@@ -212,7 +212,12 @@ const runReplica = async ({
 	const client = createAutumnClient({
 		autumnApiUrl: `http://127.0.0.1:${AUTUMN_PORT}`,
 	});
-	const held = createHeldSubjects({ budgetBytes: HELD_BUDGET_BYTES });
+	const held = createHeldSubjects({
+		budgetBytes: HELD_BUDGET_BYTES,
+		...(process.env.GC_PARSED_BYTES && {
+			parsedBudgetBytes: Number(process.env.GC_PARSED_BYTES),
+		}),
+	});
 	const auth = createDeployedAuth({
 		dataDir,
 		tokenHash: hashToken({ token: ATOM_TOKEN }),
@@ -362,6 +367,8 @@ const runReplica = async ({
 					heldSubjects: held.size,
 					heldMb: Math.round(held.bytes / 1024 ** 2),
 					heldEvicted: held.evicted,
+					heldParsed: held.parsedSize,
+					heldParses: held.parses,
 					loopLagAvgMs: Number((lagTotalMs / Math.max(1, lagTicks)).toFixed(3)),
 					loopLagP99Ms: Number(percentile(sortedLags, 0.99).toFixed(2)),
 					loopLagMaxMs: Number(lagMaxMs.toFixed(2)),

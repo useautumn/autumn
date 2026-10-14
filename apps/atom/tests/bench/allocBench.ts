@@ -8,18 +8,27 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	applyMutation,
 	computeCheck,
+	computeTrack,
 	createSubjectState,
 	mergeSubjectStates,
 	type SubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
+import { AppEnv, fullSubjectToRelevantFeatures } from "@autumn/shared";
+import { workerStateToApiBalance } from "../../../../packages/balance-engine/src/apiRenderer/balances/workerStateToApiBalance.js";
+import { checkCommandToDeductionRequest } from "../../../../packages/balance-engine/src/commands/check/checkCommandToDeductionRequest.js";
+import { deduct } from "../../../../packages/balance-engine/src/deduction/deduct.js";
+import { selectDeductionRows } from "../../../../packages/balance-engine/src/deduction/setup/selectDeductionRows.js";
+import { setupDeductionContext } from "../../../../packages/balance-engine/src/deduction/setup/setupDeductionContext.js";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
 	createCustomerProduct,
 	identity,
 } from "../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { subjectPushToStoredSubject } from "../../src/lib/contracts/subjectContract.js";
 import { getAtomLogger } from "../../src/lib/logging/getAtomLogger.js";
 import {
 	checkToCommand,
@@ -35,6 +44,7 @@ import { createHeldSubjects } from "../../src/state/heldSubjects/createHeldSubje
 import { openJournal } from "../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../src/state/openSqliteStore.js";
+import { subjectToSlice } from "../../src/state/repos/subjectStates.js";
 import {
 	atomOrg,
 	checkRequestFor,
@@ -180,6 +190,10 @@ const child = async ({
 		idempotencyKey: null,
 	});
 
+	const result0 = computeCheck({
+		fullSubject: subject0.fullSubject,
+		command: command0,
+	});
 	// Per deduction: the engine's decision alone.
 	await stage("engineDecision", () => {
 		sink += computeCheck({
@@ -188,6 +202,72 @@ const child = async ({
 		}).allowed
 			? 1
 			: 0;
+	});
+	// Inside the decision: rows selected, the draw, and the outcome shaped.
+	const request0 = checkCommandToDeductionRequest({ command: command0 });
+	await stage("decision.selectRows", () => {
+		sink += selectDeductionRows({
+			fullSubject: subject0.fullSubject,
+			selection: request0.selection,
+		}).customerEntitlements.length;
+	});
+	await stage("decision.setupContext", () => {
+		sink += setupDeductionContext({
+			fullSubject: subject0.fullSubject,
+			selection: request0.selection,
+		}).rows.length;
+	});
+	await stage("decision.deduct", () => {
+		sink += deduct({
+			fullSubject: subject0.fullSubject,
+			request: request0,
+		}).appliedValue;
+	});
+	// Inside the fold step: the track decided, and the mutation applied to the state.
+	const mutation0 = computeTrack({
+		fullSubject: subject0.fullSubject,
+		command: track0,
+	});
+	await stage("foldStep.computeTrack", () => {
+		sink += computeTrack({ fullSubject: subject0.fullSubject, command: track0 })
+			.changes.length;
+	});
+	await stage("foldStep.applyMutation", () => {
+		sink += applyMutation({ state: hot.state, mutation: mutation0 }).revision;
+	});
+	// Inside the render: the balance read, the version changes, the JSON.
+	const renderContext = {
+		org: subject0.org,
+		env: AppEnv.Sandbox,
+		features: subject0.features,
+		logger: ctx.logger,
+		expand: [],
+	};
+	await stage("render.apiBalance", () => {
+		sink +=
+			workerStateToApiBalance({
+				ctx: renderContext,
+				fullSubject: subject0.fullSubject,
+				featureId: "messages",
+				allocationView: "spendable",
+			})?.remaining ?? 0;
+	});
+	await stage("render.relevantFeatures", () => {
+		sink += fullSubjectToRelevantFeatures({
+			fullSubject: subject0.fullSubject,
+			featureId: "messages",
+			features: subject0.features,
+		}).length;
+	});
+	const rendered0 = renderCheck({
+		ctx,
+		check,
+		command: command0,
+		result: result0,
+		subject: subject0,
+	});
+	await stage("render.toJson", () => {
+		sink += checkResponseToJson({ response: rendered0.response }).length;
 	});
 	// Per deduction: the command objects (check command, track command).
 	await stage("commands", (i) => {
@@ -227,10 +307,6 @@ const child = async ({
 		sink += Object.values({ ...subject0.catalog.features }).length;
 	});
 	// Per deduction: the API response rendered and stringified.
-	const result0 = computeCheck({
-		fullSubject: subject0.fullSubject,
-		command: command0,
-	});
 	await stage("renderResponse", () => {
 		const { response } = renderCheck({
 			ctx,
@@ -290,17 +366,53 @@ const child = async ({
 		).json.length;
 	});
 	// Per push: a 40-balance subject parsed, stored, held and reconciled; then the view folded across it.
+	const lastSeq = () => journal.owed({ customerId }).at(-1)?.seq ?? seq;
 	let readAt = 2000;
 	await stage("pushApply", async () => {
 		readAt++;
-		await processor.setSubject({ customerId, body: pushBody(readAt, seq) });
+		await processor.setSubject({
+			customerId,
+			body: pushBody(readAt, lastSeq()),
+		});
 		sink += readCurrentSubject({ ctx, customerId, entityId: null }).features
 			.length;
 	});
-	// Per push: the JSON parse of its body alone.
-	const body0 = pushBody(readAt, seq);
-	await stage("pushJsonParse", () => {
+	// Inside the push: its parse and validation, its store (slice stringify + hash, state stringify, SQLite), the journal reconcile, and the view after it.
+	const body0 = pushBody(readAt, lastSeq());
+	await stage("push.jsonParse", () => {
 		sink += Object.keys(JSON.parse(body0)).length;
+	});
+	await stage("push.toStoredSubject", () => {
+		sink += subjectPushToStoredSubject({ customerId, body: body0 }).readAt;
+	});
+	const stored0 = subjectPushToStoredSubject({ customerId, body: body0 });
+	await stage("push.subjectToSlice", () => {
+		sink += subjectToSlice({ subject: stored0 }).hash.length;
+	});
+	await stage("push.stateStringify", () => {
+		sink += JSON.stringify(stored0.state).length;
+	});
+	await stage("push.storeSetSubject", () => {
+		readAt++;
+		sink += sqliteStore.setSubject({
+			subject: { ...stored0, readAt, logOffset: BigInt(readAt) },
+		})
+			? 1
+			: 0;
+	});
+	await stage("push.reconcile", () => {
+		journal.reconcile({
+			customerId,
+			atomSeqs: { atom_bench: { [journal.writerId]: lastSeq() } },
+		});
+	});
+	await stage("push.viewAfterPush", () => {
+		readAt++;
+		sqliteStore.setSubject({
+			subject: { ...stored0, readAt, logOffset: BigInt(readAt) },
+		});
+		sink += readCurrentSubject({ ctx, customerId, entityId: null }).features
+			.length;
 	});
 	console.log(
 		JSON.stringify({
