@@ -92,9 +92,30 @@ test(`${chalk.yellowBright("set-plans resave scheduled start: a plan starting be
 		"subscription_recreated_backdated",
 	);
 
+	const subscriptionId = live.subscription_ids![0]!;
+	const scheduleId = live.scheduled_ids![0]!;
+	const invoicesBefore = await ctx.stripeCli.invoices.list({
+		subscription: subscriptionId,
+		limit: 100,
+	});
+
 	await autumnV2_4.billing.setPlans(resave);
-	const subscription = await ctx.stripeCli.subscriptions.retrieve(
-		live.subscription_ids![0],
-	);
+
+	const subscription =
+		await ctx.stripeCli.subscriptions.retrieve(subscriptionId);
 	expect(subscription.status).toBe("active");
+	expect(subscription.schedule).toBe(scheduleId);
+	const schedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	expect(
+		schedule.phases.some(
+			({ start_date }) =>
+				start_date === Math.floor(renewalPhaseStartsAt / 1000),
+		),
+	).toBe(true);
+	const invoicesAfter = await ctx.stripeCli.invoices.list({
+		subscription: subscriptionId,
+		limit: 100,
+	});
+	expect(invoicesAfter.data.length).toBe(invoicesBefore.data.length);
 });

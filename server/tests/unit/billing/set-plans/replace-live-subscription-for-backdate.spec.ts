@@ -198,6 +198,37 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		});
 	});
 
+	test("a plan on another subscription lends its start to no re-save", () => {
+		const active = subscriptionWithStatus("active");
+		const otherSubscriptionStart = planStart + ms.days(5);
+		const otherSubscriptionPlan = {
+			...customerProducts.create({
+				id: "cus_prod_addon",
+				productId: "addon",
+				product: products.createFull({ id: "addon" }),
+				status: CusProductStatus.Active,
+				subscriptionIds: ["sub_other"],
+				startsAt: otherSubscriptionStart,
+			}),
+			scheduled_ids: [],
+		};
+
+		expect(
+			replace({
+				startsAt: otherSubscriptionStart,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: scheduleWithCurrentPhaseFrom(
+					planStart + ms.days(10),
+				),
+				rows: [proOnLiveSubscription(), otherSubscriptionPlan],
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
+	});
+
 	test("nothing live leaves nothing to replace", () => {
 		expect(
 			replace({ startsAt: backdatedStart, stripeSubscription: null }),

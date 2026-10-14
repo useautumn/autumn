@@ -1,6 +1,7 @@
 import {
 	customerProductHasActiveStatus,
 	type FullCustomer,
+	filterCustomerProductsByStripeSubscriptionId,
 	SET_PLANS_FIRST_PHASE_TOLERANCE_MS,
 	type StripeSubscriptionScope,
 	secondsToMs,
@@ -18,11 +19,15 @@ type LiveStartParams = {
 
 const latestLivePlanStart = ({
 	fullCustomer,
+	stripeSubscription,
 	stripeSubscriptionScope,
 }: LiveStartParams) => {
-	const liveStarts = filterCustomerProductsInStripeSubscriptionScope({
-		stripeSubscriptionScope,
-		customerProducts: fullCustomer.customer_products,
+	const liveStarts = filterCustomerProductsByStripeSubscriptionId({
+		customerProducts: filterCustomerProductsInStripeSubscriptionScope({
+			stripeSubscriptionScope,
+			customerProducts: fullCustomer.customer_products,
+		}),
+		stripeSubscriptionId: stripeSubscription.id,
 	})
 		.filter(customerProductHasActiveStatus)
 		.map(({ starts_at }) => starts_at);
