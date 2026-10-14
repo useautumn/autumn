@@ -5,7 +5,8 @@
  *  the lock taken in an earlier batch → found by the batch's one read, settled;
  *  a lock already settled, or a replayed finalize → nothing moves, the seq lands;
  *  replayed after its lock id was reused, by an id nothing remembers → its seq is held, so the new lock stays open;
- *  a held row whose feature is not the one named → refused, the lock stays open, the seq lands.
+ *  a held row whose feature is not the one named → settles nothing, the lock stays open, the seq lands;
+ *  a settle lands the seq in its own mutation, one record; a resend inside the writer's window is a duplicate.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -64,6 +65,47 @@ describe("an Atom's queued finalize", () => {
 				balance: STARTING_BALANCE,
 				openLocks: [],
 				atomSeqs: { atom_1: { w_1: 2 } },
+			});
+		}));
+
+	test("settling, it lands its seq in the same mutation: one record in the log, with the lock's delete", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({
+				commands: [
+					lockTrack,
+					atomFinalizeOf({ customerId, lockId: "L1", seq: 2 }),
+				],
+			});
+			await pipeline.drain();
+
+			const records = pipeline.commits
+				.flat()
+				.filter(({ id }) => id.startsWith("atom_finalize_2"));
+			expect(records).toHaveLength(1);
+			expect(records[0]?.changes).toEqual(
+				expect.arrayContaining([
+					{ table: "locks", op: "delete", id: "lck_L1" },
+					expect.objectContaining({
+						table: "customer",
+						after: { atom_seqs: { atom_1: { w_1: 2 } } },
+					}),
+				]),
+			);
+		}));
+
+	test("resent inside the writer's window, it is answered as a duplicate of what it decided, never a conflict", () =>
+		withPipeline(async (pipeline) => {
+			const release = atomFinalizeOf({ customerId, lockId: "L1", seq: 2 });
+			await pipeline.consumeBatch({ commands: [lockTrack, release] });
+			await pipeline.drain();
+
+			const resent = await pipeline.processor.decideAtomFinalize({
+				command: release,
+				lock: null,
+			});
+
+			expect(await resent.waitForCommit()).toMatchObject({
+				kind: "duplicate",
 			});
 		}));
 
@@ -165,7 +207,7 @@ describe("an Atom's queued finalize", () => {
 			});
 		}));
 
-	test("naming a lock Autumn holds under another feature, it is refused: the lock stays open and its seq lands", () =>
+	test("naming a lock Autumn holds under another feature, it settles nothing: the lock stays open and its seq lands", () =>
 		withPipeline(async (pipeline) => {
 			await pipeline.consumeBatch({
 				commands: [
