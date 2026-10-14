@@ -10,9 +10,11 @@ import type {
 	ProductV2,
 	Rollover,
 } from "@autumn/shared";
+import { type AxiosInstance, isAxiosError } from "axios";
 import { toast } from "sonner";
+import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
-import { setActiveOrg } from "@/lib/orgSync";
+import { setActiveOrg, setLastSwitchedOrgId } from "@/lib/orgSync";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
 export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
@@ -80,6 +82,48 @@ export const impersonateUser = async ({
 	}
 
 	window.location.reload();
+};
+
+/** The member to impersonate, or null when the org has none (e.g. an unclaimed keyless sandbox). */
+export const findOrgMemberUserId = async ({
+	axiosInstance,
+	orgId,
+}: {
+	axiosInstance: AxiosInstance;
+	orgId: string;
+}): Promise<string | null> => {
+	try {
+		const { data } = await axiosInstance.get<{ userId?: string }>(
+			`/admin/org-member?org_id=${orgId}`,
+		);
+		return data.userId ?? null;
+	} catch (error) {
+		if (isAxiosError(error) && error.response?.status === 404) return null;
+		throw error;
+	}
+};
+
+/** Moves the admin's own session into an org with no members, where there's no one to impersonate. */
+export const enterOrgAsAdmin = async ({
+	axiosInstance,
+	organizationId,
+	isCurrentlyImpersonating = false,
+}: {
+	axiosInstance: AxiosInstance;
+	organizationId: string;
+	isCurrentlyImpersonating?: boolean;
+}) => {
+	if (isCurrentlyImpersonating) {
+		const { error } = await authClient.admin.stopImpersonating();
+		if (error)
+			throw new Error(error.message || "Failed to restore admin session");
+	}
+
+	await axiosInstance.post(`/admin/orgs/${organizationId}/enter`);
+	// DashboardGate and useOrg would otherwise switch back to the remembered org
+	setLastSwitchedOrgId(organizationId);
+	// A sandbox of the previous org would be rejected for the new one
+	setActiveSandbox(null);
 };
 
 export const getCusEntHoverTexts = ({
