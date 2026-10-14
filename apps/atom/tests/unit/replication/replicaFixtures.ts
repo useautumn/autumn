@@ -10,6 +10,7 @@ import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { createHandoffBarrier } from "../../../src/replicas/handover/createHandoffBarrier.js";
 import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
 import { createMembership } from "../../../src/replicas/membership/createMembership.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
@@ -129,7 +130,13 @@ export const createReplica = ({
 		loop: loopOnTime,
 		replication,
 		stopping,
-		peer: { port: PEER_PORT, secret, ring, membership },
+		peer: {
+			port: PEER_PORT,
+			secret,
+			ring,
+			membership,
+			barrier: createHandoffBarrier({ ctx: { counters } }),
+		},
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -162,6 +169,7 @@ export const createReplica = ({
 				ctx: {
 					ring,
 					membership,
+					folders: createDeployedFolders({ slots: auth.slots }),
 					peer: { port: PEER_PORT, secret },
 					logger: quiet,
 				},
@@ -193,11 +201,18 @@ export const connect = ({
 	replicas,
 	autumn,
 	replyFrom = async (_replica, reply) => reply,
+	beforeDispatch = async () => {},
 }: {
 	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
+	/** Runs before a request reaches its replica: a test can hold one on the way, as a slow link does. */
+	beforeDispatch?: (request: Request) => Promise<void>;
 	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
-	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
+	replyFrom?: (
+		replica: Reachable,
+		reply: Response,
+		request: Request,
+	) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),
@@ -215,11 +230,12 @@ export const connect = ({
 				{ code: "ECONNREFUSED" },
 			);
 		const app = Number(url.port) === PEER_PORT ? replica.peerApp : replica.app;
+		await beforeDispatch(new Request(url, init));
 		const reply = await app.request(`${url.pathname}${url.search}`, {
 			...init,
 			signal: undefined,
 		});
-		return replyFrom(replica, reply);
+		return replyFrom(replica, reply, new Request(url, init));
 	};
 	spyOn(globalThis, "fetch").mockImplementation(((
 		input: URL | RequestInfo,
