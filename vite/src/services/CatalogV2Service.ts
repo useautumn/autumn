@@ -1,4 +1,6 @@
 import type {
+	GetCatalogParams,
+	GetCatalogResponse,
 	PreviewUpdateCatalogResponse,
 	UpdateCatalogParamsInput,
 	UpdateCatalogResponse,
@@ -6,6 +8,14 @@ import type {
 import type { AxiosInstance } from "axios";
 
 export class CatalogV2Service {
+	static async get(
+		axiosInstance: AxiosInstance,
+		params: GetCatalogParams,
+	): Promise<GetCatalogResponse> {
+		const response = await axiosInstance.post("/v1/catalogV2.get", params);
+		return response.data;
+	}
+
 	static async previewUpdate(
 		axiosInstance: AxiosInstance,
 		params: UpdateCatalogParamsInput,
