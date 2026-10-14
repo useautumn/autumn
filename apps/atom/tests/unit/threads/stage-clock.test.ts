@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import {
 	readStageClock,
@@ -101,4 +102,17 @@ describe("the stage clock", () => {
 			"stageViewRenderUs",
 		]);
 	});
+});
+
+test("where the kernel keeps no thread CPU count (gVisor), the clock still reads its stages and leaves busy and idle out", () => {
+	const read = spyOn(fs, "readFileSync").mockImplementation(() => {
+		throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+	});
+	cleanups.push(() => read.mockRestore());
+
+	const clock = readStageClock({ aliveUs: 1_000 });
+
+	expect(clock.stageEngineDecisionUs).toBeNumber();
+	expect(clock).not.toHaveProperty("stageOtherBusyUs");
+	expect(clock).not.toHaveProperty("stageIdleUs");
 });

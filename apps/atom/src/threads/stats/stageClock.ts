@@ -59,17 +59,25 @@ export const timeStage = <T>(stage: Stage, run: () => T): T => {
 	}
 };
 
-/** CPU this thread has run, from the kernel's own count: what the stages are a share of. */
-const threadCpuUs = (): number =>
-	Number(readFileSync("/proc/thread-self/schedstat", "utf8").split(" ")[0]) /
-	1000;
+/** CPU this thread has run, from the kernel's own count: what the stages are a share of. Null where it keeps none (gVisor). */
+const threadCpuUs = (): number | null => {
+	try {
+		return (
+			Number(
+				readFileSync("/proc/thread-self/schedstat", "utf8").split(" ")[0],
+			) / 1000
+		);
+	} catch {
+		return null;
+	}
+};
 
 const fieldOf = (stage: string) =>
 	`stage${stage[0]?.toUpperCase()}${stage.slice(1)}Us`;
 
 /**
  * Each stage's time since boot as its thread stat field (`stageEngineDecisionUs`), and the thread's busy time no stage
- * holds and its idle time beside them, all in µs. `aliveUs` is how long the thread has run.
+ * holds and its idle time beside them (where the kernel counts thread CPU), all in µs. `aliveUs` is how long the thread has run.
  */
 export const readStageClock = ({
 	aliveUs,
@@ -78,11 +86,17 @@ export const readStageClock = ({
 }): Record<string, number> => {
 	const cpuUs = threadCpuUs();
 	const stagedUs = STAGES.reduce((sum, stage) => sum + spentUs[stage], 0);
+	const busyAndIdle =
+		cpuUs === null
+			? {}
+			: {
+					otherBusy: Math.max(0, cpuUs - stagedUs),
+					idle: Math.max(0, aliveUs - cpuUs),
+				};
 	return Object.fromEntries(
-		Object.entries({
-			...spentUs,
-			otherBusy: Math.max(0, cpuUs - stagedUs),
-			idle: Math.max(0, aliveUs - cpuUs),
-		}).map(([stage, us]) => [fieldOf(stage), Math.round(us)]),
+		Object.entries({ ...spentUs, ...busyAndIdle }).map(([stage, us]) => [
+			fieldOf(stage),
+			Math.round(us),
+		]),
 	);
 };
