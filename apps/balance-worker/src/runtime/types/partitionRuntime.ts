@@ -14,6 +14,7 @@ import type {
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
 import type { ReceiptPolicy } from "../../processor/types/receiptPolicy.js";
 import type { RecentCommands } from "../../processor/writer/recentCommands/types/recentCommands.js";
+import type { SubjectMapUsage } from "../../processor/writer/subjectMap/types/subjectMapUsage.js";
 import type { CommitPositionSink } from "../../processor/writer/types/commitPositionSink.js";
 import type {
 	CommittedOutcomeAppender,
@@ -127,6 +128,7 @@ export type PartitionRuntime = {
 	stop(): Promise<void>;
 	getStatus(): PartitionRuntimeStatus;
 	getHealth(): OwnedPartitionHealth;
+	readSubjectMapUsage(): SubjectMapUsage;
 	subscribeUnavailable(listener: RuntimeUnavailableListener): () => void;
 	/** Runs one processor command behind the readiness gate and recovery mapping.
 	 *  `budgetMs` is how long the caller will still wait: an activating runtime holds

@@ -28,6 +28,9 @@ type Entry = {
 	touchedAt: number;
 };
 
+const isHidden = ({ entry }: { entry: Entry }): boolean =>
+	entry.bytes === 0 && entry.customerKey !== null;
+
 const weigh = ({ value }: { value: unknown }): number =>
 	JSON.stringify(value)?.length ?? 0;
 
@@ -150,7 +153,8 @@ export const createSubjectMap = ({
 		const bound = boundBytes();
 		for (const [subjectKey, entry] of entries) {
 			if (totalBytes <= bound) return;
-			if (entry.pins > 0 || subjectKey === except) continue;
+			if (entry.pins > 0 || isHidden({ entry }) || subjectKey === except)
+				continue;
 			dropState({ subjectKey, entry, reason: "capacity" });
 		}
 	};
@@ -163,7 +167,7 @@ export const createSubjectMap = ({
 			const isIdle = entry.touchedAt < idleBefore;
 			if (!isIdle || scanned === SUBJECT_MAP_IDLE_SCAN_PER_WRITE) return;
 			scanned += 1;
-			if (entry.pins > 0) touch({ subjectKey, entry });
+			if (entry.pins > 0 || isHidden({ entry })) touch({ subjectKey, entry });
 			else dropState({ subjectKey, entry, reason: "idle" });
 		}
 	};

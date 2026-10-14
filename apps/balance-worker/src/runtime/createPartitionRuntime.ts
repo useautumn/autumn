@@ -117,6 +117,10 @@ export function createPartitionRuntime({
 		return getRuntimeHealth({ ctx, state });
 	}
 
+	function readSubjectMapUsage() {
+		return ctx.processor.readSubjectMapUsage();
+	}
+
 	function subscribeUnavailable(
 		listener: RuntimeUnavailableListener,
 	): () => void {
@@ -139,6 +143,7 @@ export function createPartitionRuntime({
 		processInline,
 		getStatus,
 		getHealth,
+		readSubjectMapUsage,
 		subscribeUnavailable,
 	};
 }

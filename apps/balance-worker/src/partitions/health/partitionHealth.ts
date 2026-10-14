@@ -6,6 +6,7 @@ import type {
 	PartitionsScope,
 	PartitionsState,
 } from "../types/partitionState.js";
+import type { PartitionRuntimePort } from "../types/partitions.js";
 import {
 	refreshPartitionHighWatermarks,
 	respondToUnhealthyPartitions,
@@ -67,14 +68,24 @@ export function listPartitionHealth({
 }): OwnedPartitionHealth[] {
 	const health = new Map<number, OwnedPartitionHealth>();
 	for (const entry of state.retiringEntries.values())
-		health.set(entry.partition, entry.runtime.getHealth());
+		health.set(entry.partition, reportedHealthOf({ runtime: entry.runtime }));
 	for (const entry of state.handingOff.values())
-		health.set(entry.partition, entry.runtime.getHealth());
+		health.set(entry.partition, reportedHealthOf({ runtime: entry.runtime }));
 	for (const [partition, terminal] of state.terminalHealthByPartition)
 		health.set(partition, terminal);
 	for (const entry of state.entries.values())
-		health.set(entry.partition, entry.runtime.getHealth());
+		health.set(entry.partition, reportedHealthOf({ runtime: entry.runtime }));
 	return [...health.values()].sort(comparePartitionHealth);
+}
+
+export function reportedHealthOf({
+	runtime,
+}: {
+	runtime: Pick<PartitionRuntimePort, "getHealth" | "readSubjectMapUsage">;
+}): OwnedPartitionHealth {
+	const health = runtime.getHealth();
+	const subjectMap = runtime.readSubjectMapUsage?.();
+	return subjectMap ? { ...health, subjectMap } : health;
 }
 
 function comparePartitionHealth(

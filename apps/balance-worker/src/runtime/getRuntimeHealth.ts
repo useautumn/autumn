@@ -16,17 +16,14 @@ export function getRuntimeHealth({
 	state,
 }: PartitionRuntimeScope): OwnedPartitionHealth {
 	const { topic, partition } = ctx.config;
-	const health = {
-		...ownedPartitionHealthOf({
-			topic,
-			partition,
-			status: state.status,
-			localNextOffset: ctx.stateStore.readNextOffset({ topic, partition }),
-			...ctx.follower.readProgress({ topic, partition }),
-			failureReason: state.failureReason,
-		}),
-		subjectMap: ctx.processor.readSubjectMapUsage(),
-	};
+	const health = ownedPartitionHealthOf({
+		topic,
+		partition,
+		status: state.status,
+		localNextOffset: ctx.stateStore.readNextOffset({ topic, partition }),
+		...ctx.follower.readProgress({ topic, partition }),
+		failureReason: state.failureReason,
+	});
 	return state.checkpointLease
 		? { ...health, checkpoint: state.checkpointLease.getHealth() }
 		: health;

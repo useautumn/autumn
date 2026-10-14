@@ -1,6 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
 import type { PartitionProcessor } from "../../processor/types/partitionProcessor.js";
+import type { SubjectMapUsage } from "../../processor/writer/subjectMap/types/subjectMapUsage.js";
 
 export interface PartitionRuntimePort {
 	/** Read-only: rebuilds the dedup window from the log, writes nothing durable. */
@@ -13,6 +14,7 @@ export interface PartitionRuntimePort {
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
 	getHealth(): OwnedPartitionHealth;
+	readSubjectMapUsage?(): SubjectMapUsage;
 	subscribeUnavailable(listener: PartitionUnavailableListener): Unsubscribe;
 	process<Decision>(
 		run: (processor: PartitionProcessor) => Promise<Decision>,

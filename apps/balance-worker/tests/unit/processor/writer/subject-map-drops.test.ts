@@ -143,6 +143,42 @@ describe("subject map drops", () => {
 		});
 	});
 
+	test("a subject hidden by an evict waiting for the store is never swept for capacity; the evict counts it", () => {
+		const map = createSubjectMap({ maxBytes: stateBytes });
+		write({ map, subjectKey: "cus_a" });
+		map.hideCustomer({ customerKey: "cus_a" });
+		write({ map, subjectKey: "cus_b" });
+		write({ map, subjectKey: "cus_c" });
+
+		expect(map.isEvicting({ customerKey: "cus_a" })).toBe(true);
+		expect(map.readUsage().droppedSubjects).toEqual({
+			...noDrops,
+			capacity: 1,
+		});
+
+		map.evictCustomer({ customerKey: "cus_a", reason: "evict" });
+		expect(map.readUsage()).toEqual({
+			residentSubjects: 1,
+			residentBytes: stateBytes,
+			droppedSubjects: { ...noDrops, capacity: 1, evict: 1 },
+		});
+	});
+
+	test("a subject hidden by an evict waiting for the store is never swept as idle; the evict counts it", () => {
+		let at = 0;
+		const map = createSubjectMap({ idleExpiryMs: 1_000, now: () => at });
+		write({ map, subjectKey: "cus_a" });
+		map.hideCustomer({ customerKey: "cus_a" });
+		at += 1_001;
+		write({ map, subjectKey: "cus_b" });
+
+		expect(map.isEvicting({ customerKey: "cus_a" })).toBe(true);
+		expect(map.readUsage().droppedSubjects).toEqual(noDrops);
+
+		map.evictCustomer({ customerKey: "cus_a", reason: "stale" });
+		expect(map.readUsage().droppedSubjects).toEqual({ ...noDrops, stale: 1 });
+	});
+
 	test("a cold start counts what it drops and nothing it spares or finds pinned", () => {
 		const map = createSubjectMap();
 		write({ map, subjectKey: "dropped" });
