@@ -1,8 +1,9 @@
-import type {
-	AtomFinalizeCommand,
-	FinalizeCommand,
-	TrackCommand,
-	WorkerLock,
+import {
+	type AtomFinalizeCommand,
+	type FinalizeCommand,
+	isLandedSeq,
+	type TrackCommand,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import { landAtomSeqOnly } from "./consumeTrack.js";
 import { resolveLockRow } from "./resolveLockRow.js";
@@ -109,6 +110,27 @@ async function settleOrRefuse({
 	}
 }
 
+/** A seq the customer already holds was settled with it before: a resend, whatever lock now holds the id. */
+async function isResend({
+	ctx,
+	command,
+}: {
+	ctx: ConsumeContext;
+	command: AtomFinalizeCommand;
+}): Promise<boolean> {
+	const { state } = await ctx.processor.readSubjectState({
+		command: {
+			schemaVersion: 1,
+			type: "readSubjectState",
+			requestId: command.requestId,
+			identity: command.identity,
+			occurredAt: command.occurredAt,
+			org: command.org,
+		},
+	});
+	return isLandedSeq({ source: command.source, customer: state.customer });
+}
+
 /** One record, two decides in log order: it settles once both have committed, and answers with the settle's verdict. */
 const settledThenSeq = ({
 	settled,
@@ -142,8 +164,14 @@ export async function consumeAtomFinalize({
 	/** The open lock rows the batch's one read found for its finalizes. */
 	lockRows: readonly WorkerLock[];
 }): Promise<QueuedCommand | null> {
-	const pending = ctx.processor.pendingLockRow(command);
-	const lock = resolveLockRow({ pending, rows: lockRows, command });
+	const landed = await isResend({ ctx, command });
+	const lock = landed
+		? null
+		: resolveLockRow({
+				pending: ctx.processor.pendingLockRow(command),
+				rows: lockRows,
+				command,
+			});
 	const settled = lock ? await settleOrRefuse({ ctx, command, lock }) : null;
 	const seq = await landAtomSeqOnly({
 		ctx,
