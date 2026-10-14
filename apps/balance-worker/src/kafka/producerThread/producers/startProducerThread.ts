@@ -99,6 +99,7 @@ export async function startProducerThread({
 		ackRing: rings.ack,
 		sendSignal: rings.sendSignal.sab,
 		ackSignal: rings.ackSignal.sab,
+		dedupeCjsChildren: config.dedupeCjsChildren,
 	};
 	thread.postMessage(init);
 	try {
