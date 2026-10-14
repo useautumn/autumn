@@ -5,6 +5,7 @@ import {
 	findStructuralDifference,
 	findSubjectStateDifference,
 	type SubjectState,
+	subjectStateRowsOf,
 } from "../../../../src/balanceEngine.js";
 import {
 	createCatalogFor,
@@ -96,6 +97,32 @@ describe("findSubjectStateDifference", () => {
 				},
 			}),
 		).toEqual({ path: "customerEntitlements.length", left: 1, right: 2 });
+	});
+});
+
+describe("subjectStateRowsOf", () => {
+	test("is the rows the difference compares, so a runtime's deep equality over it decides as findSubjectStateDifference does", () => {
+		const state = tracked({ state: createState({ balance: 10 }) });
+		const [row] = state.customerEntitlements;
+		if (!row) throw new Error("fixture holds a row");
+		const sameRows = (right: SubjectState) =>
+			Bun.deepEquals(subjectStateRowsOf(state), subjectStateRowsOf(right));
+		const others: SubjectState[] = [
+			asPushed(state),
+			{ ...state, revision: 0 },
+			{
+				...state,
+				customer: { ...state.customer, atom_seqs: { atom_1: { w_1: 4 } } },
+			},
+			{ ...state, customerEntitlements: [{ ...row, balance: 9 }] },
+		];
+
+		expect(others.map(sameRows)).toEqual([true, true, true, false]);
+		expect(
+			others.map(
+				(right) => findSubjectStateDifference({ left: state, right }) === null,
+			),
+		).toEqual([true, true, true, false]);
 	});
 });
 
