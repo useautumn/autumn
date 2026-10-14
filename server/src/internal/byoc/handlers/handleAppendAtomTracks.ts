@@ -38,7 +38,6 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 		logAtomTracksAppend({
 			ctx: c.get("ctx"),
 			atom: c.get("atom"),
-			writer: request.writer,
 			commands,
 			queued,
 			latencyMs: performance.now() - startedAt,
@@ -51,26 +50,28 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 const logAtomTracksAppend = ({
 	ctx,
 	atom,
-	writer,
 	commands,
 	queued,
 	latencyMs,
 }: {
 	ctx: AutumnContext;
 	atom: AtomHonoEnv["Variables"]["atom"];
-	writer: string;
 	commands: TrackCommand[];
 	queued: boolean;
 	latencyMs: number;
 }) => {
 	const seqs = commands.map(({ source }) => source?.seq ?? 0);
+	const writers = new Set(commands.map(({ source }) => source?.writerId));
+	const [onlyWriter] = writers;
 	const oldestAt = Math.min(...commands.map(({ occurredAt }) => occurredAt));
 	ctx.logger.info("atom_tracks_append", {
 		type: "atom_tracks_append",
 		atom_id: atom.id,
 		org_id: atom.orgId,
 		env: atom.env,
-		writer,
+		// One journal per request names it; a thread's batch spans several.
+		writer: writers.size === 1 ? (onlyWriter ?? null) : null,
+		writers: writers.size,
 		tracks: commands.length,
 		first_seq: commands.length ? Math.min(...seqs) : null,
 		last_seq: commands.length ? Math.max(...seqs) : null,
