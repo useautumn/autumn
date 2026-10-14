@@ -39,6 +39,8 @@ const args = Object.fromEntries(
 );
 const total = Number(args.total ?? 10_000);
 const claimMs = Number(args.claimMs ?? 0);
+/** The AWS SDK's default socket pool per client: claims beyond it queue. */
+const claimSockets = Number(args.claimSockets ?? 50);
 const appendMs = Number(args.appendMs ?? 10);
 const applyMs = Number(args.applyMs ?? 5);
 const fetchMs = Number(args.fetchMs ?? 2);
@@ -113,11 +115,18 @@ const timings = {
 	batchSizes: [] as number[],
 };
 const claimed = new Set<string>();
+let claimsInFlight = 0;
+const socketFreed: ((value: unknown) => void)[] = [];
 /** A DynamoDB conditional put at `claimMs`; the only timing line around store.claim lives here, not in product code. */
 const idempotencyKeys: IdempotencyKeyStore = {
 	async claim(claim: IdempotencyClaim): Promise<IdempotencyClaimResult> {
 		const started = performance.now();
+		while (claimsInFlight >= claimSockets)
+			await new Promise((r) => socketFreed.push(r));
+		claimsInFlight += 1;
 		await sleep(claimMs);
+		claimsInFlight -= 1;
+		socketFreed.shift()?.(undefined);
 		const outcome = claimed.has(claim.storageKey) ? "duplicate" : "claimed";
 		claimed.add(claim.storageKey);
 		timings.claim.push(performance.now() - started);
@@ -290,6 +299,7 @@ console.log(
 			config: {
 				total,
 				claimMs,
+				claimSockets,
 				appendMs,
 				applyMs,
 				fetchMs,
