@@ -4,7 +4,7 @@ import type {
 	SetPlansPreviewBalanceChange,
 	SetPlansPreviewPhase,
 } from "@autumn/shared";
-import { balanceChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/balanceChangesToReviewSection";
+import { renderedBalances as balanceChangesToReviewSection } from "./renderedReviewSections";
 
 const credits = { id: "credits", name: "Credits" } as Feature;
 
@@ -54,8 +54,7 @@ describe("balanceChangesToReviewSection", () => {
 
 		expect(row?.description).toBe("10,000 → 100,000 granted · 0 used");
 		expect(row?.pooled).toEqual({
-			featureName: "Credits",
-			previousTotal: 10_000,
+			previous_total: 10_000,
 			total: 100_000,
 			contributors: 1,
 		});
