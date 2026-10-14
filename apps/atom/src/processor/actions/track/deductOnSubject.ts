@@ -69,13 +69,18 @@ export const deductOnSubject = ({
 		throw new CannotAnswerError({ reason: "journal_backlog" });
 	// D2: a lock_id this slot took is the same lock on its terms (nothing moves or is journaled), a conflict on any other.
 	const lockId = track.lock?.lockId;
-	const held = lockId
-		? ctx.openLocks.trackOf({
-				customerId,
-				lockId,
-				owed: ctx.journal.owed({ customerId }),
-			})
-		: null;
+	// Only while the lock is still open in the view: one this slot already settled is taken anew.
+	const isOpen = subject.fullSubject.open_locks.some(
+		(openLock) => openLock.lock_id === lockId,
+	);
+	const held =
+		lockId && isOpen
+			? ctx.openLocks.trackOf({
+					customerId,
+					lockId,
+					owed: ctx.journal.owed({ customerId }),
+				})
+			: null;
 	if (lockId && held) {
 		if (!isSameLock({ held, retry: track }))
 			throw new LockTermsConflictError({ lockId });
