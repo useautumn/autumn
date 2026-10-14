@@ -2134,6 +2134,7 @@ components:
                           - graduated
                           - volume
                         type: string
+                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                       interval:
                         enum:
                           - one_off
@@ -3063,6 +3064,7 @@ components:
                               - graduated
                               - volume
                             type: string
+                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                           interval:
                             enum:
                               - one_off
@@ -3934,6 +3936,7 @@ components:
                                             - graduated
                                             - volume
                                           type: string
+                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                         interval:
                                           enum:
                                             - one_off
@@ -10946,6 +10949,7 @@ paths:
                               - graduated
                               - volume
                             type: string
+                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                           interval:
                             enum:
                               - one_off
@@ -11546,6 +11550,7 @@ paths:
                                             - graduated
                                             - volume
                                           type: string
+                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                         interval:
                                           enum:
                                             - one_off
@@ -12620,6 +12625,7 @@ paths:
                                     - graduated
                                     - volume
                                   type: string
+                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                 interval:
                                   enum:
                                     - one_off
@@ -13549,6 +13555,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -14420,6 +14427,7 @@ paths:
                                                       - graduated
                                                       - volume
                                                     type: string
+                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   interval:
                                                     enum:
                                                       - one_off
@@ -15079,6 +15087,7 @@ paths:
                                           - graduated
                                           - volume
                                         type: string
+                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                       interval:
                                         enum:
                                           - one_off
@@ -15973,6 +15982,7 @@ paths:
                                     - graduated
                                     - volume
                                   type: string
+                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                 interval:
                                   enum:
                                     - one_off
@@ -16902,6 +16912,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -17773,6 +17784,7 @@ paths:
                                                       - graduated
                                                       - volume
                                                     type: string
+                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   interval:
                                                     enum:
                                                       - one_off
@@ -18432,6 +18444,7 @@ paths:
                                           - graduated
                                           - volume
                                         type: string
+                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                       interval:
                                         enum:
                                           - one_off
@@ -19307,6 +19320,7 @@ paths:
                                           - graduated
                                           - volume
                                         type: string
+                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                       interval:
                                         enum:
                                           - one_off
@@ -20236,6 +20250,7 @@ paths:
                                               - graduated
                                               - volume
                                             type: string
+                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                           interval:
                                             enum:
                                               - one_off
@@ -21107,6 +21122,7 @@ paths:
                                                             - graduated
                                                             - volume
                                                           type: string
+                                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                         interval:
                                                           enum:
                                                             - one_off
@@ -21766,6 +21782,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -22407,6 +22424,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -23278,6 +23296,7 @@ paths:
                                                               - graduated
                                                               - volume
                                                             type: string
+                                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                           interval:
                                                             enum:
                                                               - one_off
@@ -24025,6 +24044,7 @@ paths:
                                                     - graduated
                                                     - volume
                                                   type: string
+                                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                 interval:
                                                   enum:
                                                     - one_off
@@ -25138,6 +25158,7 @@ paths:
                               - graduated
                               - volume
                             type: string
+                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                           interval:
                             enum:
                               - one_off
@@ -25738,6 +25759,7 @@ paths:
                                             - graduated
                                             - volume
                                           type: string
+                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                         interval:
                                           enum:
                                             - one_off
@@ -26720,6 +26742,7 @@ paths:
                                             - graduated
                                             - volume
                                           type: string
+                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                         interval:
                                           enum:
                                             - one_off
@@ -27619,6 +27642,7 @@ paths:
                                                           - graduated
                                                           - volume
                                                         type: string
+                                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                       interval:
                                                         enum:
                                                           - one_off
@@ -28434,6 +28458,7 @@ paths:
                                     - graduated
                                     - volume
                                   type: string
+                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                 interval:
                                   enum:
                                     - one_off
@@ -29363,6 +29388,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -30234,6 +30260,7 @@ paths:
                                                       - graduated
                                                       - volume
                                                     type: string
+                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   interval:
                                                     enum:
                                                       - one_off
@@ -30893,6 +30920,7 @@ paths:
                                           - graduated
                                           - volume
                                         type: string
+                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                       interval:
                                         enum:
                                           - one_off
@@ -34617,6 +34645,10 @@ paths:
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
+        @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
+        @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
         @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -34876,6 +34908,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -35415,6 +35448,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -36314,6 +36348,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -36820,8 +36855,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -36933,6 +36974,186 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                remove_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: "The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+                      direction:
+                        enum:
+                          - charge
+                          - refund
+                        type: string
+                        description: Only remove charges or only remove refunds (credits). Omit to remove both.
+                      price:
+                        anyOf:
+                          - const: true
+                          - type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                              interval_count:
+                                type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                                description: Only match the price billed every this many intervals.
+                            additionalProperties: false
+                        description: Remove the base price line. Pass true, or an object to narrow by interval.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose line to remove.
+                            billing_behavior:
+                              enum:
+                                - prepaid
+                                - usage_based
+                              type: string
+                              description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                            interval_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: Only match the price billed every this many intervals.
+                          required:
+                            - feature_id
+                            - billing_behavior
+                          additionalProperties: false
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan linked to the parent plan.
+                            price:
+                              anyOf:
+                                - const: true
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                      description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: Only match the price billed every this many intervals.
+                                  additionalProperties: false
+                              description: Remove the base price line. Pass true, or an object to narrow by interval.
+                            feature_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose line to remove.
+                                  billing_behavior:
+                                    enum:
+                                      - prepaid
+                                      - usage_based
+                                    type: string
+                                    description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                  interval_count:
+                                    type: integer
+                                    minimum: -9.007199254740991e+15
+                                    maximum: 9.007199254740991e+15
+                                    exclusiveMinimum: 0
+                                    description: Only match the price billed every this many intervals.
+                                required:
+                                  - feature_id
+                                  - billing_behavior
+                                additionalProperties: false
+                          required:
+                            - license_plan_id
+                          additionalProperties: false
+                    required:
+                      - plan_id
+                    additionalProperties: false
+                    title: RemoveLine
+                    description: Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+                  description: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+                add_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
+                    required:
+                      - amount
+                      - description
+                    title: AddLine
+                    description: A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+                  description: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -37275,8 +37496,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -37564,6 +37791,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -38103,6 +38331,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -38970,6 +39199,7 @@ paths:
                                                       - graduated
                                                       - volume
                                                     type: string
+                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   interval:
                                                     enum:
                                                       - one_off
@@ -39712,6 +39942,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -40251,6 +40482,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -41118,6 +41350,7 @@ paths:
                                                               - graduated
                                                               - volume
                                                             type: string
+                                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                           interval:
                                                             enum:
                                                               - one_off
@@ -41866,6 +42099,7 @@ paths:
                                               - graduated
                                               - volume
                                             type: string
+                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                           interval:
                                             enum:
                                               - one_off
@@ -42405,6 +42639,7 @@ paths:
                                               - graduated
                                               - volume
                                             type: string
+                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                           interval:
                                             enum:
                                               - one_off
@@ -43272,6 +43507,7 @@ paths:
                                                             - graduated
                                                             - volume
                                                           type: string
+                                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                         interval:
                                                           enum:
                                                             - one_off
@@ -44152,6 +44388,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -44666,8 +44903,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -45075,6 +45318,10 @@ paths:
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
+        @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
+        @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 
         @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -45334,6 +45581,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -45873,6 +46121,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -46772,6 +47021,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -47278,8 +47528,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -47391,6 +47647,186 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                remove_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: "The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+                      direction:
+                        enum:
+                          - charge
+                          - refund
+                        type: string
+                        description: Only remove charges or only remove refunds (credits). Omit to remove both.
+                      price:
+                        anyOf:
+                          - const: true
+                          - type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                              interval_count:
+                                type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                                description: Only match the price billed every this many intervals.
+                            additionalProperties: false
+                        description: Remove the base price line. Pass true, or an object to narrow by interval.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose line to remove.
+                            billing_behavior:
+                              enum:
+                                - prepaid
+                                - usage_based
+                              type: string
+                              description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                            interval_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: Only match the price billed every this many intervals.
+                          required:
+                            - feature_id
+                            - billing_behavior
+                          additionalProperties: false
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan linked to the parent plan.
+                            price:
+                              anyOf:
+                                - const: true
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                      description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: Only match the price billed every this many intervals.
+                                  additionalProperties: false
+                              description: Remove the base price line. Pass true, or an object to narrow by interval.
+                            feature_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose line to remove.
+                                  billing_behavior:
+                                    enum:
+                                      - prepaid
+                                      - usage_based
+                                    type: string
+                                    description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                  interval_count:
+                                    type: integer
+                                    minimum: -9.007199254740991e+15
+                                    maximum: 9.007199254740991e+15
+                                    exclusiveMinimum: 0
+                                    description: Only match the price billed every this many intervals.
+                                required:
+                                  - feature_id
+                                  - billing_behavior
+                                additionalProperties: false
+                          required:
+                            - license_plan_id
+                          additionalProperties: false
+                    required:
+                      - plan_id
+                    additionalProperties: false
+                    title: RemoveLine
+                    description: Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+                  description: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+                add_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
+                    required:
+                      - amount
+                      - description
+                    title: AddLine
+                    description: A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+                  description: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -48165,6 +48601,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -48679,8 +49116,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -49405,6 +49848,10 @@ paths:
 
         @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
 
+        @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
+        @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 
         @param billingCycleAnchor - Reset the billing cycle immediately with 'now', or schedule a reset at a future Unix timestamp in milliseconds. (optional)
@@ -49654,6 +50101,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -50193,6 +50641,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -51092,6 +51541,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -51598,8 +52048,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -51688,6 +52144,186 @@ paths:
                       - amount
                       - description
                   description: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+                remove_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: "The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+                      direction:
+                        enum:
+                          - charge
+                          - refund
+                        type: string
+                        description: Only remove charges or only remove refunds (credits). Omit to remove both.
+                      price:
+                        anyOf:
+                          - const: true
+                          - type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                              interval_count:
+                                type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                                description: Only match the price billed every this many intervals.
+                            additionalProperties: false
+                        description: Remove the base price line. Pass true, or an object to narrow by interval.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose line to remove.
+                            billing_behavior:
+                              enum:
+                                - prepaid
+                                - usage_based
+                              type: string
+                              description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                            interval_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: Only match the price billed every this many intervals.
+                          required:
+                            - feature_id
+                            - billing_behavior
+                          additionalProperties: false
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan linked to the parent plan.
+                            price:
+                              anyOf:
+                                - const: true
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                      description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: Only match the price billed every this many intervals.
+                                  additionalProperties: false
+                              description: Remove the base price line. Pass true, or an object to narrow by interval.
+                            feature_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose line to remove.
+                                  billing_behavior:
+                                    enum:
+                                      - prepaid
+                                      - usage_based
+                                    type: string
+                                    description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                  interval_count:
+                                    type: integer
+                                    minimum: -9.007199254740991e+15
+                                    maximum: 9.007199254740991e+15
+                                    exclusiveMinimum: 0
+                                    description: Only match the price billed every this many intervals.
+                                required:
+                                  - feature_id
+                                  - billing_behavior
+                                additionalProperties: false
+                          required:
+                            - license_plan_id
+                          additionalProperties: false
+                    required:
+                      - plan_id
+                    additionalProperties: false
+                    title: RemoveLine
+                    description: Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+                  description: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+                add_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
+                    required:
+                      - amount
+                      - description
+                    title: AddLine
+                    description: A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+                  description: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
                 cancel_action:
                   enum:
                     - cancel_immediately
@@ -51903,6 +52539,10 @@ paths:
         @param removeDiscounts - Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged. (optional)
 
         @param customLineItems - Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription. (optional)
+
+        @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+
+        @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
 
         @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 
@@ -52153,6 +52793,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -52692,6 +53333,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -53591,6 +54233,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -54097,8 +54740,14 @@ paths:
                       description: If true, enables the plan immediately even though the invoice is not paid yet.
                     finalize:
                       type: boolean
-                      default: true
-                      description: If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+                      description: "Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."
+                    issue_method:
+                      enum:
+                        - draft
+                        - finalize
+                        - send
+                      type: string
+                      description: "How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."
                     invoice_template_id:
                       type: string
                       description: ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
@@ -54187,6 +54836,186 @@ paths:
                       - amount
                       - description
                   description: Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.
+                remove_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: "The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+                      direction:
+                        enum:
+                          - charge
+                          - refund
+                        type: string
+                        description: Only remove charges or only remove refunds (credits). Omit to remove both.
+                      price:
+                        anyOf:
+                          - const: true
+                          - type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                              interval_count:
+                                type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                                description: Only match the price billed every this many intervals.
+                            additionalProperties: false
+                        description: Remove the base price line. Pass true, or an object to narrow by interval.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose line to remove.
+                            billing_behavior:
+                              enum:
+                                - prepaid
+                                - usage_based
+                              type: string
+                              description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                            interval_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: Only match the price billed every this many intervals.
+                          required:
+                            - feature_id
+                            - billing_behavior
+                          additionalProperties: false
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan linked to the parent plan.
+                            price:
+                              anyOf:
+                                - const: true
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                      description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: Only match the price billed every this many intervals.
+                                  additionalProperties: false
+                              description: Remove the base price line. Pass true, or an object to narrow by interval.
+                            feature_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose line to remove.
+                                  billing_behavior:
+                                    enum:
+                                      - prepaid
+                                      - usage_based
+                                    type: string
+                                    description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                  interval_count:
+                                    type: integer
+                                    minimum: -9.007199254740991e+15
+                                    maximum: 9.007199254740991e+15
+                                    exclusiveMinimum: 0
+                                    description: Only match the price billed every this many intervals.
+                                required:
+                                  - feature_id
+                                  - billing_behavior
+                                additionalProperties: false
+                          required:
+                            - license_plan_id
+                          additionalProperties: false
+                    required:
+                      - plan_id
+                    additionalProperties: false
+                    title: RemoveLine
+                    description: Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+                  description: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+                add_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
+                    required:
+                      - amount
+                      - description
+                    title: AddLine
+                    description: A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+                  description: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
                 cancel_action:
                   enum:
                     - cancel_immediately
@@ -55618,6 +56447,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -56157,6 +56987,7 @@ paths:
                                   - graduated
                                   - volume
                                 type: string
+                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                               interval:
                                 enum:
                                   - one_off
@@ -57056,6 +57887,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -57615,6 +58447,186 @@ paths:
                       - amount
                       - description
                   description: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
+                remove_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: "The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request."
+                      entity_id:
+                        anyOf:
+                          - type: string
+                            minLength: 1
+                          - type: "null"
+                        description: The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+                      direction:
+                        enum:
+                          - charge
+                          - refund
+                        type: string
+                        description: Only remove charges or only remove refunds (credits). Omit to remove both.
+                      price:
+                        anyOf:
+                          - const: true
+                          - type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                              interval_count:
+                                type: integer
+                                minimum: -9.007199254740991e+15
+                                maximum: 9.007199254740991e+15
+                                exclusiveMinimum: 0
+                                description: Only match the price billed every this many intervals.
+                            additionalProperties: false
+                        description: Remove the base price line. Pass true, or an object to narrow by interval.
+                      feature_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature whose line to remove.
+                            billing_behavior:
+                              enum:
+                                - prepaid
+                                - usage_based
+                              type: string
+                              description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                            interval:
+                              enum:
+                                - one_off
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                            interval_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: Only match the price billed every this many intervals.
+                          required:
+                            - feature_id
+                            - billing_behavior
+                          additionalProperties: false
+                      license_quantities:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            license_plan_id:
+                              type: string
+                              description: The license plan linked to the parent plan.
+                            price:
+                              anyOf:
+                                - const: true
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - one_off
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                      description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9.007199254740991e+15
+                                      maximum: 9.007199254740991e+15
+                                      exclusiveMinimum: 0
+                                      description: Only match the price billed every this many intervals.
+                                  additionalProperties: false
+                              description: Remove the base price line. Pass true, or an object to narrow by interval.
+                            feature_quantities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature whose line to remove.
+                                  billing_behavior:
+                                    enum:
+                                      - prepaid
+                                      - usage_based
+                                    type: string
+                                    description: "Which of the feature's prices to match: 'prepaid' or 'usage_based'."
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+                                  interval_count:
+                                    type: integer
+                                    minimum: -9.007199254740991e+15
+                                    maximum: 9.007199254740991e+15
+                                    exclusiveMinimum: 0
+                                    description: Only match the price billed every this many intervals.
+                                required:
+                                  - feature_id
+                                  - billing_behavior
+                                additionalProperties: false
+                          required:
+                            - license_plan_id
+                          additionalProperties: false
+                    required:
+                      - plan_id
+                    additionalProperties: false
+                    title: RemoveLine
+                    description: Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+                  description: Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+                add_lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      amount:
+                        type: number
+                        description: Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+                      description:
+                        type: string
+                        description: Description for the line item.
+                      period_start:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+                      period_end:
+                        type: integer
+                        minimum: 0
+                        maximum: 9.007199254740991e+15
+                        description: End of the period this charge covers, in milliseconds. Given together with period_start.
+                    required:
+                      - amount
+                      - description
+                    title: AddLine
+                    description: A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+                  description: Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
                 processor_subscription_id:
                   type: string
                   description: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -63137,6 +64149,12 @@ paths:
                   minimum: 1
                   maximum: 250
                   description: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+                measure:
+                  enum:
+                    - sum
+                    - count
+                  type: string
+                  description: 'What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.'
                 aggregate_on:
                   enum:
                     - deducted
@@ -63713,6 +64731,7 @@ paths:
                                         - graduated
                                         - volume
                                       type: string
+                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                     interval:
                                       enum:
                                         - one_off
@@ -64216,6 +65235,7 @@ paths:
                                               - graduated
                                               - volume
                                             type: string
+                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                           interval:
                                             enum:
                                               - one_off
@@ -66658,6 +67678,7 @@ paths:
                                                 - graduated
                                                 - volume
                                               type: string
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                             interval:
                                               enum:
                                                 - one_off
@@ -67161,6 +68182,7 @@ paths:
                                                       - graduated
                                                       - volume
                                                     type: string
+                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   interval:
                                                     enum:
                                                       - one_off
@@ -78266,6 +79288,7 @@ webhooks:
                                                       - amount
                                                     additionalProperties: false
                                                 tier_behavior:
+                                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   type: string
                                                   enum:
                                                     - graduated
@@ -79244,6 +80267,7 @@ webhooks:
                                                           - amount
                                                         additionalProperties: false
                                                     tier_behavior:
+                                                      description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                       type: string
                                                       enum:
                                                         - graduated
@@ -80140,6 +81164,7 @@ webhooks:
                                                                         - amount
                                                                       additionalProperties: false
                                                                   tier_behavior:
+                                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                     type: string
                                                                     enum:
                                                                       - graduated
@@ -81486,6 +82511,7 @@ webhooks:
                                                       - amount
                                                     additionalProperties: false
                                                 tier_behavior:
+                                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                   type: string
                                                   enum:
                                                     - graduated
@@ -82093,6 +83119,7 @@ webhooks:
                                                   - amount
                                                 additionalProperties: false
                                             tier_behavior:
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                               type: string
                                               enum:
                                                 - graduated
@@ -82989,6 +84016,7 @@ webhooks:
                                                                 - amount
                                                               additionalProperties: false
                                                           tier_behavior:
+                                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                             type: string
                                                             enum:
                                                               - graduated
@@ -83798,6 +84826,7 @@ webhooks:
                                                             - amount
                                                           additionalProperties: false
                                                       tier_behavior:
+                                                        description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                         type: string
                                                         enum:
                                                           - graduated
@@ -84776,6 +85805,7 @@ webhooks:
                                                                 - amount
                                                               additionalProperties: false
                                                           tier_behavior:
+                                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                             type: string
                                                             enum:
                                                               - graduated
@@ -85672,6 +86702,7 @@ webhooks:
                                                                               - amount
                                                                             additionalProperties: false
                                                                         tier_behavior:
+                                                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                           type: string
                                                                           enum:
                                                                             - graduated
@@ -86505,6 +87536,7 @@ webhooks:
                                                                     - amount
                                                                   additionalProperties: false
                                                               tier_behavior:
+                                                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                 type: string
                                                                 enum:
                                                                   - graduated
@@ -87483,6 +88515,7 @@ webhooks:
                                                                         - amount
                                                                       additionalProperties: false
                                                                   tier_behavior:
+                                                                    description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                     type: string
                                                                     enum:
                                                                       - graduated
@@ -88379,6 +89412,7 @@ webhooks:
                                                                                       - amount
                                                                                     additionalProperties: false
                                                                                 tier_behavior:
+                                                                                  description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                                   type: string
                                                                                   enum:
                                                                                     - graduated
@@ -89725,6 +90759,7 @@ webhooks:
                                                                     - amount
                                                                   additionalProperties: false
                                                               tier_behavior:
+                                                                description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                 type: string
                                                                 enum:
                                                                   - graduated
@@ -90332,6 +91367,7 @@ webhooks:
                                                                 - amount
                                                               additionalProperties: false
                                                           tier_behavior:
+                                                            description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                             type: string
                                                             enum:
                                                               - graduated
@@ -91228,6 +92264,7 @@ webhooks:
                                                                               - amount
                                                                             additionalProperties: false
                                                                         tier_behavior:
+                                                                          description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                                                           type: string
                                                                           enum:
                                                                             - graduated
@@ -91933,6 +92970,7 @@ webhooks:
                                                   - amount
                                                 additionalProperties: false
                                             tier_behavior:
+                                              description: How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
                                               type: string
                                               enum:
                                                 - graduated

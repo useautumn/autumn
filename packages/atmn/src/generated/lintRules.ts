@@ -394,6 +394,26 @@ export const LINT_RULES: LintRules = {
 				because:
 					"An archived feature should not gain new customers through a live plan.",
 			},
+			{
+				kind: "targetForbids",
+				field: "featureId",
+				in: "features",
+				matching: "featureId",
+				target: "consumable",
+				equals: false,
+				whenEquals: {
+					"price.tierBehavior": "volume",
+					"price.billingMethod": "usage_based",
+				},
+				whenStated: [],
+				whenAnyStated: [
+					"price.tiers.0.flatAmount",
+					"price.tiers.0.additionalCurrencies.*.flatAmount",
+				],
+				whenUnstated: [],
+				because:
+					"A volume-tiered allocated item can't have a first-tier flatAmount: Stripe would charge it even with no seats over included. Move the fee to a later tier.",
+			},
 		],
 	},
 	"plans.items.expiry": {
@@ -570,12 +590,15 @@ export const LINT_RULES: LintRules = {
 		},
 		rules: [
 			{
-				kind: "valueWhen",
-				when: "tierBehavior",
-				equals: "volume",
-				field: "billingMethod",
-				mustBe: "prepaid",
-				because: "Volume tiers are prepaid-only.",
+				kind: "refusedWhen",
+				whenEquals: {
+					tierBehavior: "volume",
+					billingMethod: "usage_based",
+				},
+				whenStated: [],
+				whenUnstated: ["tiers.1"],
+				because:
+					"Volume-based pricing on a usage-based item needs at least two tiers. Add a tier, or use graduated pricing for a single rate.",
 			},
 		],
 	},

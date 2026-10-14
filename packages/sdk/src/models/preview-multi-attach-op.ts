@@ -154,10 +154,16 @@ export type PreviewMultiAttachPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PreviewMultiAttachTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PreviewMultiAttachTierBehavior = ClosedEnum<
   typeof PreviewMultiAttachTierBehavior
 >;
@@ -212,6 +218,9 @@ export type PreviewMultiAttachPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewMultiAttachPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PreviewMultiAttachTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -779,6 +788,21 @@ export type PreviewMultiAttachFreeTrialParams = {
   onEnd?: PreviewMultiAttachOnEnd | undefined;
 };
 
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export const PreviewMultiAttachIssueMethod = {
+  Draft: "draft",
+  Finalize: "finalize",
+  Send: "send",
+} as const;
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export type PreviewMultiAttachIssueMethod = ClosedEnum<
+  typeof PreviewMultiAttachIssueMethod
+>;
+
 export const PreviewMultiAttachPaymentMethodType = {
   Card: "card",
   CustomerBalance: "customer_balance",
@@ -805,9 +829,13 @@ export type PreviewMultiAttachInvoiceMode = {
    */
   enablePlanImmediately?: boolean | undefined;
   /**
-   * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+   * Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.
    */
   finalize?: boolean | undefined;
+  /**
+   * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+   */
+  issueMethod?: PreviewMultiAttachIssueMethod | undefined;
   /**
    * ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
    */
@@ -3060,6 +3088,11 @@ export function previewMultiAttachFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachIssueMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachIssueMethod
+> = z.enum(PreviewMultiAttachIssueMethod);
+
+/** @internal */
 export const PreviewMultiAttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
   typeof PreviewMultiAttachPaymentMethodType
 > = z.enum(PreviewMultiAttachPaymentMethodType);
@@ -3068,7 +3101,8 @@ export const PreviewMultiAttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
 export type PreviewMultiAttachInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
-  finalize: boolean;
+  finalize?: boolean | undefined;
+  issue_method?: string | undefined;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
   payment_method_types?: Array<string> | undefined;
@@ -3082,7 +3116,8 @@ export const PreviewMultiAttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.object({
     enabled: z.boolean(),
     enablePlanImmediately: z._default(z.boolean(), false),
-    finalize: z._default(z.boolean(), true),
+    finalize: z.optional(z.boolean()),
+    issueMethod: z.optional(PreviewMultiAttachIssueMethod$outboundSchema),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
     paymentMethodTypes: z.optional(
@@ -3092,6 +3127,7 @@ export const PreviewMultiAttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
+      issueMethod: "issue_method",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
       paymentMethodTypes: "payment_method_types",

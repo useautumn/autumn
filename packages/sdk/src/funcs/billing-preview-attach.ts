@@ -58,6 +58,8 @@ import { Result } from "../types/fp.js";
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
  * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
+ * @param removeLines - Lines to remove from the invoice this request creates. Never changes the subscription or later invoices. (optional)
+ * @param addLines - Lines to add to the invoice this request creates. Never changes the subscription or later invoices. (optional)
  * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
  * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
