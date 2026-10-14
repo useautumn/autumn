@@ -3,6 +3,7 @@ import {
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import { checkResultToApiResponse } from "@autumn/balance-engine/api-renderer";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type CheckResponseWithPreview,
@@ -42,6 +43,13 @@ export async function checkAnswerToApiResponse({
 		result,
 		fullSubject,
 		isDeductingCheck,
+	});
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": command.featureId,
+		"check.allowed": result.allowed,
+		"check.required_balance": result.requiredBalance,
+		"check.balance": balance?.remaining,
+		"check.deny_reason": result.limitType ?? result.reason ?? undefined,
 	});
 	const preview = withPreview
 		? await getCheckPreview({

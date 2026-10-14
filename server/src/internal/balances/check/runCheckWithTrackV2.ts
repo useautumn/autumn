@@ -13,6 +13,7 @@ import {
 	type TrackParams,
 	UsageLimitExceededError,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
@@ -111,6 +112,7 @@ export const runCheckWithTrackV2 = async ({
 	};
 
 	let allowed = true;
+	let denyReason: string | undefined;
 	let trackBalances: Record<string, ApiBalanceV1 | null> | undefined;
 
 	try {
@@ -132,6 +134,7 @@ export const runCheckWithTrackV2 = async ({
 			error instanceof UsageLimitExceededError
 		) {
 			allowed = false;
+			denyReason = error.code;
 		} else {
 			throw error;
 		}
@@ -162,6 +165,14 @@ export const runCheckWithTrackV2 = async ({
 			ctx.logger.error(`Failed to schedule lock expiration: ${error}`);
 		}
 	}
+
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": body.feature_id,
+		"check.allowed": allowed,
+		"check.required_balance": responseRequiredBalance,
+		"check.balance": checkData.apiBalance?.remaining,
+		"check.deny_reason": denyReason,
+	});
 
 	return CheckResponseV3Schema.parse({
 		allowed,

@@ -1,6 +1,7 @@
 import { type AppEnv, AuthType } from "@autumn/shared";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
+import { isLogReplacedByMapleTrace } from "@/external/maple/mapleTraceScope.js";
 import {
 	addAppContextToLogs,
 	addStripeEventToLogs,
@@ -71,5 +72,10 @@ export const stripeLoggerMiddleware = async (
 
 	await next();
 
-	logStripeWebhookResponse({ ctx, statusCode: c.res.status });
+	const statusCode = c.res.status;
+	// An early-acked webhook has answered 200 by now: a handler that threw
+	// shows only in `c.error`, and keeps its line.
+	if (!c.error && isLogReplacedByMapleTrace({ req: c.req, statusCode })) return;
+
+	logStripeWebhookResponse({ ctx, statusCode });
 };

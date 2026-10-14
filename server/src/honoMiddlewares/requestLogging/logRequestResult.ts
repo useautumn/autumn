@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import type { Context } from "hono";
+import { isLogReplacedByMapleTrace } from "@/external/maple/mapleTraceScope.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { isAxiomResponseBodyReductionEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs.js";
@@ -111,6 +112,10 @@ export const logRequestResult = async ({
 }) => {
 	try {
 		if (skipUrls.includes(c.req.path)) {
+			return;
+		}
+
+		if (isLogReplacedByMapleTrace({ req: c.req, statusCode })) {
 			return;
 		}
 

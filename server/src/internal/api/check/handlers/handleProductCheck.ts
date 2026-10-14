@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	SuccessCode,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -75,6 +76,11 @@ export const handleProductCheck = async ({
 		: undefined;
 
 	if (!cusProduct) {
+		trace.getActiveSpan()?.setAttributes({
+			"check.product_id": product_id,
+			"check.allowed": false,
+			"check.deny_reason": "product_not_attached",
+		});
 		return {
 			customer_id,
 			code: SuccessCode.ProductFound,
@@ -88,14 +94,22 @@ export const handleProductCheck = async ({
 		notNullish(cusProduct.trial_ends_at) &&
 		cusProduct.trial_ends_at! > Date.now();
 
+	const allowed =
+		cusProduct.status === CusProductStatus.Active ||
+		cusProduct.status === CusProductStatus.PastDue;
+
+	trace.getActiveSpan()?.setAttributes({
+		"check.product_id": product_id,
+		"check.allowed": allowed,
+		"check.deny_reason": allowed ? undefined : "product_not_active",
+	});
+
 	return {
 		customer_id,
 		code: SuccessCode.ProductFound,
 		product_id,
 		entity_id,
-		allowed:
-			cusProduct.status === CusProductStatus.Active ||
-			cusProduct.status === CusProductStatus.PastDue,
+		allowed,
 		status: notNullish(cusProduct.canceled_at)
 			? "canceled"
 			: onTrial

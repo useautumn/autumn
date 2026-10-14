@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { markJobTraceForMaple } from "@/external/maple/mapleTraceScope.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import {
 	runStripeWebhookReplay,
@@ -43,6 +44,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerChec
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { logContextExtras } from "@/utils/logging/logContextExtras.js";
+import { parseTraceparent } from "@/utils/otel/traceparent.js";
 import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
@@ -57,6 +59,8 @@ const actionHandlers = [
 export interface SqsJob {
 	name: string;
 	data: any;
+	/** W3C trace context of the request that queued the job; only kept Maple traces carry it. */
+	traceparent?: string;
 }
 
 const isClaimContestedError = ({ error }: { error: unknown }): boolean => {
@@ -482,6 +486,9 @@ export const processMessage = async ({
 				customer_id: job.data?.customerId,
 			},
 			attributes: {
+				"messaging.system": "aws_sqs",
+				"messaging.operation.type": "process",
+				"autumn.job_name": job.name,
 				...(Number.isFinite(sentAtMs) && {
 					"queue.dwell_ms": Math.max(0, Date.now() - sentAtMs),
 				}),
@@ -489,7 +496,15 @@ export const processMessage = async ({
 					"queue.receive_count": receiveCount,
 				}),
 			},
-			fn: executeJob,
+			traceparent: job.traceparent,
+			fn: () => {
+				markJobTraceForMaple({
+					jobName: job.name,
+					isContinued:
+						parseTraceparent({ traceparent: job.traceparent }) !== undefined,
+				});
+				return executeJob();
+			},
 		});
 	} catch (error) {
 		const ctx = workerCtx ?? { logger: workerLogger };

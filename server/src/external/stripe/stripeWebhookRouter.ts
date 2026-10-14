@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { withTwStripeWebhookPriority } from "@/external/connect/clientCache/twStripeLimiter/twStripeRequestContext";
 import { stripeLoggerMiddleware } from "@/external/stripe/webhookMiddlewares/stripeLoggerMiddleware.js";
-import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
+import {
+	traceEnrichMiddleware,
+	traceStampMiddleware,
+} from "@/honoMiddlewares/traceMiddleware.js";
 import { handleStripeWebhookEvent } from "./handleStripeWebhookEvent.js";
 import { stripeConnectSeederMiddleware } from "./webhookMiddlewares/stripeConnectSeederMiddleware.js";
 import { stripeIdempotencyMiddleware } from "./webhookMiddlewares/stripeIdempotencyMiddleware.js";
@@ -24,6 +27,8 @@ stripeWebhookRouter.post(
 	stripeLegacySeederMiddleware,
 	stripeToAutumnCustomerMiddleware,
 	stripeIdempotencyMiddleware,
+	// Before the ack: an early ack ends the HTTP span, which must carry the tenant.
+	traceStampMiddleware,
 	stripeWebhookAckMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeSyncMiddleware,
@@ -38,6 +43,8 @@ stripeWebhookRouter.post(
 	stripeConnectSeederMiddleware,
 	stripeToAutumnCustomerMiddleware,
 	stripeIdempotencyMiddleware,
+	// Before the ack: an early ack ends the HTTP span, which must carry the tenant.
+	traceStampMiddleware,
 	stripeWebhookAckMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeSyncMiddleware,

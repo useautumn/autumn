@@ -1,9 +1,11 @@
 import {
+	type AllowedResult,
 	apiBalanceToAllowed,
 	CheckResponseV3Schema,
 	FeatureType,
 	orgToInStatuses,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
@@ -47,6 +49,13 @@ export const getCheckResponseV2 = async ({
 	}
 
 	if (!evaluationApiBalance && !evaluationApiFlag) {
+		trace.getActiveSpan()?.setAttributes({
+			"check.feature_id": originalFeature.id,
+			"check.allowed": false,
+			"check.required_balance": requiredBalance,
+			"check.balance": apiBalance?.remaining,
+			"check.deny_reason": "feature_not_attached",
+		});
 		return CheckResponseV3Schema.parse({
 			allowed: false,
 			customer_id: customerId || "",
@@ -57,8 +66,8 @@ export const getCheckResponseV2 = async ({
 		});
 	}
 
-	const allowed = evaluationApiFlag
-		? true
+	const { allowed, limitType }: AllowedResult = evaluationApiFlag
+		? { allowed: true }
 		: evaluationApiBalance
 			? apiBalanceToAllowed({
 					apiBalance: evaluationApiBalance,
@@ -67,8 +76,16 @@ export const getCheckResponseV2 = async ({
 					requiredBalance,
 					originalFeature,
 					properties,
-				}).allowed
-			: false;
+				})
+			: { allowed: false };
+
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": originalFeature.id,
+		"check.allowed": allowed,
+		"check.required_balance": requiredBalance,
+		"check.balance": apiBalance?.remaining,
+		"check.deny_reason": limitType,
+	});
 
 	return CheckResponseV3Schema.parse({
 		allowed,

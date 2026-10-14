@@ -4,7 +4,7 @@ import { logs, resources } from "@opentelemetry/sdk-node";
 import type pino from "pino";
 import { type PinoLogLine, parseMapleLog } from "./parseMapleLog.js";
 
-const MAPLE_LOGS_URL = "https://ingest.maple.dev/v1/logs";
+const MAPLE_LOGS_URL = `${process.env.MAPLE_OTLP_ENDPOINT ?? "https://ingest.maple.dev"}/v1/logs`;
 
 const SEVERITY_NUMBERS: Record<string, number> = {
 	TRACE: 1,

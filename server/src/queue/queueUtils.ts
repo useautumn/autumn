@@ -8,7 +8,12 @@ import type {
 	UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
+import { type Span, SpanKind, trace } from "@opentelemetry/api";
 import { generateId } from "@server/utils/genUtils";
+import {
+	getMapleTraceMark,
+	isHotMapleJob,
+} from "@/external/maple/mapleTraceScope.js";
 import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
 import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
@@ -17,6 +22,8 @@ import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recov
 import type { EntityCreationRecoveryPayload } from "@/internal/entities/recovery/entityCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
+import { formatTraceparent } from "@/utils/otel/traceparent.js";
+import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { SqsBatchAccumulator } from "./SqsBatchAccumulator.js";
@@ -197,54 +204,85 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 		process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
-		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
+		// The send is a span only for traces going to Maple, so nothing is added
+		// to the hot path otherwise.
+		const activeTraceId = trace.getActiveSpan()?.spanContext().traceId;
+		// Batch jobs are sent from a timer that still holds the context of the
+		// last request to arm it, so they are left out of that request's trace.
+		const mapleMode =
+			activeTraceId && !isHotMapleJob(jobName as string)
+				? getMapleTraceMark(activeTraceId)?.mode
+				: undefined;
 
-		// SQS implementation
-		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
-		const messageId =
-			generateDeduplicationId === false ? undefined : generateId("job");
-		const message = {
-			...(messageId && { id: messageId }),
-			name: jobName as string,
-			data: payload,
+		const send = async (span?: Span) => {
+			const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
+
+			// SQS implementation
+			const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
+			const messageId =
+				generateDeduplicationId === false ? undefined : generateId("job");
+			// Only a kept trace propagates: sampled hot-path messages stay small,
+			// and a dropped parent never leaves an orphaned worker span.
+			const traceparent =
+				span && mapleMode === "keep"
+					? formatTraceparent({ spanContext: span.spanContext() })
+					: undefined;
+			const message = {
+				...(messageId && { id: messageId }),
+				name: jobName as string,
+				data: payload,
+				...(traceparent && { traceparent }),
+			};
+
+			// Convert milliseconds to seconds for SQS (max 900 seconds)
+			const delaySeconds = delayMs
+				? Math.min(Math.floor(delayMs / 1000), 900)
+				: undefined;
+
+			const resolvedMessageDeduplicationId =
+				messageDeduplicationId ??
+				Bun.hash(messageId ?? generateId("dedup")).toString();
+
+			const messageInput = {
+				QueueUrl: resolvedQueueUrl,
+				MessageBody: JSON.stringify(message),
+				...(delaySeconds && { DelaySeconds: delaySeconds }),
+				// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
+				...(isFifoQueue && {
+					MessageGroupId: messageGroupId || generateId("msg"),
+					MessageDeduplicationId: resolvedMessageDeduplicationId,
+				}),
+			};
+
+			const sendBatcher = resolveSqsSendBatcher(resolvedQueueUrl);
+			if (sendBatcher) {
+				await sendBatcher.enqueue({
+					queueUrl: resolvedQueueUrl,
+					jobName: jobName as string,
+					messageBody: messageInput.MessageBody,
+					messageGroupId: messageInput.MessageGroupId,
+					messageDeduplicationId: messageInput.MessageDeduplicationId,
+					delaySeconds: messageInput.DelaySeconds,
+				});
+				return;
+			}
+
+			const command = new SendMessageCommand(messageInput);
+			await sqsClient.send(command);
 		};
 
-		// Convert milliseconds to seconds for SQS (max 900 seconds)
-		const delaySeconds = delayMs
-			? Math.min(Math.floor(delayMs / 1000), 900)
-			: undefined;
-
-		const resolvedMessageDeduplicationId =
-			messageDeduplicationId ??
-			Bun.hash(messageId ?? generateId("dedup")).toString();
-
-		const messageInput = {
-			QueueUrl: resolvedQueueUrl,
-			MessageBody: JSON.stringify(message),
-			...(delaySeconds && { DelaySeconds: delaySeconds }),
-			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.
-			...(isFifoQueue && {
-				MessageGroupId: messageGroupId || generateId("msg"),
-				MessageDeduplicationId: resolvedMessageDeduplicationId,
-			}),
-		};
-
-		const sendBatcher = resolveSqsSendBatcher(resolvedQueueUrl);
-		if (sendBatcher) {
-			await sendBatcher.enqueue({
-				queueUrl: resolvedQueueUrl,
-				jobName: jobName as string,
-				messageBody: messageInput.MessageBody,
-				messageGroupId: messageInput.MessageGroupId,
-				messageDeduplicationId: messageInput.MessageDeduplicationId,
-				delaySeconds: messageInput.DelaySeconds,
-			});
-			return;
-		}
-
-		const command = new SendMessageCommand(messageInput);
-		await sqsClient.send(command);
-		return;
+		if (!mapleMode) return send();
+		return withActiveSpan({
+			name: "sqs.send",
+			kind: SpanKind.PRODUCER,
+			attributes: {
+				"messaging.system": "aws_sqs",
+				"messaging.operation.type": "send",
+				"messaging.destination.name": resolvedQueueUrl.split("/").pop(),
+				"autumn.job_name": jobName as string,
+			},
+			fn: send,
+		});
 	}
 
 	throw new Error("No queue configured. Set SQS_QUEUE_URL_V2");

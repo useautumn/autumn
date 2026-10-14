@@ -1,6 +1,8 @@
-import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
+import { context, SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
 import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
+import { isMapleEnabled } from "@/external/maple/mapleEnabled.js";
 import { type TenantAttrs, withTenantContext } from "./tenantContext.js";
+import { parseTraceparent } from "./traceparent.js";
 
 const tracer = trace.getTracer("autumn.worker");
 
@@ -8,24 +10,36 @@ const tracer = trace.getTracer("autumn.worker");
  * Root span wrapper for worker/cron jobs. Creates a span named after the
  * workflow, stamps workflow + tenant attrs on it AND on the OTel context so
  * every child span inherits them. Records exceptions and sets ERROR status on
- * throw. Always re-throws so SQS retry semantics are preserved.
+ * throw. Always re-throws so SQS retry semantics are preserved. A valid
+ * `traceparent` makes the span a child of the request that queued the job.
  */
 export const withWorkerSpan = async <T>({
 	workflowName,
 	workflowId,
 	tenantAttrs,
 	attributes,
+	traceparent,
 	fn,
 }: {
 	workflowName: string;
 	workflowId: string;
 	tenantAttrs?: TenantAttrs;
 	attributes?: Record<string, string | number>;
+	traceparent?: string;
 	fn: () => Promise<T>;
 }): Promise<T> => {
+	// Only a process that exports to Maple continues a request's trace.
+	const parentSpanContext = isMapleEnabled
+		? parseTraceparent({ traceparent })
+		: undefined;
+	const parentContext = parentSpanContext
+		? trace.setSpanContext(context.active(), parentSpanContext)
+		: context.active();
+
 	return tracer.startActiveSpan(
 		`worker.${workflowName}`,
 		{ kind: SpanKind.CONSUMER },
+		parentContext,
 		async (span) => {
 			span.setAttributes({
 				...attributes,

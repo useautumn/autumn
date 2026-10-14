@@ -1,5 +1,6 @@
 import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -26,6 +27,15 @@ export const logUpdateSubscriptionContext = ({
 	} = billingContext;
 
 	const fullProduct = fullProducts[0];
+
+	trace.getActiveSpan()?.setAttributes({
+		"billing.action":
+			cancelAction && cancelAction !== "uncancel" ? "cancel" : "update",
+		"billing.plan_id": customerProduct.product.id,
+		"billing.plan_version": customerProduct.product.version,
+		"billing.checkout_mode": billingContext.checkoutMode ?? undefined,
+		"billing.no_billing_changes": billingContext.skipBillingChanges,
+	});
 
 	addToExtraLogs({
 		ctx,

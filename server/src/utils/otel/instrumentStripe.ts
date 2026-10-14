@@ -6,6 +6,7 @@ import {
 	trace,
 } from "@opentelemetry/api";
 import type Stripe from "stripe";
+import { isMapleEnabled } from "@/external/maple/mapleEnabled.js";
 import { otelConfig } from "./otelConfig.js";
 
 const TRACER_NAME = "autumn.stripe";
@@ -21,7 +22,16 @@ type StripeApiLike = {
 
 type MakeRequestArgs = Parameters<StripeHttpClient["makeRequest"]>;
 
-const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
+const finalizeSpan = ({
+	span,
+	error,
+	failed,
+}: {
+	span: Span;
+	error?: unknown;
+	/** Stripe answered with an error status; the SDK throws it after this span ends. */
+	failed?: boolean;
+}) => {
 	try {
 		if (error) {
 			span.setStatus({ code: SpanStatusCode.ERROR });
@@ -30,6 +40,8 @@ const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
 			} else {
 				span.recordException(new Error(String(error)));
 			}
+		} else if (failed) {
+			span.setStatus({ code: SpanStatusCode.ERROR });
 		} else {
 			span.setStatus({ code: SpanStatusCode.OK });
 		}
@@ -99,16 +111,16 @@ export const instrumentStripe = ({ client }: { client: Stripe }): Stripe => {
 				originalMakeRequest(...args),
 			);
 
+			let failed = false;
 			try {
-				span.setAttribute(
-					"http.response.status_code",
-					response.getStatusCode(),
-				);
+				const statusCode = response.getStatusCode();
+				span.setAttribute("http.response.status_code", statusCode);
+				failed = isMapleEnabled && statusCode >= 400;
 			} catch {
 				// Ignore response inspection failures
 			}
 
-			finalizeSpan({ span });
+			finalizeSpan({ span, failed });
 			return response;
 		} catch (error) {
 			finalizeSpan({ span, error });

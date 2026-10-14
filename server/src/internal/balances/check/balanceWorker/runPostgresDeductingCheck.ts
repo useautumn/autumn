@@ -13,6 +13,7 @@ import {
 	type TrackParams,
 	UsageLimitExceededError,
 } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type CheckResponseWithPreview,
@@ -21,7 +22,9 @@ import {
 import { getTrackFeatureDeductions } from "../../track/utils/getFeatureDeductions.js";
 import { runPostgresTrackV3 } from "../../track/v3/runPostgresTrackV3.js";
 
-const isRefusedDeduction = (error: unknown): boolean =>
+const isRefusedDeduction = (
+	error: unknown,
+): error is InsufficientBalanceError | UsageLimitExceededError =>
 	error instanceof InsufficientBalanceError ||
 	error instanceof UsageLimitExceededError;
 
@@ -85,6 +88,7 @@ export async function runPostgresDeductingCheck({
 	}).map((deduction) => ({ ...deduction, enforceOverdueBlock: true }));
 
 	let allowed = true;
+	let denyReason: string | undefined;
 	let balance: ApiBalanceV1 | null;
 	try {
 		const response = await runPostgresTrackV3({
@@ -97,8 +101,16 @@ export async function runPostgresDeductingCheck({
 	} catch (error) {
 		if (!isRefusedDeduction(error)) throw error;
 		allowed = false;
+		denyReason = error.code;
 		balance = fullSubjectToApiBalance({ ctx, fullSubject, feature });
 	}
+	trace.getActiveSpan()?.setAttributes({
+		"check.feature_id": feature.id,
+		"check.allowed": allowed,
+		"check.required_balance": requiredBalance,
+		"check.balance": balance?.remaining,
+		"check.deny_reason": denyReason,
+	});
 
 	const response = applyResponseVersionChanges<CheckResponseV3>({
 		ctx,

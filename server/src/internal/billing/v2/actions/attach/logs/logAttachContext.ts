@@ -1,5 +1,6 @@
 import type { AttachBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
@@ -28,6 +29,16 @@ export const logAttachContext = ({
 		resetCycleAnchorMs,
 		trialContext,
 	} = billingContext;
+
+	trace.getActiveSpan()?.setAttributes({
+		"billing.action": "attach",
+		"billing.plan_id": attachProduct.id,
+		"billing.plan_version": attachProduct.version,
+		"billing.from_plan_id": currentCustomerProduct?.product.id,
+		"billing.plan_timing": planTiming,
+		"billing.checkout_mode": checkoutMode ?? undefined,
+		"billing.no_billing_changes": billingContext.skipBillingChanges,
+	});
 
 	addToExtraLogs({
 		ctx,

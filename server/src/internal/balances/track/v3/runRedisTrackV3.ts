@@ -4,7 +4,8 @@ import type {
 	TrackParams,
 	TrackResponseV3,
 } from "@autumn/shared";
-import { buildAiCreditCostProperty, tryCatch } from "@autumn/shared";
+import { buildAiCreditCostProperty, sumValues, tryCatch } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import {
@@ -202,6 +203,18 @@ export const runRedisTrackV3 = async ({
 		featureDeductions,
 		updates,
 	});
+
+	// Row balances, summed over every entitlement the event drew from.
+	const rowUpdates = Object.values(updates);
+	if (rowUpdates.length > 0) {
+		const deducted = sumValues(rowUpdates.map((update) => update.deducted));
+		const after = sumValues(rowUpdates.map((update) => update.balance));
+		trace.getActiveSpan()?.setAttributes({
+			"balance.before": sumValues([after, deducted]),
+			"balance.after": after,
+			"balance.deducted": deducted,
+		});
+	}
 
 	return {
 		customer_id: body.customer_id,

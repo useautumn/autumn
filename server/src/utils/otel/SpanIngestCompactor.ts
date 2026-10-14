@@ -11,7 +11,7 @@ const getQueryId = ({ statement }: { statement: string }) =>
 const getDurationMs = ({ span }: { span: ReadableSpan }) =>
 	span.duration[0] * 1000 + span.duration[1] / 1_000_000;
 
-const withAttributes = ({
+export const withAttributes = ({
 	span,
 	attributes,
 }: {

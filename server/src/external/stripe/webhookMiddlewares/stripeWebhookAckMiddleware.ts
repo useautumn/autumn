@@ -1,5 +1,6 @@
 import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
+import { addMapleTraceRoot } from "@/external/maple/mapleTraceScope.js";
 import { enqueueStripeWebhookReplay } from "../webhookReplay/enqueueStripeWebhookReplay.js";
 import { stripeWebhookErrorWouldRedeliver } from "../webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
@@ -31,13 +32,23 @@ export const stripeWebhookAckMiddleware = async (
 		classifyStripeWebhookAckMode({ event: ctx.stripeEvent });
 	const idempotency = ctx.webhookIdempotency;
 
+	// Before the ack: an early ack ends the HTTP span.
+	const { stripeEvent } = ctx;
+	trace.getActiveSpan()?.setAttributes({
+		"stripe.event.id": stripeEvent.id,
+		"stripe.event.type": stripeEvent.type,
+		"stripe.object_id":
+			"id" in stripeEvent.data.object ? stripeEvent.data.object.id : undefined,
+		"stripe.livemode": stripeEvent.livemode,
+		"stripe.webhook.ack_mode": ackMode,
+	});
+
 	if (ackMode === "sync") {
 		const queueSyncFailure = (error: unknown) => {
 			if (!stripeWebhookErrorWouldRedeliver({ error })) return;
 			return enqueueStripeWebhookReplay({
 				ctx,
-				failureReason:
-					error instanceof Error ? error.message : String(error),
+				failureReason: error instanceof Error ? error.message : String(error),
 			});
 		};
 
@@ -71,6 +82,7 @@ export const stripeWebhookAckMiddleware = async (
 	// still-active root HTTP span; ended in finally(...) when deferred work
 	// completes so traceEnrichMiddleware + child spans land on a live span.
 	const deferredSpan = tracer.startSpan("stripe.webhook.deferred");
+	addMapleTraceRoot(deferredSpan);
 	const ctxWithSpan = trace.setSpan(context.active(), deferredSpan);
 
 	const runWebhook = () =>

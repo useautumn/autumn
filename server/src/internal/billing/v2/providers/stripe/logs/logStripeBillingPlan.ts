@@ -1,7 +1,7 @@
+import type { BillingContext, StripeBillingPlan } from "@autumn/shared";
+import { trace } from "@opentelemetry/api";
 import { customerProductsToPricesWithProduct } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
-import type { StripeBillingPlan } from "@autumn/shared";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logStripeBillingPlan = ({
@@ -17,8 +17,12 @@ export const logStripeBillingPlan = ({
 		customerProducts: billingContext.fullCustomer.customer_products,
 	});
 
-	const { invoiceAction, subscriptionAction, refundAction, ...restBillingPlan } =
-		stripeBillingPlan;
+	const {
+		invoiceAction,
+		subscriptionAction,
+		refundAction,
+		...restBillingPlan
+	} = stripeBillingPlan;
 
 	const refund = refundAction
 		? `${refundAction.amountInCents} cents from charge ${refundAction.chargeId} (invoice ${refundAction.stripeInvoiceId})`
@@ -35,6 +39,30 @@ export const logStripeBillingPlan = ({
 	// 		: subscriptionAction
 	// 			? { type: subscriptionAction.type }
 	// 			: undefined;
+
+	const {
+		subscriptionScheduleAction,
+		invoiceItemsAction,
+		checkoutSessionAction,
+		replacedSubscriptionAction,
+	} = restBillingPlan;
+	trace.getActiveSpan()?.setAttributes({
+		// Empty when the plan leaves Stripe untouched.
+		"billing.stripe_actions": [
+			subscriptionAction &&
+				subscriptionAction.type !== "none" &&
+				`subscription.${subscriptionAction.type}`,
+			subscriptionScheduleAction &&
+				`subscription_schedule.${subscriptionScheduleAction.type}`,
+			invoiceAction && "invoice",
+			invoiceItemsAction && "invoice_items",
+			checkoutSessionAction && "checkout_session",
+			refundAction && "refund",
+			replacedSubscriptionAction && "replaced_subscription",
+		]
+			.filter(Boolean)
+			.join(","),
+	});
 
 	addToExtraLogs({
 		ctx,
