@@ -9,9 +9,19 @@ const TICK_MS = 1000;
  * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
  * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
  */
-// BENCH ONLY (staging #361, never merged): 3, not 30, so no checkpoint copies 30 s of log at once.
-export const TICKS_PER_FILE = 3;
+export const TICKS_PER_FILE = 30;
+/** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
+ * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
+export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
 const WAL_SUFFIX = "-wal";
+
+const walBytesOf = ({ path }: { path: string }): number => {
+	try {
+		return statSync(`${path}${WAL_SUFFIX}`).size;
+	} catch {
+		return 0;
+	}
+};
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {
 	try {
@@ -84,11 +94,11 @@ export const startWalCheckpointer = ({
 		let walBytes = 0;
 		let maxMs = 0;
 		paths.forEach((path, index) => {
-			if (index % TICKS_PER_FILE !== tick % TICKS_PER_FILE) return;
+			const size = walBytesOf({ path });
+			const itsTurn = index % TICKS_PER_FILE === tick % TICKS_PER_FILE;
+			if (!itsTurn && size <= CHECKPOINT_WAL_BYTES) return;
 			const fileStartedAt = performance.now();
-			try {
-				walBytes += statSync(`${path}${WAL_SUFFIX}`).size;
-			} catch {}
+			walBytes += size;
 			checkpointOne({ path });
 			files++;
 			maxMs = Math.max(maxMs, performance.now() - fileStartedAt);
