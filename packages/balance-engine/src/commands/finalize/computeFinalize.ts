@@ -10,9 +10,14 @@ import { toDeductionSelection } from "../../deduction/toDeductionSelection.js";
 import type { DeductionDecision } from "../../deduction/types/deductionDecision.js";
 import type { DeductionRequest } from "../../deduction/types/deductionRequest.js";
 import { LockNotFoundError } from "../../errors.js";
+import type { LockRowChange } from "../../models/mutation/rowChange.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
+import {
+	atomSourceToRowChange,
+	isAtomReplay,
+} from "../common/atomSourceToRowChange.js";
 import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
 import { unwindLock } from "./unwindLock/unwindLock.js";
@@ -36,12 +41,20 @@ export const computeFinalizeDecision = ({
 		(openLock) => openLock.id === lock.id,
 	);
 
-	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
+	// An Atom's finalize already applied, or on a lock Autumn already settled, settles nothing: only its seq lands.
+	const settlesNothing =
+		command.source !== undefined &&
+		(!isOpen ||
+			isAtomReplay({ source: command.source, customer: fullSubject.customer }));
+	if (!isOpen && !settlesNothing)
+		throw new LockNotFoundError({ lockId: lock.lock_id });
 
 	const lockValue = lock.deltas
 		.reduce((total, delta) => total.minus(delta.valueDelta), new Decimal(0))
 		.toNumber();
-	const finalValue = command.finalValue ?? lockValue;
+	const finalValue = settlesNothing
+		? lockValue
+		: (command.finalValue ?? lockValue);
 
 	const { unwindValue, additionalValue } = splitFinalize({
 		lockValue,
@@ -93,6 +106,15 @@ export const computeFinalizeDecision = ({
 	const outcome = deductionStateToOutcome({ context, deductionState, request });
 
 	const { rejected } = outcome;
+	const sourceChange =
+		command.source &&
+		atomSourceToRowChange({
+			source: command.source,
+			customer: fullSubject.customer,
+		});
+	const lockChanges = settlesNothing
+		? []
+		: [{ table: "locks", op: "delete", id: lock.id } satisfies LockRowChange];
 	const mutation: SubjectStateMutation = {
 		schemaVersion: 1,
 		type: "mutation",
@@ -105,9 +127,10 @@ export const computeFinalizeDecision = ({
 		},
 		command,
 		// A rejected confirm moves nothing and leaves the lock open for another attempt.
-		changes: rejected
-			? []
-			: [...outcome.changes, { table: "locks", op: "delete", id: lock.id }],
+		changes: [
+			...(rejected ? [] : [...outcome.changes, ...lockChanges]),
+			...(sourceChange ? [sourceChange] : []),
+		],
 		result: {
 			type: "finalize",
 			status: rejected ? "rejected" : "applied",

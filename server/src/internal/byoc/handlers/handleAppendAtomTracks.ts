@@ -25,7 +25,8 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 			400,
 		);
 	try {
-		await getBalanceWorkerClient().queue.track({ commands });
+		// One append keeps a lock's track ahead of its finalize.
+		await getBalanceWorkerClient().enqueue({ commands });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

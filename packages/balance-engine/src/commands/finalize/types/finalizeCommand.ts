@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { atomSourceSchema } from "../../../models/command/atomSource.js";
 import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
 import { commandOrgSchema } from "../../../models/command/commandOrg.js";
 import { propertiesSchema } from "../../../models/common/json.js";
@@ -23,6 +24,7 @@ export const finalizeCommandSchema = mutatingCommandSchema
 		finalValue: finiteNumberSchema.nullable(),
 		/** Overrides the lock's own properties on whatever the finalize deducts. */
 		properties: propertiesSchema,
+		source: atomSourceSchema.optional(),
 	})
 	.loose();
 

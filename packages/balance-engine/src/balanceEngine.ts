@@ -75,7 +75,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
-export { trackOfNothing } from "./commands/track/trackSourceToRowChange.js";
+export { trackOfNothing } from "./commands/track/trackOfNothing.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
