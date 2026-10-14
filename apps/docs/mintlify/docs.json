@@ -192,17 +192,22 @@
 						"pages": [
 							"api-reference/billing/attach",
 							"api-reference/billing/billingUpdate",
-							"api-reference/billing/previewAttach",
-							"api-reference/billing/previewUpdate",
 							"api-reference/billing/openCustomerPortal",
 							"api-reference/billing/setupPayment",
-							"api-reference/billing/previewMultiAttach",
 							"api-reference/billing/multiAttach",
-							"api-reference/billing/previewMultiUpdate",
 							"api-reference/billing/multiUpdate",
 							"api-reference/billing/createSchedule",
 							"api-reference/billing/verify",
 							"api-reference/billing/import",
+							{
+								"group": "Previews",
+								"pages": [
+									"api-reference/billing/previewAttach",
+									"api-reference/billing/previewUpdate",
+									"api-reference/billing/previewMultiAttach",
+									"api-reference/billing/previewMultiUpdate"
+								]
+							},
 							{
 								"group": "Licenses",
 								"pages": [
@@ -329,8 +334,13 @@
 							"api-reference/webhooks/createWebhook",
 							"api-reference/webhooks/updateWebhook",
 							"api-reference/webhooks/deleteWebhook",
-							"api-reference/webhooks/previewSyncWebhooks",
-							"api-reference/webhooks/syncWebhooks"
+							"api-reference/webhooks/syncWebhooks",
+							{
+								"group": "Previews",
+								"pages": [
+									"api-reference/webhooks/previewSyncWebhooks"
+								]
+							}
 						]
 					},
 					{
