@@ -38,7 +38,10 @@ export const startFakeAutumn = () => {
 		);
 		if (!parsed.success || switches.refuseWith === 400)
 			return Response.json({ code: "unreadable" }, { status: 400 });
-		const commands = parsed.data.tracks.map(({ command }) =>
+		const handedIn = parsed.data.tracks.flatMap((entry) =>
+			"command" in entry ? [entry] : [],
+		);
+		const commands = handedIn.map(({ command }) =>
 			parseTrackCommand({ input: command }),
 		);
 		if (
@@ -46,7 +49,7 @@ export const startFakeAutumn = () => {
 		)
 			return Response.json({ code: "unreadable" }, { status: 400 });
 		requestSizes.push(parsed.data.tracks.length);
-		for (const [index, { writerId, seq }] of parsed.data.tracks.entries()) {
+		for (const [index, { writerId, seq }] of handedIn.entries()) {
 			const command = commands[index] as (typeof commands)[number];
 			const key = command.idempotency?.key ?? command.commandId;
 			if (appliedKeys.has(key)) continue;

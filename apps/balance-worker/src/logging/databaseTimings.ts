@@ -8,6 +8,7 @@ export type DatabaseQueryKind =
 	| "subject_snapshot"
 	| "entity_rows"
 	| "catalog_rows"
+	| "lock_rows"
 	| "billing_anchors"
 	| "claim_customer"
 	| "pooled_balances"

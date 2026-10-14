@@ -10,17 +10,40 @@ const trackCommandOnWire = z.custom<TrackCommand>(
 	(value) => typeof value === "object" && value !== null,
 );
 
+/** A lock the Atom settles, named as the API names it: Autumn settles its own row, never the Atom's copy. */
+const atomFinalizeSchema = z.object({
+	requestId: z.string().min(1),
+	occurredAt: z.number().int().nonnegative(),
+	customer_id: z.string().min(1),
+	lock_id: z.string().min(1),
+	/** The lock's entity and feature, as its track named them: the view it settles in and what a confirm above it is attributed to. */
+	entity_id: z.string().min(1).nullable(),
+	feature_id: z.string().min(1),
+	/** 0 releases the lock, null confirms it at what it took. */
+	finalValue: z.number().nullable(),
+	properties: z.record(z.string(), z.unknown()).nullish(),
+});
+
+export type AtomFinalize = z.infer<typeof atomFinalizeSchema>;
+
 /**
- * Journaled tracks: `writerId` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up to
+ * Journaled tracks and finalizes: `writerId` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up to
  * #N from that journal". A new file is a new writer; one request may carry every journal of a thread.
  */
 export const AtomTracksAppendRequestSchema = z.object({
 	tracks: z.array(
-		z.object({
-			writerId: z.string().min(1),
-			seq: z.number().int().positive(),
-			command: trackCommandOnWire,
-		}),
+		z.union([
+			z.object({
+				writerId: z.string().min(1),
+				seq: z.number().int().positive(),
+				command: trackCommandOnWire,
+			}),
+			z.object({
+				writerId: z.string().min(1),
+				seq: z.number().int().positive(),
+				finalize: atomFinalizeSchema,
+			}),
+		]),
 	),
 });
 

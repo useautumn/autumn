@@ -18,6 +18,7 @@ const mockState = {
 	releaseClaimCalls: [] as Record<string, unknown>[],
 	queueCalls: [] as Record<string, unknown>[],
 	queueResponse: { success: true } as { success: true } | null,
+	lockLookups: [] as Record<string, unknown>[],
 };
 
 await mockModuleWithRestore(
@@ -29,7 +30,12 @@ await mockModuleWithRestore(
 
 await mockModuleWithRestore(
 	"@/internal/balances/finalizeLock/balanceWorker/getBalanceLock.js",
-	() => ({ getBalanceLock: async () => null }),
+	() => ({
+		getBalanceLock: async (args: Record<string, unknown>) => {
+			mockState.lockLookups.push(args);
+			return null;
+		},
+	}),
 );
 await mockModuleWithRestore(
 	"@/internal/balances/utils/lock/fetchLockReceipt.js",
@@ -91,6 +97,7 @@ const resetMockState = () => {
 	mockState.releaseClaimCalls = [];
 	mockState.queueCalls = [];
 	mockState.queueResponse = { success: true };
+	mockState.lockLookups = [];
 };
 
 beforeEach(resetMockState);
@@ -174,6 +181,34 @@ describe("runFinalizeLock", () => {
 
 		await expect(runFinalizeLock({ ctx, params })).rejects.toBe(error);
 		expect(mockState.queueCalls).toHaveLength(0);
+	});
+});
+
+describe("runFinalizeLock with a customer_id (API 2.6)", () => {
+	test("looks the lock up only among the customer's own; a pre-2.6 finalize naming none searches by lock_id alone", async () => {
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "" } as never,
+		});
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "cus_123" } as never,
+		});
+
+		expect(mockState.lockLookups).toEqual([
+			{ ctx, lockId: "lock_123", customerId: undefined },
+			{ ctx, lockId: "lock_123", customerId: "cus_123" },
+		]);
+	});
+
+	test("a Redis lock is finalized by its lock_id whatever customer the finalize names, as before 2.6", async () => {
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "cus_other" } as never,
+		});
+
+		expect(mockState.finalizeV2Calls).toHaveLength(1);
+		expect(mockState.releaseClaimCalls).toEqual([]);
 	});
 });
 

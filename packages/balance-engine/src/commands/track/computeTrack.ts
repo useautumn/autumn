@@ -11,6 +11,7 @@ import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.j
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
+import { atomReplayAsNothing } from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** No grant funds the feature; an overdue block that removed every grant is a refusal instead. */
@@ -30,10 +31,14 @@ export const computeTrackDecision = ({
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
 }): DeductionDecision => {
-	assertCommandSupported({ fullSubject, command });
+	const track = atomReplayAsNothing({
+		command,
+		customer: fullSubject.customer,
+	});
+	assertCommandSupported({ fullSubject, command: track });
 
 	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
-	const lockId = command.lock?.lockId;
+	const lockId = track.lock?.lockId;
 	const holdsLock = fullSubject.open_locks.some(
 		(openLock) => openLock.lock_id === lockId,
 	);
@@ -41,10 +46,10 @@ export const computeTrackDecision = ({
 
 	const outcome = deduct({
 		fullSubject,
-		request: trackCommandToDeductionRequest({ command }),
+		request: trackCommandToDeductionRequest({ command: track }),
 	});
 	// A plain track nothing funds applies as a no-op, as on legacy, so its usage event is still recorded.
-	if (fundsNothing({ outcome }) && isDeductingCheck({ command })) {
+	if (fundsNothing({ outcome }) && isDeductingCheck({ command: track })) {
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	}
 	if (isPaidAllocatedV1Deduction({ outcome })) {
@@ -54,7 +59,7 @@ export const computeTrackDecision = ({
 	}
 
 	return {
-		mutation: trackOutcomeToMutation({ command, outcome, fullSubject }),
+		mutation: trackOutcomeToMutation({ command: track, outcome, fullSubject }),
 		outcome,
 	};
 };

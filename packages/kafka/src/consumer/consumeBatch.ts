@@ -88,6 +88,8 @@ async function applyBatch({
 		return;
 	}
 
+	const begun = ctx.handler.beginBatch?.({ topic, partition, messages });
+	if (begun instanceof Promise) await begun;
 	for (const message of messages) {
 		if (
 			!payload.isRunning() ||

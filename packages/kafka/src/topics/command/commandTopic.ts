@@ -20,6 +20,7 @@ const QUEUED_COMMAND_TYPES: ReadonlySet<string> = new Set([
 	"track",
 	"initialize",
 	"finalize",
+	"atomFinalize",
 	"confirmExpiredLock",
 	"reset",
 	"evict",

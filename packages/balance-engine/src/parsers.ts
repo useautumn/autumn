@@ -56,6 +56,10 @@ import {
 	catalogRowSchema,
 } from "./models/catalog/catalogRow.js";
 import {
+	type AtomFinalizeCommand,
+	atomFinalizeCommandSchema,
+} from "./models/command/atomFinalizeCommand.js";
+import {
 	type MeteringIdentity,
 	meteringIdentitySchema,
 } from "./models/identity/meteringIdentity.js";
@@ -139,6 +143,12 @@ export const parseRecalculateBalanceCommand = ({
 }: {
 	input: unknown;
 }): RecalculateBalanceCommand => recalculateBalanceCommandSchema.parse(input);
+
+export const parseAtomFinalizeCommand = ({
+	input,
+}: {
+	input: unknown;
+}): AtomFinalizeCommand => atomFinalizeCommandSchema.parse(input);
 
 export const parseFinalizeCommand = ({
 	input,

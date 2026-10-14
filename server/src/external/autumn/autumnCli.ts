@@ -40,6 +40,7 @@ import {
 	EntityExpand,
 	ErrCode,
 	type FinalizeLockParamsV0,
+	type FinalizeLockParamsV1,
 	type GetCatalogParams,
 	type GetCatalogResponse,
 	type LegacyVersion,
@@ -1381,7 +1382,7 @@ export class AutumnInt {
 			return data as RecalculateBalancePreview;
 		},
 		finalize: async (
-			params: FinalizeLockParamsV0,
+			params: FinalizeLockParamsV0 | FinalizeLockParamsV1,
 			{
 				skipCache = false,
 				headers,

@@ -75,6 +75,7 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { trackOfNothing } from "./commands/track/trackSourceToRowChange.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -120,6 +121,8 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+export type { AtomFinalizeCommand } from "./models/command/atomFinalizeCommand.js";
+export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
@@ -190,6 +193,7 @@ export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
 export {
 	parseApplyBillingPlanRequest,
+	parseAtomFinalizeCommand,
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,

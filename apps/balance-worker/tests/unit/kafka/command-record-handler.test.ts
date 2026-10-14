@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type AtomFinalizeCommand,
 	type EvictCommand,
+	type FinalizeCommand,
+	parseAtomFinalizeCommand,
 	parseEvictCommand,
 	parseResetCommand,
 	parseTrackCommand,
 	type ResetCommand,
 	type TrackCommand,
 	UnsupportedCommandError,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import { buildIdempotencyStorageKey } from "@autumn/dynamodb";
 import { BALANCE_WORKER_QUEUED_COMMITS_IN_FLIGHT } from "@autumn/env/balanceWorkerConstants";
@@ -36,6 +40,7 @@ function createFixture({
 	canPark = false,
 	evictLog,
 	commitFailures = [],
+	lockRows = [],
 }: {
 	outcome?: "applied" | "rejected" | Error;
 	owned?: boolean;
@@ -45,7 +50,11 @@ function createFixture({
 	evictLog?: Promise<void>;
 	/** Each track's commit fails with the next of these, in order; once used up, commits land. */
 	commitFailures?: Error[];
+	/** What Postgres holds for a batch's lock read. */
+	lockRows?: WorkerLock[];
 } = {}) {
+	const lockReads: string[][] = [];
+	const finalized: FinalizeCommand[] = [];
 	const tracked: TrackCommand[] = [];
 	const evicted: EvictCommand[] = [];
 	const sources: unknown[] = [];
@@ -90,6 +99,18 @@ function createFixture({
 					}
 					return { kind: "write", waitForCommit };
 				},
+				readLockRows: async ({ keys }: { keys: { lockId: string }[] }) => {
+					lockReads.push(keys.map(({ lockId }) => lockId));
+					return lockRows;
+				},
+				pendingLockRow: () => null,
+				decideFinalize: async (params: { command: FinalizeCommand }) => {
+					finalized.push(params.command);
+					return {
+						kind: "write",
+						waitForCommit: async () => ({ mutation: { result: {} } }),
+					};
+				},
 				decideReset: async () => {
 					if (outcome instanceof Error) throw outcome;
 					return {
@@ -133,6 +154,8 @@ function createFixture({
 		parked,
 		committed,
 		keys,
+		lockReads,
+		finalized,
 	};
 }
 
@@ -185,17 +208,88 @@ const { storageKey: keyedStorageKey } = buildIdempotencyStorageKey({
 
 function recordOf({
 	command: record,
+	offset = "7",
 }: {
-	command: TrackCommand | ResetCommand | EvictCommand;
+	command: TrackCommand | ResetCommand | EvictCommand | AtomFinalizeCommand;
+	offset?: string;
 }) {
 	return {
 		topic,
 		partition,
-		message: { offset: "7", ...serializeCommandRecord({ record }) },
+		message: { offset, ...serializeCommandRecord({ record }) },
 	};
 }
 
+const atomFinalizeOf = ({ lockId, seq }: { lockId: string; seq: number }) =>
+	parseAtomFinalizeCommand({
+		input: {
+			schemaVersion: 1,
+			type: "atomFinalize",
+			commandId: `atom_finalize_${seq}`,
+			requestId: `atom_finalize_${seq}`,
+			identity: testIdentity,
+			occurredAt: 1_700_000_000_000,
+			org: testOrg,
+			lockId,
+			featureId: "messages",
+			internalFeatureId: "feat_messages",
+			finalValue: 0,
+			properties: null,
+			source: { atomId: "atom_1", writerId: "w_1", seq },
+		},
+	});
+
+const lockRowOf = ({ lockId }: { lockId: string }): WorkerLock => ({
+	id: `lck_${lockId}`,
+	org_id: testIdentity.orgId,
+	env: testIdentity.env,
+	lock_id: lockId,
+	internal_customer_id: "cus_internal_1",
+	customer_id: testIdentity.customerId,
+	entity_id: null,
+	feature_id: "messages",
+	overage_behavior: "reject",
+	properties: null,
+	deltas: [],
+	expires_at: 1_700_086_400_000,
+	expiry_action: "confirm",
+	created_at: 1_700_000_000_000,
+});
+
 describe("command record handler", () => {
+	test("a begun batch reads its Atom finalizes' locks in one query and settles each from it; once settled the batch is forgotten", async () => {
+		const { handler, lockReads, finalized } = createFixture({
+			lockRows: [lockRowOf({ lockId: "L1" }), lockRowOf({ lockId: "L2" })],
+		});
+		const batch = [
+			recordOf({
+				command: atomFinalizeOf({ lockId: "L1", seq: 1 }),
+				offset: "0",
+			}),
+			recordOf({
+				command: atomFinalizeOf({ lockId: "L2", seq: 2 }),
+				offset: "1",
+			}),
+		];
+
+		await handler.beginBatch?.({
+			topic,
+			partition,
+			messages: batch.map(({ message }) => message),
+		});
+		for (const record of batch) await handler.applyRecord(record);
+		await handler.settleBatch?.({ topic, partition });
+		await handler.applyRecord(
+			recordOf({
+				command: atomFinalizeOf({ lockId: "L1", seq: 3 }),
+				offset: "2",
+			}),
+		);
+
+		expect(lockReads).toEqual([["L1", "L2"]]);
+		expect(finalized.map(({ lock }) => lock.lock_id)).toEqual(["L1", "L2"]);
+	});
+
 	test("a queued track reaches the partition's processor and resolves with no reply", async () => {
 		const { handler, tracked, logs, completed } = createFixture();
 		expect(

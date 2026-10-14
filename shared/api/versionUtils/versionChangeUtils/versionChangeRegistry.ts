@@ -34,6 +34,7 @@ import { V0_2_CheckChange } from "../../balances/check/changes/V0.2_CheckChange"
 import { V1_2_CheckChange } from "../../balances/check/changes/V1.2_CheckChange";
 import { V1_2_CheckQueryChange } from "../../balances/check/changes/V1.2_CheckQueryChange";
 import { V2_0_CheckChange } from "../../balances/check/changes/V2.0_CheckChange";
+import { V2_5_FinalizeLockParamsChange } from "../../balances/finalizeLock/requestChanges/V2.5_FinalizeLockParamsChange";
 import { V1_2_TrackChange } from "../../balances/track/changes/V1.2_TrackChange";
 import { V2_0_TrackChange } from "../../balances/track/changes/V2.0_TrackChange";
 import { V1_2_TrackParamsChange } from "../../balances/track/requestChanges/V1.2_TrackParamsChange";
@@ -50,6 +51,10 @@ import { V2_0_AggregateEventsChange } from "../../events/aggregate/changes/V2.0_
 import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
+
+export const V2_6_CHANGES: VersionChangeConstructor[] = [
+	V2_5_FinalizeLockParamsChange, // Finalize params TO V2.6: older clients never name the customer
+];
 
 export const V2_5_CHANGES: VersionChangeConstructor[] = [
 	V2_4_TrackParamsChange, // Track params TO V2.5: an omitted async means false (sync)
@@ -121,6 +126,10 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_6,
+		changes: V2_6_CHANGES,
+	});
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_5,
 		changes: V2_5_CHANGES,
