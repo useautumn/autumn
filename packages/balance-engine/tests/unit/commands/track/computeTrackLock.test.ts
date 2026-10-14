@@ -114,7 +114,7 @@ describe("a locked track", () => {
 				command: {
 					...lockedTrack({ value: 11 }),
 					overageBehavior: "overflow",
-					lock: { ...lock, overageBehavior: "reject" },
+					lock: { ...lock, callerOverageBehavior: "reject" },
 				},
 			});
 			expect(mutation.result).toMatchObject({ status: "applied" });
