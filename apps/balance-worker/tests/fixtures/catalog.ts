@@ -100,6 +100,7 @@ export const createSyntheticWorkerDb = ({
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
 	listPooledBalancesWithoutOtherContributions: async () => [],
+	readLockRows: async () => [],
 	sumPooledContributionGrants: async () => ({}),
 });
 
@@ -112,6 +113,7 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
 	listPooledBalancesWithoutOtherContributions: async () => [],
+	readLockRows: async () => [],
 	sumPooledContributionGrants: async () => ({}),
 	getCatalogRows: async () => ({
 		entitlements: [],

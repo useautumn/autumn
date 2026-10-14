@@ -37,6 +37,7 @@ export function createWorkerFixture({
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
 		listPooledBalancesWithoutOtherContributions: async () => [],
+		readLockRows: async () => [],
 		sumPooledContributionGrants: async () => ({}),
 		getCatalogRows: async () => ({
 			entitlements: catalogRows.flatMap((row) =>
