@@ -9,6 +9,7 @@
 
 import { heapSize, heapStats } from "bun:jsc";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSubjectState, type SubjectState } from "@autumn/balance-engine";
@@ -316,7 +317,25 @@ const runReplica = async ({
 			heapMb: Math.round(heapSize() / 1024 ** 2),
 		});
 	}, 1000);
+	// Bun appends a duplicate to a parent's native child list on every require of a cached CJS module (oven-sh/bun#43279);
+	// reading `children` dedupes it, so the sum right after a read is the floor and the growth since is the duplicates.
+	const cjsChildren = () => {
+		const cache = createRequire(import.meta.url).cache as Record<
+			string,
+			{ children?: unknown[] } | undefined
+		>;
+		let modules = 0;
+		let children = 0;
+		for (const cached of Object.values(cache)) {
+			modules += 1;
+			children += cached?.children?.length ?? 0;
+		}
+		return { modules, children };
+	};
+	let cjsAtReset = cjsChildren();
 	const reset = () => {
+		cjsAtReset = cjsChildren();
+		cjsAtReset = cjsChildren();
 		stageClockAtReset = stageClockNow();
 		cpuAtReset = jsThreadCpuMs();
 		wallAtReset = performance.now();
@@ -344,7 +363,11 @@ const runReplica = async ({
 				const sortedLags = [...lags].sort((a, b) => a - b);
 				const heap = heapStats();
 				const statsAt = performance.now();
+				const cjsAtEnd = cjsChildren();
 				return Response.json({
+					cjsModules: cjsAtEnd.modules,
+					cjsChildrenAtReset: cjsAtReset.children,
+					cjsChildrenAtEnd: cjsAtEnd.children,
 					heapStatsMs: Number((performance.now() - statsAt).toFixed(1)),
 					threadCpuMs: jsThreadCpuMs() - cpuAtReset,
 					wallMs: performance.now() - wallAtReset,
