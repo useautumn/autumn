@@ -63,14 +63,24 @@ test.skipIf(!isBalanceWorkerRoute())(
 			postAsAtom({ autumn, path: ATOM_TRACKS_APPEND_PATH, tokenHash, body });
 
 		const batch = {
-			writer: "w_1",
-			tracks: [{ seq: 1, command: atomTrack({ customerId, value: 30 }) }],
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 1,
+					command: atomTrack({ customerId, value: 30 }),
+				},
+			],
 		};
 		const first = await append(batch);
 		const resent = await append(batch);
 		const next = await append({
-			writer: "w_1",
-			tracks: [{ seq: 2, command: atomTrack({ customerId, value: 5 }) }],
+			tracks: [
+				{
+					writerId: "w_1",
+					seq: 2,
+					command: atomTrack({ customerId, value: 5 }),
+				},
+			],
 		});
 
 		expect([first.status, resent.status, next.status]).toEqual([204, 204, 204]);
@@ -153,9 +163,9 @@ test.skipIf(!isBalanceWorkerRoute())(
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash: atomTokenToHash({ token: atom.token }),
 			body: {
-				writer: "w_1",
 				tracks: [
 					{
+						writerId: "w_1",
 						seq: 1,
 						command: {
 							...atomTrack({ customerId, value: 120 }),
@@ -201,13 +211,15 @@ test(`${chalk.yellowBright("atom-tracks3: an unreadable body is 400 unreadable; 
 		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: atomTokenToHash({ token: atom.token }),
-		body: { writer: "w_1", tracks: [{ seq: 1, command: { type: "track" } }] },
+		body: {
+			tracks: [{ writerId: "w_1", seq: 1, command: { type: "track" } }],
+		},
 	});
 	const unknownAtom = await postAsAtom({
 		autumn,
 		path: ATOM_TRACKS_APPEND_PATH,
 		tokenHash: "f".repeat(64),
-		body: { writer: "w_1", tracks: [] },
+		body: { tracks: [] },
 	});
 
 	expect(unreadable.status).toBe(400);
@@ -238,6 +250,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 		const writer = `w_${crypto.randomUUID()}`;
 		const journal = () =>
 			[1, 2].map((seq) => ({
+				writerId: writer,
 				seq,
 				command: atomTrack({ customerId, value: 10 }),
 			}));
@@ -247,7 +260,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 				autumn,
 				path: ATOM_TRACKS_APPEND_PATH,
 				tokenHash,
-				body: { writer, tracks },
+				body: { tracks },
 			});
 
 		const replies = [
@@ -271,7 +284,11 @@ test.skipIf(!isBalanceWorkerRoute())(
 		});
 		// One customer's commands apply in order: a later seq landing means every resend before it was decided.
 		const marker = await append([
-			{ seq: 3, command: atomTrack({ customerId, value: 1 }) },
+			{
+				writerId: writer,
+				seq: 3,
+				command: atomTrack({ customerId, value: 1 }),
+			},
 		]);
 		expect(marker.status).toBe(204);
 		await expectBalanceCorrect({

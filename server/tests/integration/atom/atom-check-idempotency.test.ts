@@ -56,9 +56,9 @@ const initHandIn = async ({ customerId }: { customerId: string }) => {
 			path: ATOM_TRACKS_APPEND_PATH,
 			tokenHash,
 			body: {
-				writer,
 				tracks: [
 					{
+						writerId: writer,
 						seq: 1,
 						command: atomTrack({ customerId, value: 10, idempotencyKey }),
 					},
