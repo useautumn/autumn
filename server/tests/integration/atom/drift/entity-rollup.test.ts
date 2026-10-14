@@ -15,7 +15,6 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -27,8 +26,8 @@ import {
 	ensureAtomDeployment,
 	type TestAtom,
 } from "../utils/ensureAtomDeployment.js";
-import { expectAtomCheckCorrect } from "../utils/expectAtomCheckCorrect.js";
 import { trackOnAtom } from "../utils/trackOnAtom.js";
+import { expectAtomAgrees } from "./utils/expectAtomAgrees.js";
 
 const autumn = atomTestClient();
 
@@ -69,39 +68,6 @@ const initMixedCustomer = async ({ customerId }: { customerId: string }) => {
 	};
 };
 
-/** The Atom answers this check itself, with exactly the reply the API gives to the same check. */
-const expectAtomAgrees = async ({
-	atom,
-	api,
-	customerId,
-	entityId,
-	requiredBalance,
-}: {
-	atom: TestAtom;
-	api: AutumnInt;
-	customerId: string;
-	entityId?: string;
-	requiredBalance: number;
-}) => {
-	const apiAnswer: { allowed: boolean } = await api.post("/balances.check", {
-		customer_id: customerId,
-		entity_id: entityId,
-		feature_id: TestFeature.Messages,
-		required_balance: requiredBalance,
-	});
-	await expectAtomCheckCorrect({
-		atom,
-		api,
-		secretKey: defaultCtx.orgSecretKey,
-		customerId,
-		entityId,
-		featureId: TestFeature.Messages,
-		requiredBalance,
-		allowed: apiAnswer.allowed,
-		timeoutMs: 15_000,
-	});
-};
-
 const expectAtomAgreesEverywhere = async (params: {
 	atom: TestAtom;
 	api: AutumnInt;
@@ -110,7 +76,12 @@ const expectAtomAgreesEverywhere = async (params: {
 }) => {
 	for (const entityId of [undefined, ...params.entityIds])
 		for (const requiredBalance of BOUNDARIES)
-			await expectAtomAgrees({ ...params, entityId, requiredBalance });
+			await expectAtomAgrees({
+				...params,
+				entityId,
+				featureId: TestFeature.Messages,
+				requiredBalance,
+			});
 };
 
 test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
