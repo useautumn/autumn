@@ -213,7 +213,11 @@ const reported = new Map<
 	number,
 	{ counts: Record<OwnerClass, RollCounts>; from: number }
 >();
-const keys = { allowed: [] as string[], ambiguous: [] as string[] };
+const keys = {
+	allowed: [] as string[],
+	ambiguous: [] as string[],
+	customers: {} as Record<string, string>,
+};
 const receive = (line: {
 	type: string;
 	second?: number;
@@ -221,10 +225,12 @@ const receive = (line: {
 	b?: RollCounts;
 	allowed?: string[];
 	ambiguous?: string[];
+	customers?: Record<string, string>;
 }) => {
 	if (line.type === "keys") {
 		keys.allowed.push(...(line.allowed ?? []));
 		keys.ambiguous.push(...(line.ambiguous ?? []));
+		Object.assign(keys.customers, line.customers ?? {});
 		return;
 	}
 	if (line.type !== "second" || line.second === undefined) return;
@@ -291,6 +297,19 @@ const unexpected = [...appliedCount.keys()].filter(
 	(key) => !allowed.has(key) && !ambiguous.has(key),
 );
 const ambiguousApplied = keys.ambiguous.filter((key) => appliedCount.has(key));
+/** What the stub holds for each lost deduction's customer: the watermark it reached and every hand-in it saw. */
+const traceLost = async () =>
+	Object.fromEntries(
+		await Promise.all(
+			lost.slice(0, 5).map(async (key) => {
+				const customerId = keys.customers[key] ?? "";
+				const stubView = await (
+					await fetch(`${stubUrl}/__rig/customer?id=${customerId}`)
+				).json();
+				return [key, { customerId, ...stubView }];
+			}),
+		),
+	);
 const summary = {
 	marks,
 	p1: {
@@ -307,6 +326,7 @@ const summary = {
 			doubled: doubled.slice(0, 5),
 			unexpected: unexpected.slice(0, 5),
 		},
+		lostTrace: await traceLost(),
 	},
 	stub: await (await fetch(`${stubUrl}/__rig/stats`)).json(),
 	replicas: {

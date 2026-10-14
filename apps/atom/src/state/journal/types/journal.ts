@@ -50,8 +50,11 @@ export type Journal = {
 	 * so Autumn's per-writer watermark clears them wherever they were sent from. Ones already held are ignored.
 	 */
 	appendForeign(params: { entries: HandedEntry[] }): Promise<number>;
-	/** Every customer owing something, with each owed entry and whether Autumn already holds it: what a handoff carries. */
-	handoffs(): { customerId: string; entries: HandedEntry[] }[];
+	/**
+	 * Every customer owing something, with each owed entry and whether Autumn already holds it: what a handoff carries.
+	 * Taken once the appends in flight have committed, so none crosses as sent before it is even on disk.
+	 */
+	handoffs(): Promise<{ customerId: string; entries: HandedEntry[] }[]>;
 	/** Entries handed to another journal, which holds them now: gone from this one. */
 	dropHandedOff(params: { entries: JournalEntry[] }): void;
 	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */

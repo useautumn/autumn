@@ -29,7 +29,10 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
 	| { type: "track"; request: TrackRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
-	| { type: "receiveHandoff"; customerId: string; entries: HandedEntry[] }
+	| {
+			type: "receiveHandoff";
+			handoffs: { customerId: string; entries: HandedEntry[] }[];
+	  }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
 	/** The slot's subjects written at or after `after`, past `cursor`, for a replica copying what it missed. */

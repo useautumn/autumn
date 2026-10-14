@@ -50,8 +50,13 @@ const counts = {
 };
 /** Each deduction applied, by the key the caller's Idempotency-Key gave it; a count above 1 is a double deduction. */
 const applied = new Map<string, number>();
-const recordApplied = (key: string) =>
+/** Where each key came from, and every hand-in skipped as a replay: what a reconciliation miss is traced with. */
+const appliedFrom = new Map<string, string>();
+const replayed: string[] = [];
+const recordApplied = (key: string, from: string) => {
 	applied.set(key, (applied.get(key) ?? 0) + 1);
+	appliedFrom.set(key, from);
+};
 
 const stateOf = (customerId: string): SubjectState => {
 	const held = states.get(customerId);
@@ -76,6 +81,9 @@ const applyTrack = ({
 	// The worker's replay guard: a journal re-sent after a restart lands no seq twice.
 	if (seq <= (state.customer.atom_seqs?.[tenant.atomId]?.[writerId] ?? 0)) {
 		counts.replays++;
+		replayed.push(
+			`${customerId} ${writerId}/${seq} ${command.idempotency?.key ?? command.commandId}`,
+		);
 		return;
 	}
 	const mutation = computeTrack({
@@ -86,7 +94,10 @@ const applyTrack = ({
 		command: { ...command, source: { atomId: tenant.atomId, writerId, seq } },
 	});
 	states.set(customerId, applyMutation({ state, mutation }));
-	recordApplied(command.idempotency?.key ?? command.commandId);
+	recordApplied(
+		command.idempotency?.key ?? command.commandId,
+		`${customerId} ${writerId}/${seq}`,
+	);
 };
 
 /** A deduction a replica left to the API, deducted here as the API's worker would, under the caller's key. */
@@ -117,7 +128,7 @@ const applyForwardedDeduction = ({
 		command: { ...command, identity: { ...command.identity, customerId } },
 	});
 	states.set(customerId, applyMutation({ state, mutation }));
-	recordApplied(key);
+	recordApplied(key, `${customerId} api`);
 	counts.forwardedDeductions++;
 };
 
@@ -259,7 +270,21 @@ Bun.serve({
 		if (pathname === "/__rig/stats")
 			return Response.json({ ...counts, queue: queue.stats() });
 		if (pathname === "/__rig/applied")
-			return Response.json({ applied: Object.fromEntries(applied) });
+			return Response.json({
+				applied: Object.fromEntries(applied),
+				appliedFrom: Object.fromEntries(appliedFrom),
+				replayed,
+			});
+		if (pathname === "/__rig/customer") {
+			const customerId = new URL(request.url).searchParams.get("id") ?? "";
+			return Response.json({
+				atomSeqs: stateOf(customerId).customer.atom_seqs ?? null,
+				applied: [...appliedFrom]
+					.filter(([, from]) => from.startsWith(`${customerId} `))
+					.map(([key, from]) => `${from} ${key}`),
+				replayed: replayed.filter((line) => line.startsWith(`${customerId} `)),
+			});
+		}
 		if (pathname.startsWith("/v1/")) return answerForwarded(request, pathname);
 		return new Response("no such route", { status: 404 });
 	},

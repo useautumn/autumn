@@ -95,6 +95,48 @@ describe("journal", () => {
 		);
 	});
 
+	test("a handoff waits for the entries still committing and hands them as unsent: what the new owner must still send", async () => {
+		const journal = open({ databasePath: ":memory:" });
+		const append = journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+
+		const handoffs = await journal.handoffs();
+		await append;
+
+		expect(handoffs).toEqual([
+			{
+				customerId: "cus_1",
+				entries: [expect.objectContaining({ seq: 1, sent: false })],
+			},
+		]);
+		expect(journal.countUnsent()).toBe(1);
+	});
+
+	test("a handoff names what Autumn already holds as sent, so the new owner holds it without sending it again", async () => {
+		const journal = open({ databasePath: ":memory:" });
+		const first = await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+		journal.markSent({ entries: [first] });
+
+		expect(
+			(await journal.handoffs())[0]?.entries.map(({ seq, sent }) => ({
+				seq,
+				sent,
+			})),
+		).toEqual([
+			{ seq: 1, sent: true },
+			{ seq: 2, sent: false },
+		]);
+	});
+
 	test("an entry is owed from the moment it is appended, before its commit lands", async () => {
 		const journal = open({ databasePath: journalPath() });
 

@@ -71,6 +71,8 @@ export const openJournal = ({
 		{ entries: JournalEntry[]; head: number }
 	>();
 	let notifyCommitted = () => {};
+	/** Appends whose commit has not landed: owed already, but neither on disk nor unsent yet. */
+	const pending = new Map<JournalEntry, Promise<void>>();
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
@@ -166,8 +168,13 @@ export const openJournal = ({
 		lastSeqs.set(customerId, seq);
 		const entry = { customerId, writerId, seq, appendedAt: now(), command };
 		owe({ entry });
+		const commit = groupCommit.add(entry);
+		pending.set(
+			entry,
+			commit.catch(() => {}),
+		);
 		try {
-			await groupCommit.add(entry);
+			await commit;
 			return entry;
 		} catch (error) {
 			appendFailedOnThread++;
@@ -176,6 +183,8 @@ export const openJournal = ({
 				entries: owed({ customerId }).filter((held) => held !== entry),
 			});
 			throw error;
+		} finally {
+			pending.delete(entry);
 		}
 	}
 
@@ -280,11 +289,19 @@ export const openJournal = ({
 		return fresh.length;
 	}
 
-	function handoffs(): { customerId: string; entries: HandedEntry[] }[] {
-		return [...owedByCustomer].map(([customerId, entries]) => ({
-			customerId,
-			entries: entries.map((entry) => ({ ...entry, sent: !unsent.has(entry) })),
-		}));
+	async function handoffs(): Promise<
+		{ customerId: string; entries: HandedEntry[] }[]
+	> {
+		await Promise.all([...pending.values()]);
+		// Appended since: still committing, and the caller keeps them.
+		return [...owedByCustomer]
+			.map(([customerId, entries]) => ({
+				customerId,
+				entries: entries
+					.filter((entry) => !pending.has(entry))
+					.map((entry) => ({ ...entry, sent: !unsent.has(entry) })),
+			}))
+			.filter(({ entries }) => entries.length > 0);
 	}
 
 	/** The handed copies name entries by writer and seq; what leaves are the entries held here under those. */

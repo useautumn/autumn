@@ -67,9 +67,12 @@ export const createSlotProcessor = ({
 			});
 			return track({ ctx, request });
 		},
-		receiveHandoff: async ({ customerId, entries }) => {
-			const held = await ctx.journal.appendForeign({ entries });
-			ctx.barrier?.arrived({ customerId });
+		receiveHandoff: async ({ handoffs }) => {
+			const held = await ctx.journal.appendForeign({
+				entries: handoffs.flatMap(({ entries }) => entries),
+			});
+			for (const { customerId } of handoffs)
+				ctx.barrier?.arrived({ customerId });
 			return { held };
 		},
 		setSubject: async (params) => {

@@ -34,7 +34,11 @@ for (const customerId of plan.customerIds)
 let routed: OwnerClass[] = ["a", "b"];
 let stopped = false;
 const seconds = new Map<number, Record<OwnerClass, RollCounts>>();
-const keys = { allowed: [] as string[], ambiguous: [] as string[] };
+const keys = {
+	allowed: [] as string[],
+	ambiguous: [] as string[],
+	customers: {} as Record<string, string>,
+};
 let flushedThrough = -1;
 
 const countsOf = (second: number, owner: OwnerClass): RollCounts => {
@@ -73,6 +77,7 @@ const send = async ({
 	const to = routed[Math.floor(Math.random() * routed.length)] ?? "a";
 	add(into.sentTo, to);
 	const key = deducts ? `${plan.index}-${nextKey++}` : null;
+	if (key) keys.customers[key] = customerId;
 	const startedAt = performance.now();
 	try {
 		const reply = await fetch(`${plan.replicaUrls[to]}/v1/balances.check`, {

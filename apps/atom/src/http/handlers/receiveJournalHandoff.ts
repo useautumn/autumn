@@ -1,34 +1,54 @@
 import type { Context } from "hono";
-import { HandoffSchema } from "../../replicas/handover/handoffContract.js";
+import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
+import {
+	type Handoff,
+	HandoffBatchSchema,
+} from "../../replicas/handover/handoffContract.js";
 import type { HandedEntry } from "../../state/journal/types/journal.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
-/** A customer's owed entries from the replica that owned it: held by the slot's owner thread, then its waiting requests go on. */
+/**
+ * Customers' owed entries from the replica that owned them: each slot's owner thread holds its customers' in one
+ * transaction, then their waiting requests go on.
+ */
 export const receiveJournalHandoff = ({
 	ctx,
 }: {
 	ctx: Pick<AtomHttpContext, "peer">;
 }) =>
 	async function receive(context: Context<AtomHttpEnv>) {
-		const parsed = HandoffSchema.safeParse(context.get("body"));
+		const parsed = HandoffBatchSchema.safeParse(context.get("body"));
 		if (!parsed.success)
 			return context.json(
 				{
-					message: "A handoff names its customer and entries",
+					message: "A handoff names its customers and their entries",
 					code: "invalid_request",
 				},
 				400,
 			);
-		const { customerId, entries } = parsed.data;
 		// On its way out itself: the sender keeps them and drains them to Autumn instead.
 		if (ctx.peer.membership?.isSelfLeaving())
 			return context.json(
 				{ message: "This replica is leaving too", code: "atom_leaving" },
 				503,
 			);
-		const held = await context
-			.get("slots")
-			.processorFor({ customerId })
-			.receiveHandoff({ customerId, entries: entries as HandedEntry[] });
-		return context.json(held);
+		const slots = context.get("slots");
+		const bySlot = new Map<SlotProcessor, Handoff[]>();
+		for (const handoff of parsed.data.handoffs) {
+			const processor = slots.processorFor({ customerId: handoff.customerId });
+			bySlot.set(processor, [...(bySlot.get(processor) ?? []), handoff]);
+		}
+		const held = await Promise.all(
+			[...bySlot].map(([processor, handoffs]) =>
+				processor.receiveHandoff({
+					handoffs: handoffs.map(({ customerId, entries }) => ({
+						customerId,
+						entries: entries as HandedEntry[],
+					})),
+				}),
+			),
+		);
+		return context.json({
+			held: held.reduce((sum, { held: n }) => sum + n, 0),
+		});
 	};

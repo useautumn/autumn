@@ -134,13 +134,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					customerId,
 					body,
 				})) as PushedSubject,
-			receiveHandoff: async ({ customerId, entries }) =>
-				(await call({
-					type: "receiveHandoff",
-					atomId,
-					customerId,
-					entries,
-				})) as { held: number },
+			receiveHandoff: async ({ handoffs }) =>
+				(await call({ type: "receiveHandoff", atomId, handoffs })) as {
+					held: number;
+				},
 		};
 	}
 

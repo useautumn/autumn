@@ -48,9 +48,8 @@ export type SlotProcessor = {
 		customerId: string;
 		body: string;
 	}): Promise<PushedSubject>;
-	/** A customer's owed entries another replica handed over with it: held in this slot's journal under their own writer. */
+	/** Customers' owed entries another replica handed over with them: held in this slot's journal, in one transaction, under their own writers. */
 	receiveHandoff(params: {
-		customerId: string;
-		entries: HandedEntry[];
+		handoffs: { customerId: string; entries: HandedEntry[] }[];
 	}): Promise<{ held: number }>;
 };

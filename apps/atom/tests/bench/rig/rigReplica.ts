@@ -50,6 +50,9 @@ const pushQueueEnv =
 const dataDir = mkdtempSync(join(tmpdir(), "atom-rig-"));
 const HOSTS_FILE = "/etc/hosts";
 const SERVICE_NAME = "atom.svc";
+// A replica set on one machine (a smoke test) has no address of its own to filter atom.svc by: it reads a peers file instead.
+const onOneMachine = self.startsWith("127.");
+const peersFile = join(dataDir, "peers");
 const logDir = join(homedir(), "atom-rig");
 mkdirSync(logDir, { recursive: true });
 const logPath = join(logDir, `replica-${self}.log`);
@@ -74,6 +77,11 @@ let restarts = 0;
 /** atom.svc resolves to this box and `next`, as hickory lists the running containers; written whole and renamed into place. */
 const writePeers = (next: string[]): void => {
 	peers = next;
+	if (onOneMachine) {
+		writeFileSync(`${peersFile}.next`, next.join("\n"));
+		renameSync(`${peersFile}.next`, peersFile);
+		return;
+	}
 	const kept = readFileSync(HOSTS_FILE, "utf8")
 		.split("\n")
 		.filter((line) => !line.includes(` ${SERVICE_NAME}`));
@@ -115,6 +123,7 @@ const startAtom = ({ srcDir }: { srcDir: string }): AtomRun => {
 				ATOM_PEER_PORT: String(replica.peerPort),
 				ATOM_PEER_SECRET: peerSecret,
 				ATOM_DATA_DIR: dataDir,
+				...(onOneMachine && { ATOM_PEERS_FILE: peersFile }),
 				AUTUMN_API_URL: stub,
 				...pushQueueEnv,
 				...replica.bunJscFlags,
