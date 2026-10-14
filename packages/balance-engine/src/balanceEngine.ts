@@ -248,7 +248,10 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
-export { findSubjectStateDifference } from "./utils/subjectStateUtils/findSubjectStateUtils.js";
+export {
+	findSubjectStateDifference,
+	subjectStateRowsOf,
+} from "./utils/subjectStateUtils/findSubjectStateUtils.js";
 export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,
