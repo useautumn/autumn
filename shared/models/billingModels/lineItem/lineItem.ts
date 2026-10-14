@@ -1,3 +1,4 @@
+import { RemoveLineSchema } from "@api/billing/common/removeLine";
 import { z } from "zod/v4";
 import { LineItemContextSchema } from "./lineItemContext";
 
@@ -38,6 +39,9 @@ export const LineItemSchema = z
 
 		// Whether this line item was prorated (mid-cycle change)
 		prorated: z.boolean().default(false),
+
+		/** The remove_lines entry that removes exactly this line; null when it can't be targeted alone. */
+		removeLine: RemoveLineSchema.nullable().optional(),
 	})
 	.transform((data) => {
 		return {

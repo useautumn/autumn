@@ -27,7 +27,7 @@ Response:
   "organization_slug": "acme",
   "api_key": "am_sk_test_…",
   "claim_token": "<opaque>",
-  "claim_expires_at": "<iso8601>"
+  "claim_expires_at": null
 }
 ```
 
@@ -35,7 +35,7 @@ Keep:
 
 - `api_key` — the durable secret. Write it to `.env` as `AUTUMN_SECRET_KEY`. Never print it or paste it into chat. It is a sandbox key with catalog, customer, balance, and billing scopes; production is unavailable until a human claims the org.
 - `claim_token` — a second credential that can start a claim without the key. As secret as the key. You normally don't need it.
-- `claim_expires_at` — the deadline for a human to claim (72 hours today). After it passes the org can't be claimed by anyone. Read it from the response instead of assuming.
+- `claim_expires_at` — always `null`. There is no deadline: a human can claim the org whenever they're ready.
 
 Provisioning is rate limited (5/hour per client, 100/hour globally). If it fails, tell the user and offer sign-in — never loop on it.
 
@@ -81,7 +81,7 @@ Notes:
 - `claim_url` dies in `expires_at` (10 minutes today). POST `/agent.start_claim` again to replace it; each new link supersedes the last.
 - There is no code for the user to read back to you. Never ask for one. Completion happens in the browser.
 - There is no polling endpoint. The user tells you they've claimed; the key keeps working either way.
-- A claimed org, or one past `claim_expires_at`, fails deliberately with a vague error. Don't probe — tell the user it didn't go through and what you'll try next.
+- An org that's already claimed fails deliberately with a vague error. Don't probe — tell the user it didn't go through and what you'll try next.
 
 After the claim, the human owns the org: same key, same catalog, same customers, plus the dashboard at `https://app.useautumn.com`. You are done.
 

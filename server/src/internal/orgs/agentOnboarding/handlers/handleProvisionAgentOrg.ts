@@ -29,7 +29,8 @@ export const handleProvisionAgentOrg = createRoute({
 			organization_slug: provisioned.organization.slug,
 			api_key: provisioned.apiKey,
 			claim_token: provisioned.claimToken,
-			claim_expires_at: provisioned.claimExpiresAt.toISOString(),
+			// Field kept so the response shape is stable; null means there is no claim deadline
+			claim_expires_at: null,
 		});
 	},
 });

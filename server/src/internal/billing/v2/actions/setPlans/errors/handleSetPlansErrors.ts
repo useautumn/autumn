@@ -15,6 +15,7 @@ import { assertNoAmbiguousDroppedLicenses } from "@/internal/billing/v2/common/e
 import { assertNoBillingCycleAnchorWithTrial } from "@/internal/billing/v2/common/errors/assertNoBillingCycleAnchorWithTrial";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/common/errors/handleCarryOverUsagesErrors";
+import { handleInvoiceLineEditsErrors } from "@/internal/billing/v2/common/errors/handleInvoiceLineEditsErrors";
 import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
 import { handleRemoveDiscountsErrors } from "@/internal/billing/v2/common/errors/handleRemoveDiscountsErrors";
 import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors";
@@ -200,6 +201,7 @@ export const handleSetPlansBillingPlanErrors = ({
 	billingPlan: BillingPlan;
 }) => {
 	handleProrationBehaviorErrors({ billingContext, billingPlan });
+	handleInvoiceLineEditsErrors({ params: {}, billingContext, billingPlan });
 	handleStripeSchedulePhaseLimitErrors({ billingPlan });
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };

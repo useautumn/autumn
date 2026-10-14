@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
+import { isCustomLineItem } from "@/internal/billing/v2/utils/lineItems/isCustomLineItem";
 import { handleStripeCheckoutLicenseErrors } from "./handleLicenseErrors/handleStripeCheckoutLicenseErrors";
 
 /**
@@ -18,6 +19,7 @@ const getRecurringIntervalsFromPaidLineItems = ({
 	const intervals = new Set<string>();
 
 	for (const lineItem of autumnBillingPlan.lineItems ?? []) {
+		if (isCustomLineItem(lineItem)) continue;
 		const price = lineItem.context.price;
 		const interval = price.config.interval;
 

@@ -23,7 +23,6 @@ export const startAgentAuthChallenge = async ({
 		db,
 		claimToken,
 		setupKey,
-		now,
 	});
 	if (identity.kind === "invalid") return null;
 

@@ -10,6 +10,7 @@ import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
 import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
+import { applyInvoiceLineEdits } from "@/internal/billing/v2/compute/finalize/invoiceLineEdits/applyInvoiceLineEdits";
 import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
 import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
@@ -22,7 +23,8 @@ import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/u
  * 2. Filtering line items based on trial state transitions
  * 3. Filtering out unchanged prices (refund + charge pairs that cancel out)
  * 4. Adding line items for sibling products affected by trial state changes
- * 5. Applying Stripe discounts to line items
+ * 5. Applying remove_lines / add_lines
+ * 6. Applying Stripe discounts to line items
  */
 export const finalizeLineItems = ({
 	ctx,
@@ -113,7 +115,14 @@ export const finalizeLineItems = ({
 	});
 	finalizedLineItems = [...finalizedLineItems, ...sharedTrialLineItems];
 
-	// 4. Apply Stripe discounts if present
+	// 4. remove_lines / add_lines patch the generated lines
+	finalizedLineItems = applyInvoiceLineEdits({
+		ctx,
+		lineItems: finalizedLineItems,
+		billingContext,
+	});
+
+	// 5. Apply Stripe discounts if present
 	if (billingContext.stripeDiscounts?.length) {
 		finalizedLineItems = applyStripeDiscountsToLineItems({
 			lineItems: finalizedLineItems,
