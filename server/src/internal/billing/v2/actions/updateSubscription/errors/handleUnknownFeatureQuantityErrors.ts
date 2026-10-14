@@ -1,21 +1,19 @@
 import {
 	ErrCode,
+	type FullProduct,
 	findPrepaidQuantityTargetPrice,
 	RecaseError,
-	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
 /** Rejects feature_quantities for features the plan has no prepaid price for; quantity setup would otherwise drop them silently. */
 export const handleUnknownFeatureQuantityErrors = ({
-	billingContext,
+	fullProduct,
 	params,
 }: {
-	billingContext: UpdateSubscriptionBillingContext;
-	params: UpdateSubscriptionV1Params;
+	fullProduct: FullProduct;
+	params: Pick<UpdateSubscriptionV1Params, "feature_quantities">;
 }) => {
-	const [fullProduct] = billingContext.fullProducts;
-
 	const unknownFeatureIds = (params.feature_quantities ?? [])
 		.map((featureQuantity) => featureQuantity.feature_id)
 		.filter(

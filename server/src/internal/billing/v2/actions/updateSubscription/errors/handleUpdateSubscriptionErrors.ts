@@ -65,7 +65,10 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
 	// 3. Feature quantity errors (quantities must target the plan's prepaid features)
-	handleUnknownFeatureQuantityErrors({ billingContext, params });
+	handleUnknownFeatureQuantityErrors({
+		fullProduct: billingContext.fullProducts[0],
+		params,
+	});
 
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
