@@ -33,6 +33,9 @@ export const THREAD_STAT_FIELDS = [
 	"viewFoldRebuiltTrim",
 	"viewFoldRebuiltCatalog",
 	"viewFoldRebuiltState",
+	/** Deductions replayed to check a push's acknowledged entries on a kept fold, and to rebuild one from the stored copy. */
+	"viewFoldReplayedKept",
+	"viewFoldReplayedRebuilt",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
@@ -51,6 +54,26 @@ export const THREAD_STAT_FIELDS = [
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
+	/** This thread's JS heap now, in bytes: its sawtooth is the cheap view of how much it collects. */
+	"heapBytes",
+	/** Thread time since boot by stage, in µs (stageClock): each stage's own, busy time no stage holds, and idle. */
+	"stageHonoRouteUs",
+	"stageHttpParseRespondUs",
+	"stageHopForwardUs",
+	"stageHopServeUs",
+	"stageEngineDecisionUs",
+	"stageEngineFoldStepUs",
+	"stageEngineFoldCheckUs",
+	"stageEngineFoldRebuildUs",
+	"stageViewRenderUs",
+	"stageJournalAppendUs",
+	"stageJournalOwedUs",
+	"stagePushApplyUs",
+	"stageRelaySendUs",
+	"stageRelayReceiveUs",
+	"stageSettlePullUs",
+	"stageOtherBusyUs",
+	"stageIdleUs",
 ] as const;
 
 export type ThreadStatField = (typeof THREAD_STAT_FIELDS)[number];

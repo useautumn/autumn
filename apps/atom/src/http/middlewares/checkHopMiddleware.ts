@@ -6,6 +6,7 @@ import {
 	PEER_FOLDER_HEADER,
 	peerRequestHeaders,
 } from "../../replication/transport/peerSignature.js";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import { forwardRequest } from "../forward/forwardRequest.js";
 import {
 	newRequestId,
@@ -77,27 +78,30 @@ export function checkHopMiddleware({
 		const hop = await hopOf(context);
 		if (!hop) return next();
 		const { pathname, search } = new URL(context.req.url);
+		const body = await context.req.text();
 		let reply: Response;
 		try {
-			reply = await forwardRequest({
-				context,
-				target: `http://${hop.to}:${peer.port}${pathname}${search}`,
-				// Only a replica names a routed customer or folder; a client's would break the signature.
-				heldBack: [ATOM_CUSTOMER_ID_HEADER, PEER_FOLDER_HEADER],
-				headers: peerRequestHeaders({
-					secret: peer.secret,
-					method: context.req.method,
-					path: pathname,
-					body: await context.req.text(),
-					headers: {
-						[REQUEST_ID_HEADER]: newRequestId(),
-						[OCCURRED_AT_HEADER]: String(Date.now()),
-					},
+			reply = await timeStage("hopForward", () =>
+				forwardRequest({
+					context,
+					target: `http://${hop.to}:${peer.port}${pathname}${search}`,
+					// Only a replica names a routed customer or folder; a client's would break the signature.
+					heldBack: [ATOM_CUSTOMER_ID_HEADER, PEER_FOLDER_HEADER],
+					headers: peerRequestHeaders({
+						secret: peer.secret,
+						method: context.req.method,
+						path: pathname,
+						body,
+						headers: {
+							[REQUEST_ID_HEADER]: newRequestId(),
+							[OCCURRED_AT_HEADER]: String(Date.now()),
+						},
+					}),
+					replyHeaders: { [PROXIED_HEADER]: hop.answeredBy },
+					timeoutMs: PROXY_TIMEOUT_MS,
+					send: peer.fetch,
 				}),
-				replyHeaders: { [PROXIED_HEADER]: hop.answeredBy },
-				timeoutMs: PROXY_TIMEOUT_MS,
-				send: peer.fetch,
-			});
+			);
 		} catch (error) {
 			if (neverReachedPeer(error)) return unavailable(hop, next);
 			// The peer may have answered Autumn already, so the check is not run again here or by the API.

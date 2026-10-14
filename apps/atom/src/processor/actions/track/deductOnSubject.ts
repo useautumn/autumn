@@ -5,6 +5,7 @@ import {
 	type TrackCommand,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
@@ -27,7 +28,9 @@ export const deductOnSubject = ({
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
-	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	const result = timeStage("engineDecision", () =>
+		computeCheck({ fullSubject: subject.fullSubject, command }),
+	);
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });

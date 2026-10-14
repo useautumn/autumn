@@ -69,6 +69,7 @@ export const foldAcrossPush = ({
 					owed: fold.owed.slice(0, trimmed),
 					state: fold.customer.state,
 					catalog,
+					stage: "engineFoldCheck",
 				});
 	if (
 		!Bun.deepEquals(

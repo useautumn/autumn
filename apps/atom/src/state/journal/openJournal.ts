@@ -1,4 +1,5 @@
 import type { TrackCommand } from "@autumn/balance-engine";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import {
 	deleteCustomerJournalEntries,
 	deleteJournalEntriesUpTo,
@@ -108,7 +109,7 @@ export const openJournal = ({
 
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
-			insertJournalEntries({ ctx, entries });
+			timeStage("journalAppend", () => insertJournalEntries({ ctx, entries }));
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
@@ -127,6 +128,10 @@ export const openJournal = ({
 	}): readonly JournalEntry[] {
 		return owedByCustomer.get(customerId) ?? NOTHING_OWED;
 	}
+
+	/** What callers read: timed, unlike the journal's own lookups. */
+	const owedTimed = (params: { customerId: string }) =>
+		timeStage("journalOwed", () => owed(params));
 
 	/** O(1): the customer's array grows, never copied, however much it owes. */
 	function owe({ entry }: { entry: JournalEntry }): void {
@@ -190,7 +195,10 @@ export const openJournal = ({
 			oldestUnsent({ customerId });
 	}
 
-	function isBackedUp({ customerId }: { customerId: string }): boolean {
+	const isBackedUp = (params: { customerId: string }): boolean =>
+		timeStage("journalOwed", () => isCustomerBackedUp(params));
+
+	function isCustomerBackedUp({ customerId }: { customerId: string }): boolean {
 		const entries = owed({ customerId });
 		if (unsentOnThread > MAX_UNSENT_PER_THREAD) return true;
 		if (entries.length > MAX_OWED_PER_CUSTOMER) return true;
@@ -236,7 +244,7 @@ export const openJournal = ({
 	return {
 		writerId,
 		append,
-		owed,
+		owed: owedTimed,
 		unsent: takeUnsent,
 		countUnsent: () => unsent.size,
 		park,

@@ -10,6 +10,7 @@ import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { createReplicaRing } from "../replicas/createReplicaRing.js";
 import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -111,13 +112,13 @@ export const createAtomServer = ({
 		listener = serveAtomApp({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PORT,
-			fetch: app.fetch,
+			fetch: (request) => timeStage("honoRoute", () => app.fetch(request)),
 			logger: ctx.logger,
 		});
 		peerListener = serveAtomApp({
 			hostname: env.ATOM_HOSTNAME,
 			port: env.ATOM_PEER_PORT,
-			fetch: peerApp.fetch,
+			fetch: (request) => timeStage("honoRoute", () => peerApp.fetch(request)),
 			logger: ctx.logger,
 		});
 	}
