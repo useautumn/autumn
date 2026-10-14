@@ -1,3 +1,4 @@
+import { heapSize } from "bun:jsc";
 import { readViewFoldThreadStats } from "../../processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import { readJournalThreadStats } from "../../state/journal/openJournal.js";
@@ -36,6 +37,7 @@ export const startThreadStatsTick = ({
 		counters.set("journalOldestUnsentMs", journals.journalOldestUnsentMs);
 		counters.set("tracksAppended", journals.tracksAppended);
 		counters.set("appendFailed", journals.appendFailed);
+		counters.set("heapBytes", heapSize());
 		const stages = readStageClock({
 			aliveUs: (performance.now() - startedAt) * 1000,
 		});

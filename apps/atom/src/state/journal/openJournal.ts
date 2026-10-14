@@ -204,6 +204,10 @@ export const openJournal = ({
 		else owedByCustomer.set(entry.customerId, [entry]);
 	}
 
+	/** What callers read: timed, unlike the journal's own lookups. */
+	const owedTimed = (params: { customerId: string }) =>
+		timeStage("journalOwed", () => owed(params));
+
 	function setOwed({
 		customerId,
 		entries,
@@ -317,7 +321,10 @@ export const openJournal = ({
 			oldestUnsent({ customerId });
 	}
 
-	function isBackedUp({ customerId }: { customerId: string }): boolean {
+	const isBackedUp = (params: { customerId: string }): boolean =>
+		timeStage("journalOwed", () => isCustomerBackedUp(params));
+
+	function isCustomerBackedUp({ customerId }: { customerId: string }): boolean {
 		const entries = owed({ customerId });
 		if (unsentOnThread > MAX_UNSENT_PER_THREAD) return true;
 		if (entries.length > MAX_OWED_PER_CUSTOMER) return true;
@@ -494,7 +501,7 @@ export const openJournal = ({
 	return {
 		writerId,
 		append,
-		owed,
+		owed: owedTimed,
 		unsent: takeUnsent,
 		countUnsent: () => unsent.size,
 		park,

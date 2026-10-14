@@ -40,6 +40,7 @@ import {
 } from "./middlewares/peerRequestMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
+import { timedRoute } from "./stages/timedRoute.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
 /**
@@ -57,20 +58,20 @@ export function createPeerApp({
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
-	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
-	app.use("/v1/track", admissionMiddleware({ ctx }));
-	app.use("/v1/balances.finalize", admissionMiddleware({ ctx }));
+	app.use("/v1/balances.check", timedRoute(admissionMiddleware({ ctx })));
+	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx })));
+	app.use("/v1/balances.finalize", timedRoute(admissionMiddleware({ ctx })));
 	app.use(
-		requestLogMiddleware({ ctx, handleError }),
-		requestBodyMiddleware,
-		peerRequestMiddleware({ secret }),
+		timedRoute(requestLogMiddleware({ ctx, handleError })),
+		timedRoute(requestBodyMiddleware),
+		timedRoute(peerRequestMiddleware({ secret })),
 	);
 	// A request another replica handed on is answered here, unless its customer moved on since: then one hop more (the error handler).
-	const ready = peerReadyMiddleware({ ctx });
-	const authed = clientAuthMiddleware({ ctx });
-	app.post("/v1/balances.check", ready, authed, receiveCheck);
-	app.post("/v1/track", ready, authed, receiveTrack);
-	app.post("/v1/balances.finalize", ready, authed, receiveFinalize);
+	const ready = timedRoute(peerReadyMiddleware({ ctx }));
+	const authed = timedRoute(clientAuthMiddleware({ ctx }));
+	app.post("/v1/balances.check", ready, authed, timedRoute(receiveCheck));
+	app.post("/v1/track", ready, authed, timedRoute(receiveTrack));
+	app.post("/v1/balances.finalize", ready, authed, timedRoute(receiveFinalize));
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
 	app.post(PEER_ANNOUNCEMENT_PATH, receiveAnnouncement({ ctx }));
 	if (ctx.multiTenant) {

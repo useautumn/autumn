@@ -55,13 +55,19 @@ export const THREAD_STAT_FIELDS = [
 	/** The last 1 s tick's lateness, and how many ticks since boot were ≥100 ms late. */
 	"loopLagMs",
 	"loopStalls",
+	/** This thread's JS heap now, in bytes: its sawtooth is the cheap view of how much it collects. */
+	"heapBytes",
 	/** Thread time since boot by stage, in µs (stageClock): each stage's own, busy time no stage holds, and idle. */
+	"stageHonoRouteUs",
 	"stageHttpParseRespondUs",
 	"stageHopForwardUs",
 	"stageHopServeUs",
-	"stageEngineStepUs",
+	"stageEngineDecisionUs",
+	"stageEngineFoldStepUs",
+	"stageEngineFoldCheckUs",
 	"stageViewRenderUs",
 	"stageJournalAppendUs",
+	"stageJournalOwedUs",
 	"stagePushApplyUs",
 	"stageRelaySendUs",
 	"stageRelayReceiveUs",

@@ -17,6 +17,7 @@ import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { MAX_FORWARDS_IN_FLIGHT } from "../../../src/http/handlers/errorHandler/createAtomErrorHandler.js";
 import { FIRST_ALLOWED_CHECKS_LOGGED } from "../../../src/http/middlewares/requestLog/requestLogMiddleware.js";
 import { createMultiTenantAuth } from "../../../src/multiTenant/createMultiTenantAuth.js";
+import { readStageClock } from "../../../src/threads/stats/stageClock.js";
 import {
 	createThreadStatsBuffer,
 	openThreadCounters,
@@ -290,6 +291,18 @@ describe("an Atom in an org's cloud", () => {
 			allowed.headers.get("x-atom-deny-reason"),
 			allowed.headers.get("x-atom-limit-type"),
 		]).toEqual([null, null]);
+	});
+
+	test("a check over HTTP counts Hono's own work to honoRoute", async () => {
+		const { app } = createDeployedApp();
+		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
+		const before = readStageClock({ aliveUs: 0 }).stageHonoRouteUs ?? 0;
+
+		await app.request("/v1/balances.check", checkMessages({}));
+
+		expect(readStageClock({ aliveUs: 0 }).stageHonoRouteUs).toBeGreaterThan(
+			before,
+		);
 	});
 
 	test("a push routed to one customer but holding another is refused and stores nothing", async () => {

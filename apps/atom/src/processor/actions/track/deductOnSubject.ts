@@ -92,7 +92,7 @@ export const deductOnSubject = ({
 			committed: Promise.resolve(),
 		};
 	}
-	const { result, lockRow } = timeStage("engineStep", () =>
+	const { result, lockRow } = timeStage("engineDecision", () =>
 		track.lock
 			? decideLockedTrack({ subject, command, track })
 			: {

@@ -46,15 +46,15 @@ describe("the stage clock", () => {
 		const grown = await stagesGrownBy(() =>
 			timeStage("viewRender", () => {
 				busyFor({ ms: 10 });
-				timeStage("engineStep", () => busyFor({ ms: 20 }));
+				timeStage("engineDecision", () => busyFor({ ms: 20 }));
 			}),
 		);
 
 		expect(Object.keys(grown).sort()).toEqual([
-			"stageEngineStepUs",
+			"stageEngineDecisionUs",
 			"stageViewRenderUs",
 		]);
-		expect(grown.stageEngineStepUs).toBeGreaterThanOrEqual(20_000);
+		expect(grown.stageEngineDecisionUs).toBeGreaterThanOrEqual(20_000);
 		expect(grown.stageViewRenderUs).toBeGreaterThanOrEqual(10_000);
 		expect(grown.stageViewRenderUs).toBeLessThan(20_000);
 	});
@@ -71,7 +71,7 @@ describe("the stage clock", () => {
 		expect(grown.stageSettlePullUs).toBeLessThan(40_000);
 	});
 
-	test("a push is counted to pushApply, and a deducting check to the view, the engine, the journal and its JSON", async () => {
+	test("a push is counted to pushApply, and a deducting check to the view, the engine's decision and the fold's append step, the journal's lookups and commit, and its JSON", async () => {
 		const folder = createSlotFolder();
 		const slot = openSlotProcessor({
 			journal: openJournal({ databasePath: folder.journalPath }),
@@ -93,9 +93,11 @@ describe("the stage clock", () => {
 
 		expect(Object.keys(pushed)).toEqual(["stagePushApplyUs"]);
 		expect(Object.keys(checked).sort()).toEqual([
-			"stageEngineStepUs",
+			"stageEngineDecisionUs",
+			"stageEngineFoldStepUs",
 			"stageHttpParseRespondUs",
 			"stageJournalAppendUs",
+			"stageJournalOwedUs",
 			"stageViewRenderUs",
 		]);
 	});

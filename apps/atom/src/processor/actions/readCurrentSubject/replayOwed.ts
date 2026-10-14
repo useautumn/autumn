@@ -44,6 +44,7 @@ export const replayOwed = ({
 	catalog,
 	fullSubject: stateFullSubject = null,
 	onApplied,
+	stage = "engineFoldStep",
 }: {
 	owed: readonly JournalEntry[];
 	state: SubjectState;
@@ -52,6 +53,8 @@ export const replayOwed = ({
 	fullSubject?: WorkerFullSubject | null;
 	/** Told each mutation applied, for a caller that keeps what a step wrote, such as a lock's row. */
 	onApplied?: (mutation: SubjectStateMutation) => void;
+	/** Which engine stage the replay counts to: a view's fold, or the check whether a fold carries across a push. */
+	stage?: "engineFoldStep" | "engineFoldCheck";
 }): SubjectState =>
 	owed.reduce((current, { command }) => {
 		const fullSubject =
@@ -63,7 +66,7 @@ export const replayOwed = ({
 						entityId: command.identity.entityId,
 					});
 		try {
-			return timeStage("engineStep", () => {
+			return timeStage(stage, () => {
 				const mutation = computeOwed({ fullSubject, command });
 				onApplied?.(mutation);
 				return applyMutation({ state: current, mutation });

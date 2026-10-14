@@ -14,6 +14,7 @@ import { checkHopMiddleware } from "./middlewares/checkHopMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
+import { timedRoute } from "./stages/timedRoute.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
 /** What the public endpoint serves. Nothing here trusts another replica: peers talk on their own port (createPeerApp). */
@@ -22,14 +23,17 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
-	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
-	app.use("/v1/track", admissionMiddleware({ ctx }));
+	app.use("/v1/balances.check", timedRoute(admissionMiddleware({ ctx })));
+	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx })));
 	// A finalize the API cannot settle before its lock's hand-in lands: its caller retries the Atom instead.
 	app.use(
 		"/v1/balances.finalize",
-		admissionMiddleware({ ctx, retriedAtAtom: true }),
+		timedRoute(admissionMiddleware({ ctx, retriedAtAtom: true })),
 	);
-	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
+	app.use(
+		timedRoute(requestLogMiddleware({ ctx, handleError })),
+		timedRoute(requestBodyMiddleware),
+	);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
 		mountMultiTenantRoutes({
@@ -40,11 +44,16 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
 	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
-	const toOwner = checkHopMiddleware({ ctx });
-	const authed = clientAuthMiddleware({ ctx });
-	authorized.post("/balances.check", toOwner, authed, receiveCheck);
-	authorized.post("/track", toOwner, authed, receiveTrack);
-	authorized.post("/balances.finalize", toOwner, authed, receiveFinalize);
+	const toOwner = timedRoute(checkHopMiddleware({ ctx }));
+	const authed = timedRoute(clientAuthMiddleware({ ctx }));
+	authorized.post("/balances.check", toOwner, authed, timedRoute(receiveCheck));
+	authorized.post("/track", toOwner, authed, timedRoute(receiveTrack));
+	authorized.post(
+		"/balances.finalize",
+		toOwner,
+		authed,
+		timedRoute(receiveFinalize),
+	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/subjects.delete", pushAuth, receiveDeleteSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
