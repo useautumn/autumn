@@ -27,7 +27,10 @@ export const checkToCommand = ({
 	check,
 	subject,
 }: {
-	check: AnswerableCheck;
+	check: Pick<
+		AnswerableCheck,
+		"requestId" | "occurredAt" | "featureId" | "requiredBalance" | "properties"
+	>;
 	subject: CurrentSubject;
 }): CheckCommand => {
 	const feature = findFeatureById({
