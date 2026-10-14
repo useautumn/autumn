@@ -5,6 +5,7 @@ import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { isStripePendingPaymentError } from "@/external/stripe/common/utils/isStripePendingPaymentError";
 import { expirePendingPlanAtDueDate } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanAtDueDate";
 import { expirePendingCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -129,10 +130,7 @@ export const handleVoidInvoiceCron = async ({
 				id: metadata.id,
 			});
 		} catch (error) {
-			if (
-				error instanceof Error &&
-				error.message.includes("pending payments waiting to clear")
-			) {
+			if (isStripePendingPaymentError(error)) {
 				await MetadataService.update({
 					db,
 					id: metadata.id,

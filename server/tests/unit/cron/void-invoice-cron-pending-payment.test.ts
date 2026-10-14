@@ -11,6 +11,8 @@ const state = {
 	errorLogs: [] as string[],
 	invoiceStatus: "open" as "open" | "paid",
 	pendingPayment: true,
+	pendingPaymentMessage:
+		"Invoices with pending payments waiting to clear cannot be paid, voided, or marked uncollectible.",
 };
 
 await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
@@ -22,9 +24,7 @@ await mockModuleWithRestore("@/external/connect/createStripeCli.js", () => ({
 			}),
 			voidInvoice: async () => {
 				if (state.pendingPayment) {
-					throw new Error(
-						"Invoices with pending payments waiting to clear cannot be paid, voided, or marked uncollectible.",
-					);
+					throw new Error(state.pendingPaymentMessage);
 				}
 			},
 		},
@@ -68,6 +68,8 @@ const resetState = () => {
 	state.errorLogs = [];
 	state.invoiceStatus = "open";
 	state.pendingPayment = true;
+	state.pendingPaymentMessage =
+		"Invoices with pending payments waiting to clear cannot be paid, voided, or marked uncollectible.";
 };
 
 const runCron = () =>
@@ -95,6 +97,18 @@ test("backs off cleanup when Stripe has a pending payment", async () => {
 	expect(state.metadataUpdates[0]?.expiresAt).toBeGreaterThan(
 		startedAt + 23 * 60 * 60 * 1000,
 	);
+	expect(state.errorLogs).toHaveLength(0);
+});
+
+test("backs off cleanup on Stripe's current pending payment wording", async () => {
+	resetState();
+	state.pendingPaymentMessage =
+		"This invoice can't be modified while a payment on it is still pending. Wait for the payment to clear, then try again.";
+
+	await runCron();
+
+	expect(state.deletedMetadataIds).toEqual([]);
+	expect(state.metadataUpdates).toHaveLength(1);
 	expect(state.errorLogs).toHaveLength(0);
 });
 
