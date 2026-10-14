@@ -146,3 +146,88 @@ test("a track crosses to the owner with its API version, once the owner has caug
 	link.disconnect();
 	port2.close();
 });
+
+test("a check or track that waited past the owner's budget is refused with a 503 and never decided; a push still applies", async () => {
+	const { port1, port2 } = new MessageChannel();
+	const threadsReady = new Int32Array([1, 1]);
+	const decided: string[] = [];
+	const slots = {
+		processorFor: () => ({
+			track: async ({ request }: { request: TrackRequest }) => {
+				decided.push(`track:${request.requestId}`);
+				return { customer_id: "cus_1", value: 1, balance: null };
+			},
+			check: async () => {
+				decided.push("check");
+				return { json: '{"allowed":true}', allowed: true, denial: null };
+			},
+			setSubject: async ({ customerId }: { customerId: string }) => {
+				decided.push(`push:${customerId}`);
+				return { stored: true, entityId: null };
+			},
+		}),
+	} as unknown as Slots;
+	answerOwnerCalls({
+		ctx: {
+			auth: { slotsFor: () => slots },
+			health: { threadsReady, thread: 1 },
+		},
+		port: port2,
+	});
+	const replies = new Map<number, { ok: boolean; unavailable?: boolean }>();
+	port1.onmessage = (event: MessageEvent) => {
+		replies.set(event.data.id, event.data);
+	};
+	const stale = Date.now() - 1_000;
+	const track = trackRequestFor();
+	port1.postMessage(
+		JSON.stringify({
+			id: 1,
+			sentAt: stale,
+			atomId: null,
+			type: "track",
+			request: track,
+		}),
+	);
+	port1.postMessage(
+		JSON.stringify({
+			id: 2,
+			sentAt: stale,
+			atomId: null,
+			type: "check",
+			request: {
+				requestId: "req_c",
+				occurredAt: 1,
+				params: { customer_id: "cus_1", feature_id: "messages" },
+				query: {},
+				apiVersion: null,
+			},
+		}),
+	);
+	port1.postMessage({
+		id: 3,
+		sentAt: stale,
+		atomId: null,
+		type: "setSubject",
+		customerId: "cus_1",
+		body: "{}",
+	});
+	port1.postMessage(
+		JSON.stringify({
+			id: 4,
+			sentAt: Date.now(),
+			atomId: null,
+			type: "track",
+			request: track,
+		}),
+	);
+	for (let i = 0; i < 50 && replies.size < 4; i++) await Bun.sleep(5);
+
+	expect(replies.get(1)).toMatchObject({ ok: false, unavailable: true });
+	expect(replies.get(2)).toMatchObject({ ok: false, unavailable: true });
+	expect(replies.get(3)).toMatchObject({ ok: true });
+	expect(replies.get(4)).toMatchObject({ ok: true });
+	expect(decided).toEqual(["push:cus_1", "track:atom_req_1"]);
+	port1.close();
+	port2.close();
+});
