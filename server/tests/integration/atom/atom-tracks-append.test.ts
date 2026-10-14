@@ -250,6 +250,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 		const writer = `w_${crypto.randomUUID()}`;
 		const journal = () =>
 			[1, 2].map((seq) => ({
+				writerId: writer,
 				seq,
 				command: atomTrack({ customerId, value: 10 }),
 			}));
@@ -259,7 +260,7 @@ test.skipIf(!isBalanceWorkerRoute())(
 				autumn,
 				path: ATOM_TRACKS_APPEND_PATH,
 				tokenHash,
-				body: { writer, tracks },
+				body: { tracks },
 			});
 
 		const replies = [
@@ -283,7 +284,11 @@ test.skipIf(!isBalanceWorkerRoute())(
 		});
 		// One customer's commands apply in order: a later seq landing means every resend before it was decided.
 		const marker = await append([
-			{ seq: 3, command: atomTrack({ customerId, value: 1 }) },
+			{
+				writerId: writer,
+				seq: 3,
+				command: atomTrack({ customerId, value: 1 }),
+			},
 		]);
 		expect(marker.status).toBe(204);
 		await expectBalanceCorrect({
