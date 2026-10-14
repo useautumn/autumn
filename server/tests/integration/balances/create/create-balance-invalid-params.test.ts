@@ -38,6 +38,17 @@ test.concurrent(
 				params: { feature_id: TestFeature.Dashboard, included_grant: 10 },
 				message: "boolean features cannot have included_grant",
 			},
+			{
+				params: { feature_id: TestFeature.Dashboard, unlimited: true },
+				message: "boolean features cannot be unlimited",
+			},
+			{
+				params: {
+					feature_id: TestFeature.Dashboard,
+					reset: { interval: ResetInterval.Month },
+				},
+				message: "boolean features cannot have reset",
+			},
 		];
 
 		for (const { params, message } of cases) {
