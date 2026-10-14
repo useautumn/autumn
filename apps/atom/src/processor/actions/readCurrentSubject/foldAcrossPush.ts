@@ -3,6 +3,7 @@ import {
 	findStructuralDifference,
 	findSubjectStateDifference,
 	type StructuralDifference,
+	subjectStateRowsOf,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
@@ -47,12 +48,15 @@ export const foldAcrossPush = ({
 }): { kept: ReplayBase } | FoldRebuilt => {
 	const trimmed = trimmedCountOf({ fold, owed });
 	if (trimmed === null) return { rebuiltFor: "trim", difference: null };
-	const catalogDifference = findStructuralDifference({
-		left: fold.current.catalog,
-		right: catalog,
-	});
-	if (catalogDifference)
-		return { rebuiltFor: "catalog", difference: catalogDifference };
+	// Bun's compare decides; the path finder, ten times slower, runs only to name what differs.
+	if (!Bun.deepEquals(fold.current.catalog, catalog))
+		return {
+			rebuiltFor: "catalog",
+			difference: findStructuralDifference({
+				left: fold.current.catalog,
+				right: catalog,
+			}),
+		};
 	const acknowledged =
 		trimmed === 0
 			? fold.customer.state
@@ -61,12 +65,19 @@ export const foldAcrossPush = ({
 					state: fold.customer.state,
 					catalog,
 				});
-	const stateDifference = findSubjectStateDifference({
-		left: acknowledged,
-		right: customer.state,
-	});
-	if (stateDifference)
-		return { rebuiltFor: "state", difference: stateDifference };
+	if (
+		!Bun.deepEquals(
+			subjectStateRowsOf(acknowledged),
+			subjectStateRowsOf(customer.state),
+		)
+	)
+		return {
+			rebuiltFor: "state",
+			difference: findSubjectStateDifference({
+				left: acknowledged,
+				right: customer.state,
+			}),
+		};
 	// The fold's own steps past the acknowledged ones, counted on from Autumn's revision so the next replay starts there.
 	const stepsPastPush = fold.customerState.revision - acknowledged.revision;
 	return {
