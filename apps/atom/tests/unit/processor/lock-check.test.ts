@@ -12,6 +12,7 @@ import {
 import {
 	createSlotFolder,
 	openSlotProcessor,
+	owedCommand,
 } from "../utils/journalFixtures.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -135,5 +136,37 @@ describe("a lock on the Atom", () => {
 			message: "A lock with this ID already exists",
 		});
 		expect(after.journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+	});
+
+	test("a journaled lock whose lock_id Autumn already holds open moves nothing in the view, as the worker refuses it", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		await processor.setSubject(
+			subjectPushOf({
+				subject: {
+					...storedSubjectWith({ balance: 1000, readAt: 2000 }),
+					state: {
+						...storedSubjectWith({ balance: 1000 }).state,
+						openLocks: [{ id: "lck_api", lock_id: "lock_1" }],
+					},
+				},
+			}),
+		);
+		await journal.append({
+			customerId: "cus_1",
+			command: {
+				...owedCommand({ commandId: "locked_twice", value: 30 }),
+				lock: {
+					id: "lck_atom",
+					lockId: "lock_1",
+					expiresAt: 1_900_000_000_000,
+					expiryAction: "confirm",
+				},
+			},
+		});
+
+		expect(
+			(await checkResponseOf({ processor, request: checkRequestFor() })).balance
+				?.remaining,
+		).toBe(1000);
 	});
 });
