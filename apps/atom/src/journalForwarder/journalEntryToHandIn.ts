@@ -1,5 +1,6 @@
 import type { AtomTracksAppendRequest } from "@autumn/byoc";
 import type { JournalEntry } from "../state/journal/types/journal.js";
+import { overrideOverageForHandIn } from "./overrideOverageForHandIn.js";
 
 /**
  * A journaled entry as Autumn takes it: a track as the worker's own command, a finalize as the lock it names. Autumn
@@ -12,7 +13,8 @@ export const journalEntryToHandIn = ({
 	writerId: string;
 	entry: JournalEntry;
 }): AtomTracksAppendRequest["tracks"][number] => {
-	if (command.type === "track") return { writerId, seq, command };
+	if (command.type === "track")
+		return { writerId, seq, command: overrideOverageForHandIn({ command }) };
 	return {
 		writerId,
 		seq,

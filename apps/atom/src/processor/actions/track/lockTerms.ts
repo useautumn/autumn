@@ -20,6 +20,6 @@ export const isSameLock = ({
 	held.identity.entityId === retry.identity.entityId &&
 	held.featureId === retry.featureId &&
 	held.value === retry.value &&
-	held.lock?.overageBehavior === retry.lock?.overageBehavior &&
+	held.overageBehavior === retry.overageBehavior &&
 	(retry.lock?.expiryAction !== "release" ||
 		held.lock?.expiresAt === retry.lock.expiresAt);
