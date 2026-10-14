@@ -1033,6 +1033,59 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
+		test("an open lock is read back whole from Postgres after an evict: the worker holds its full row, deltas included", async () => {
+			const first = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(first)) workers.push(first);
+			const locking = await seedCustomer({ postgres, balance: 100 });
+			try {
+				await trackOrExplain(
+					harness,
+					parseTrackCommand({
+						input: {
+							...trackCommand({
+								customer: locking,
+								commandId: "lock_track_1",
+								value: 8,
+							}),
+							lock: {
+								id: "lck_hydrate_1",
+								lockId: "L_hydrate",
+								expiresAt: Date.now() + 3_600_000,
+								expiryAction: "release",
+							},
+						},
+					}),
+				);
+				expect(await waitForBalance({ customer: locking, balance: 92 })).toBe(
+					92,
+				);
+				const [stored] = (
+					await postgres.db.execute(
+						sql`SELECT id, lock_id, customer_id, feature_id, overage_behavior, deltas FROM balance_locks WHERE internal_customer_id = ${locking.internalCustomerId}`,
+					)
+				).rows;
+
+				await harness.client.evict({
+					command: evictCommand({
+						customerId: locking.identity.customerId,
+						orgId: locking.orgId,
+						env: locking.env,
+					}),
+				});
+				const read = await harness.client.readSubjectState({
+					command: readSubjectStateCommand({
+						customer: locking,
+						requestId: "read_locks",
+					}),
+				});
+
+				expect(stored).toMatchObject({ lock_id: "L_hydrate" });
+				expect(read.state.openLocks).toEqual([expect.objectContaining(stored)]);
+			} finally {
+				await locking.cleanup();
+			}
+		}, 60_000);
+
 		test("a billing plan that creates a customer lands every row in Postgres, arrays included, and a track then draws on it", async () => {
 			const worker = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(worker)) workers.push(worker);
