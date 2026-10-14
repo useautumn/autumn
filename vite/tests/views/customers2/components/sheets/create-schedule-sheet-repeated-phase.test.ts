@@ -203,3 +203,61 @@ test("a repeated phase hours after another boundary still reopens", () => {
 		sameDay,
 	]);
 });
+
+test("a repeated phase reopens with the plans it saved, not the nearest scheduled plan", () => {
+	const noon = NEXT_PHASE + 12 * 60 * 60 * 1000;
+	const evening = NEXT_PHASE + 18 * 60 * 60 * 1000;
+	const nearbyCustomer = {
+		...customer,
+		customer_products: [
+			row({
+				id: "cp_now",
+				productId: "enterprise",
+				status: CusProductStatus.Active,
+				startsAt: PHASE_START,
+				endedAt: NEXT_PHASE,
+				internalEntityId: "ety_main",
+			}),
+			row({
+				id: "cp_next",
+				productId: "enterprise",
+				status: CusProductStatus.Scheduled,
+				startsAt: NEXT_PHASE,
+				endedAt: evening,
+				internalEntityId: "ety_main",
+			}),
+			row({
+				id: "cp_evening",
+				productId: "premium",
+				status: CusProductStatus.Scheduled,
+				startsAt: evening,
+				internalEntityId: "ety_main",
+			}),
+		],
+	} as unknown as FullCustomer;
+
+	const form = buildInitialValues({
+		customer: nearbyCustomer,
+		products: [plan("enterprise"), plan("premium")],
+		nowMs: NOW,
+		schedules: [
+			scheduleWithPhases([
+				{ startsAt: NEXT_PHASE, customerProductIds: ["cp_next"] },
+				{ startsAt: noon, customerProductIds: ["cp_next"] },
+				{ startsAt: evening, customerProductIds: ["cp_evening"] },
+			]),
+		],
+	});
+
+	expect(
+		form.phases.map((phase) => ({
+			startsAt: phase.startsAt,
+			plans: phase.plans.map(({ productId }) => productId),
+		})),
+	).toEqual([
+		{ startsAt: PHASE_START, plans: ["enterprise"] },
+		{ startsAt: NEXT_PHASE, plans: ["enterprise"] },
+		{ startsAt: noon, plans: ["enterprise"] },
+		{ startsAt: evening, plans: ["premium"] },
+	]);
+});

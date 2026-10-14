@@ -57,7 +57,11 @@ const subscriptionTargetFromSheetData = (
 	(sheetData?.subscriptionTarget as SetPlansSubscriptionTarget | undefined) ??
 	null;
 
-type RepeatedPhase = { startsAt: number; continuesFrom: number };
+type RepeatedPhase = {
+	startsAt: number;
+	continuesFrom: number;
+	customerProductIds: string[];
+};
 
 const isScheduledCustomerProduct = (customerProduct: FullCusProduct) =>
 	customerProduct.status === CusProductStatus.Scheduled;
@@ -219,11 +223,10 @@ const savedRepeatedPhases = ({
 		.flatMap((schedule) => schedule.phases)
 		.filter((phase) => phase.starts_at > nowMs)
 		.flatMap((phase) => {
-			const heldStarts = customerProducts
-				.filter((customerProduct) =>
-					phase.customer_product_ids.includes(customerProduct.id),
-				)
-				.map((customerProduct) => customerProduct.starts_at);
+			const held = customerProducts.filter((customerProduct) =>
+				phase.customer_product_ids.includes(customerProduct.id),
+			);
+			const heldStarts = held.map(({ starts_at }) => starts_at);
 			const startsHere = heldStarts.some(
 				(startsAt) =>
 					truncateMsToSecondPrecision(startsAt) ===
@@ -231,7 +234,11 @@ const savedRepeatedPhases = ({
 			);
 			if (heldStarts.length === 0 || startsHere) return [];
 			return [
-				{ startsAt: phase.starts_at, continuesFrom: Math.max(...heldStarts) },
+				{
+					startsAt: phase.starts_at,
+					continuesFrom: Math.max(...heldStarts),
+					customerProductIds: held.map(({ id }) => id),
+				},
 			];
 		});
 
@@ -292,6 +299,12 @@ function customerProductsToSetPlansState({
 			canUnschedule: phaseStarts.length > 1,
 			entities,
 			products,
+			heldCustomerProductIdsAt: new Map(
+				repeatedOnly.map(({ startsAt, customerProductIds }) => [
+					startsAt,
+					customerProductIds,
+				]),
+			),
 		}),
 		repeatedPhases: repeatedOnly,
 	};
