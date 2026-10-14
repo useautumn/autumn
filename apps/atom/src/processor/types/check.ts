@@ -8,8 +8,6 @@ import type {
 
 /** A check as the caller sent it to Autumn's own API, read where it entered. */
 export type CheckRequest = {
-	/** A track arrives as the deducting check of its value; it is answered and journaled as the API's track. */
-	kind: "check" | "track";
 	requestId: string;
 	occurredAt: number;
 	/** The caller's Idempotency-Key, read as the API reads it; null when it sent none. */

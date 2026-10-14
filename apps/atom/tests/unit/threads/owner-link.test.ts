@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
+import type { TrackRequest } from "../../../src/processor/types/track.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
 import { answerOwnerCalls } from "../../../src/threads/owners/answerOwnerCalls.js";
 import { createOwnerLink } from "../../../src/threads/owners/createOwnerLink.js";
 import { OwnerUnavailableError } from "../../../src/threads/owners/ownerUnavailableError.js";
+import { trackRequestFor } from "../utils/atomFixtures.js";
 
 test("a full link sheds pushes but still delivers a catalog install", async () => {
 	const { port1, port2 } = new MessageChannel();
@@ -100,6 +102,46 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 		denial: null,
 	});
 	expect(await listSince()).toEqual([]);
+
+	link.disconnect();
+	port2.close();
+});
+
+test("a track crosses to the owner with its API version, once the owner has caught up", async () => {
+	const { port1, port2 } = new MessageChannel();
+	const threadsReady = new Int32Array(2);
+	const received: TrackRequest[] = [];
+	const slots = {
+		processorFor: () => ({
+			track: async ({ request }: { request: TrackRequest }) => {
+				received.push(request);
+				return { customer_id: "cus_1", value: 1, balance: null };
+			},
+		}),
+	} as unknown as Slots;
+	answerOwnerCalls({
+		ctx: {
+			auth: { slotsFor: () => slots },
+			health: { threadsReady, thread: 1 },
+		},
+		port: port2,
+	});
+	const link = createOwnerLink({ thread: 1 });
+	link.connect({ port: port1 });
+	const processor = link.processorFor({ atomId: null });
+	const request = trackRequestFor({ idempotencyKey: "evt_1" });
+
+	await expect(processor.track({ request })).rejects.toBeInstanceOf(
+		OwnerUnavailableError,
+	);
+	Atomics.store(threadsReady, 1, 1);
+	expect(await processor.track({ request })).toEqual({
+		customer_id: "cus_1",
+		value: 1,
+		balance: null,
+	});
+	expect(received).toEqual([request]);
+	expect(received[0]?.apiVersion.value).toBe(request.apiVersion.value);
 
 	link.disconnect();
 	port2.close();
