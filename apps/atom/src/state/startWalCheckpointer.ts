@@ -14,7 +14,7 @@ export const TICKS_PER_FILE = 3;
 /** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
  * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
 export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
->>>>>>> 436920c436 (fix(atom): a WAL grown past 16 MB is checkpointed on the next tick, ahead of its turn, so one hot file's 30 s of writes never comes back as one burst)const WAL_SUFFIX = "-wal";
+const WAL_SUFFIX = "-wal";
 
 const walBytes = ({ path }: { path: string }): number => {
 	try {
