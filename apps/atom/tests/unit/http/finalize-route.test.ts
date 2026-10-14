@@ -153,3 +153,66 @@ describe("a finalize the Atom leaves to the API", () => {
 		expect(await remainingOn(replica)).toBe(70);
 	});
 });
+
+describe("a finalize the Atom cannot run for a transport reason", () => {
+	const apiCalls = () => {
+		const calls: string[] = [];
+		return {
+			calls,
+			autumn: async (request: Request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ code: "lock_not_found" }, { status: 404 });
+			},
+		};
+	};
+
+	test("on a stopping replica is a 503 marked x-atom-forwarded, so the SDK retries the Atom; a check there is still left to the API", async () => {
+		const api = apiCalls();
+		const replica = createReplica({
+			address: A,
+			peers: [],
+			stopping: () => true,
+		});
+		connect({ replicas: [replica], autumn: api.autumn });
+
+		const finalized = await finalizeOn(replica);
+		const checked = await replica.app.request(
+			"/v1/balances.check",
+			callOf({ body: { customer_id: CUSTOMER, feature_id: "messages" } }),
+		);
+
+		expect(finalized.status).toBe(503);
+		expect(await finalized.json()).toMatchObject({ code: "atom_stopping" });
+		expect(finalized.headers.get("x-atom-forwarded")).toBe("atom_stopping");
+		expect(checked.status).toBe(503);
+		expect(checked.headers.get("x-atom-forwarded")).toBeNull();
+		expect(api.calls).toEqual([]);
+	});
+
+	test("handed on to an owner that cannot be reached, or that sheds it, is a 503 marked x-atom-forwarded, never the API's", async () => {
+		const api = apiCalls();
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		await storeOnly({ replica: b, customerId: CUSTOMER, readAt: 1700 });
+
+		connect({ replicas: [b], autumn: api.autumn });
+		const unreachable = await finalizeOn(b);
+		disconnect();
+		connect({
+			replicas: [a, b],
+			autumn: api.autumn,
+			replyFrom: async (replica, reply) =>
+				replica === a
+					? Response.json({ code: "atom_overloaded" }, { status: 503 })
+					: reply,
+		});
+		const shed = await finalizeOn(b);
+
+		for (const reply of [unreachable, shed]) {
+			expect(reply.status).toBe(503);
+			expect(await reply.json()).toMatchObject({ code: "atom_unavailable" });
+			expect(reply.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
+		}
+		expect(api.calls).toEqual([]);
+	});
+});
