@@ -22,6 +22,25 @@ import type { StoredSubject } from "./types/storedSubject.js";
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
 
+type Slice = Pick<StoredSubject, "catalog" | "org">;
+/** By slice hash, across every customer the thread holds: customers on one plan hold one catalog, not one each. */
+const slicesByHash = new Map<string, WeakRef<Slice>>();
+
+/** The held copy of this slice when any customer holds one, else this one, kept for the next. */
+const sharedSlice = ({
+	hash,
+	slice,
+}: {
+	hash: string;
+	slice: Slice;
+}): Slice => {
+	const held = slicesByHash.get(hash)?.deref();
+	if (held) return held;
+	const shared = deepFreeze({ catalog: slice.catalog, org: slice.org });
+	slicesByHash.set(hash, new WeakRef(shared));
+	return shared;
+};
+
 const subjectKey = ({
 	customerId,
 	entityId,
@@ -63,7 +82,10 @@ export const openSqliteStore = ({
 		const read = readSubjectRow({ ctx, ...params });
 		if (read === null) return null;
 		// Frozen, because every check of the subject shares the copy.
-		const subject = deepFreeze(read.subject);
+		const subject = deepFreeze({
+			...read.subject,
+			...sharedSlice({ hash: read.sliceHash, slice: read.subject }),
+		});
 		held.hold({ key, subject, bytes: read.bytes, sliceHash: read.sliceHash });
 		return subject;
 	}
@@ -81,14 +103,18 @@ export const openSqliteStore = ({
 		return readSubjectVersion({ ctx, ...params });
 	}
 
-	/** A slice the held copy already has is kept as it is: its row stays, and its frozen catalog and org are reused. */
+	/** A slice any held copy already has is reused, frozen; its row is rewritten only when this customer's held a different one. */
 	function writeOf(subject: StoredSubject): SubjectWrite {
 		const slice = subjectToSlice({ subject });
 		const heldCopy = held.get(storePrefix + keyOf(subject));
-		if (heldCopy?.sliceHash !== slice.hash)
-			return { subject, slice, sliceStored: false };
-		const { catalog, org } = heldCopy.subject;
-		return { subject: { ...subject, catalog, org }, slice, sliceStored: true };
+		return {
+			subject: {
+				...subject,
+				...sharedSlice({ hash: slice.hash, slice: subject }),
+			},
+			slice,
+			sliceStored: heldCopy?.sliceHash === slice.hash,
+		};
 	}
 
 	/** A stored subject is held as written; one ignored as older keeps the newer copy, carrying a version the push raised. */

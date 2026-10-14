@@ -454,6 +454,36 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
+	test("customers on the same catalog slice share one held copy of it, whether pushed or read from the file", () => {
+		const databasePath = slotPath();
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const pushed = openSqliteStore({ databasePath, held: freshHeld() });
+		for (const customerId of ["cus_1", "cus_2"])
+			pushed.setSubject({ subject: asCustomer(customerId) });
+		const read = (store: typeof pushed, customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read(pushed, "cus_2")?.catalog).toBe(
+			read(pushed, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read(pushed, "cus_2")?.org).toBe(
+			read(pushed, "cus_1")?.org as StoredSubject["org"],
+		);
+		pushed.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+		expect(read(reopened, "cus_2")?.catalog).toBe(
+			read(reopened, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		reopened.close();
+	});
+
 	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", () => {
 		const databasePath = slotPath();
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });
