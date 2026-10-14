@@ -32,7 +32,7 @@ import {
 	createOwnershipConsumer,
 	type OwnershipConsumer,
 } from "@autumn/kafka";
-import type { PostgresClient } from "@autumn/postgres";
+import { type PostgresClient, readLockRows } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
@@ -1030,6 +1030,55 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 				expect(await readAtomSeqs()).toEqual({ atom_1: { w_1: 7 } });
 			} finally {
 				await handedIn.cleanup();
+			}
+		}, 60_000);
+
+		test("lock rows are read by (org, env, lock id) in one probe; a key under another org or env, or an unknown id, finds nothing", async () => {
+			const first = workers.at(-1) ?? (await startWorker({ harness }));
+			if (!workers.includes(first)) workers.push(first);
+			const locking = await seedCustomer({ postgres, balance: 100 });
+			const key = { orgId: locking.orgId, env: locking.env, lockId: "L_read" };
+			try {
+				await trackOrExplain(
+					harness,
+					parseTrackCommand({
+						input: {
+							...trackCommand({
+								customer: locking,
+								commandId: "lock_read_1",
+								value: 8,
+							}),
+							lock: {
+								id: "lck_read_1",
+								lockId: "L_read",
+								expiresAt: Date.now() + 3_600_000,
+								expiryAction: "release",
+							},
+						},
+					}),
+				);
+
+				const rows = await readLockRows({
+					ctx: { db: postgres.db },
+					keys: [
+						key,
+						{ ...key, orgId: "org_other" },
+						{ ...key, env: "live" },
+						{ ...key, lockId: "L_unknown" },
+					],
+				});
+
+				expect(rows).toEqual([
+					expect.objectContaining({
+						id: "lck_read_1",
+						lock_id: "L_read",
+						customer_id: locking.identity.customerId,
+						feature_id: locking.featureId,
+						expires_at: expect.any(Number),
+					}),
+				]);
+			} finally {
+				await locking.cleanup();
 			}
 		}, 60_000);
 

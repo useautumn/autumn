@@ -69,6 +69,25 @@ export const updateBalanceOf = ({
 		},
 	});
 
+/** A track that opens lock `lockId` over `value`, as a check with a lock asks for. */
+export const lockingTrackOf = ({
+	customerId,
+	lockId,
+	value = 10,
+}: {
+	customerId: string;
+	lockId: string;
+	value?: number;
+}): TrackCommand => ({
+	...trackOf({ customerId, commandId: `lock_${lockId}`, value }),
+	lock: {
+		id: `lck_${lockId}`,
+		lockId,
+		expiresAt: testOccurredAt + 86_400_000,
+		expiryAction: "confirm",
+	},
+});
+
 /** The sync check-with-lock path: a track that opens a lock, answered once the store holds the lock row. */
 export const takeLock = async ({
 	pipeline,
@@ -82,15 +101,7 @@ export const takeLock = async ({
 	value?: number;
 }): Promise<WorkerLock> => {
 	const reply = await pipeline.processor.track({
-		command: {
-			...trackOf({ customerId, commandId: `lock_${lockId}`, value }),
-			lock: {
-				id: `lck_${lockId}`,
-				lockId,
-				expiresAt: testOccurredAt + 86_400_000,
-				expiryAction: "confirm",
-			},
-		},
+		command: lockingTrackOf({ customerId, lockId, value }),
 	});
 	const opened = reply.changes.find(
 		(change) => change.table === "locks" && change.op === "insert",
