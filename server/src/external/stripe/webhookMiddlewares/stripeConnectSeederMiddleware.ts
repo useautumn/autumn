@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	AuthType,
 	ErrCode,
 	type Feature,
@@ -78,6 +78,19 @@ export const stripeConnectSeederMiddleware = async (
 			}
 			return c.json({ error: message }, 400);
 		}
+	}
+
+	// Live Connect endpoints also receive connected accounts' test events; those belong to the sandbox endpoint.
+	if (
+		typeof event.livemode === "boolean" &&
+		event.livemode !== (env === AppEnv.Live)
+	) {
+		return c.json(
+			{
+				message: `Skipping livemode=${event.livemode} event on ${env} endpoint`,
+			},
+			200,
+		);
 	}
 
 	// Step 4: Get org from account ID
