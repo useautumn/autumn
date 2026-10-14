@@ -1,18 +1,13 @@
-/**
- * Contract: a pooled credit balance prices and admits usage by its
- * contributors' feature_override, and a plan with a different rate card is
- * rejected rather than joining the pool, so no draw uses a rate no plan set.
- */
+/** A pooled credit balance prices usage by its contributors' feature_override;
+ * a plan with a different rate card gets its own pool. */
 
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
-	AttachParamsV1Input,
 	CheckResponseV2,
 	FeatureConfigOverride,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -107,7 +102,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pooled credit override: a plan with a different rate card can't join an existing pool")}`,
+	`${chalk.yellowBright("pooled credit override: a plan with a different rate card pools separately")}`,
 	async () => {
 		const customerId = "pooled-override-conflict";
 		const inheriting = pooledCreditsPlan({
@@ -129,24 +124,32 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [inheriting, excluding] }),
 			],
-			actions: [s.billing.attach({ productId: inheriting.id, entityIndex: 0 })],
+			actions: [
+				s.billing.attach({ productId: inheriting.id, entityIndex: 0 }),
+				s.billing.attach({ productId: excluding.id, entityIndex: 0 }),
+			],
 		});
 
-		await expectAutumnError({
-			errMessage:
-				"different credit rate overrides can't share a pooled balance",
-			func: () =>
-				autumnV2_3.billing.attach<AttachParamsV1Input>({
-					customer_id: customerId,
-					entity_id: entities[0].id,
-					plan_id: excluding.id,
-				}),
-		});
-
-		// The rejected plan's credits never reached the pool.
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
 			skip_cache: "true",
 		});
-		expect(customer.features[TestFeature.Credits]!.balance).toBe(100);
+		expect(customer.features[TestFeature.Credits]!.balance).toBe(1_100);
+
+		// Action1 at 0.2 credits: 600 needs 120, more than the only pool that covers it.
+		const check = await autumnV2_3.check<CheckResponseV2>({
+			customer_id: customerId,
+			entity_id: entities[0]!.id,
+			feature_id: TestFeature.Action1,
+			required_balance: 600,
+		});
+		expect(check.allowed).toBe(false);
+
+		const withinPool = await autumnV2_3.check<CheckResponseV2>({
+			customer_id: customerId,
+			entity_id: entities[0]!.id,
+			feature_id: TestFeature.Action1,
+			required_balance: 400,
+		});
+		expect(withinPool.allowed).toBe(true);
 	},
 );
