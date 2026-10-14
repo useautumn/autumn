@@ -463,6 +463,19 @@ export const UpdateEntityType = {
  */
 export type UpdateEntityType = OpenEnum<typeof UpdateEntityType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const UpdateEntityCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type UpdateEntityCombine = OpenEnum<typeof UpdateEntityCombine>;
+
 export type UpdateEntityDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -837,6 +850,10 @@ export type UpdateEntityFeature = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: UpdateEntityCombine | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -1894,6 +1911,12 @@ export const UpdateEntityType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityType);
 
 /** @internal */
+export const UpdateEntityCombine$inboundSchema: z.ZodMiniType<
+  UpdateEntityCombine,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityCombine);
+
+/** @internal */
 export const UpdateEntityDimensions6$inboundSchema: z.ZodMiniType<
   UpdateEntityDimensions6,
   unknown
@@ -2633,6 +2656,7 @@ export const UpdateEntityFeature$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: UpdateEntityType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(UpdateEntityCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => UpdateEntityCreditSchema1$inboundSchema),

@@ -12,6 +12,9 @@ export const LINT_RULES: LintRules = {
 			type: {
 				enum: ["boolean", "metered", "credit_system", "ai_credit_system"],
 			},
+			combine: {
+				enum: ["sum", "max", "min"],
+			},
 			defaultMarkup: {
 				minimum: -100,
 			},

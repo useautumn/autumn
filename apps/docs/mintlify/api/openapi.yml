@@ -930,6 +930,15 @@ components:
                     description: "For metered features: true if usage resets periodically (API
                       calls, credits), false if allocated persistently (seats,
                       storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds
+                      them up, 'max' / 'min' keep the highest / lowest grant
+                      among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -4888,6 +4897,15 @@ components:
               description: "For metered features: true if usage resets periodically (API
                 calls, credits), false if allocated persistently (seats,
                 storage)."
+            combine:
+              enum:
+                - sum
+                - max
+                - min
+              type: string
+              description: "How grants of this feature from several plans combine: 'sum' adds
+                them up, 'max' / 'min' keep the highest / lowest grant among
+                plan items with no price. Omitted when 'sum'."
             event_names:
               type: array
               items:
@@ -6782,6 +6800,16 @@ paths:
                               description: "For metered features: true if usage resets periodically (API
                                 calls, credits), false if allocated persistently
                                 (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds
+                                them up, 'max' / 'min' keep the highest / lowest
+                                grant among plan items with no price. Omitted
+                                when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -8593,6 +8621,16 @@ paths:
                                     description: "For metered features: true if usage resets periodically (API
                                       calls, credits), false if allocated
                                       persistently (seats, storage)."
+                                  combine:
+                                    enum:
+                                      - sum
+                                      - max
+                                      - min
+                                    type: string
+                                    description: "How grants of this feature from several plans combine: 'sum' adds
+                                      them up, 'max' / 'min' keep the highest /
+                                      lowest grant among plan items with no
+                                      price. Omitted when 'sum'."
                                   event_names:
                                     type: array
                                     items:
@@ -10514,6 +10552,16 @@ paths:
                               description: "For metered features: true if usage resets periodically (API
                                 calls, credits), false if allocated persistently
                                 (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds
+                                them up, 'max' / 'min' keep the highest / lowest
+                                grant among plan items with no price. Omitted
+                                when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -35502,6 +35550,17 @@ paths:
                     that periodically resets and is consumed rather than
                     allocated (like credits, API requests, etc.). Applicable
                     only for 'metered' features.
+                combine:
+                  enum:
+                    - sum
+                    - max
+                    - min
+                  type: string
+                  description: How grants of this feature from several plans combine. 'sum'
+                    (default) adds them up. 'max' or 'min' keeps only the
+                    highest or lowest grant among plan items with no price;
+                    priced items always add on top. Metered and credit system
+                    features only.
                 display:
                   type: object
                   properties:
@@ -35921,6 +35980,15 @@ paths:
                     description: "For metered features: true if usage resets periodically (API
                       calls, credits), false if allocated persistently (seats,
                       storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds
+                      them up, 'max' / 'min' keep the highest / lowest grant
+                      among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -36524,6 +36592,15 @@ paths:
                     description: "For metered features: true if usage resets periodically (API
                       calls, credits), false if allocated persistently (seats,
                       storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds
+                      them up, 'max' / 'min' keep the highest / lowest grant
+                      among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -37110,6 +37187,16 @@ paths:
                           description: "For metered features: true if usage resets periodically (API
                             calls, credits), false if allocated persistently
                             (seats, storage)."
+                        combine:
+                          enum:
+                            - sum
+                            - max
+                            - min
+                          type: string
+                          description: "How grants of this feature from several plans combine: 'sum' adds
+                            them up, 'max' / 'min' keep the highest / lowest
+                            grant among plan items with no price. Omitted when
+                            'sum'."
                         event_names:
                           type: array
                           items:
@@ -37712,6 +37799,17 @@ paths:
                     that periodically resets and is consumed rather than
                     allocated (like credits, API requests, etc.). Applicable
                     only for 'metered' features.
+                combine:
+                  enum:
+                    - sum
+                    - max
+                    - min
+                  type: string
+                  description: How grants of this feature from several plans combine. 'sum'
+                    (default) adds them up. 'max' or 'min' keeps only the
+                    highest or lowest grant among plan items with no price;
+                    priced items always add on top. Metered and credit system
+                    features only.
                 display:
                   type: object
                   properties:
@@ -38131,6 +38229,15 @@ paths:
                     description: "For metered features: true if usage resets periodically (API
                       calls, credits), false if allocated persistently (seats,
                       storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds
+                      them up, 'max' / 'min' keep the highest / lowest grant
+                      among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -68589,6 +68696,16 @@ paths:
                                 description: "For metered features: true if usage resets periodically (API
                                   calls, credits), false if allocated
                                   persistently (seats, storage)."
+                              combine:
+                                enum:
+                                  - sum
+                                  - max
+                                  - min
+                                type: string
+                                description: "How grants of this feature from several plans combine: 'sum' adds
+                                  them up, 'max' / 'min' keep the highest /
+                                  lowest grant among plan items with no price.
+                                  Omitted when 'sum'."
                               event_names:
                                 type: array
                                 items:
@@ -69829,6 +69946,16 @@ paths:
                                 description: "For metered features: true if usage resets periodically (API
                                   calls, credits), false if allocated
                                   persistently (seats, storage)."
+                              combine:
+                                enum:
+                                  - sum
+                                  - max
+                                  - min
+                                type: string
+                                description: "How grants of this feature from several plans combine: 'sum' adds
+                                  them up, 'max' / 'min' keep the highest /
+                                  lowest grant among plan items with no price.
+                                  Omitted when 'sum'."
                               event_names:
                                 type: array
                                 items:
@@ -79441,6 +79568,16 @@ paths:
                               description: "For metered features: true if usage resets periodically (API
                                 calls, credits), false if allocated persistently
                                 (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds
+                                them up, 'max' / 'min' keep the highest / lowest
+                                grant among plan items with no price. Omitted
+                                when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -80549,6 +80686,16 @@ paths:
                               description: "For metered features: true if usage resets periodically (API
                                 calls, credits), false if allocated persistently
                                 (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds
+                                them up, 'max' / 'min' keep the highest / lowest
+                                grant among plan items with no price. Omitted
+                                when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -81703,6 +81850,16 @@ paths:
                                     description: "For metered features: true if usage resets periodically (API
                                       calls, credits), false if allocated
                                       persistently (seats, storage)."
+                                  combine:
+                                    enum:
+                                      - sum
+                                      - max
+                                      - min
+                                    type: string
+                                    description: "How grants of this feature from several plans combine: 'sum' adds
+                                      them up, 'max' / 'min' keep the highest /
+                                      lowest grant among plan items with no
+                                      price. Omitted when 'sum'."
                                   event_names:
                                     type: array
                                     items:
@@ -83059,6 +83216,16 @@ paths:
                               description: "For metered features: true if usage resets periodically (API
                                 calls, credits), false if allocated persistently
                                 (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds
+                                them up, 'max' / 'min' keep the highest / lowest
+                                grant among plan items with no price. Omitted
+                                when 'sum'."
                             event_names:
                               type: array
                               items:

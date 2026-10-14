@@ -48189,6 +48189,8 @@ name: string;
 type: "boolean" | "metered" | "credit_system" | "ai_credit_system";
 /** For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage). */
 consumable: boolean;
+/** How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'. */
+combine?: "sum" | "max" | "min";
 /** Event names that trigger this feature's balance. Allows multiple features to respond to a single event. */
 eventNames?: Array<string>;
 /** For classic credit systems: maps metered features to flat or graduated credit costs. */
@@ -50510,6 +50512,8 @@ name: string;
 type: "boolean" | "metered" | "credit_system" | "ai_credit_system";
 /** For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage). */
 consumable: boolean;
+/** How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'. */
+combine?: "sum" | "max" | "min";
 /** Event names that trigger this feature's balance. Allows multiple features to respond to a single event. */
 eventNames?: Array<string>;
 /** For classic credit systems: maps metered features to flat or graduated credit costs. */

@@ -814,6 +814,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.",
 			},
 			{
+				name: "combine",
+				type: "string",
+				required: false,
+				description:
+					"How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.",
+			},
+			{
 				name: "display",
 				type: "json",
 				required: false,
@@ -910,6 +917,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.",
+			},
+			{
+				name: "combine",
+				type: "string",
+				required: false,
+				description:
+					"How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.",
 			},
 			{
 				name: "display",

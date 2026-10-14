@@ -739,6 +739,17 @@ UpdateEntityType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+UpdateEntityCombine = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class UpdateEntityDimensions6TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -1549,6 +1560,8 @@ class UpdateEntityFeatureTypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[UpdateEntityCombine]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[UpdateEntityCreditSchemaUnionTypedDict]]
@@ -1585,6 +1598,9 @@ class UpdateEntityFeature(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[UpdateEntityCombine] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -1610,6 +1626,7 @@ class UpdateEntityFeature(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",

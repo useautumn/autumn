@@ -862,6 +862,13 @@ components:
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -4459,6 +4466,13 @@ components:
             consumable:
               type: boolean
               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+            combine:
+              enum:
+                - sum
+                - max
+                - min
+              type: string
+              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
             event_names:
               type: array
               items:
@@ -6241,6 +6255,13 @@ paths:
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -7887,6 +7908,13 @@ paths:
                                   consumable:
                                     type: boolean
                                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                                  combine:
+                                    enum:
+                                      - sum
+                                      - max
+                                      - min
+                                    type: string
+                                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                                   event_names:
                                     type: array
                                     items:
@@ -9622,6 +9650,13 @@ paths:
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -31598,6 +31633,8 @@ paths:
 
         @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 
+        @param combine - How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only. (optional)
+
         @param display - Singular and plural display names for the feature in your user interface. (optional)
 
         @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
@@ -31635,6 +31672,13 @@ paths:
                 consumable:
                   type: boolean
                   description: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+                combine:
+                  enum:
+                    - sum
+                    - max
+                    - min
+                  type: string
+                  description: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
                 display:
                   type: object
                   properties:
@@ -32015,6 +32059,13 @@ paths:
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -32550,6 +32601,13 @@ paths:
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -33069,6 +33127,13 @@ paths:
                         consumable:
                           type: boolean
                           description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                        combine:
+                          enum:
+                            - sum
+                            - max
+                            - min
+                          type: string
+                          description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                         event_names:
                           type: array
                           items:
@@ -33599,6 +33664,8 @@ paths:
 
         @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 
+        @param combine - How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only. (optional)
+
         @param display - Singular and plural display names for the feature in your user interface. (optional)
 
         @param creditSchema - A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
@@ -33641,6 +33708,13 @@ paths:
                 consumable:
                   type: boolean
                   description: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+                combine:
+                  enum:
+                    - sum
+                    - max
+                    - min
+                  type: string
+                  description: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
                 display:
                   type: object
                   properties:
@@ -34019,6 +34093,13 @@ paths:
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                  combine:
+                    enum:
+                      - sum
+                      - max
+                      - min
+                    type: string
+                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                   event_names:
                     type: array
                     items:
@@ -60806,6 +60887,13 @@ paths:
                               consumable:
                                 type: boolean
                                 description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                              combine:
+                                enum:
+                                  - sum
+                                  - max
+                                  - min
+                                type: string
+                                description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                               event_names:
                                 type: array
                                 items:
@@ -61924,6 +62012,13 @@ paths:
                               consumable:
                                 type: boolean
                                 description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                              combine:
+                                enum:
+                                  - sum
+                                  - max
+                                  - min
+                                type: string
+                                description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                               event_names:
                                 type: array
                                 items:
@@ -70186,6 +70281,13 @@ paths:
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -71198,6 +71300,13 @@ paths:
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                             event_names:
                               type: array
                               items:
@@ -72264,6 +72373,13 @@ paths:
                                   consumable:
                                     type: boolean
                                     description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                                  combine:
+                                    enum:
+                                      - sum
+                                      - max
+                                      - min
+                                    type: string
+                                    description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                                   event_names:
                                     type: array
                                     items:
@@ -73480,6 +73596,13 @@ paths:
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."
+                            combine:
+                              enum:
+                                - sum
+                                - max
+                                - min
+                              type: string
+                              description: "How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."
                             event_names:
                               type: array
                               items:
