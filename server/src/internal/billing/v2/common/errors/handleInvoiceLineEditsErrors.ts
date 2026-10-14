@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import { ErrCode, isCustomerProductOneOff, RecaseError } from "@autumn/shared";
 import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
+import { isCustomLineItem } from "@/internal/billing/v2/utils/lineItems/isCustomLineItem";
 
 const invalidRequest = (message: string) =>
 	new RecaseError({
@@ -21,8 +22,66 @@ const skipsInvoiceLineEdits = ({
 	billingContext: BillingContext;
 }) => billingContext.requestedProrationBehavior === "none";
 
-/** Why this request has no Autumn-built invoice to edit, or undefined when it has one. */
-const invoiceLineEditsBlockReason = ({
+const isScheduledForEndOfCycle = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}) =>
+	"planTiming" in billingContext &&
+	billingContext.planTiming === "end_of_cycle";
+
+const billsGeneratedLinesNow = ({
+	billingPlan,
+}: {
+	billingPlan: BillingPlan;
+}) =>
+	(billingPlan.autumn.lineItems ?? []).some(
+		(lineItem) =>
+			lineItem.chargeImmediately &&
+			!isCustomLineItem(lineItem) &&
+			lineItem.amount !== 0,
+	);
+
+/** Why add_lines has nothing billed now to ride on, or undefined when it has. */
+const addLinesBlockReason = ({
+	billingContext,
+	billingPlan,
+}: {
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
+}): string | undefined => {
+	if (isScheduledForEndOfCycle({ billingContext })) {
+		return "this request schedules the change for the end of the cycle";
+	}
+
+	if (billingPlan.stripe?.checkoutSessionAction) {
+		const hasNegativeLine = billingContext.invoiceLineEdits?.addLines.some(
+			(line) => line.amount < 0,
+		);
+		return hasNegativeLine
+			? "Stripe Checkout can't take negative add_lines"
+			: undefined;
+	}
+
+	const subAction = billingPlan.stripe?.subscriptionAction;
+	if (subAction?.type === "create") return undefined;
+	if (
+		subAction?.type === "update" &&
+		willStripeSubscriptionUpdateCreateInvoice({
+			billingContext,
+			stripeSubscriptionAction: subAction,
+		})
+	) {
+		return undefined;
+	}
+
+	if (billsGeneratedLinesNow({ billingPlan })) return undefined;
+
+	return "this request bills nothing now";
+};
+
+/** Why this request has no Autumn-built invoice to remove lines from, or undefined when it has one. */
+const removeLinesBlockReason = ({
 	billingContext,
 	billingPlan,
 }: {
@@ -36,10 +95,7 @@ const invoiceLineEditsBlockReason = ({
 		return "one-off plans have no subscription invoice";
 	}
 
-	if (
-		"planTiming" in billingContext &&
-		billingContext.planTiming === "end_of_cycle"
-	) {
+	if (isScheduledForEndOfCycle({ billingContext })) {
 		return "this request schedules the change for the end of the cycle";
 	}
 
@@ -63,8 +119,7 @@ const invoiceLineEditsBlockReason = ({
 	return undefined;
 };
 
-/** Whether the dashboard can offer remove and add controls on this preview. */
-export const invoiceLinesEditable = ({
+const offersInvoiceLineEdits = ({
 	billingContext,
 	billingPlan,
 }: {
@@ -72,10 +127,31 @@ export const invoiceLinesEditable = ({
 	billingPlan: BillingPlan;
 }) =>
 	!billingPlan.autumn.customLineItems?.length &&
-	!skipsInvoiceLineEdits({ billingContext }) &&
-	invoiceLineEditsBlockReason({ billingContext, billingPlan }) === undefined;
+	!skipsInvoiceLineEdits({ billingContext });
 
-/** add_lines / remove_lines only patch an invoice Autumn builds now, on an existing subscription. */
+/** Whether the dashboard can offer remove controls on this preview. */
+export const invoiceLinesRemovable = ({
+	billingContext,
+	billingPlan,
+}: {
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
+}) =>
+	offersInvoiceLineEdits({ billingContext, billingPlan }) &&
+	removeLinesBlockReason({ billingContext, billingPlan }) === undefined;
+
+/** Whether the dashboard can offer the add control on this preview. */
+export const invoiceLinesAddable = ({
+	billingContext,
+	billingPlan,
+}: {
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
+}) =>
+	offersInvoiceLineEdits({ billingContext, billingPlan }) &&
+	addLinesBlockReason({ billingContext, billingPlan }) === undefined;
+
+/** remove_lines only patches an invoice Autumn builds; add_lines rides on anything billed now. */
 export const handleInvoiceLineEditsErrors = ({
 	params,
 	billingContext,
@@ -85,7 +161,8 @@ export const handleInvoiceLineEditsErrors = ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }) => {
-	if (!billingContext.invoiceLineEdits) return;
+	const { invoiceLineEdits } = billingContext;
+	if (!invoiceLineEdits) return;
 
 	if (params.custom_line_items?.length) {
 		throw invalidRequest(
@@ -102,10 +179,19 @@ export const handleInvoiceLineEditsErrors = ({
 		return;
 	}
 
-	const reason = invoiceLineEditsBlockReason({ billingContext, billingPlan });
-	if (reason) {
-		throw invalidRequest(
-			`remove_lines and add_lines need a change billed immediately on an existing subscription; ${reason}`,
-		);
+	if (invoiceLineEdits.removeLines.length > 0) {
+		const reason = removeLinesBlockReason({ billingContext, billingPlan });
+		if (reason) {
+			throw invalidRequest(
+				`remove_lines needs a change billed immediately on an existing subscription; ${reason}`,
+			);
+		}
+	}
+
+	if (invoiceLineEdits.addLines.length > 0) {
+		const reason = addLinesBlockReason({ billingContext, billingPlan });
+		if (reason) {
+			throw invalidRequest(`add_lines needs a charge billed now; ${reason}`);
+		}
 	}
 };

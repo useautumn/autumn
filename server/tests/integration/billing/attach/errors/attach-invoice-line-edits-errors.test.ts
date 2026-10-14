@@ -2,7 +2,7 @@
  * add_lines / remove_lines errors on attach.
  *
  * Contract (all 400):
- *   - The invoice isn't built by Autumn now: a new subscription, or a change scheduled for the end of the cycle.
+ *   - A change scheduled for the end of the cycle bills nothing now.
  *   - Combined with custom_line_items.
  *   - remove_lines names a plan with no line, matches no line, or two entries match the same line.
  */
@@ -16,11 +16,10 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const NEEDS_AUTUMN_INVOICE =
-	"remove_lines and add_lines need a change billed immediately on an existing subscription";
+const NEEDS_CHARGE_NOW = "add_lines needs a charge billed now";
 
 test.concurrent(
-	`${chalk.yellowBright("attach invoice line edits errors 1: a new subscription or a scheduled change has no Autumn-built invoice")}`,
+	`${chalk.yellowBright("attach invoice line edits errors 1: a change scheduled for the end of the cycle bills nothing now")}`,
 	async () => {
 		const customerId = "attach-line-edits-err-invoice";
 		const pro = products.pro({
@@ -39,17 +38,6 @@ test.concurrent(
 			actions: [],
 		});
 
-		await expectAutumnError({
-			errMessage: `${NEEDS_AUTUMN_INVOICE}; this request creates a new subscription`,
-			func: () =>
-				autumnV2_5.billing.attach<AttachParamsV1Input>({
-					customer_id: customerId,
-					plan_id: premium.id,
-					redirect_mode: "if_required",
-					add_lines: [{ amount: 10, description: "Setup" }],
-				}),
-		});
-
 		await autumnV2_5.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: premium.id,
@@ -57,7 +45,7 @@ test.concurrent(
 		});
 
 		await expectAutumnError({
-			errMessage: `${NEEDS_AUTUMN_INVOICE}; this request schedules the change for the end of the cycle`,
+			errMessage: `${NEEDS_CHARGE_NOW}; this request schedules the change for the end of the cycle`,
 			func: () =>
 				autumnV2_5.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,

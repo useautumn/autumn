@@ -87,7 +87,8 @@ test.concurrent(
 
 		// Premium $50, pro credit -$20, pro overage $5
 		const basePreview = await previewWith([]);
-		expect(basePreview.invoice_lines_editable).toBe(true);
+		expect(basePreview.invoice_lines_removable).toBe(true);
+		expect(basePreview.invoice_lines_addable).toBe(true);
 		expect(basePreview.line_items).toHaveLength(3);
 		await expectEachSelectorRemovesOnlyItsLine({ basePreview, previewWith });
 
@@ -172,6 +173,7 @@ test.concurrent(
 				plan_id: pro.id,
 				redirect_mode: "if_required",
 			})) as BillingPreviewResponse;
-		expect(preview.invoice_lines_editable).toBe(false);
+		expect(preview.invoice_lines_removable).toBe(false);
+		expect(preview.invoice_lines_addable).toBe(true);
 	},
 );

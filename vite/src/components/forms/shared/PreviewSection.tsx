@@ -56,7 +56,8 @@ type PreviewData = {
 	invoice_credits?: { balance: number; applied?: number };
 	amount_due?: number;
 	checkout_type?: "stripe_checkout" | "autumn_checkout" | null;
-	invoice_lines_editable?: boolean;
+	invoice_lines_removable?: boolean;
+	invoice_lines_addable?: boolean;
 };
 
 /** Optional fields so confirmation stages can pass a bare `{ data }`. */
@@ -178,8 +179,10 @@ export function PreviewSection({
 	const resolvedLineItems = lineItems ?? previewData.line_items;
 	const creditAmount = getPreviewCreditAmount({ previewData });
 	const creditNoteVisible = showCreditNote && creditAmount > 0;
+	const linesRemovable = !!previewData.invoice_lines_removable;
+	const linesAddable = !!previewData.invoice_lines_addable;
 	const activeLineEdits =
-		lineEdits && (previewData.invoice_lines_editable || lineEdits.hasEdits)
+		lineEdits && (linesRemovable || linesAddable || lineEdits.hasEdits)
 			? lineEdits
 			: undefined;
 	const lineItemsVisible =
@@ -223,6 +226,8 @@ export function PreviewSection({
 						filterZeroAmounts={filterZeroAmounts}
 						lineEdits={activeLineEdits}
 						isRefreshing={loading}
+						linesRemovable={linesRemovable}
+						linesAddable={linesAddable}
 					/>
 					{totalsBlockVisible && (
 						<PreviewTotalsBlock previewData={previewData} />

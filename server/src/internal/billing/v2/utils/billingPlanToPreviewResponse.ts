@@ -6,7 +6,10 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { invoiceLinesEditable } from "@/internal/billing/v2/common/errors/handleInvoiceLineEditsErrors";
+import {
+	invoiceLinesAddable,
+	invoiceLinesRemovable,
+} from "@/internal/billing/v2/common/errors/handleInvoiceLineEditsErrors";
 import { computeNextCycleTaxPreview } from "./billingPlan/preview/tax/computeNextCycleTaxPreview";
 import { billingPlanToImmediatePreview } from "./billingPlan/toImmediatePreview/billingPlanToImmediatePreview";
 import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
@@ -157,9 +160,10 @@ export const billingPlanToPreviewResponse = async ({
 		incoming,
 		outgoing,
 		refund: autumnBillingPlan.refundPlan,
-		invoice_lines_editable: invoiceLinesEditable({
+		invoice_lines_removable: invoiceLinesRemovable({
 			billingContext,
 			billingPlan,
 		}),
+		invoice_lines_addable: invoiceLinesAddable({ billingContext, billingPlan }),
 	};
 };

@@ -3,7 +3,8 @@
  *
  * Contract:
  *   - The immediate invoice drops the removed lines and bills the added ones; later phases are untouched.
- *   - A first phase that starts later, or a new subscription, has no Autumn-built invoice now: 400.
+ *   - A first phase that starts later takes add_lines on whatever is billed now.
+ *   - A new subscription bills added lines on its first invoice; remove_lines on it is a 400.
  */
 
 import { expect, test } from "bun:test";
@@ -22,8 +23,6 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-const NEEDS_AUTUMN_INVOICE =
-	"remove_lines and add_lines need a change billed immediately on an existing subscription";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const setupPlans = async ({
@@ -109,7 +108,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set_plans invoice line edits 2: a first phase that starts later has no invoice to edit")}`,
+	`${chalk.yellowBright("set_plans invoice line edits 2: a later first phase takes add_lines on the credit billed now")}`,
 	async () => {
 		const customerId = "set-plans-line-edits-future";
 		const { autumnV2_5, premium, advancedTo } = await setupPlans({
@@ -117,25 +116,25 @@ test.concurrent(
 			proActive: true,
 		});
 
-		await expectAutumnError({
-			errMessage: NEEDS_AUTUMN_INVOICE,
-			func: () =>
-				autumnV2_5.billing.previewSetPlans({
-					customer_id: customerId,
-					phases: [
-						{
-							starts_at: advancedTo + 10 * DAY_MS,
-							plans: [{ plan_id: premium.id }],
-						},
-					],
-					add_lines: [{ amount: 500, description: "Onboarding" }],
-				}),
+		// Pro ends now and is credited -$20; premium bills from its start.
+		const preview = await autumnV2_5.billing.previewSetPlans({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: advancedTo + 10 * DAY_MS,
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+			add_lines: [{ amount: 500, description: "Onboarding" }],
 		});
+		expect(preview.invoice_lines_addable).toBe(true);
+		expect(preview.invoice_lines_removable).toBe(false);
+		expect(preview.total).toBeCloseTo(480, 2);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set_plans invoice line edits 3: a new subscription has no Autumn-built invoice")}`,
+	`${chalk.yellowBright("set_plans invoice line edits 3: a new subscription takes add_lines but not remove_lines")}`,
 	async () => {
 		const customerId = "set-plans-line-edits-new-sub";
 		const { autumnV2_5, premium } = await setupPlans({
@@ -143,14 +142,35 @@ test.concurrent(
 			proActive: false,
 		});
 
+		const preview = await autumnV2_5.billing.previewSetPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: premium.id }] }],
+			add_lines: [{ amount: 500, description: "Onboarding" }],
+		});
+		expect(preview.invoice_lines_addable).toBe(true);
+		expect(preview.invoice_lines_removable).toBe(false);
+		expect(preview.total).toBeCloseTo(550, 2);
+
 		await expectAutumnError({
-			errMessage: `${NEEDS_AUTUMN_INVOICE}; this request creates a new subscription`,
+			errMessage:
+				"remove_lines needs a change billed immediately on an existing subscription; this request creates a new subscription",
 			func: () =>
 				autumnV2_5.billing.previewSetPlans({
 					customer_id: customerId,
 					phases: [{ starts_at: "now", plans: [{ plan_id: premium.id }] }],
-					add_lines: [{ amount: 500, description: "Onboarding" }],
+					remove_lines: [{ plan_id: premium.id }],
 				}),
+		});
+
+		await autumnV2_5.billing.setPlans({
+			customer_id: customerId,
+			phases: [{ starts_at: "now", plans: [{ plan_id: premium.id }] }],
+			add_lines: [{ amount: 500, description: "Onboarding" }],
+		});
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 1,
+			latestTotal: 550,
 		});
 	},
 );
@@ -175,7 +195,8 @@ test.concurrent(
 			],
 		};
 		const basePreview = await autumnV2_5.billing.previewSetPlans(params);
-		expect(basePreview.invoice_lines_editable).toBe(true);
+		expect(basePreview.invoice_lines_removable).toBe(true);
+		expect(basePreview.invoice_lines_addable).toBe(true);
 		const credit = basePreview.line_items.find(
 			(line: { total: number }) => line.total < 0,
 		);

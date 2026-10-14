@@ -215,10 +215,15 @@ export const BillingPreviewResponseSchema =
 	ExtBillingPreviewResponseSchema.extend({
 		object: z.literal("billing_preview").meta({ internal: true }),
 		line_items: z.array(PreviewLineItemSchema),
-		invoice_lines_editable: z.boolean().optional().meta({
+		invoice_lines_removable: z.boolean().optional().meta({
 			internal: true,
 			description:
-				"Whether add_lines and remove_lines can edit the invoice this request creates.",
+				"Whether remove_lines can remove lines from the invoice this request creates.",
+		}),
+		invoice_lines_addable: z.boolean().optional().meta({
+			internal: true,
+			description:
+				"Whether add_lines can add lines to what this request bills now.",
 		}),
 	});
 

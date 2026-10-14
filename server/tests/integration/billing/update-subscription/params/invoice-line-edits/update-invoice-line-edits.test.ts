@@ -3,7 +3,7 @@
  *
  * Contract:
  *   - direction tells a same-plan price change's refund and charge apart under bill_difference.
- *   - add_lines alone bills a standalone invoice on an unchanged subscription.
+ *   - add_lines alone on an unchanged subscription bills nothing now, so it's a 400.
  *   - Under proration_behavior "none" both fields are skipped, like custom_line_items.
  *   - Combined with cancel_action, the request is a 400.
  */
@@ -88,7 +88,7 @@ for (const prorationBehavior of ["prorate_immediately", "none"] as const) {
 		`${chalk.yellowBright(`update invoice line edits 2: add_lines on an unchanged subscription under ${prorationBehavior}`)}`,
 		async () => {
 			const customerId = `update-line-edits-standalone-${prorationBehavior}`;
-			const { autumnV2_5, ctx, pro } = await setupPro({ customerId });
+			const { autumnV2_5, pro } = await setupPro({ customerId });
 			const suppressed = prorationBehavior === "none";
 
 			const params: UpdateSubscriptionV1ParamsInput = {
@@ -98,26 +98,20 @@ for (const prorationBehavior of ["prorate_immediately", "none"] as const) {
 				add_lines: [{ amount: 12, description: "Agreed charge" }],
 			};
 
-			const preview = await autumnV2_5.billing.previewUpdate(params);
-			expectPreviewLinesCorrect({
-				preview,
-				total: suppressed ? 0 : 12,
-				lines: suppressed ? [] : [{ description: "Agreed charge", total: 12 }],
-			});
-
-			const result = await autumnV2_5.billing.update(params);
-			if (suppressed) {
-				expect(result.invoice).toBeUndefined();
-				await expectCustomerInvoiceCorrect({ customerId, count: 1 });
+			if (!suppressed) {
+				await expectAutumnError({
+					errMessage:
+						"add_lines needs a charge billed now; this request bills nothing now",
+					func: () => autumnV2_5.billing.update(params),
+				});
 				return;
 			}
-			await expectStripeInvoiceLinesCorrect({
-				stripeCli: ctx.stripeCli,
-				stripeInvoiceId: result.invoice.stripe_id,
-				total: 12,
-				lineCount: 1,
-				descriptions: ["Agreed charge"],
-			});
+
+			const preview = await autumnV2_5.billing.previewUpdate(params);
+			expectPreviewLinesCorrect({ preview, total: 0, lines: [] });
+			const result = await autumnV2_5.billing.update(params);
+			expect(result.invoice).toBeUndefined();
+			await expectCustomerInvoiceCorrect({ customerId, count: 1 });
 		},
 	);
 }

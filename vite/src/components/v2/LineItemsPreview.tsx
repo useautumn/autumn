@@ -41,6 +41,10 @@ export interface LineItemsContentProps<T extends BillingLineItem> {
 	lineEdits?: InvoiceLineEditsController;
 	/** A refetch is in flight, so removals and additions are still settling. */
 	isRefreshing?: boolean;
+	/** remove_lines is accepted, so lines with a selector get a ×. */
+	linesRemovable?: boolean;
+	/** add_lines is accepted, so the add control shows. */
+	linesAddable?: boolean;
 }
 
 export interface LineItemsPreviewProps<T extends BillingLineItem>
@@ -128,6 +132,8 @@ export function LineItemsContent<T extends BillingLineItem>({
 	accordionTitle = "Line Items",
 	lineEdits,
 	isRefreshing = false,
+	linesRemovable = false,
+	linesAddable = false,
 }: LineItemsContentProps<T>) {
 	const removedSelectors = new Set(
 		(lineEdits?.removed ?? []).map(({ removeLine }) =>
@@ -173,7 +179,7 @@ export function LineItemsContent<T extends BillingLineItem>({
 							<div className="space-y-2">
 								{filteredItems.map((item, itemIndex) => {
 									const addedIndex = addedIndexes[itemIndex];
-									const removeLine = item.remove_line;
+									const removeLine = linesRemovable ? item.remove_line : null;
 									return (
 										<div
 											key={`${item.description}-${itemIndex}`}
@@ -244,7 +250,9 @@ export function LineItemsContent<T extends BillingLineItem>({
 										)}
 									</div>
 								))}
-								{lineEdits && <AddInvoiceLineForm onAdd={lineEdits.addLine} />}
+								{lineEdits && linesAddable && (
+									<AddInvoiceLineForm onAdd={lineEdits.addLine} />
+								)}
 							</div>
 						</AccordionContent>
 					</AccordionItem>

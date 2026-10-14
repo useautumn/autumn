@@ -1,4 +1,5 @@
 import type { LineItem, PreviewLineItem } from "@autumn/shared";
+import { isCustomLineItem } from "./isCustomLineItem";
 
 /**
  * Transforms an internal LineItem to a PreviewLineItem for API responses.
@@ -22,8 +23,7 @@ export const lineItemToPreviewLineItem = (line: LineItem): PreviewLineItem => {
 		})),
 		plan_id: line.context.product.id,
 		feature_id: feature?.id ?? null,
-		// Lines from add_lines carry an empty price.
-		custom: !line.context.price.config,
+		custom: isCustomLineItem(line),
 		quantity: line.totalQuantity ?? 1,
 		period: line.context.effectivePeriod,
 		remove_line: line.removeLine ?? null,
