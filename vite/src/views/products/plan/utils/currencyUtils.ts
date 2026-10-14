@@ -31,6 +31,22 @@ const tierForCurrency = ({
 	};
 };
 
+/** A tier's prices in `code`, blank where that currency has none set. */
+export const tierPriceInCurrency = ({
+	tier,
+	code,
+	baseCurrency,
+}: {
+	tier: ProductItemTier;
+	code: string;
+	baseCurrency: string;
+}): { amount?: number | null; flat_amount?: number | null } => {
+	if (code.toLowerCase() === baseCurrency.toLowerCase()) return tier;
+	return (
+		findCurrencyEntry(tier.additional_currencies, code.toLowerCase()) ?? {}
+	);
+};
+
 export const productItemsForCurrency = ({
 	items,
 	currency,

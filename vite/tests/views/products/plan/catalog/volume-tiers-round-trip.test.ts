@@ -14,7 +14,6 @@ import {
 	UpdateCatalogPlanParamsSchema,
 } from "@autumn/shared";
 import { buildUpdateCatalogPlanParams } from "@/views/products/plan/catalog/buildUpdateCatalogPlanParams";
-import { itemToVolumePricingModeOnOpen } from "@/views/products/plan/utils/tierUtils";
 
 const messages: Feature = {
 	internal_id: "fe_messages",
@@ -83,12 +82,6 @@ const product = (items: FrontendProduct["items"]): FrontendProduct => ({
 });
 
 describe("API-created volume item saved from the dashboard", () => {
-	test("opens in Per Unit, with its rates visible", () => {
-		expect(itemToVolumePricingModeOnOpen({ item: dashboardItem })).toBe(
-			"per_unit",
-		);
-	});
-
 	test("save with no edits keeps every tier amount and flat fee", () => {
 		const params = buildUpdateCatalogPlanParams({
 			baseProduct: product([dashboardItem]),

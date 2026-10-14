@@ -3,6 +3,7 @@ import {
 	EntInterval,
 	type Feature,
 	Infinite,
+	type PriceTier,
 	type ProductItem,
 	ProductItemFeatureType,
 	ProductItemType,
@@ -149,7 +150,12 @@ export const stripEditorFields = ({
 }: {
 	items: ProductItem[] | undefined;
 }): ProductItem[] | undefined =>
-	items?.map(({ _uid, ...item }) => item as ProductItem);
+	items?.map(({ _uid, ...item }) => ({
+		...item,
+		tiers: item.tiers?.map(
+			({ _uid, ...tier }: PriceTier & { _uid?: string }) => tier,
+		),
+	})) as ProductItem[] | undefined;
 
 export const getPrepaidItems = (product: ProductV2 | undefined) => {
 	if (!product) return [];

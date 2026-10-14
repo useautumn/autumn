@@ -8,9 +8,10 @@ import {
 	TierInfinite,
 	tiersToVolumeTierPricing,
 } from "@autumn/shared";
+import { cn } from "@autumn/ui/lib/utils";
 import { migrateTierCurrenciesForMode } from "./currencyUtils";
 
-const itemToIncludedUsage = (item: ProductItem): number =>
+export const itemToIncludedUsage = (item: ProductItem): number =>
 	typeof item.included_usage === "number" ? item.included_usage : 0;
 
 export const tierToDisplay = ({
@@ -26,6 +27,24 @@ export const tierToDisplay = ({
 		(typeof tier.to === "number" ? tier.to : 0) + includedUsage
 	).toString();
 };
+
+/** The header and every tier row share one grid, so their columns line up. */
+export const tierGridClassName = (showsFlatFee: boolean) =>
+	cn(
+		"grid items-center gap-2 px-2.5",
+		showsFlatFee
+			? "grid-cols-[6rem_minmax(0,1fr)_minmax(0,1fr)_1.5rem]"
+			: "grid-cols-[6rem_minmax(0,1fr)_1.5rem]",
+	);
+
+type EditorTier = PriceTier & { _uid?: string };
+
+/** Row keys survive deletes: untagged tiers keep the index key they rendered with until a delete. */
+export const tierRowKey = (tier: EditorTier, index: number) =>
+	tier._uid ?? `tier-${index}`;
+
+const withTierUids = (tiers: EditorTier[]): EditorTier[] =>
+	tiers.map((tier, index) => ({ ...tier, _uid: tierRowKey(tier, index) }));
 
 const zeroedCurrencyEntries = (tier: PriceTier | undefined) =>
 	tier?.additional_currencies?.length
@@ -63,7 +82,7 @@ export const addTier = ({
 		});
 	} else {
 		// Adding to existing multi-tier setup
-		const newTiers = [...item.tiers];
+		const newTiers = withTierUids(item.tiers);
 		const lastTier = newTiers[newTiers.length - 1];
 
 		// Set previous last tier to a default value if it was infinite
@@ -77,6 +96,7 @@ export const addTier = ({
 			to: Infinite,
 			amount: 0,
 			additional_currencies: zeroedCurrencyEntries(lastTier),
+			_uid: crypto.randomUUID(),
 		});
 		setItem({ ...item, tiers: newTiers });
 	}
@@ -97,7 +117,7 @@ export const removeTier = ({
 		return;
 	}
 
-	const newTiers = [...item.tiers];
+	const newTiers = withTierUids(item.tiers);
 	newTiers.splice(index, 1);
 
 	// Ensure last tier is always infinite
@@ -113,7 +133,7 @@ export const removeTier = ({
 
 	// One tier saves as a plain `price.amount` with no tier behaviour or flat fee,
 	// so drop both rather than show volume pricing that won't save.
-	const [onlyTier] = newTiers;
+	const [{ _uid, ...onlyTier }] = newTiers;
 	setItem({
 		...remaining,
 		tier_behavior: undefined,
@@ -209,24 +229,6 @@ export const updateTier = ({
 		newTiers[index] = { ...newTiers[index], [field]: numValue };
 	}
 	setItem({ ...item, tiers: newTiers });
-};
-
-export type VolumePricingMode = "flat" | "per_unit";
-
-/** The mode an item opens in: Flat only when no tier has a unit rate, so mixed tiers show
- * their rates. Switching modes later only changes which field the inputs edit. */
-export const itemToVolumePricingModeOnOpen = ({
-	item,
-}: {
-	item: ProductItem | null | undefined;
-}): VolumePricingMode => {
-	const tiers = item?.tiers ?? [];
-	if (item?.tier_behavior !== TierBehavior.VolumeBased) return "per_unit";
-
-	const hasNoUnitRates = tiers.every((tier) => !tier.amount);
-	const hasFlatField = tiers.some((tier) => tier.flat_amount != null);
-	if (hasNoUnitRates && hasFlatField) return "flat";
-	return "per_unit";
 };
 
 export type TierRow = { range: string; value: string };

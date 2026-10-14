@@ -19,15 +19,10 @@ import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/co
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
-import {
-	itemToVolumePricingModeOnOpen,
-	type VolumePricingMode,
-} from "../../utils/tierUtils";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
 import { IncludedUsage } from "./IncludedUsage";
 import { PricedFeatureSettings } from "./PricedFeatureSettings";
-import { PriceSectionTitle } from "./PriceSectionTitle";
 import { PriceTiers } from "./PriceTiers";
 import { SheetFooterActions } from "./SheetFooterActions";
 import { UsageReset } from "./UsageReset";
@@ -44,15 +39,6 @@ export function EditPlanFeatureSheet({
 	const hasItemChanges = useHasItemChanges();
 	const isInvoiceEditor = useIsInvoiceEditor();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
-
-	// The toggle only picks which field the tier inputs edit; it never moves stored prices.
-	const [volumePricingMode, setVolumePricingMode] = useState(() =>
-		itemToVolumePricingModeOnOpen({ item }),
-	);
-
-	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
-	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
-	const showVolumePricingToggle = isVolumeBased && isMultiTier;
 
 	const handleTierBehaviorChange = (val: string) => {
 		const newBehavior = val as TierBehavior;
@@ -71,13 +57,7 @@ export function EditPlanFeatureSheet({
 			}
 		}
 
-		if (newBehavior !== TierBehavior.VolumeBased)
-			setVolumePricingMode("per_unit");
 		setItem(newItem);
-	};
-
-	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		setVolumePricingMode(mode);
 	};
 
 	const handleFeatureUpdateSuccess = async (oldId: string, newId: string) => {
@@ -176,30 +156,9 @@ export function EditPlanFeatureSheet({
 						)}
 
 						{isFeaturePrice && (
-							<SheetSection
-								title={
-									item.tiers && item.tiers.length > 1 ? (
-										<PriceSectionTitle
-											tierBehavior={
-												item.tier_behavior ?? TierBehavior.Graduated
-											}
-											volumePricingMode={volumePricingMode}
-											showVolumePricingToggle={showVolumePricingToggle}
-											onTierBehaviorChange={handleTierBehaviorChange}
-											onVolumePricingModeChange={handleVolumePricingModeChange}
-										/>
-									) : (
-										"Price"
-									)
-								}
-								className="space-y-3"
-							>
+							<SheetSection title="Price" className="space-y-3">
 								<div>
-									<PriceTiers
-										volumePricingMode={
-											showVolumePricingToggle ? volumePricingMode : undefined
-										}
-									/>
+									<PriceTiers onTierBehaviorChange={handleTierBehaviorChange} />
 									<UsageReset showBillingLabel={true} />
 								</div>
 								<PricedFeatureSettings />

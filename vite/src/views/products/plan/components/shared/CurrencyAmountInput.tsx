@@ -9,11 +9,13 @@ export const CurrencyAmountInput = ({
 	currencyCode,
 	onRawChange,
 	className,
+	placeholder = "0.00",
 }: {
 	displayValue: string;
 	currencyCode: string;
 	onRawChange: (raw: string) => void;
 	className?: string;
+	placeholder?: string;
 }) => {
 	const [editingValue, setEditingValue] = useState<string | undefined>();
 
@@ -36,7 +38,7 @@ export const CurrencyAmountInput = ({
 						e.preventDefault();
 					}
 				}}
-				placeholder="0.00"
+				placeholder={placeholder}
 				value={editingValue ?? displayValue}
 			/>
 			<InputGroupAddon align="inline-end">

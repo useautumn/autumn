@@ -1,5 +1,5 @@
-import type { UsageTier } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
-import { Infinite } from "@models/productModels/productEnums";
+import type { UsageTier } from "../../../../models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { Infinite } from "../../../../models/productModels/productEnums";
 
 /**
  * Find the volume-tier that covers the given quantity. Walks tiers in order
