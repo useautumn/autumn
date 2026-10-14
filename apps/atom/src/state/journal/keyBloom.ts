@@ -68,3 +68,9 @@ export const mayHoldKey = ({
 	const value = filterValueOf({ customerId, keyHash });
 	return filtersAt({ now }).some((filter) => filter.test(value));
 };
+
+/** The filters a thread starts with: empty, as after a restart. */
+export const emptyKeyFilters = (): void => {
+	filters = null;
+	newestWindow = 0;
+};

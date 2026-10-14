@@ -18,8 +18,13 @@ const WINDOW_MS = keyBloom.BLOOM_WINDOW_MS;
 const folders: string[] = [];
 const journals: Journal[] = [];
 const spies: { mockRestore(): void }[] = [];
-const openAt = ({ clock }: { clock: () => number }) => {
-	const folder = mkdtempSync(join(tmpdir(), "atom-key-bloom-"));
+const openAt = ({
+	clock,
+	folder = mkdtempSync(join(tmpdir(), "atom-key-bloom-")),
+}: {
+	clock: () => number;
+	folder?: string;
+}) => {
 	folders.push(folder);
 	const journal = openJournal({
 		databasePath: join(folder, "journal-000-of-001.sqlite"),
@@ -172,5 +177,48 @@ describe("the key filter in front of journal_keys", () => {
 		);
 
 		expect(held).toEqual([false, true, true]);
+	});
+});
+
+describe("the key filters after a restart", () => {
+	test("a key added 5 min ago is 409, one added 2 h ago is new, and a fresh key reads nothing", async () => {
+		let clock = 10 * WINDOW_MS + 7 * MINUTE_MS;
+		const folder = mkdtempSync(join(tmpdir(), "atom-key-bloom-"));
+		const before = openAt({ clock: () => clock, folder });
+		await before.append({
+			customerId: "cus_1",
+			command: trackClaiming({ key: "two_hours" }),
+		});
+		clock += 115 * MINUTE_MS;
+		await before.append({
+			customerId: "cus_1",
+			command: trackClaiming({ key: "five_minutes" }),
+		});
+		clock += 5 * MINUTE_MS;
+		before.close();
+		journals.splice(journals.indexOf(before), 1);
+
+		// A restarted thread starts with empty filters.
+		keyBloom.emptyKeyFilters();
+		const after = openAt({ clock: () => clock, folder });
+		const reads = spyOn(journalKeys, "readJournalKey");
+		spies.push(reads);
+		const fresh = after.holdsKey({ customerId: "cus_1", key: "track:fresh" });
+		const readsForFresh = reads.mock.calls.length;
+
+		expect({
+			fiveMinutes: after.holdsKey({
+				customerId: "cus_1",
+				key: "track:five_minutes",
+			}),
+			twoHours: after.holdsKey({ customerId: "cus_1", key: "track:two_hours" }),
+			fresh,
+			readsForFresh,
+		}).toEqual({
+			fiveMinutes: true,
+			twoHours: false,
+			fresh: false,
+			readsForFresh: 0,
+		});
 	});
 });
