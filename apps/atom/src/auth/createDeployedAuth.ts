@@ -1,4 +1,5 @@
 import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
+import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -20,6 +21,7 @@ export const createDeployedAuth = ({
 	now,
 	subjectPulls,
 	journalForwarder,
+	barrier,
 }: {
 	dataDir: string;
 	tokenHash: string;
@@ -29,6 +31,7 @@ export const createDeployedAuth = ({
 	now?: () => number;
 	subjectPulls: SubjectPulls;
 	journalForwarder: JournalForwarder;
+	barrier?: HandoffBarrier;
 }): DeployedAuth => {
 	const slots = openSlots({
 		folder: dataDir,
@@ -38,6 +41,7 @@ export const createDeployedAuth = ({
 		now,
 		pulls: { subjectPulls, tokenHash: () => tokenHash },
 		journalForwarder,
+		barrier,
 	});
 
 	function authorize({ token }: { token: string }) {

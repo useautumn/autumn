@@ -32,6 +32,7 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		idempotencyKey: context.req.header(IDEMPOTENCY_KEY_HEADER),
 		...arrivalOf(context),
+		movedFrom: context.get("movedFrom") ?? null,
 	});
 	context.set("idempotencyKey", request.idempotencyKey);
 	const processor = context

@@ -18,6 +18,12 @@ export const receiveLeaving = ({
 				},
 				400,
 			);
-		ctx.peer.membership?.markLeaving(parsed.data.address);
-		return context.json({ left: parsed.data.address });
+		const { address, handedOff } = parsed.data;
+		if (handedOff)
+			ctx.peer.membership?.handoffCompleted({
+				address,
+				threads: handedOff.threads,
+			});
+		else ctx.peer.membership?.markLeaving(address);
+		return context.json({ left: address });
 	};

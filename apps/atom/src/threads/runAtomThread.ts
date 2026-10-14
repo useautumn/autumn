@@ -7,8 +7,11 @@ import { createJournalForwarder } from "../journalForwarder/createJournalForward
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
+import { createHandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import { createMembership } from "../replicas/membership/createMembership.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
+import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import {
 	createDeployedFolders,
 	createMultiTenantFolders,
@@ -46,11 +49,22 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const journalForwarder = createJournalForwarder({
 		ctx: { autumnClient: getAutumnClient({ env }), logger, counters },
 	});
+	// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
+	const self =
+		(env.ATOM_PEERS_FILE ? env.ATOM_HOSTNAME : ownAddresses()[0]) ??
+		env.ATOM_HOSTNAME;
+	const membership = createMembership({
+		self,
+		table: new Int32Array(init.membership),
+	});
+	// On this thread, where a moved customer's handoff and its requests both land.
+	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const { auth, multiTenant, held } = openAuth({
 		env,
 		owners,
 		subjectPulls,
 		journalForwarder,
+		barrier,
 	});
 	const health = {
 		bootedAt: init.bootedAt,
@@ -85,7 +99,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			folders,
 			replication: replicas.replication,
 			journalForwarder,
-			membershipTable: new Int32Array(init.membership),
+			membership,
 		},
 		config: {
 			env,
