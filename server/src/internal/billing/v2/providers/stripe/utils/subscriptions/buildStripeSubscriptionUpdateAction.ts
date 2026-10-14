@@ -116,11 +116,15 @@ export const buildStripeSubscriptionUpdateAction = ({
 		params.discounts,
 	].every((field) => field === undefined);
 
-	// Anchor resets and custom invoices still need an update action when subscription items stay unchanged.
+	// Anchor resets and custom or edited invoices still need an update action when subscription items stay unchanged.
+	const billsEditedLines = Boolean(
+		billingContext.invoiceLineEdits && autumnBillingPlan.lineItems?.length,
+	);
 	if (
 		hasNoUpdates &&
 		billingContext.requestedBillingCycleAnchor !== "now" &&
-		!autumnBillingPlan.customLineItems?.length
+		!autumnBillingPlan.customLineItems?.length &&
+		!billsEditedLines
 	) {
 		return undefined;
 	}
