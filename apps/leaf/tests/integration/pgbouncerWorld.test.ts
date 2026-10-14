@@ -9,6 +9,8 @@
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import postgres from "postgres";
+import { createRestartBudget } from "../../src/internal/agentRuntime/eve/restartBudget.js";
+import { superviseEve } from "../../src/internal/agentRuntime/eve/superviseEve.js";
 
 const bouncerUrl = process.env.CHAT_DATABASE_URL;
 const directUrl = process.env.CHAT_DATABASE_DIRECT_URL;
@@ -33,7 +35,7 @@ const createLeafWorld = async ({ listenUrl }: { listenUrl?: string }) => {
 	if (listenUrl) process.env.CHAT_DATABASE_DIRECT_URL = listenUrl;
 	else delete process.env.CHAT_DATABASE_DIRECT_URL;
 	try {
-		return createWorld();
+		return createWorld({ onListenerLost: () => undefined });
 	} finally {
 		process.env.CHAT_DATABASE_DIRECT_URL = directUrl;
 	}
@@ -166,4 +168,109 @@ describeWithBouncer("workflow world behind a transaction pooler", () => {
 			await sql.end({ timeout: 1 });
 		}
 	});
+
+	test("a killed listener restarts eve and live delivery resumes", async () => {
+		const sql = postgres(directUrl as string, { max: 1 });
+		const listenerPids = async () =>
+			(
+				await sql<{ pid: number }[]>`
+					select pid from pg_stat_activity where query = 'LISTEN workflow_event_chunk'`
+			).map((row) => row.pid);
+		const waitForNewListener = async (known: number[]) => {
+			const deadline = Date.now() + 10_000;
+			while (Date.now() < deadline) {
+				const fresh = (await listenerPids()).filter(
+					(pid) => !known.includes(pid),
+				);
+				if (fresh.length > 0) return fresh;
+				await Bun.sleep(100);
+			}
+			throw new Error("no new LISTEN backend");
+		};
+		const writer = track(await createLeafWorld({ listenUrl: directUrl }));
+		const runId = "wrun_fixture";
+		const name = `strm_restart_${crypto.randomUUID()}`;
+		const lines: string[] = [];
+		const children: ReturnType<typeof Bun.spawn>[] = [];
+		const exitCodes: number[] = [];
+		const waitForLine = async (line: string) => {
+			const deadline = Date.now() + 10_000;
+			while (!lines.includes(line) && Date.now() < deadline)
+				await Bun.sleep(50);
+			return lines.includes(line);
+		};
+
+		const startEve = async () => {
+			const child = Bun.spawn({
+				cmd: ["bun", "tests/integration/fixtures/streamReaderEve.ts"],
+				cwd: leafRoot,
+				env: {
+					...process.env,
+					WORKFLOW_POSTGRES_URL: bouncerUrl,
+					CHAT_DATABASE_DIRECT_URL: directUrl,
+					STREAM_NAME: name,
+				},
+				stdout: "pipe",
+				stderr: "ignore",
+			});
+			children.push(child);
+			void (async () => {
+				const decoder = new TextDecoder();
+				for await (const bytes of child.stdout) {
+					lines.push(...decoder.decode(bytes).split("\n").filter(Boolean));
+				}
+			})();
+			return {
+				exited: child.exited.then((code) => {
+					exitCodes.push(code);
+					return code;
+				}),
+			};
+		};
+
+		try {
+			const before = await listenerPids();
+			let leafExit: number | undefined;
+			const supervising = superviseEve({
+				start: startEve,
+				budget: createRestartBudget({
+					maxRestarts: 2,
+					windowMs: 60_000,
+					baseDelayMs: 100,
+					maxDelayMs: 100,
+				}),
+				exitLeaf: (code) => {
+					leafExit = code;
+				},
+			});
+
+			const first = await waitForNewListener(before);
+			await writer.streams.write(
+				runId,
+				name,
+				new TextEncoder().encode("before"),
+			);
+			expect(await waitForLine("chunk:before")).toBe(true);
+
+			await sql`select pg_terminate_backend(pid) from pg_stat_activity where pid = any(${first})`;
+			const second = await waitForNewListener([...before, ...first]);
+			expect(exitCodes).toEqual([75]);
+			expect(children).toHaveLength(2);
+
+			await writer.streams.write(
+				runId,
+				name,
+				new TextEncoder().encode("after"),
+			);
+			expect(await waitForLine("chunk:after")).toBe(true);
+
+			children[1].kill("SIGKILL");
+			await supervising;
+			expect(leafExit).not.toBe(75);
+			expect(second).toHaveLength(1);
+		} finally {
+			for (const child of children) child.kill("SIGKILL");
+			await sql.end({ timeout: 1 });
+		}
+	}, 30_000);
 });

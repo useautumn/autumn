@@ -41,7 +41,10 @@ At boot leaf proves that a `NOTIFY` sent through `CHAT_DATABASE_URL` reaches a
 `LISTEN` on `CHAT_DATABASE_DIRECT_URL` (or on `CHAT_DATABASE_URL` when the direct
 URL is unset). If it doesn't, eve falls back to its local world and
 `leaf.eve_server_starting` logs `durable_journal: false`. The world module is
-`agent/lib/workflowWorld/workflowWorld.ts`. To reproduce prod's bouncer setup,
+`agent/lib/workflowWorld/workflowWorld.ts`. world-postgres never reconnects its
+listener, so if that connection dies eve exits and leaf restarts it with backoff
+(`leaf.eve_world_listener_lost`). After 5 restarts in an hour leaf keeps eve on its
+local world (`leaf.eve_world_listener_restarts_exhausted`). To reproduce prod's bouncer setup,
 see `tests/integration/pgbouncerWorld.test.ts`.
 
 3. Create a Slack app at https://api.slack.com/apps using `slack-manifest.example.json`.

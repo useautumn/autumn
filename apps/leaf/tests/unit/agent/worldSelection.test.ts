@@ -227,6 +227,7 @@ describe("listener-routed pool", () => {
 			queryUrl: bouncer.url,
 			listenUrl: direct.url,
 			max: 6,
+			onListenerClosed: () => undefined,
 		});
 		const pooled = pool.connect().catch(() => undefined);
 		await waitFor(() => bouncer.accepted() > 0);
@@ -300,6 +301,32 @@ describe("listener-routed pool", () => {
 		} finally {
 			recorder.restore();
 		}
+	});
+
+	test("only the listener's socket closing reports a lost listener", async () => {
+		const bouncer = startPostgresStub();
+		const direct = startPostgresStub();
+		const onListenerClosed = mock(() => undefined);
+		const pool = createListenerRoutedPool({
+			queryUrl: bouncer.url,
+			listenUrl: direct.url,
+			onListenerClosed,
+		});
+		const pooled = pool.connect().catch(() => undefined);
+		await waitFor(() => bouncer.accepted() > 0);
+		bouncer.stop();
+		await pooled;
+		expect(onListenerClosed).not.toHaveBeenCalled();
+
+		const listener = new pg.Client(pool.options);
+		listener.on("error", () => undefined);
+		const connecting = listener.connect().catch(() => undefined);
+		await waitFor(() => direct.accepted() > 0);
+		direct.stop();
+		await connecting;
+		await waitFor(() => onListenerClosed.mock.calls.length > 0);
+		expect(onListenerClosed).toHaveBeenCalledTimes(1);
+		await pool.end();
 	});
 
 	test("the world refuses to start without a query URL", () => {
