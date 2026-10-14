@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
@@ -77,6 +81,18 @@ describe("shouldRetrySqsJobError", () => {
 				error: new RedisUnavailableError({
 					source: "runTrackV3",
 					reason: "timeout",
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("retries track jobs when the subject view changes", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.Track,
+				error: new RedisDeductionError({
+					message: "Subject view changed",
+					code: RedisDeductionErrorCode.SubjectViewChanged,
 				}),
 			}),
 		).toBe(true);
