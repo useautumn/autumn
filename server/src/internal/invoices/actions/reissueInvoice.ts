@@ -46,7 +46,10 @@ import { applyReissueCustomerOverrides } from "./reissue/applyReissueCustomerOve
 import { buildReissueLines } from "./reissue/buildReissueLines";
 import { previewReissue } from "./reissue/previewReissue";
 import { previewReissuedInvoice } from "./reissue/previewReissuedInvoice";
-import { resolveReissueSubscriptionId } from "./reissue/resolveReissueSubscriptionId";
+import {
+	type ReissueSubscription,
+	resolveReissueSubscription,
+} from "./reissue/resolveReissueSubscription";
 import { resolveReissueTax } from "./reissue/resolveReissueTax";
 import { updateInvoiceFromStripe } from "./updateFromStripe";
 import { upsertInvoiceFromStripe } from "./upsertFromStripe";
@@ -206,6 +209,7 @@ const createReplacementDraft = async ({
 	overrides,
 	lines,
 	dropDeferredPointer,
+	subscription,
 }: {
 	ctx: AutumnContext;
 	stripeCli: Stripe;
@@ -218,13 +222,9 @@ const createReplacementDraft = async ({
 	overrides?: ReissueInvoiceOverrides;
 	lines: Stripe.InvoiceAddLinesParams.Line[];
 	dropDeferredPointer: boolean;
+	subscription: ReissueSubscription;
 }) => {
-	const { stripeSubId, subscriptionEnded } = await resolveReissueSubscriptionId(
-		{
-			stripeCli,
-			stripeInvoice,
-		},
-	);
+	const { stripeSubId, subscriptionEnded, endedPaymentMethodId } = subscription;
 	const stripeCusId = stripeRefToId(stripeInvoice.customer);
 	if (!stripeCusId) {
 		throw invalidRequest("Original invoice has no Stripe customer");
@@ -283,6 +283,9 @@ const createReplacementDraft = async ({
 			: {}),
 		...(overrides?.account_tax_ids !== undefined
 			? { account_tax_ids: overrides.account_tax_ids }
+			: {}),
+		...(collectionMethod === "charge_automatically" && endedPaymentMethodId
+			? { default_payment_method: endedPaymentMethodId }
 			: {}),
 	};
 	// The draft exists from here on, so anything that fails must take it with it.
@@ -358,6 +361,12 @@ const issueReplacement = async ({
 	customerAdjusted: boolean;
 	issueMethod?: InvoiceIssueMethod;
 }): Promise<{ issued: Stripe.Invoice; creditNoteId: string | null }> => {
+	const subscription = await resolveReissueSubscription({
+		stripeCli,
+		stripeInvoice,
+	});
+	// With the subscription ended, the original's pending plan is expired by its void, not moved.
+	const repointsDeferred = !subscription.subscriptionEnded;
 	const draft = await createReplacementDraft({
 		ctx,
 		stripeCli,
@@ -373,6 +382,7 @@ const issueReplacement = async ({
 		overrides,
 		lines,
 		dropDeferredPointer: creditOriginal,
+		subscription,
 	});
 
 	// The total is only guaranteed to match when nothing was adjusted.
@@ -418,19 +428,23 @@ const issueReplacement = async ({
 	}
 
 	try {
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: stripeInvoice.id,
-			toStripeInvoiceId: issued.id,
-		});
+		if (repointsDeferred) {
+			await repointDeferredReferences({
+				ctx,
+				fromStripeInvoiceId: stripeInvoice.id,
+				toStripeInvoiceId: issued.id,
+			});
+		}
 		if (!originalIsDraft) await voidInvoice({ ctx, invoiceId });
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
-		await repointDeferredReferences({
-			ctx,
-			fromStripeInvoiceId: issued.id,
-			toStripeInvoiceId: stripeInvoice.id,
-		}).catch(() => undefined);
+		if (repointsDeferred) {
+			await repointDeferredReferences({
+				ctx,
+				fromStripeInvoiceId: issued.id,
+				toStripeInvoiceId: stripeInvoice.id,
+			}).catch(() => undefined);
+		}
 		if (originalIsDraft) {
 			await unparkDraftOriginal({ stripeCli, stripeInvoice }).catch(
 				() => undefined,
@@ -871,7 +885,7 @@ const storeReplacementInAutumn = async ({
  * copy issued per issue_method. The replacement stays linked to the same subscription
  * and inherits the original's deferred-plan pointers, so paying it has the same
  * effect the original payment would have had. Once that subscription has ended,
- * the replacement is issued standalone without them.
+ * the replacement is issued standalone and voiding the original expires its pending plan.
  *
  * A sent or finalized replacement is issued before the original is voided, so a
  * failure never leaves the customer without a payable invoice.

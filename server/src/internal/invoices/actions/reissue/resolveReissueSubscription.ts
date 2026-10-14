@@ -1,17 +1,24 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
 import { isStripeResourceMissing } from "@/external/stripe/common/utils/isStripeResourceMissing";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { stripeSubscriptionToAutumnStatus } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 
-/** The original's subscription while it can still take invoices; Stripe refuses to link one that has ended. */
-export const resolveReissueSubscriptionId = async ({
+export type ReissueSubscription = {
+	/** Set only while the subscription can still take invoices; Stripe refuses to link an ended one. */
+	stripeSubId?: string;
+	subscriptionEnded: boolean;
+	/** The ended subscription's card, which a standalone replacement would otherwise lose. */
+	endedPaymentMethodId?: string;
+};
+
+export const resolveReissueSubscription = async ({
 	stripeCli,
 	stripeInvoice,
 }: {
 	stripeCli: Stripe;
 	stripeInvoice: Stripe.Invoice;
-}): Promise<{ stripeSubId?: string; subscriptionEnded: boolean }> => {
+}): Promise<ReissueSubscription> => {
 	const stripeSubId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 	if (!stripeSubId) return { subscriptionEnded: false };
 
@@ -21,11 +28,16 @@ export const resolveReissueSubscriptionId = async ({
 			if (isStripeResourceMissing(error)) return null;
 			throw error;
 		});
+	if (!subscription) return { subscriptionEnded: true };
+
 	const subscriptionEnded =
-		!subscription ||
 		stripeSubscriptionToAutumnStatus({ stripeStatus: subscription.status }) ===
-			CusProductStatus.Expired;
-	return subscriptionEnded
-		? { subscriptionEnded }
-		: { stripeSubId, subscriptionEnded };
+		CusProductStatus.Expired;
+	if (!subscriptionEnded) return { stripeSubId, subscriptionEnded };
+
+	return {
+		subscriptionEnded,
+		endedPaymentMethodId:
+			stripeRefToId(subscription.default_payment_method) ?? undefined,
+	};
 };
