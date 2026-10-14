@@ -49,9 +49,6 @@ export const createMembership = ({
 	self: string;
 	table?: Int32Array;
 }): Membership => {
-	/** The boot names seen, by code; a thread that only read the code from the table reports the code. */
-	const boots = new Map<number, string>();
-
 	const rowOf = (address: string): number => {
 		const code = codeOf(address);
 		for (let row = 0; row < MAX_PEERS; row++)
@@ -93,18 +90,14 @@ export const createMembership = ({
 		isLeaving: (address) => stateOf(address) === "leaving",
 		markReady: ({ address, boot }) => {
 			const at = rowFor(address);
-			const code = bootCodeOf(boot);
-			boots.set(code, boot);
 			// Back after leaving, from a new boot: its customers' entries are handed to it again before it owns them.
 			clearRow(at);
-			Atomics.store(table, at + BOOT, code);
+			Atomics.store(table, at + BOOT, bootCodeOf(boot));
 			Atomics.store(table, at + STATE, STATES.ready);
 		},
-		bootOf: (address) => {
+		isBootOf: ({ address, boot }) => {
 			const at = rowOf(address);
-			if (at < 0) return null;
-			const code = Atomics.load(table, at + BOOT);
-			return code === 0 ? null : (boots.get(code) ?? String(code));
+			return at >= 0 && Atomics.load(table, at + BOOT) === bootCodeOf(boot);
 		},
 		markJoined: (address) =>
 			Atomics.store(table, rowFor(address) + STATE, STATES.joined),

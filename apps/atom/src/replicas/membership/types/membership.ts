@@ -13,8 +13,8 @@ export type Membership = {
 	stateOf(address: string): MemberState | null;
 	/** The peer answered ready from the boot named: counted from nothing, or again after leaving when the boot is a new one. */
 	markReady(params: { address: string; boot: string }): void;
-	/** The boot the peer was marked ready from, so a leaving peer back at the same address is told apart. */
-	bootOf(address: string): string | null;
+	/** Whether the peer was marked ready from this boot: read from the shared table, so every thread tells a leaving peer back at the same address apart. */
+	isBootOf(params: { address: string; boot: string }): boolean;
 	markJoined(address: string): void;
 	/** Whether this thread has handed the peer its entries since it was marked ready. */
 	hasHandedOff(params: { address: string; thread: number }): boolean;
