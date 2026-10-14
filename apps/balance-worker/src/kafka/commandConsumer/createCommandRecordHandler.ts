@@ -34,21 +34,6 @@ const isCommittedMutation = (
 	committed !== null &&
 	"mutation" in committed;
 
-/** An Atom's track that landed only its seq: the engine or the consumer turned it into a track of nothing. */
-const isAtomTrackOfNothing = ({
-	command,
-	committed,
-}: {
-	command: CommandRecord;
-	committed: unknown;
-}): boolean =>
-	command.type === "track" &&
-	command.source !== undefined &&
-	command.value !== 0 &&
-	isCommittedMutation(committed) &&
-	committed.mutation.command.type === "track" &&
-	committed.mutation.command.value === 0;
-
 /** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
 
@@ -62,8 +47,6 @@ export function createCommandRecordHandler({
 		number,
 		{ runtime: PartitionRuntimePort; logs: DeferredLogs }
 	>();
-	/** Per partition, the Atom tracks this batch landed as nothing: a resend can be a whole journal, so one line per batch. */
-	const atomTracksOfNothing = new Map<number, number>();
 
 	function deferredLogsOf({
 		partition,
@@ -97,13 +80,6 @@ export function createCommandRecordHandler({
 		} catch (cause) {
 			parkOrRethrow({ topic, partition, cause });
 		}
-		const count = atomTracksOfNothing.get(partition);
-		atomTracksOfNothing.delete(partition);
-		if (count)
-			ctx.logger?.info(
-				"Queued Atom tracks deducted nothing: already applied, duplicate or refused",
-				{ topic, partition, count },
-			);
 	}
 
 	/** Postgres says how far the commands are decided; a batch starting below that is skipped forward, never re-decided. */
@@ -139,7 +115,7 @@ export function createCommandRecordHandler({
 					deferredLogs,
 				}),
 			);
-			if (decided) deferredLogs.add(settleCommit({ ...decided, partition }));
+			if (decided) deferredLogs.add(settleCommit(decided));
 		} catch (cause) {
 			parkOrRethrow({ topic, partition, offset, cause });
 		}
@@ -207,46 +183,18 @@ export function createCommandRecordHandler({
 	async function settleCommit({
 		command,
 		queued,
-		partition,
 	}: {
 		command: CommandRecord;
 		queued: QueuedCommand;
-		partition: number;
 	}): Promise<void> {
 		try {
 			const committed = await queued.decided.waitForCommit();
 			logRejection({ command, committed });
-			if (isAtomTrackOfNothing({ command, committed }))
-				atomTracksOfNothing.set(
-					partition,
-					(atomTracksOfNothing.get(partition) ?? 0) + 1,
-				);
-			else logAtomTrackApplied({ command, committed });
 		} catch (cause) {
 			if (classifyQueuedFailure({ cause }) === "refused")
 				await queued.onRefused?.();
 			settleQueuedFailure({ ctx: { logger: ctx.logger }, command, cause });
 		}
-	}
-
-	/** Every Atom track that deducted, by its journal entry, so a double apply shows as one entry logged twice. */
-	function logAtomTrackApplied({
-		command,
-		committed,
-	}: {
-		command: CommandRecord;
-		committed: unknown;
-	}): void {
-		if (command.type !== "track" || !command.source) return;
-		if (!isCommittedMutation(committed) || committed.kind === "duplicate")
-			return;
-		ctx.logger?.info("Queued Atom track applied", {
-			commandId: command.commandId,
-			customerId: command.identity.customerId,
-			atomId: command.source.atomId,
-			writerId: command.source.writerId,
-			seq: command.source.seq,
-		});
 	}
 
 	/** A deduction the balance could not fund committed as rejected: nothing moved, and nobody is waiting to hear it. */

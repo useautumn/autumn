@@ -71,12 +71,6 @@ describe("an Atom's resent journal entries", () => {
 				balance: STARTING_BALANCE - 20,
 				atomSeqs: { atom_1: { [writerId]: 2 } },
 			});
-			expect(
-				pipeline.logs.filter((line) => line.includes("deducted nothing")),
-			).toHaveLength(1);
-			expect(
-				pipeline.logs.filter((line) => line.includes("Atom track applied")),
-			).toHaveLength(2);
 		} finally {
 			await pipeline.close();
 		}
