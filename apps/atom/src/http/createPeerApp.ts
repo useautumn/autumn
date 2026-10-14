@@ -3,6 +3,7 @@ import { receiveDeleteAtom } from "../multiTenant/receiveDeleteAtom.js";
 import { receiveListAtoms } from "../multiTenant/receiveListAtoms.js";
 import { receivePutAtom } from "../multiTenant/receivePutAtom.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
+import { PEER_LEAVING_PATH } from "../replicas/handover/leavingContract.js";
 import {
 	PEER_ATOMS_LIST_PATH,
 	PEER_CATALOG_SINCE_PATH,
@@ -13,6 +14,7 @@ import {
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
+import { receiveLeaving } from "./handlers/receiveLeaving.js";
 import {
 	receiveCatalogSince,
 	receiveSubjectsDigest,
@@ -72,6 +74,7 @@ export function createPeerApp({
 		receiveFinalize,
 	);
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
+	app.post(PEER_LEAVING_PATH, receiveLeaving({ ctx }));
 	if (ctx.multiTenant) {
 		const tenants = { ...ctx.multiTenant, replication: ctx.replication };
 		app.post(ATOM_PUT.path, receivePutAtom({ ctx: tenants }));
