@@ -211,10 +211,7 @@ export {
 	parseWorkerCustomerEntitlement,
 	parseWorkerLock,
 } from "./parsers.js";
-export {
-	changesKeepCatalogKeys,
-	isSameCatalog,
-} from "./utils/catalogUtils/classifyCatalogUtils.js";
+export { changesKeepCatalogKeys } from "./utils/catalogUtils/classifyCatalogUtils.js";
 export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
@@ -231,6 +228,10 @@ export {
 	filterCatalogForState,
 	filterCatalogKeysMissingFrom,
 } from "./utils/catalogUtils/filterCatalogUtils.js";
+export {
+	findStructuralDifference,
+	type StructuralDifference,
+} from "./utils/findStructuralDifference.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,
@@ -238,7 +239,6 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
-export { isSameSubjectState } from "./utils/subjectStateUtils/classifySubjectStateUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,
@@ -248,6 +248,7 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export { findSubjectStateDifference } from "./utils/subjectStateUtils/findSubjectStateUtils.js";
 export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,

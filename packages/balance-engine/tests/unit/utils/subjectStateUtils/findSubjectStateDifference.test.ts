@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	applyMutation,
 	computeTrack,
-	isSameCatalog,
-	isSameSubjectState,
+	findStructuralDifference,
+	findSubjectStateDifference,
 	type SubjectState,
 } from "../../../../src/balanceEngine.js";
 import {
@@ -37,13 +37,13 @@ const asPushed = (state: SubjectState): SubjectState => {
 	return reversed(JSON.parse(JSON.stringify(state))) as SubjectState;
 };
 
-describe("isSameSubjectState", () => {
+describe("findSubjectStateDifference", () => {
 	test("the same rows at the same revision are the same state, whatever their key order or JSON round trip", () => {
 		const state = tracked({ state: createState({ balance: 10 }) });
 
-		expect(isSameSubjectState({ left: state, right: asPushed(state) })).toBe(
-			true,
-		);
+		expect(
+			findSubjectStateDifference({ left: state, right: asPushed(state) }),
+		).toBeNull();
 	});
 
 	test("the customer's atom_seqs is not compared: only the worker's apply of an Atom's track writes it", () => {
@@ -53,56 +53,66 @@ describe("isSameSubjectState", () => {
 			customer: { ...state.customer, atom_seqs: { atom_1: { w_1: 4 } } },
 		};
 
-		expect(isSameSubjectState({ left: state, right: acknowledged })).toBe(true);
+		expect(
+			findSubjectStateDifference({ left: state, right: acknowledged }),
+		).toBeNull();
 	});
 
 	test("a different revision is a different state: Autumn applied something else", () => {
 		const state = tracked({ state: createState({ balance: 10 }) });
 
 		expect(
-			isSameSubjectState({
+			findSubjectStateDifference({
 				left: state,
 				right: { ...state, revision: state.revision + 1 },
 			}),
-		).toBe(false);
+		).toEqual({
+			path: "revision",
+			left: state.revision,
+			right: state.revision + 1,
+		});
 	});
 
-	test("a different balance, or a row more, is a different state", () => {
+	test("a different balance, or a row more, is a different state, named by the first path that differs", () => {
 		const state = createState({ balance: 10 });
 		const [row] = state.customerEntitlements;
 		if (!row) throw new Error("fixture holds a row");
 
 		expect(
-			isSameSubjectState({
+			findSubjectStateDifference({
 				left: state,
 				right: {
 					...state,
 					customerEntitlements: [{ ...row, balance: 9 }],
 				},
 			}),
-		).toBe(false);
+		).toEqual({
+			path: "customerEntitlements[0].balance",
+			left: 10,
+			right: 9,
+		});
 		expect(
-			isSameSubjectState({
+			findSubjectStateDifference({
 				left: state,
 				right: {
 					...state,
 					customerEntitlements: [row, { ...row, id: "messages_extra" }],
 				},
 			}),
-		).toBe(false);
+		).toEqual({ path: "customerEntitlements.length", left: 1, right: 2 });
 	});
 });
 
-describe("isSameCatalog", () => {
+describe("findStructuralDifference on catalogs", () => {
 	test("the same rows are the same catalog, whatever their key order", () => {
 		const catalog = createCatalogFor({ state: createState() });
 
 		expect(
-			isSameCatalog({
+			findStructuralDifference({
 				left: catalog,
 				right: JSON.parse(JSON.stringify(catalog)),
 			}),
-		).toBe(true);
+		).toBeNull();
 	});
 
 	test("an edited row is a different catalog", () => {
@@ -111,13 +121,17 @@ describe("isSameCatalog", () => {
 		if (!id || !entitlement) throw new Error("fixture holds an entitlement");
 
 		expect(
-			isSameCatalog({
+			findStructuralDifference({
 				left: catalog,
 				right: {
 					...catalog,
 					entitlements: { [id]: { ...entitlement, allowance: 1 } },
 				},
 			}),
-		).toBe(false);
+		).toEqual({
+			path: `entitlements.${id}.allowance`,
+			left: entitlement.allowance,
+			right: 1,
+		});
 	});
 });
