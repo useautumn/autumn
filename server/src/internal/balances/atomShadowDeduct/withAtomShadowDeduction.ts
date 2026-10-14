@@ -42,8 +42,8 @@ export const withAtomShadowDeduction = async ({
 		atomShadowDeductTarget({ ctx, customerId: call.params.customer_id });
 	if (!call || !target) return runOnApi({ idempotencyKey });
 
-	// One key on both legs: a deduction Atom journaled before it went quiet is claimed once.
-	const key = idempotencyKey || `atom_shadow_${ctx.id}`;
+	// BENCH-ONLY (bench/bw-no-shadow-key): a keyless call stays keyless on both legs, as in prod, so no Atom track is claimed.
+	const key = idempotencyKey;
 	const startedAt = performance.now();
 	const reply = await askAtomToDeduct({
 		target,

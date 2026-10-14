@@ -32,9 +32,9 @@ const callToBody = ({
 	idempotencyKey,
 }: {
 	call: AtomDeductCall;
-	idempotencyKey: string;
+	idempotencyKey: string | undefined;
 }): unknown =>
-	call.route === "track"
+	call.route === "track" && idempotencyKey
 		? { ...call.params, idempotency_key: idempotencyKey }
 		: call.params;
 
@@ -50,7 +50,7 @@ export const askAtomToDeduct = async ({
 	call: AtomDeductCall;
 	search: string;
 	apiVersion: ApiVersionClass;
-	idempotencyKey: string;
+	idempotencyKey: string | undefined;
 }): Promise<AtomDeductReply> => {
 	try {
 		const response = await postToAtom({
