@@ -3,36 +3,14 @@ import {
 	orgDisableStripeWrites,
 	ProcessorType,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli";
-import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
 import {
 	type ExpandedStripeCustomer,
 	getExpandedStripeCustomer,
 } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
+import { syncStripeCustomerEmail } from "@/external/stripe/customers/operations/syncStripeCustomerEmail";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
-
-/** The caller's customer may be a snapshot taken before a concurrent
- * customers.update committed; pushing its email to Stripe would echo the stale
- * value back through the customer.updated webhook and overwrite the new one. */
-const latestCustomerEmail = async ({
-	ctx,
-	customer,
-}: {
-	ctx: AutumnContext;
-	customer: Customer;
-}) => {
-	const idOrInternalId = customer.id || customer.internal_id;
-	if (!idOrInternalId) return customer.email;
-	const current = await CusService.get({
-		db: ctx.db,
-		env: ctx.env,
-		idOrInternalId,
-		orgId: ctx.org.id,
-	});
-	return current?.email ?? customer.email;
-};
 
 export const getOrCreateStripeCustomer = async ({
 	ctx,
@@ -59,22 +37,11 @@ export const getOrCreateStripeCustomer = async ({
 	});
 
 	if (currentStripeCustomer) {
-		const email = await latestCustomerEmail({ ctx, customer });
-		if (
-			email &&
-			currentStripeCustomer.email !== email &&
-			!orgDisableStripeWrites({ ctx })
-		) {
-			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-			await stripeCli.customers.update(
-				currentStripeCustomer.id,
-				{ email },
-				autumnStripeRequestOptions({ source: "customer.update" }),
-			);
-			return { ...currentStripeCustomer, email };
-		}
-
-		return currentStripeCustomer;
+		return syncStripeCustomerEmail({
+			ctx,
+			customer,
+			stripeCustomer: currentStripeCustomer,
+		});
 	}
 
 	if (orgDisableStripeWrites({ ctx })) return undefined;

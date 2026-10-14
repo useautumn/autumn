@@ -17,6 +17,10 @@ const idempotencyMismatch = new Stripe.errors.StripeIdempotencyError({
 const mockState = {
 	createError: idempotencyMismatch as Error,
 	linkedProcessorId: null as string | null,
+	linkAfterLookups: 0,
+	lookups: 0,
+	savedEmail: null as string | null,
+	emailUpdates: [] as { id: string; email: string }[],
 	searchResults: [] as { id: string }[],
 	retrievedIds: [] as string[],
 };
@@ -45,7 +49,11 @@ mock.module("@/external/connect/createStripeCli", () => ({
 			search: async () => ({ data: mockState.searchResults }),
 			retrieve: async (id: string) => {
 				mockState.retrievedIds.push(id);
-				return { id, object: "customer" };
+				return { id, object: "customer", email: null };
+			},
+			update: async (id: string, { email }: { email: string }) => {
+				mockState.emailUpdates.push({ id, email });
+				return { id, email };
 			},
 		},
 	}),
@@ -53,11 +61,18 @@ mock.module("@/external/connect/createStripeCli", () => ({
 
 mock.module("@/internal/customers/CusService", () => ({
 	CusService: {
-		get: async () => ({
-			processor: mockState.linkedProcessorId
-				? { id: mockState.linkedProcessorId, type: ProcessorType.Stripe }
-				: null,
-		}),
+		get: async () => {
+			mockState.lookups++;
+			const linked =
+				mockState.linkedProcessorId &&
+				mockState.lookups > mockState.linkAfterLookups;
+			return {
+				email: mockState.savedEmail,
+				processor: linked
+					? { id: mockState.linkedProcessorId, type: ProcessorType.Stripe }
+					: null,
+			};
+		},
 	},
 }));
 
@@ -85,6 +100,10 @@ describe("createStripeCustomer idempotency mismatch", () => {
 	beforeEach(() => {
 		mockState.createError = idempotencyMismatch;
 		mockState.linkedProcessorId = null;
+		mockState.linkAfterLookups = 0;
+		mockState.lookups = 0;
+		mockState.savedEmail = null;
+		mockState.emailUpdates = [];
 		mockState.searchResults = [];
 		mockState.retrievedIds = [];
 	});
@@ -103,6 +122,33 @@ describe("createStripeCustomer idempotency mismatch", () => {
 		const stripeCustomer = await createStripeCustomer({ ctx, customer });
 
 		expect(stripeCustomer.id).toBe("cus_stripe_tagged");
+	});
+
+	test("waits for the concurrent create to link its Stripe customer", async () => {
+		mockState.linkedProcessorId = "cus_stripe_linked";
+		mockState.linkAfterLookups = 2;
+
+		const stripeCustomer = await createStripeCustomer({ ctx, customer });
+
+		expect(stripeCustomer.id).toBe("cus_stripe_linked");
+	});
+
+	test("rethrows the idempotency error when no Stripe customer turns up", async () => {
+		await expect(createStripeCustomer({ ctx, customer })).rejects.toBe(
+			idempotencyMismatch,
+		);
+	});
+
+	test("applies the saved email to the recovered Stripe customer", async () => {
+		mockState.linkedProcessorId = "cus_stripe_linked";
+		mockState.savedEmail = "customer@example.com";
+
+		const stripeCustomer = await createStripeCustomer({ ctx, customer });
+
+		expect(stripeCustomer.email).toBe("customer@example.com");
+		expect(mockState.emailUpdates).toEqual([
+			{ id: "cus_stripe_linked", email: "customer@example.com" },
+		]);
 	});
 
 	test("rethrows other Stripe errors", async () => {

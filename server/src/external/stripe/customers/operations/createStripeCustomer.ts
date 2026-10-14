@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { retryAsync } from "@/utils/retryAsync";
 import { findStripeCustomerForAutumnCustomer } from "./findStripeCustomerForAutumnCustomer";
 import type { ExpandedStripeCustomer } from "./getExpandedStripeCustomer";
+import { syncStripeCustomerEmail } from "./syncStripeCustomerEmail";
 
 export const createStripeCustomer = async ({
 	ctx,
@@ -73,7 +74,11 @@ export const createStripeCustomer = async ({
 				expandTax: options.expandTax,
 			});
 			if (!existingStripeCustomer) throw error;
-			return existingStripeCustomer;
+			return syncStripeCustomerEmail({
+				ctx,
+				customer,
+				stripeCustomer: existingStripeCustomer,
+			});
 		},
 	});
 };
