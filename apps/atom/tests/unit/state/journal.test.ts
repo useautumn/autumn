@@ -549,6 +549,71 @@ describe("journal", () => {
 	}, 30_000);
 });
 
+describe("a journal's handoff", () => {
+	test("waits for the entries still committing and hands them as unsent: what the new owner must still send", async () => {
+		const journal = open({ databasePath: journalPath() });
+		const append = journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+
+		const handoffs = await journal.handoffs();
+		await append;
+
+		expect(handoffs).toEqual([
+			{
+				customerId: "cus_1",
+				entries: [expect.objectContaining({ seq: 1, sent: false })],
+			},
+		]);
+		expect(journal.countUnsent()).toBe(1);
+	});
+
+	test("names what Autumn already holds as sent, so the new owner holds it without sending it again", async () => {
+		const journal = open({ databasePath: journalPath() });
+		const first = await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+		journal.markSent({ entries: [first] });
+
+		expect(
+			(await journal.handoffs())[0]?.entries.map(({ seq, sent }) => ({
+				seq,
+				sent,
+			})),
+		).toEqual([
+			{ seq: 1, sent: true },
+			{ seq: 2, sent: false },
+		]);
+	});
+
+	test("what the new owner acknowledged leaves this journal, in memory and on disk, and the rest stays owed", async () => {
+		const databasePath = journalPath();
+		const journal = open({ databasePath });
+		const first = await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+
+		await journal.dropHandedOff({ entries: [first] });
+
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[2],
+		);
+		expect(journal.countUnsent()).toBe(1);
+		expect(rowsIn({ databasePath })).toEqual([{ customerId: "cus_1", seq: 2 }]);
+	});
+});
+
 describe("journal entries carry their writer", () => {
 	test("an entry held under another writer keeps that writer, raises no seq of this file, and clears only against its own watermark", async () => {
 		const databasePath = journalPath();
