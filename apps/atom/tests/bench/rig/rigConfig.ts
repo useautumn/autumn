@@ -69,6 +69,9 @@ const defaults = {
 		exitToDnsDropMs: 12_000,
 		dnsDropToStartMs: 10_000,
 		readyToRegisteredMs: 15_000,
+		/** One deduction in this many is a locked check (lock_id held, 1 unit), finalized `lockFinalizeAfterMs` later; 0 sends none. */
+		lockEvery: 0,
+		lockFinalizeAfterMs: 8_000,
 	},
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,
