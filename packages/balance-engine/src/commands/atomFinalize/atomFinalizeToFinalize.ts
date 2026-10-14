@@ -21,7 +21,9 @@ export const atomFinalizeToFinalize = ({
 		entityId: lock.entity_id,
 	},
 	org: command.org,
-	lock,
+	// The Atom already answered this settle, so a draw above the lock lands as its tracks do (overflow), never rejected
+	// under the row's own overage, which would leave the lock open behind the Atom's 200.
+	lock: { ...lock, overage_behavior: "overflow" },
 	internalFeatureId: command.internalFeatureId,
 	finalValue: command.finalValue,
 	properties: command.properties,
