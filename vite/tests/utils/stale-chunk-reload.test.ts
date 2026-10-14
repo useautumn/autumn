@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { addSeconds } from "date-fns";
 import { claimStaleChunkReload } from "@/utils/staleChunkReload";
 
 const createStorage = () => {
@@ -12,28 +11,40 @@ const createStorage = () => {
 	};
 };
 
+const oldBuild = "https://app.example.com/assets/index-old.js";
+const newBuild = "https://app.example.com/assets/index-new.js";
+
 describe("claimStaleChunkReload", () => {
-	const now = new Date("2026-10-14T14:10:57Z");
-
 	test("allows the first reload", () => {
-		expect(claimStaleChunkReload({ storage: createStorage(), now })).toBe(true);
+		expect(
+			claimStaleChunkReload({ storage: createStorage(), buildId: oldBuild }),
+		).toBe(true);
 	});
 
-	test("blocks a second reload right after the first, so a missing chunk can't loop", () => {
+	test("blocks a second reload on the same build, however long it took, so a missing chunk can't loop", () => {
 		const storage = createStorage();
-		claimStaleChunkReload({ storage, now });
+		claimStaleChunkReload({ storage, buildId: oldBuild });
 
-		expect(claimStaleChunkReload({ storage, now: addSeconds(now, 2) })).toBe(
-			false,
-		);
+		expect(claimStaleChunkReload({ storage, buildId: oldBuild })).toBe(false);
 	});
 
-	test("allows another reload once the cooldown has passed, for a later deploy", () => {
+	test("allows another reload once the tab is on a newer build", () => {
 		const storage = createStorage();
-		claimStaleChunkReload({ storage, now });
+		claimStaleChunkReload({ storage, buildId: oldBuild });
 
-		expect(claimStaleChunkReload({ storage, now: addSeconds(now, 60) })).toBe(
-			true,
-		);
+		expect(claimStaleChunkReload({ storage, buildId: newBuild })).toBe(true);
+	});
+
+	test("skips the reload when storage is unavailable, since it can't be bounded", () => {
+		const storage = {
+			getItem: () => {
+				throw new Error("SecurityError");
+			},
+			setItem: () => {
+				throw new Error("QuotaExceededError");
+			},
+		};
+
+		expect(claimStaleChunkReload({ storage, buildId: oldBuild })).toBe(false);
 	});
 });
