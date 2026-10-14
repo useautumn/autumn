@@ -2,13 +2,10 @@ import type { Metadata } from "@autumn/shared";
 import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import type { RepoContext } from "@/db/repoContext";
+import { isStripeInvoicePendingPaymentError } from "@/external/stripe/invoices/utils/classifyStripeInvoice";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-const PENDING_PAYMENT_ERROR = "pending payments waiting to clear";
 const UNPAID_CLOSED_STATUSES = new Set(["void", "uncollectible"]);
-
-const isPendingPaymentError = (error: unknown) =>
-	error instanceof Error && error.message.includes(PENDING_PAYMENT_ERROR);
 
 /** Returns whether the invoice is now closed unpaid; a clearing payment defers cleanup a day. */
 export const voidInvoiceAtDueDate = async ({
@@ -32,7 +29,7 @@ export const voidInvoiceAtDueDate = async ({
 		);
 		return true;
 	} catch (error) {
-		if (!isPendingPaymentError(error)) throw error;
+		if (!isStripeInvoicePendingPaymentError(error)) throw error;
 
 		await MetadataService.update({
 			db: ctx.db,
