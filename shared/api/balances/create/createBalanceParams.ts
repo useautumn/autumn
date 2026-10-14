@@ -67,32 +67,25 @@ export const CreateBalanceParamsV0Schema = ExtCreateBalanceParamsSchema.extend({
 export const ValidateCreateBalanceParamsSchema =
 	CreateBalanceParamsV0Schema.extend({
 		feature: FeatureSchema,
-	}).refine((data) => {
-		if (!data.feature) {
-			return false;
-		}
-
+	}).superRefine((data, ctx) => {
 		const included = data.included_grant ?? data.granted_balance;
+		const fail = (message: string) => ctx.addIssue({ code: "custom", message });
 
 		if (data.feature.type === FeatureType.Boolean) {
-			if (included !== undefined || data.unlimited || data.reset?.interval) {
-				return false;
-			}
+			if (included !== undefined)
+				fail("boolean features cannot have included_grant");
+			if (data.unlimited) fail("boolean features cannot be unlimited");
+			if (data.reset?.interval) fail("boolean features cannot have reset");
 		}
 
 		if (data.feature.type === FeatureType.Metered) {
-			if (included === undefined && !data.unlimited) {
-				return false;
-			}
-			if (included !== undefined && data.unlimited) {
-				return false;
-			}
-			if (data.unlimited && data.reset?.interval) {
-				return false;
-			}
+			if (included === undefined && !data.unlimited)
+				fail("included_grant or unlimited is required for metered features");
+			if (included !== undefined && data.unlimited)
+				fail("included_grant cannot be combined with unlimited");
+			if (data.unlimited && data.reset?.interval)
+				fail("reset cannot be combined with unlimited");
 		}
-
-		return true;
 	});
 
 export type CreateBalanceParamsV0 = z.infer<typeof CreateBalanceParamsV0Schema>;
