@@ -30,8 +30,8 @@ export const subjectRowsEnvelopeSchema = z.object({
 	pooled_balances: z.array(PooledBalanceSchema),
 	/** License pools on the customer's products: seat counters the worker serves on `customers.get`. */
 	customer_licenses: z.array(CustomerLicenseRowSchema),
-	/** Whole rows, held in memory so a finalize can be settled without reading Postgres. */
-	open_locks: z.array(z.record(z.string(), z.unknown())),
+	/** Ids only: the rest of a lock row is read at finalize, never held in memory. */
+	open_locks: z.array(z.object({ id: z.string(), lock_id: z.string() })),
 	entity: EntitySchema.nullable(),
 });
 

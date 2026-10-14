@@ -186,7 +186,7 @@ export const subjectRowsSql = ({
 	),
 
 	subject_open_locks AS (
-		SELECT bl.*
+		SELECT bl.id, bl.lock_id
 		FROM balance_locks bl
 		WHERE bl.internal_customer_id IN (SELECT internal_id FROM customer_record)
 			AND ${customerOwnedOnly}

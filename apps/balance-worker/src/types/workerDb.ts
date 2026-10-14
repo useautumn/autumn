@@ -2,6 +2,7 @@ import type { MeteringIdentity } from "@autumn/balance-engine";
 import type {
 	CatalogRowIds,
 	CatalogRowsEnvelope,
+	LockRowKey,
 	SubjectRowsEnvelope,
 } from "@autumn/postgres";
 
@@ -30,6 +31,8 @@ export type WorkerDb = {
 		identity: MeteringIdentity;
 		ids: CatalogRowIds;
 	}): Promise<CatalogRowsEnvelope>;
+	/** The open lock rows under these keys as Postgres stores them, whichever customers hold them; one probe. */
+	readLockRows(params: { keys: readonly LockRowKey[] }): Promise<unknown[]>;
 	/** Subscription billing anchors by customer product id, for the plans whose reset the anchor can move. */
 	getBillingCycleAnchors(params: {
 		identity: MeteringIdentity;

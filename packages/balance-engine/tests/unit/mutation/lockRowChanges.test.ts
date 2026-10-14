@@ -45,7 +45,7 @@ describe("lock row changes", () => {
 			state: createState(),
 			changes: [insertLock(createLock())],
 		});
-		expect(state.openLocks).toEqual([createLock()]);
+		expect(state.openLocks).toEqual([{ id: "lck_1", lock_id: "L1" }]);
 	});
 
 	test.concurrent("a second lock under the same lock id is stale", () => {
@@ -89,10 +89,10 @@ describe("lock row changes", () => {
 			changes: [insertLock(createLock())],
 		});
 		const { customer, entity } = splitSubjectState({ state: merged });
-		expect(customer.openLocks).toEqual([createLock()]);
+		expect(customer.openLocks).toEqual([{ id: "lck_1", lock_id: "L1" }]);
 		expect(entity?.openLocks).toEqual([]);
 		expect(mergeSubjectStates({ customer, entity }).openLocks).toEqual([
-			createLock(),
+			{ id: "lck_1", lock_id: "L1" },
 		]);
 	});
 

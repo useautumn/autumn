@@ -32,7 +32,7 @@ import {
 	createOwnershipConsumer,
 	type OwnershipConsumer,
 } from "@autumn/kafka";
-import type { PostgresClient } from "@autumn/postgres";
+import { type PostgresClient, readLockRows } from "@autumn/postgres";
 import { sql } from "drizzle-orm";
 import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
@@ -1033,10 +1033,11 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 			}
 		}, 60_000);
 
-		test("an open lock is read back whole from Postgres after an evict: the worker holds its full row, deltas included", async () => {
+		test("lock rows are read by (org, env, lock id) in one probe; a key under another org or env, or an unknown id, finds nothing", async () => {
 			const first = workers.at(-1) ?? (await startWorker({ harness }));
 			if (!workers.includes(first)) workers.push(first);
 			const locking = await seedCustomer({ postgres, balance: 100 });
+			const key = { orgId: locking.orgId, env: locking.env, lockId: "L_read" };
 			try {
 				await trackOrExplain(
 					harness,
@@ -1044,43 +1045,38 @@ describe.skipIf(brokers.length === 0 || !databaseUrl)(
 						input: {
 							...trackCommand({
 								customer: locking,
-								commandId: "lock_track_1",
+								commandId: "lock_read_1",
 								value: 8,
 							}),
 							lock: {
-								id: "lck_hydrate_1",
-								lockId: "L_hydrate",
+								id: "lck_read_1",
+								lockId: "L_read",
 								expiresAt: Date.now() + 3_600_000,
 								expiryAction: "release",
 							},
 						},
 					}),
 				);
-				expect(await waitForBalance({ customer: locking, balance: 92 })).toBe(
-					92,
-				);
-				const [stored] = (
-					await postgres.db.execute(
-						sql`SELECT id, lock_id, customer_id, feature_id, overage_behavior, deltas FROM balance_locks WHERE internal_customer_id = ${locking.internalCustomerId}`,
-					)
-				).rows;
 
-				await harness.client.evict({
-					command: evictCommand({
-						customerId: locking.identity.customerId,
-						orgId: locking.orgId,
-						env: locking.env,
-					}),
-				});
-				const read = await harness.client.readSubjectState({
-					command: readSubjectStateCommand({
-						customer: locking,
-						requestId: "read_locks",
-					}),
+				const rows = await readLockRows({
+					ctx: { db: postgres.db },
+					keys: [
+						key,
+						{ ...key, orgId: "org_other" },
+						{ ...key, env: "live" },
+						{ ...key, lockId: "L_unknown" },
+					],
 				});
 
-				expect(stored).toMatchObject({ lock_id: "L_hydrate" });
-				expect(read.state.openLocks).toEqual([expect.objectContaining(stored)]);
+				expect(rows).toEqual([
+					expect.objectContaining({
+						id: "lck_read_1",
+						lock_id: "L_read",
+						customer_id: locking.identity.customerId,
+						feature_id: locking.featureId,
+						expires_at: expect.any(Number),
+					}),
+				]);
 			} finally {
 				await locking.cleanup();
 			}

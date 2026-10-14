@@ -194,19 +194,7 @@ describe("slimSubjectForFeatures", () => {
 		const { state, catalog } = createFixture();
 		const openLocks = Array.from({ length: 500 }, (_, index) => ({
 			id: `lck_${index}`,
-			org_id: "org_1",
-			env: "sandbox",
 			lock_id: `lock_${index}`,
-			internal_customer_id: "cus_1",
-			customer_id: "cus_1",
-			entity_id: null,
-			feature_id: "messages",
-			overage_behavior: "reject" as const,
-			properties: null,
-			deltas: [],
-			expires_at: 0,
-			expiry_action: "confirm" as const,
-			created_at: 0,
 		}));
 		const replyBytes = (subject: typeof state) =>
 			JSON.stringify(

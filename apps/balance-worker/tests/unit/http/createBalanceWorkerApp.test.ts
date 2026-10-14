@@ -182,6 +182,8 @@ const fixture = ({
 		recalculateBalance: async () => {
 			throw new Error("Recalculate balance is not configured in this fixture");
 		},
+		pendingLockRow: () => null,
+		readLockRows: async () => [],
 		drain: async () => undefined,
 	};
 	/** The budget each command was run with, in order; undefined when the request carried none. */
