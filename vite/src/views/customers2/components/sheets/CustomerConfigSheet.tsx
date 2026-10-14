@@ -13,6 +13,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 const CONFIG_TOGGLES = [
 	{
@@ -34,7 +35,8 @@ const CONFIG_TOGGLES = [
 
 export function CustomerConfigSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
 
 	const fullCustomer = customer as FullCustomer | undefined;

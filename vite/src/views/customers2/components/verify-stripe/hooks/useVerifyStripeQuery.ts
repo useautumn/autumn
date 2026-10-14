@@ -3,12 +3,12 @@ import { ProcessorType } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 const VERIFY_STALE_TIME_MS = 30_000;
 
 export const useVerifyStripeQuery = () => {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 

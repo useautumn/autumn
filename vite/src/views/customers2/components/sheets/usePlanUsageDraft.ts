@@ -7,6 +7,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 type UsageUpdate = {
 	customerId: string;
@@ -21,7 +22,8 @@ export function usePlanUsageDraft({
 }: {
 	usageLimit: ApiUsageLimit | undefined;
 }) {
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const axios = useAxiosInstance();
 	const currentUsage = usageLimit?.usage ?? 0;

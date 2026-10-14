@@ -33,6 +33,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 type CreditMode = "amount" | "lines";
 
@@ -108,7 +109,8 @@ function CreditNoteForm({
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildQueryKey = useQueryKeyFactory();
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 
 	const creditableLines = lineItems.filter((line) => line.stripe_id);
 	const isPaid = invoice.status === InvoiceStatus.Paid;

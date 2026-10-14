@@ -26,8 +26,8 @@ export const DeleteEntity = ({
 	entity: Entity | null | undefined;
 	onDeleted?: () => void;
 }) => {
-	const { customer, refetch } = useCusQuery();
-	const { setEntityId } = useCustomerContext();
+	const { refetch } = useCusQuery();
+	const { customer, setEntityId } = useCustomerContext();
 	const navigate = useNavigate();
 	const location = useLocation();
 	const [isDeleting, setIsDeleting] = useState(false);

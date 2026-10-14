@@ -57,7 +57,6 @@ import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
 import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
@@ -467,8 +466,7 @@ export function AttachProductSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
-	const { customer } = useCusQuery();
-	const { setIsInlineEditorOpen } = useCustomerContext();
+	const { customer, setIsInlineEditorOpen } = useCustomerContext();
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);

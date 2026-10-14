@@ -3,7 +3,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
 import { invoiceDiscountRows } from "../utils/invoiceDiscountRows";
 import { InvoicePreviewDocument } from "./InvoicePreviewDocument";
@@ -11,7 +11,7 @@ import { InvoicePreviewDocument } from "./InvoicePreviewDocument";
 export function CreateInvoicePreviewColumn() {
 	const { previewQuery, formValues, planIdsOutsidePeriod } =
 		useCreateInvoiceFormContext();
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const { org } = useOrg();
 	const { templates } = useInvoiceTemplatesQuery();
 	const { rewards } = useRewardsQuery();

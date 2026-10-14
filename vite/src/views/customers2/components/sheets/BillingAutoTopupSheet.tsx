@@ -48,6 +48,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 const INTERVAL_LABELS: Record<string, string> = {
@@ -61,7 +62,8 @@ export function BillingAutoTopupSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const { displayCurrency } = useCustomerDisplayCurrency();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();

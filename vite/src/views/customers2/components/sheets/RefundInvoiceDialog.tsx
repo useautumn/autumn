@@ -22,6 +22,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 type RefundMode = "full" | "partial";
 
@@ -37,7 +38,8 @@ export function RefundInvoiceDialog({
 	const [mode, setMode] = useState<RefundMode>("full");
 	const [amount, setAmount] = useState("");
 	const axiosInstance = useAxiosInstance();
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const queryClient = useQueryClient();
 	const buildQueryKey = useQueryKeyFactory();
 

@@ -41,7 +41,6 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { usePendingPaymentLink } from "./usePendingPaymentLink";
@@ -187,8 +186,7 @@ export function SubscriptionUpdateSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
-	const { customer } = useCusQuery();
-	const { setIsInlineEditorOpen } = useCustomerContext();
+	const { customer, setIsInlineEditorOpen } = useCustomerContext();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });

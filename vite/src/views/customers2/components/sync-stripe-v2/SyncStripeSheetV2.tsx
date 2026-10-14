@@ -2,12 +2,14 @@ import { useState } from "react";
 import { SheetHeader } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useSyncProposalsV2 } from "./hooks/useSyncProposalsV2";
 import { SubscriptionEditorView } from "./SubscriptionEditorView";
 import { SubscriptionListView } from "./SubscriptionListView";
 
 export function SyncStripeSheetV2() {
-	const { customer, refetch: refetchCustomer } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch: refetchCustomer } = useCusQuery();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	const customerId = customer?.id ?? "";

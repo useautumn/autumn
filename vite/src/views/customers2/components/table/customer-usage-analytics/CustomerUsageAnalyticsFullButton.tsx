@@ -2,10 +2,10 @@ import { Button } from "@autumn/ui";
 import { ChartBarIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { pushPage } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 export function CustomerUsageAnalyticsFullButton() {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const navigate = useNavigate();
 
 	return (
@@ -16,7 +16,7 @@ export function CustomerUsageAnalyticsFullButton() {
 			onClick={() => {
 				pushPage({
 					path: "/analytics",
-					queryParams: { customer_id: customer.id },
+					queryParams: { customer_id: customer.id ?? undefined },
 					navigate,
 				});
 			}}

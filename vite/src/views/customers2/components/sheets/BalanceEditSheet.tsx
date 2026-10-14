@@ -58,8 +58,7 @@ const GRANT_SOURCE_LABELS: Record<string, string> = {
 };
 
 export function BalanceEditSheet() {
-	const { customer } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const { customer, entityId } = useCustomerContext();
 	const { featureId, originalEntitlements, selectedCusEntId } =
 		useCustomerBalanceSheetStore();
 
@@ -185,7 +184,8 @@ function UnlimitedBalanceForm({
 	featureId: string;
 	billingCycleEnd: number | null;
 }) {
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const { closeSheet: closeBalanceSheet } = useCustomerBalanceSheetStore();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const axiosInstance = useAxiosInstance();
@@ -317,7 +317,7 @@ function BalanceEditForm({
 	featureId: string;
 	billingCycleEnd: number | null;
 }) {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const form = useBalanceEditForm({
 		selectedCusEnt,
 		entityId,
@@ -437,7 +437,7 @@ function EntitlementInfoRows({
 	isUnlimited: boolean;
 	billingCycleEnd: number | null;
 }) {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const planName =
 		getCustomerBalancePlanName({
 			balance: {

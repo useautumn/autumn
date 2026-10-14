@@ -39,11 +39,10 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerAllocationControls } from "../../hooks/useCustomerAllocationControls";
 import { getAllocatableSharedBalanceInterval } from "../table/customer-balance/customerBalanceUtils";
-import {
-	allocationStateQueryKey,
-} from "./AllocationUsageWindows";
+import { allocationStateQueryKey } from "./AllocationUsageWindows";
 import { sharedIntervalBalanceTotals } from "./sharedIntervalBalanceTotals";
 
 type AmountInputs = Record<string, string>;
@@ -95,7 +94,8 @@ const changedAllocations = ({
 export function AllocateBalancesSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
-	const { customer, features } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { features } = useCusQuery();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
 

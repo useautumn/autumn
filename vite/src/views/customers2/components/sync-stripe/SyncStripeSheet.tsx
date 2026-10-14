@@ -58,14 +58,14 @@ const buildDefaultMappings = ({
 };
 
 export function SyncStripeSheet() {
-	const { customer, refetch: refetchCustomer } = useCusQuery();
+	const { refetch: refetchCustomer } = useCusQuery();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const { products } = useProductsQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
-	const { setIsInlineEditorOpen } = useCustomerContext();
+	const { customer, setIsInlineEditorOpen } = useCustomerContext();
 
 	const { proposals, isLoading, error, syncMutation } = useSyncProposals({
 		customerId: customer?.id ?? "",

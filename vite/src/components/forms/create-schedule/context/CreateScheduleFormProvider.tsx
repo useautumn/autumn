@@ -56,7 +56,7 @@ import { applyFreeTrialFormValues } from "@/components/forms/shared/utils/freeTr
 import { pickFreeTrialFormValues } from "@/components/forms/shared/utils/freeTrialFormValues";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCreateScheduleGeneration } from "../hooks/useCreateScheduleGeneration";
 import { useCreateScheduleMutation } from "../hooks/useCreateScheduleMutation";
 import { useCreateSchedulePreview } from "../hooks/useCreateSchedulePreview";
@@ -169,7 +169,7 @@ export function CreateScheduleFormProvider({
 		[formValues.phases],
 	);
 
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const fullCustomer = customer as FullCustomer | null;
 	const stripeScheduleId = subscriptionTarget?.stripeScheduleId ?? null;
 	const scopedCustomerProducts = useMemo(

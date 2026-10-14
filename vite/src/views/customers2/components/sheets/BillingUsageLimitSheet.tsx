@@ -81,8 +81,8 @@ export function BillingUsageLimitSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
-	const { customer, refetch } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const { refetch } = useCusQuery();
+	const { customer, entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 

@@ -49,6 +49,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { getReissuePreviewState } from "./reissue/getReissuePreviewState";
 import { ReissueBillingDetails } from "./reissue/ReissueBillingDetails";
 import { stripeInvoiceToPrefill } from "./reissue/stripeInvoiceToPrefill";
@@ -149,7 +150,8 @@ function ReissueInvoiceForm({
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildQueryKey = useQueryKeyFactory();
-	const { customer, refetch } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { refetch } = useCusQuery();
 	const { templates } = useInvoiceTemplatesQuery();
 	const {
 		form,

@@ -43,6 +43,7 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import {
 	resolveInvoiceProcessor,
 	useInvoiceMetadataQuery,
@@ -96,7 +97,7 @@ export function InvoiceDetailSheet({
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const snapshotInvoice =
 		invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const liveInvoice = customer?.invoices?.find(
 		(inv: Invoice) => inv.id === snapshotInvoice?.id,
 	);

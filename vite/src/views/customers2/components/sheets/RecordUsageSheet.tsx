@@ -30,7 +30,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 import {
@@ -105,7 +105,7 @@ const showRecordUsageToast = ({
 export function RecordUsageSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);

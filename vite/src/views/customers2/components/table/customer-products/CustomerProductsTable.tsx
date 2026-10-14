@@ -8,6 +8,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerProductsPageQuery } from "@/views/customers2/hooks/useCustomerProductsPageQuery";
 import {
 	CUSTOMER_PRODUCTS_PAGE_SIZES,
@@ -62,7 +63,8 @@ function createScopeColumn(
 
 export function CustomerProductsTable() {
 	const env = useEnv();
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer } = useCustomerContext();
+	const { testClockFrozenTimeMs } = useCusQuery();
 	const { entityId, setEntityId } = useEntity();
 
 	const tableState = useCustomerProductsTableState({ entityId });

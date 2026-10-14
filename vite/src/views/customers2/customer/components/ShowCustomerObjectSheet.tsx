@@ -12,7 +12,7 @@ import {
 import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { EntityScopeSelector } from "../../components/sheets/EntityScopeSelector";
 import { useCusInvoicePreviewsQuery } from "../hooks/useCusInvoicePreviewsQuery";
 import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
@@ -28,7 +28,7 @@ export function ShowCustomerObjectSheet({
 }: ShowCustomerObjectSheetProps) {
 	const { customer_id } = useParams();
 
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const fullCustomer = customer as FullCustomer | undefined;
 	const entities = fullCustomer?.entities ?? [];
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);

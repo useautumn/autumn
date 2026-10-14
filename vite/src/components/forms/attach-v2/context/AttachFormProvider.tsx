@@ -49,7 +49,7 @@ import { getProductWithSupportedPlanFormValues } from "@/components/forms/shared
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import type { AttachForm } from "../attachFormSchema";
 import {
 	type UseAttachAdditionalPlansReturn,
@@ -253,7 +253,7 @@ export function AttachFormProvider({
 		};
 	}, [product, isVersionChanged, versionProductQuery.data]);
 
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const fullCustomer = customer as FullCustomer | null;
 
 	const isFreeToPaidTransition = useMemo(() => {

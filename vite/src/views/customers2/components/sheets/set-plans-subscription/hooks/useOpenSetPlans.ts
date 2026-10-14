@@ -1,7 +1,6 @@
 import type { FullCustomer } from "@autumn/shared";
 import { useCallback } from "react";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { decideSetPlansEntry } from "../utils/decideSetPlansEntry";
 
@@ -9,8 +8,7 @@ import { decideSetPlansEntry } from "../utils/decideSetPlansEntry";
  * has several linked Stripe subscriptions. */
 export const useOpenSetPlans = () => {
 	const setSheet = useSheetStore((state) => state.setSheet);
-	const { customer } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const { customer, entityId } = useCustomerContext();
 
 	return useCallback(() => {
 		const entry = decideSetPlansEntry({

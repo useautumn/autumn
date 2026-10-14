@@ -2,7 +2,7 @@ import type { SyncProposalV2 } from "@autumn/shared";
 import type { CustomerStateForm } from "@/components/forms/customer-state/customerStateSchema";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { customerStateToSyncParams } from "../customerStateToSyncParams";
 import type { SyncOptions } from "../SyncOptionsTable";
 import { usePreviewSyncV2 } from "./usePreviewSyncV2";
@@ -18,7 +18,7 @@ export const useSyncPreview = ({
 }) => {
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 
 	const syncParams = customerStateToSyncParams({
 		customerId: customer?.id ?? "",

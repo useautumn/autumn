@@ -16,7 +16,7 @@ import {
 } from "@autumn/ui";
 import { UserIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { getCustomerBalanceSourceParts } from "./customerBalanceUtils";
 import { useRecalculateBalancePreview } from "./useRecalculateBalancePreview";
 import { useRecalculateBalances } from "./useRecalculateBalances";
@@ -32,7 +32,7 @@ export function BalanceRecalculateDialog({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const preview = useRecalculateBalancePreview({
 		balance,
 		entityId,
