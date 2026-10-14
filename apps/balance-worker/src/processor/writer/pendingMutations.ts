@@ -4,6 +4,7 @@ import {
 	meteringIdentityToSubjectKey,
 	type SubjectState,
 	splitSubjectState,
+	type WorkerLock,
 } from "@autumn/balance-engine";
 import type { MeteringRecord } from "@autumn/kafka";
 import { createSubjectMap } from "./subjectMap/createSubjectMap.js";
@@ -321,6 +322,28 @@ export function pendingCommitsFor({
 	for (const pending of customerPending)
 		if (pending.nextState) commits.push(settlementOf({ pending }).waitForLog());
 	return commits;
+}
+
+/** The row a lock still pending for this customer opened: decided, but not yet applied by the store. */
+export function pendingLockRowOf({
+	state,
+	customerKey,
+	lockId,
+}: {
+	state: PartitionWriterState;
+	customerKey: string;
+	lockId: string;
+}): WorkerLock | null {
+	const customerPending = state.pendingByCustomerKey.get(customerKey) ?? [];
+	for (const { mutation } of customerPending)
+		for (const change of mutation.changes)
+			if (
+				change.table === "locks" &&
+				change.op === "insert" &&
+				change.row.lock_id === lockId
+			)
+				return change.row;
+	return null;
 }
 
 export function removePendingMutation({

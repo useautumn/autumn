@@ -1,3 +1,4 @@
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
 import { timeSync } from "../../logging/eventLoopStalls/syncSections.js";
 import { adopt as adoptState } from "./actions/adopt.js";
 import {
@@ -23,6 +24,7 @@ import {
 	allStored,
 	awaitStored,
 	createPartitionWriterState,
+	pendingLockRowOf,
 	rejectAllPending,
 	snapshotAllStored,
 } from "./pendingMutations.js";
@@ -158,6 +160,17 @@ export function createPartitionWriter({
 		return readFreshestSubjectState({ scope, identity });
 	}
 
+	function pendingLockRow({
+		identity,
+		lockId,
+	}: Parameters<PartitionWriter["pendingLockRow"]>[0]) {
+		return pendingLockRowOf({
+			state: scope.state,
+			customerKey: meteringIdentityToPartitionKey({ identity }),
+			lockId,
+		});
+	}
+
 	function readAppendedThrough(): bigint | null {
 		return scope.state.appendedThrough;
 	}
@@ -217,6 +230,7 @@ export function createPartitionWriter({
 		waitForPendingCommits,
 		assertCommitsHealthy,
 		readFreshestState,
+		pendingLockRow,
 		readAppendedThrough,
 		evict,
 		evictResident,
