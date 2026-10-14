@@ -356,7 +356,7 @@ describe("a replica not ready yet", () => {
 		expect((await b.app.request("/health")).status).toBe(200);
 	});
 
-	test("answers itself when no peer can be reached: none known, the peer unreachable, or the check already proxied once", async () => {
+	test("answers itself when no peer can be reached: none known or the peer unreachable; a check already proxied once is refused, never answered stale", async () => {
 		const alone = createReplica({
 			address: "10.0.0.1",
 			peers: [],
@@ -394,10 +394,13 @@ describe("a replica not ready yet", () => {
 			}),
 		});
 
-		for (const reply of [noPeer, unreachable, proxiedTwice]) {
+		for (const reply of [noPeer, unreachable]) {
 			expect(reply.headers.get("x-atom-proxied")).toBeNull();
 			expect((await reply.json()).balance.remaining).toBe(4);
 		}
+		// Its files may be behind the sender's: the 503 sends the check on to the API instead (owner-hop.test).
+		expect(proxiedTwice.status).toBe(503);
+		expect((await proxiedTwice.json()).code).toBe("atom_not_ready");
 	});
 });
 
