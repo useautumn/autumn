@@ -25,6 +25,8 @@ const defaults = {
 		pushLagP50Ms: 350,
 		pushLagP99Ms: 1_200,
 		seedConcurrency: 64,
+		/** http posts each push to a random replica; queue enqueues it for the replicas' push receivers, as herald's SQS queue does. */
+		pushVia: "http" as "http" | "queue",
 	},
 	customers: { count: 7_000, hotCustomerId: "cus_hot" },
 	background: {
