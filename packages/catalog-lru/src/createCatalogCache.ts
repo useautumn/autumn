@@ -21,6 +21,9 @@ const validateConfig = ({ ctx }: { ctx: CatalogCacheContext }): void => {
 		if (!Number.isSafeInteger(value) || value <= 0)
 			throw new RangeError(`${name} must be a positive safe integer`);
 	}
+	// A joined catalog goes unread for up to the freshness ttl, so a shorter idle window would purge rows in use.
+	if (ctx.config.idleExpiryMs <= ctx.config.mutableRowTtlMs)
+		throw new RangeError("idleExpiryMs must exceed mutableRowTtlMs");
 };
 
 export const createCatalogCache = ({
@@ -29,14 +32,15 @@ export const createCatalogCache = ({
 	ctx: CatalogCacheContext;
 }): CatalogCache => {
 	validateConfig({ ctx });
+	const now = ctx.now ?? Date.now;
 	const keysByScope: KeysByInvalidationScope = new Map();
 	const scope: CatalogCacheScope = {
-		ctx,
+		ctx: { ...ctx, now },
 		state: {
 			entries: new LRUCache<string, CatalogRow>({
 				maxSize: ctx.config.maxSizeBytes,
 				sizeCalculation: (row) => JSON.stringify(row).length,
-				// Default ttl; a per-entry ttl of 0 on set opts a row out of expiry.
+				// Freshness only; idle rows are purged separately (idleExpiry.ts). A per-entry ttl of 0 opts out.
 				ttl: ctx.config.mutableRowTtlMs,
 				// An expired row is kept and stays retrievable by an explicit stale
 				// read. Refreshing still happens on the strict read that `ensure`
@@ -58,6 +62,8 @@ export const createCatalogCache = ({
 			reads: new WeakMap(),
 			catalogVersions: new Map(),
 			rowVersions: new WeakMap(),
+			lastUsedAt: new WeakMap(),
+			lastIdleSweepAt: now(),
 		},
 	};
 

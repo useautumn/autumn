@@ -166,7 +166,7 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 		});
 	});
 
-	test("a re-saved schedule replays its current phase's start, even when that phase began after its plans", () => {
+	test("a re-saved schedule replays its plans' start or its current phase's, even when that phase began after its plans", () => {
 		const phaseStart = planStart + ms.days(10);
 		const active = subscriptionWithStatus("active");
 		const schedule = scheduleWithCurrentPhaseFrom(phaseStart);
@@ -183,6 +183,44 @@ describe("replaceLiveSubscriptionForBackdate", () => {
 				startsAt: planStart,
 				stripeSubscription: active,
 				stripeSubscriptionSchedule: schedule,
+			}),
+		).toEqual({});
+		expect(
+			replace({
+				startsAt: planStart - ms.days(5),
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: schedule,
+			}),
+		).toEqual({
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			replacedStripeSubscription: active,
+		});
+	});
+
+	test("a plan on another subscription lends its start to no re-save", () => {
+		const active = subscriptionWithStatus("active");
+		const otherSubscriptionStart = planStart + ms.days(5);
+		const otherSubscriptionPlan = {
+			...customerProducts.create({
+				id: "cus_prod_addon",
+				productId: "addon",
+				product: products.createFull({ id: "addon" }),
+				status: CusProductStatus.Active,
+				subscriptionIds: ["sub_other"],
+				startsAt: otherSubscriptionStart,
+			}),
+			scheduled_ids: [],
+		};
+
+		expect(
+			replace({
+				startsAt: otherSubscriptionStart,
+				stripeSubscription: active,
+				stripeSubscriptionSchedule: scheduleWithCurrentPhaseFrom(
+					planStart + ms.days(10),
+				),
+				rows: [proOnLiveSubscription(), otherSubscriptionPlan],
 			}),
 		).toEqual({
 			stripeSubscription: undefined,

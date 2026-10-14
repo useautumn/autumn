@@ -189,7 +189,14 @@ const createScope = ({
 		},
 	};
 	const catalogCache = createCatalogCache({
-		ctx: { db, config: { mutableRowTtlMs: 60_000, maxSizeBytes: 1_000_000 } },
+		ctx: {
+			db,
+			config: {
+				mutableRowTtlMs: 60_000,
+				maxSizeBytes: 1_000_000,
+				idleExpiryMs: 3_600_000,
+			},
+		},
 	});
 	const scope: SubjectScope = {
 		ctx: {

@@ -1,5 +1,6 @@
 import type { BillingDetailsBillingParams } from "@api/billing/common/billingDetailsBillingParams";
 import type { InvoiceLineEdits } from "@api/billing/common/invoiceLineEdits";
+import { InvoiceIssueMethodSchema } from "@api/others/apiInvoice/invoiceIssueMethod";
 import type {
 	BillingBehavior,
 	CancelAction,
@@ -28,6 +29,8 @@ import type { CustomerLicenseBillingContext } from "./customerLicenseBillingCont
 
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
+	/** Absent on contexts stored before issue_method existed; finalizeInvoice then decides draft or send. */
+	issueMethod: InvoiceIssueMethodSchema.optional(),
 	enableProductImmediately: z.boolean().default(true),
 	footer: z.string().optional(),
 	memo: z.string().optional(),
