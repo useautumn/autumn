@@ -102,11 +102,16 @@ const send = async ({
 			into.forwarded++;
 			into.forwardReasons[forwarded] =
 				(into.forwardReasons[forwarded] ?? 0) + 1;
-		} else if (reply.ok) into.answered++;
-		else if (reply.status === 503) into.shed++;
+		} else if (reply.ok) {
+			into.answered++;
+			if (deducts) into.deducted++;
+		} else if (reply.status === 503) into.shed++;
 		else into.failed++;
-	} catch {
-		if (into) into.failed++;
+	} catch (error) {
+		if (!into) return;
+		into.failed++;
+		if (error instanceof Error && error.name === "TimeoutError")
+			into.timedOut++;
 	}
 };
 

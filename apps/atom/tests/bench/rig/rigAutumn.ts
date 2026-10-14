@@ -43,7 +43,10 @@ const counts = {
 	pulls: 0,
 	keyChecks: 0,
 	forwarded: {} as Record<string, number>,
+	/** The hot customer's distinct journal entries handed in: compared with the deductions its callers saw answered. */
+	hotHandedIn: 0,
 };
+const hotSeen = new Set<string>();
 
 const stateOf = (customerId: string): SubjectState => {
 	const held = states.get(customerId);
@@ -144,6 +147,14 @@ const appendTracks = async (request: Request) => {
 	const touched = new Set<string>();
 	for (const { writerId, seq, command } of parsed.data.tracks) {
 		applyTrack({ command, writerId, seq });
+		const entry = `${writerId}:${seq}`;
+		if (
+			command.identity.customerId === rigConfig.customers.hotCustomerId &&
+			!hotSeen.has(entry)
+		) {
+			hotSeen.add(entry);
+			counts.hotHandedIn++;
+		}
 		touched.add(command.identity.customerId);
 	}
 	counts.appends++;

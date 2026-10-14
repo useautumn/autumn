@@ -79,6 +79,10 @@ export type StepCounts = {
 	forwarded: number;
 	shed: number;
 	failed: number;
+	/** Deductions answered by the Atom itself (2xx, not forwarded): each must land as exactly one hand-in. */
+	deducted: number;
+	/** Requests the caller gave up on at requestTimeoutMs. */
+	timedOut: number;
 	forwardReasons: Record<string, number>;
 	histogram: number[];
 };
@@ -89,6 +93,8 @@ export const emptyCounts = (): StepCounts => ({
 	forwarded: 0,
 	shed: 0,
 	failed: 0,
+	deducted: 0,
+	timedOut: 0,
 	forwardReasons: {},
 	histogram: new Array(BUCKETS).fill(0),
 });
@@ -99,6 +105,8 @@ export const mergeCounts = (into: StepCounts, from: StepCounts): StepCounts => {
 	into.forwarded += from.forwarded;
 	into.shed += from.shed;
 	into.failed += from.failed;
+	into.deducted += from.deducted;
+	into.timedOut += from.timedOut;
 	for (const [reason, n] of Object.entries(from.forwardReasons))
 		into.forwardReasons[reason] = (into.forwardReasons[reason] ?? 0) + n;
 	for (const [bucket, n] of from.histogram.entries())

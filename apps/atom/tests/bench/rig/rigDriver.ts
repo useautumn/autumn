@@ -182,6 +182,8 @@ const summaryOf = (counts: StepCounts) => ({
 	forwarded: counts.forwarded,
 	shed: counts.shed,
 	failed: counts.failed,
+	deducted: counts.deducted,
+	timedOut: counts.timedOut,
 	p50Ms: percentileOf({ histogram: counts.histogram, p: 0.5 }),
 	p99Ms: percentileOf({ histogram: counts.histogram, p: 0.99 }),
 	forwardReasons: counts.forwardReasons,
