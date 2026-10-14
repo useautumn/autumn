@@ -16,6 +16,7 @@ export const expireLock = async ({
 			ctx,
 			params: {
 				lock_id: payload.lockId,
+				customer_id: "",
 				action: "release",
 				override_value: 0,
 			},

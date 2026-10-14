@@ -185,8 +185,11 @@ describe("runFinalizeLock", () => {
 });
 
 describe("runFinalizeLock with a customer_id (API 2.6)", () => {
-	test("looks the lock up only among the customer's own; without one, the lookup names no customer", async () => {
-		await runFinalizeLock({ ctx, params });
+	test("looks the lock up only among the customer's own; a pre-2.6 finalize naming none searches by lock_id alone", async () => {
+		await runFinalizeLock({
+			ctx,
+			params: { ...(params as object), customer_id: "" } as never,
+		});
 		await runFinalizeLock({
 			ctx,
 			params: { ...(params as object), customer_id: "cus_123" } as never,
