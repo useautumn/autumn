@@ -1281,9 +1281,9 @@ test("the metering consumer begins a command batch through the command topic's o
 					beginBatch: ({ topic: begunTopic, messages }) => {
 						events.push(`begin:${begunTopic}:${messages.length}`);
 					},
-					applyRecord: async (application) => {
+					applyRecord: () => {
 						events.push("apply");
-						return applyRecord(application);
+						return applyRecord();
 					},
 				},
 			},
