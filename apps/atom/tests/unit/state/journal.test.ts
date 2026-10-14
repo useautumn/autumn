@@ -455,6 +455,56 @@ describe("journal", () => {
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
 	});
 
+	test("a refused entry parks its customer: its later entries leave the batches with it, other customers' stay, and it still counts as unsent for the ceiling", async () => {
+		let clock = 0;
+		const journal = open({ databasePath: journalPath(), now: () => clock });
+		const append = (customerId: string, commandId: string) =>
+			journal.append({
+				customerId,
+				command: commandOf({ commandId, customerId }),
+			});
+		const first = await append("cus_1", "a");
+		const bad = await append("cus_1", "bad");
+		const later = await append("cus_1", "c");
+		const other = await append("cus_2", "x");
+
+		journal.markSent({ entries: [first] });
+		journal.park({ entry: bad });
+		clock += MAX_UNSENT_AGE_MS + 1;
+
+		expect(journal.unsent({ limit: 10 })).toEqual([other]);
+		expect(journal.countUnsent()).toBe(3);
+		expect(journal.parked()).toEqual([bad]);
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([first, bad, later]);
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
+		journal.markSent({ entries: [bad] });
+		expect(journal.parked()).toEqual([]);
+		expect(journal.unsent({ limit: 10 })).toEqual([later, other]);
+	});
+
+	test("a parked customer is unparked by a push that shows its refused entry applied, or by its customer being forgotten", async () => {
+		const journal = open({ databasePath: journalPath() });
+		const appendParked = async (commandId: string) => {
+			const entry = await journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId }),
+			});
+			journal.park({ entry });
+			return entry;
+		};
+
+		const pushed = await appendParked("a");
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { atom_1: { [journal.writerId]: pushed.seq } },
+		});
+		expect(journal.parked()).toEqual([]);
+
+		await appendParked("b");
+		journal.forget({ customerId: "cus_1" });
+		expect(journal.parked()).toEqual([]);
+	});
+
 	test("ceiling: past MAX_UNSENT_PER_THREAD unsent across the thread's journals, every customer's send_event goes to the API until Autumn takes some", async () => {
 		const appendMany = async ({
 			journal,

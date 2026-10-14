@@ -25,8 +25,17 @@ export type Journal = {
 	 * array; anything else that changes it (a push's trim, a forget, a failed commit) gives a new one.
 	 */
 	owed(params: { customerId: string }): readonly JournalEntry[];
-	/** Committed entries Autumn does not hold yet, oldest commit first; each customer's in seq order. */
+	/** Committed entries Autumn does not hold yet, oldest commit first; each customer's in seq order. Parked customers' are left out. */
 	unsent(params: { limit: number }): JournalEntry[];
+	/** Every committed entry Autumn does not hold yet, parked customers' included. */
+	countUnsent(): number;
+	/**
+	 * Autumn refused the customer's oldest unsent entry on its own: the customer's entries wait behind it, so its seqs reach
+	 * Autumn in order, until Autumn holds it (or a push or a forget releases it).
+	 */
+	park(params: { entry: JournalEntry }): void;
+	/** Each parked customer's refused entry. */
+	parked(): JournalEntry[];
 	/** Autumn durably holds these: they stay owed until a push shows them applied. */
 	markSent(params: { entries: JournalEntry[] }): void;
 	/** Called after every commit. */

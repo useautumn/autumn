@@ -126,6 +126,40 @@ describe("draining the journals as the Atom stops", () => {
 		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1, 2, 3]);
 	});
 
+	test("a parked customer is not drained: the deadline line counts every entry it holds back", async () => {
+		const folder = createSlotFolder();
+		cleanups.push(folder.remove);
+		autumn.switches.refuseCommandIds.add("cmd_2");
+		const { forwarder, lines } = forwarderLogging();
+		const journal = openJournal({ databasePath: folder.journalPath });
+		const forwarding = forwarder.forward({
+			journal,
+			tokenHash: () => "hash_folder",
+			pulls: noFolderPulls,
+		});
+		cleanups.push(() => {
+			forwarding.stop();
+			journal.close();
+		});
+		await Promise.all(
+			[1, 2, 3].map((i) =>
+				journal.append({
+					customerId: "cus_1",
+					command: owedCommand({ commandId: `cmd_${i}`, value: 1 }),
+				}),
+			),
+		);
+		await until(() => journal.parked().length === 1);
+
+		await forwarder.drainAll({ deadlineMs: 200 });
+
+		expect(
+			lines.filter(({ type }) => type.startsWith("atom_journal_drain")),
+		).toEqual([
+			{ type: "atom_journal_drain_deadline", journals: 1, unsent: 2 },
+		]);
+	});
+
 	test("with no journals, ends at once", async () => {
 		const { forwarder, lines } = forwarderLogging();
 
