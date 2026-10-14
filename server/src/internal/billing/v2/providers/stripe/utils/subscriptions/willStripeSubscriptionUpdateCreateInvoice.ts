@@ -1,7 +1,9 @@
 import {
 	addInterval,
 	type BillingContext,
+	type BillingInterval,
 	type EntInterval,
+	isOneOffPrice,
 	type StripeSubscriptionAction,
 	secondsToMs,
 } from "@autumn/shared";
@@ -29,22 +31,71 @@ const cancelAtWhenTrialEnds = ({
 	return typeof requestedCancelAt === "number" ? requestedCancelAt : null;
 };
 
+type Recurrence = {
+	interval: BillingInterval | EntInterval;
+	intervalCount: number;
+};
+
+/** Recurrences billed once the trial ends: the update's items, unless an anchor reset ends it on the current ones. */
+const recurrencesWhenTrialEnds = ({
+	billingContext,
+	stripeSubscriptionAction,
+}: {
+	billingContext: BillingContext;
+	stripeSubscriptionAction: StripeSubscriptionUpdateAction;
+}): Recurrence[] => {
+	const itemUpdates = stripeSubscriptionAction.params.items ?? [];
+	const endsTrialOnCurrentItems =
+		billingContext.requestedBillingCycleAnchor === "now";
+	const deletedItemIds = new Set(
+		endsTrialOnCurrentItems
+			? []
+			: itemUpdates.filter((item) => item.deleted).map((item) => item.id),
+	);
+	const keptRecurrences = (billingContext.stripeSubscription?.items.data ?? [])
+		.filter((item) => !deletedItemIds.has(item.id))
+		.flatMap(({ price: { recurring } }) =>
+			recurring
+				? [
+						{
+							interval: recurring.interval as EntInterval,
+							intervalCount: recurring.interval_count,
+						},
+					]
+				: [],
+		);
+
+	const addsItems = itemUpdates.some((item) => !item.id && !item.deleted);
+	if (endsTrialOnCurrentItems || !addsItems) return keptRecurrences;
+
+	const incomingRecurrences = billingContext.fullProducts
+		.flatMap((fullProduct) => fullProduct.prices)
+		.filter((price) => !isOneOffPrice(price))
+		.map((price) => ({
+			interval: price.config.interval as BillingInterval,
+			intervalCount: price.config.interval_count ?? 1,
+		}));
+	return [...keptRecurrences, ...incomingRecurrences];
+};
+
 /** End of the first paid period: the soonest item to renew sets it. */
 const firstPeriodEndMs = ({
 	billingContext,
+	stripeSubscriptionAction,
 }: {
 	billingContext: BillingContext;
+	stripeSubscriptionAction: StripeSubscriptionUpdateAction;
 }) => {
-	const periodEnds = (billingContext.stripeSubscription?.items.data ?? [])
-		.map((item) => item.price.recurring)
-		.filter((recurring) => recurring !== null)
-		.map((recurring) =>
-			addInterval({
-				from: billingContext.currentEpochMs,
-				interval: recurring.interval as EntInterval,
-				intervalCount: recurring.interval_count,
-			}),
-		);
+	const periodEnds = recurrencesWhenTrialEnds({
+		billingContext,
+		stripeSubscriptionAction,
+	}).map(({ interval, intervalCount }) =>
+		addInterval({
+			from: billingContext.currentEpochMs,
+			interval,
+			intervalCount,
+		}),
+	);
 	return periodEnds.length > 0 ? Math.min(...periodEnds) : undefined;
 };
 
@@ -70,6 +121,9 @@ export const willStripeSubscriptionUpdateCreateInvoice = ({
 	if (cancelAt === null) return true;
 
 	// Flexible-mode Stripe cuts a period that cancel_at ends early and invoices nothing for it.
-	const periodEndMs = firstPeriodEndMs({ billingContext });
+	const periodEndMs = firstPeriodEndMs({
+		billingContext,
+		stripeSubscriptionAction,
+	});
 	return periodEndMs === undefined || secondsToMs(cancelAt) >= periodEndMs;
 };
