@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { matchPath, useLocation } from "react-router";
 import { stripSandboxPrefix } from "@/hooks/sandbox/sandboxUrl";
-import { useChunkLoaded } from "@/lib/lazyWithPreload";
+import { useChunkSettled } from "@/lib/lazyWithPreload";
 import { usePrefetchCustomerPage } from "@/views/customers2/customer/hooks/usePrefetchCustomerPage";
 import { useProductDataQueryOptions } from "@/views/products/product/hooks/useProductDataQueryOptions";
 import { CustomersListRoute, routeChunkForPath } from "./routeChunks";
@@ -29,6 +29,6 @@ export const usePrefetchCurrentRoute = () => {
 
 	return {
 		isCustomersList: routeChunk === CustomersListRoute,
-		routeChunkReady: useChunkLoaded(routeChunk),
+		routeChunkReady: useChunkSettled(routeChunk),
 	};
 };

@@ -10,7 +10,7 @@ export const usePrefetchPlanPage = () => {
 
 	return useCallback(
 		({ id, version }: { id: string; version?: number | null }) => {
-			void PlanEditorRoute.preload();
+			PlanEditorRoute.preload();
 			void queryClient.prefetchQuery(
 				productDataQueryOptions({ productId: id, version }),
 			);

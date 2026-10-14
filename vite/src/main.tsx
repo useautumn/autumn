@@ -56,7 +56,7 @@ const queryClient = new QueryClient({
 });
 
 // Fetch the landing page's chunk alongside the session check rather than after it.
-void routeChunkForPath(window.location.pathname)?.preload();
+routeChunkForPath(window.location.pathname)?.preload();
 
 /** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
 const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
