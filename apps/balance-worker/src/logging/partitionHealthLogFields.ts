@@ -29,5 +29,6 @@ export function partitionHealthLogFields({
 						health.checkpoint.lastConfirmedNextOffset?.toString() ?? null,
 				}
 			: null,
+		subjectMap: health.subjectMap ?? null,
 	};
 }

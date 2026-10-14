@@ -344,6 +344,9 @@ export async function createBalanceWorker({
 		function readWorkerStatus(): BalanceWorkerState["status"] {
 			return state.status;
 		}
+		const reportsHealth =
+			process.env.NODE_ENV === "production" ||
+			env.BALANCE_WORKER_LOCAL_TELEMETRY;
 		const healthReporter = createWorkerHealthReporter({
 			ctx: {
 				logger: dependencies.logger,
@@ -353,11 +356,10 @@ export async function createBalanceWorker({
 			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
-				enabled: process.env.NODE_ENV === "production",
+				enabled: reportsHealth,
 				endpoint: address.endpoint,
 			},
 		});
-		const reportsHealth = process.env.NODE_ENV === "production";
 		const coldStart = resources.edgeConfigs?.coldStart
 			? createColdStart({
 					ctx: {

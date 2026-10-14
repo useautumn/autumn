@@ -45,6 +45,23 @@ describe("Balance worker environment", () => {
 			}),
 		).toThrow();
 	});
+	test("keeps the 10 s telemetry reporters to production unless a local run opts in", () => {
+		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_LOCAL_TELEMETRY).toBe(
+			false,
+		);
+		expect(
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_LOCAL_TELEMETRY: "true",
+			}).BALANCE_WORKER_LOCAL_TELEMETRY,
+		).toBe(true);
+		expect(() =>
+			createBalanceWorkerEnv({
+				...valid,
+				BALANCE_WORKER_LOCAL_TELEMETRY: "yes",
+			}),
+		).toThrow();
+	});
 	test("commits idempotently unless a deployment names a mode", () => {
 		expect(createBalanceWorkerEnv(valid).BALANCE_WORKER_COMMIT_MODE).toBe(
 			"idempotent",

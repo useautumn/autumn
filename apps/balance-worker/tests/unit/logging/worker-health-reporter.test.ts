@@ -205,3 +205,41 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	"each partition line carries its subject map's resident size and drops by reason, and null when the partition has no map",
+	() => {
+		const { reporter, health, logs } = createHealthReporterFixture();
+		const subjectMap = {
+			residentSubjects: 1_200,
+			residentBytes: 3_400_000,
+			droppedSubjects: {
+				capacity: 50,
+				idle: 4,
+				evict: 7,
+				stale: 2,
+				storeRejected: 0,
+				coldStart: 0,
+			},
+		};
+		health.partitions = [
+			partitionHealth({ subjectMap }),
+			partitionHealth({ partition: 1, status: "recovery_required" }),
+		];
+		try {
+			reporter.start();
+			expect(logs[1]?.[0]).toMatchObject({
+				event: "balance_worker.partition_health",
+				partition: 0,
+				data: { subjectMap },
+			});
+			expect(logs[2]?.[0]).toMatchObject({
+				event: "balance_worker.partition_health",
+				partition: 1,
+				data: { subjectMap: null },
+			});
+		} finally {
+			reporter.stop();
+		}
+	},
+);

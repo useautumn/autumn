@@ -2469,6 +2469,7 @@ describe("partition writer", () => {
 					customerKey: meteringIdentityToPartitionKey({
 						identity: firstIdentity,
 					}),
+					reason: "evict",
 				})
 				.then(() => {
 					evicted = true;

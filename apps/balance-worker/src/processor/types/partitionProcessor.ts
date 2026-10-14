@@ -45,6 +45,7 @@ import type { InlineTrackDecision } from "../commands/trackInline.js";
 import type { SubjectHydrator } from "../subject/types/subjectHydrator.js";
 import type { RecentCommands } from "../writer/recentCommands/types/recentCommands.js";
 import type { ResidentDrop } from "../writer/subjectMap/types/subjectMap.js";
+import type { SubjectMapUsage } from "../writer/subjectMap/types/subjectMapUsage.js";
 import type { CommitPositionSink } from "../writer/types/commitPositionSink.js";
 import type { DecidedMutation } from "../writer/types/mutation.js";
 import type {
@@ -93,6 +94,7 @@ export type PartitionProcessor = {
 	}): Promise<EvictReply>;
 	/** Leaves the partition cold once its earlier writes are stored; Postgres keeps every row true, so nothing is logged. */
 	evictResident(params: { coldStart: ColdStartScope }): Promise<ResidentDrop>;
+	readSubjectMapUsage(): SubjectMapUsage;
 	flush(params: { command: FlushCommand }): Promise<FlushReply>;
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {

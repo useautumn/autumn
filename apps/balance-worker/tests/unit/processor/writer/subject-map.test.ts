@@ -34,7 +34,7 @@ describe("createSubjectMap", () => {
 		map.setState({ subjectKey: entityKey, customerKey, state });
 		map.setState({ subjectKey: "other", customerKey: "other", state });
 
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(map.readState({ subjectKey: "other" })).toEqual(state);
@@ -50,11 +50,11 @@ describe("createSubjectMap", () => {
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.readState({ subjectKey: entityKey })).toEqual(state);
 
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(map.sizeBytes()).toBe(0);
 		// Nothing left for the customer: a second evict is a no-op, not an error.
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 	});
 
 	test("a subject's own weight is readable, and an absent subject has none", () => {
@@ -73,7 +73,7 @@ describe("createSubjectMap", () => {
 		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
 		map.pin({ subjectKey: customerKey });
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.sizeBytes()).toBe(0);
 		map.unpin({ subjectKey: customerKey });
@@ -323,7 +323,7 @@ describe("createSubjectMap onEvicted", () => {
 		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.setState({ subjectKey: entityKey, customerKey, state });
 
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(evicted).toEqual([customerKey]);
 	});
 
@@ -334,7 +334,7 @@ describe("createSubjectMap onEvicted", () => {
 		map.setState({ subjectKey: entityKey, customerKey, state });
 		map.pin({ subjectKey: entityKey });
 
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(map.readState({ subjectKey: customerKey })).toBeNull();
 		expect(map.readState({ subjectKey: entityKey })).toBeNull();
 		expect(evicted).toEqual([]);
@@ -349,7 +349,7 @@ describe("createSubjectMap onEvicted", () => {
 		const state = createState();
 		map.setState({ subjectKey: customerKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		// A new entity of the customer, read whole after the evict.
 		map.setState({ subjectKey: entityKey, customerKey, state, baselineAt: 5 });
 
@@ -365,7 +365,7 @@ describe("createSubjectMap onEvicted", () => {
 		map.setState({ subjectKey: entityKey, customerKey, state });
 		map.pin({ subjectKey: customerKey });
 		map.pin({ subjectKey: entityKey });
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(evicted).toEqual([]);
 		map.unpin({ subjectKey: customerKey });
 		expect(evicted).toEqual([customerKey]);
@@ -384,7 +384,7 @@ describe("createSubjectMap onEvicted", () => {
 
 	test("an evict of a customer with nothing resident still fires: rows may have outlived a drop for space", () => {
 		const { map, evicted } = createEvicting();
-		map.evictCustomer({ customerKey });
+		map.evictCustomer({ customerKey, reason: "evict" });
 		expect(evicted).toEqual([customerKey]);
 	});
 });
@@ -567,7 +567,7 @@ describe("writer over a store with no resident state", () => {
 			value: 5,
 		});
 		await writer.decide(trackSubmission({ command, initial })).waitForCommit();
-		await writer.evict({ customerKey });
+		await writer.evict({ customerKey, reason: "evict" });
 		expect(writer.readFreshestState({ identity: testIdentity })).toBeNull();
 
 		expect(() => writer.decide(trackSubmission({ command, initial }))).toThrow(

@@ -182,6 +182,10 @@ function createProcessor({
 		});
 	}
 
+	function readSubjectMapUsage() {
+		return scope.ctx.writer.readSubjectMapUsage();
+	}
+
 	function flush({ command }: { command: FlushCommand }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -335,6 +339,7 @@ function createProcessor({
 		initialize,
 		evict,
 		evictResident,
+		readSubjectMapUsage,
 		flush,
 		finalize,
 		decideFinalize,

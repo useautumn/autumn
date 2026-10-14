@@ -1,4 +1,6 @@
 import type { SubjectState } from "@autumn/balance-engine";
+import type { SubjectEvictReason } from "./subjectDropReason.js";
+import type { SubjectMapUsage } from "./subjectMapUsage.js";
 
 /** `kept`: resident subjects `drops` spared. `resident`: picked but pinned by a write that landed meanwhile. */
 export type ResidentDrop = { evicted: number; kept: number; resident: number };
@@ -28,7 +30,10 @@ export type SubjectMap = {
 	pin(params: { subjectKey: string }): void;
 	unpin(params: { subjectKey: string }): void;
 	/** Drops the customer's resident rows, entities included. A pinned subject is unreadable at once and goes when its last pin is released. */
-	evictCustomer(params: { customerKey: string }): void;
+	evictCustomer(params: {
+		customerKey: string;
+		reason: SubjectEvictReason;
+	}): void;
 	/** Makes the customer's rows unreadable at once, ahead of an `evictCustomer` that waits for the store. */
 	hideCustomer(params: { customerKey: string }): void;
 	/** A subject of the customer is hidden and not yet dropped: Postgres may lack a write its rows carried. */
@@ -41,4 +46,5 @@ export type SubjectMap = {
 	/** Bytes held by resident states, for tests and health. */
 	sizeBytes(): number;
 	bytesOf(params: { subjectKey: string }): number | null;
+	readUsage(): SubjectMapUsage;
 };

@@ -1,6 +1,10 @@
 import type { SubjectState } from "@autumn/balance-engine";
 import { timeSync } from "../../../logging/eventLoopStalls/syncSections.js";
 import type {
+	SubjectDropReason,
+	SubjectEvictReason,
+} from "./types/subjectDropReason.js";
+import type {
 	OnSubjectEvicted,
 	ResidentDrop,
 	SubjectMap,
@@ -18,7 +22,7 @@ type Entry = {
 	bytes: number;
 	pins: number;
 	/** Evicted while a write was unapplied: unreadable at once, the entry goes as soon as the last pin is released. */
-	evictOnUnpin: boolean;
+	evictOnUnpin: SubjectEvictReason | null;
 	baselineAt: number | null;
 	/** Last read or write, on the map's clock. */
 	touchedAt: number;
@@ -103,6 +107,15 @@ export const createSubjectMap = ({
 	// A customer's subject keys (its own and its entities'), so an evict never walks the partition.
 	const subjectKeysByCustomer = new Map<string, Set<string>>();
 	let totalBytes = 0;
+	let residentSubjects = 0;
+	const droppedSubjects: Record<SubjectDropReason, number> = {
+		capacity: 0,
+		idle: 0,
+		evict: 0,
+		stale: 0,
+		storeRejected: 0,
+		coldStart: 0,
+	};
 
 	const touch = ({
 		subjectKey,
@@ -124,7 +137,7 @@ export const createSubjectMap = ({
 			customerKey: null,
 			bytes: 0,
 			pins: 0,
-			evictOnUnpin: false,
+			evictOnUnpin: null,
 			baselineAt: null,
 			touchedAt: now(),
 		};
@@ -138,7 +151,7 @@ export const createSubjectMap = ({
 		for (const [subjectKey, entry] of entries) {
 			if (totalBytes <= bound) return;
 			if (entry.pins > 0 || subjectKey === except) continue;
-			dropState({ subjectKey, entry });
+			dropState({ subjectKey, entry, reason: "capacity" });
 		}
 	};
 
@@ -151,7 +164,7 @@ export const createSubjectMap = ({
 			if (!isIdle || scanned === SUBJECT_MAP_IDLE_SCAN_PER_WRITE) return;
 			scanned += 1;
 			if (entry.pins > 0) touch({ subjectKey, entry });
-			else dropState({ subjectKey, entry });
+			else dropState({ subjectKey, entry, reason: "idle" });
 		}
 	};
 
@@ -203,6 +216,7 @@ export const createSubjectMap = ({
 		if (baselineAt !== undefined) entry.baselineAt = baselineAt;
 		index({ subjectKey, customerKey });
 		const previous = entry.bytes > 0 ? entry.state : null;
+		if (previous === null) residentSubjects += 1;
 		totalBytes -= entry.bytes;
 		entry.bytes = timeSync({ label: "subject.weigh" }, () =>
 			previous
@@ -227,14 +241,18 @@ export const createSubjectMap = ({
 	const dropState = ({
 		subjectKey,
 		entry,
+		reason,
 	}: {
 		subjectKey: string;
 		entry: Entry;
+		reason: SubjectDropReason;
 	}) => {
+		if (entry.bytes > 0) residentSubjects -= 1;
 		totalBytes -= entry.bytes;
 		entries.delete(subjectKey);
-		if (entry.customerKey !== null)
-			unindex({ subjectKey, customerKey: entry.customerKey });
+		if (entry.customerKey === null) return;
+		droppedSubjects[reason] += 1;
+		unindex({ subjectKey, customerKey: entry.customerKey });
 	};
 
 	const unpin = ({ subjectKey }: { subjectKey: string }) => {
@@ -242,7 +260,7 @@ export const createSubjectMap = ({
 		if (!entry || entry.pins === 0) return;
 		entry.pins -= 1;
 		if (entry.pins === 0 && entry.evictOnUnpin) {
-			dropState({ subjectKey, entry });
+			dropState({ subjectKey, entry, reason: entry.evictOnUnpin });
 			// Once per pinned subject, so the DELETE follows the last record that read it; the batcher dedupes.
 			if (entry.customerKey !== null)
 				onEvicted?.({ customerKey: entry.customerKey });
@@ -256,7 +274,13 @@ export const createSubjectMap = ({
 		entries.get(subjectKey)?.bytes ?? 0;
 
 	// Only an evict's drops reach `onEvicted`: a drop for space leaves rows Postgres still holds true.
-	const evictCustomer = ({ customerKey }: { customerKey: string }) => {
+	const evictCustomer = ({
+		customerKey,
+		reason,
+	}: {
+		customerKey: string;
+		reason: SubjectEvictReason;
+	}) => {
 		let pinned = 0;
 		for (const subjectKey of [
 			...(subjectKeysByCustomer.get(customerKey) ?? []),
@@ -264,11 +288,11 @@ export const createSubjectMap = ({
 			const entry = entries.get(subjectKey);
 			if (!entry) continue;
 			if (entry.pins === 0) {
-				dropState({ subjectKey, entry });
+				dropState({ subjectKey, entry, reason });
 				continue;
 			}
 			hide({ entry });
-			entry.evictOnUnpin = true;
+			entry.evictOnUnpin ??= reason;
 			pinned += 1;
 		}
 		if (pinned === 0) onEvicted?.({ customerKey });
@@ -276,6 +300,7 @@ export const createSubjectMap = ({
 
 	/** Unreadable at once; the entry stays indexed until an unpin or `evictCustomer` drops it. */
 	const hide = ({ entry }: { entry: Entry }) => {
+		if (entry.bytes > 0) residentSubjects -= 1;
 		totalBytes -= entry.bytes;
 		entry.state = null as unknown as SubjectState;
 		entry.bytes = 0;
@@ -310,7 +335,7 @@ export const createSubjectMap = ({
 				result.kept += 1;
 			else if (entry.pins > 0) result.resident += 1;
 			else {
-				dropState({ subjectKey, entry });
+				dropState({ subjectKey, entry, reason: "coldStart" });
 				result.evicted += 1;
 			}
 		}
@@ -321,7 +346,14 @@ export const createSubjectMap = ({
 		entries.clear();
 		subjectKeysByCustomer.clear();
 		totalBytes = 0;
+		residentSubjects = 0;
 	};
+
+	const readUsage = () => ({
+		residentSubjects,
+		residentBytes: totalBytes,
+		droppedSubjects: { ...droppedSubjects },
+	});
 
 	return {
 		readState,
@@ -338,5 +370,6 @@ export const createSubjectMap = ({
 		sizeBytes: () => totalBytes,
 		bytesOf: ({ subjectKey }: { subjectKey: string }) =>
 			entries.get(subjectKey)?.bytes || null,
+		readUsage,
 	};
 };

@@ -171,6 +171,7 @@ describe("apply linger", () => {
 
 		await writer.evict({
 			customerKey: meteringIdentityToPartitionKey({ identity }),
+			reason: "evict",
 		});
 		expect(applied).toEqual([["t1"]]);
 	});
