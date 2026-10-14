@@ -110,6 +110,7 @@ export function createCommandRecordHandler({
 		const prepared = await prepareCommandBatch({
 			commands,
 			process: (run) => runtime.process(run),
+			idempotencyKeys: ctx.idempotencyKeys,
 		});
 		batchesByPartition.set(partition, { parsed, prepared });
 	}
@@ -211,7 +212,11 @@ export function createCommandRecordHandler({
 		try {
 			switch (command.type) {
 				case "track":
-					queued = await consumeTrack({ ctx: consumeCtx, command });
+					queued = await consumeTrack({
+						ctx: consumeCtx,
+						command,
+						batch: batch?.prepared.track,
+					});
 					break;
 				case "reset":
 					queued = await consumeReset({ ctx: consumeCtx, command });
