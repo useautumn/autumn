@@ -17,6 +17,7 @@ import { customerProductToArrearLineItems } from "../../lineItems/customerProduc
 import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
+import { shouldWaiveTrialUsage } from "../../lineItems/shouldWaiveTrialUsage";
 
 export type NextCycleLineItemOptions = {
 	/**
@@ -114,7 +115,15 @@ export const billingPlanToNextCycleLineItems = ({
 		customerId: billingContext.fullCustomer.id,
 		customerConfig: billingContext.fullCustomer.config,
 	});
-	const arrearResults = productsForUsageLineItems.map((customerProduct) =>
+	// Same rule as invoice.created: a cycle opening at the trial end bills no trial usage.
+	const billedUsageCustomerProducts = productsForUsageLineItems.filter(
+		(customerProduct) =>
+			!shouldWaiveTrialUsage({
+				trialEndsAtMs: customerProduct.trial_ends_at,
+				periodStartMs: nextCycleStart,
+			}),
+	);
+	const arrearResults = billedUsageCustomerProducts.map((customerProduct) =>
 		customerProductToArrearLineItems({
 			ctx,
 			customerProduct,
