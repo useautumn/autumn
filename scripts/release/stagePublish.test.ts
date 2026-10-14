@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GENERATED_PAGE } from "./generatorOwnership.test";
-import { stagePublish } from "./stagePublish";
+import { discardUnknownChanges, stagePublish } from "./stagePublish";
 
 const repos: string[] = [];
 afterEach(() => {
@@ -119,9 +119,7 @@ describe("stage publish", () => {
 		expect(run.exitCode).toBe(0);
 		expect(log).toContain("::warning file=server/new.ts::");
 		expect(log).not.toContain("::error");
-		expect(await Bun.file(output).text()).toBe(
-			"unknown-files=server/new.ts\n",
-		);
+		expect(await Bun.file(output).text()).toBe("unknown-files=server/new.ts\n");
 		expect(git(root, "diff", "--cached", "--name-only")).toBe(
 			"packages/sdk/src/models/a.ts",
 		);
@@ -137,5 +135,49 @@ describe("stage publish", () => {
 		);
 		expect(run.exitCode).toBe(0);
 		expect(await Bun.file(output).text()).toBe("unknown-files=\n");
+	});
+
+	test("discarding unknown changes restores edited files and removes new ones, keeping known changes", async () => {
+		const root = await createRepo();
+		await write(root, "packages/sdk/src/models/a.ts", "a2\n");
+		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
+		await write(root, "packages/sdk/src/hooks/new.ts", "new\n");
+
+		expect(discardUnknownChanges({ root })).toEqual([
+			"packages/sdk/src/hooks/custom.ts",
+			"packages/sdk/src/hooks/new.ts",
+		]);
+		expect(
+			await Bun.file(join(root, "packages/sdk/src/hooks/custom.ts")).text(),
+		).toBe("custom\n");
+		expect(
+			await Bun.file(join(root, "packages/sdk/src/hooks/new.ts")).exists(),
+		).toBe(false);
+		expect(git(root, "status", "--porcelain")).toBe(
+			"M packages/sdk/src/models/a.ts",
+		);
+	});
+
+	test("the discard CLI runs before planning: it warns, outputs the files and succeeds", async () => {
+		const root = await createRepo();
+		await write(root, "packages/sdk/src/hooks/custom.ts", "changed\n");
+		const output = join(root, ".git/gh-output");
+		const run = Bun.spawnSync(
+			[
+				"bun",
+				join(import.meta.dir, "stagePublish.ts"),
+				"--discard-unknown",
+				root,
+			],
+			{ cwd: root, env: { ...process.env, GITHUB_OUTPUT: output } },
+		);
+		expect(run.exitCode).toBe(0);
+		expect(run.stdout.toString() + run.stderr.toString()).toContain(
+			"::warning file=packages/sdk/src/hooks/custom.ts::",
+		);
+		expect(await Bun.file(output).text()).toBe(
+			"unknown-files=packages/sdk/src/hooks/custom.ts\n",
+		);
+		expect(git(root, "status", "--porcelain")).toBe("");
 	});
 });
