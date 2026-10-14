@@ -16,10 +16,11 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 	database.run(`
 		CREATE TABLE IF NOT EXISTS journal_entries (
 			customer_id TEXT NOT NULL,
+			writer_id TEXT NOT NULL,
 			seq INTEGER NOT NULL CHECK (seq > 0),
 			appended_at INTEGER NOT NULL,
 			command_json TEXT NOT NULL,
-			PRIMARY KEY (customer_id, seq)
+			PRIMARY KEY (customer_id, writer_id, seq)
 		) WITHOUT ROWID
 	`);
 	// The highest seq each customer was given, kept past its entries so a dropped seq is never handed out again.
@@ -41,6 +42,34 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 		.run({ writerId: crypto.randomUUID() });
 };
 
+/** A file from before entries carried a writer keyed them by customer and seq alone: every row it holds is its own writer's. */
+const addWriterIds = ({ database }: { database: Database }) => {
+	const columns = database
+		.query<{ name: string }, []>("PRAGMA table_info(journal_entries)")
+		.all()
+		.map(({ name }) => name);
+	if (columns.includes("writer_id")) return;
+	database.transaction(() => {
+		database.run(`
+			CREATE TABLE journal_entries_next (
+				customer_id TEXT NOT NULL,
+				writer_id TEXT NOT NULL,
+				seq INTEGER NOT NULL CHECK (seq > 0),
+				appended_at INTEGER NOT NULL,
+				command_json TEXT NOT NULL,
+				PRIMARY KEY (customer_id, writer_id, seq)
+			) WITHOUT ROWID
+		`);
+		database.run(`
+			INSERT INTO journal_entries_next (customer_id, writer_id, seq, appended_at, command_json)
+			SELECT customer_id, (SELECT writer_id FROM journal_meta WHERE id = 1), seq, appended_at, command_json
+			FROM journal_entries
+		`);
+		database.run("DROP TABLE journal_entries");
+		database.run("ALTER TABLE journal_entries_next RENAME TO journal_entries");
+	})();
+};
+
 /** A slot's journal: the deductions the Atom granted and has not yet seen Autumn apply, kept as lightly as the slot's subjects. */
 export const openJournalDatabase = ({
 	databasePath,
@@ -53,6 +82,7 @@ export const openJournalDatabase = ({
 		dropSchema: dropJournalSchema,
 		createSchema: createJournalSchema,
 	});
+	addWriterIds({ database });
 	createJournalKeysTable({ database });
 	return database;
 };

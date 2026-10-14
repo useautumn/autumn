@@ -7,12 +7,13 @@ type JournalContext = { sqliteDb: Database };
 
 type JournalEntryRow = {
 	customerId: string;
+	writerId: string;
 	seq: bigint;
 	appendedAt: bigint;
 	commandJson: string;
 };
 
-const FIELDS_PER_ENTRY = 5;
+const FIELDS_PER_ENTRY = 6;
 
 /** One string for the writer thread: each entry's fields, command JSON and caller key ("" for none), NUL-separated. */
 export const encodeJournalEntries = ({
@@ -22,12 +23,15 @@ export const encodeJournalEntries = ({
 }): string =>
 	entries
 		.map(
-			({ customerId, seq, appendedAt, command }) =>
-				`${customerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}\u0000${(command.type === "track" && callerKeyOf({ command })) || ""}`,
+			({ customerId, writerId, seq, appendedAt, command }) =>
+				`${customerId}\u0000${writerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}\u0000${(command.type === "track" && callerKeyOf({ command })) || ""}`,
 		)
 		.join("\u0000");
 
-/** Every entry or none, with each customer's highest seq raised and each caller's key taken in the same transaction. */
+/**
+ * Every entry or none, each caller's key taken in the same transaction. An entry this file minted raises its customer's
+ * highest seq too; one held under another writer keeps that writer's seq and raises nothing here.
+ */
 export const insertJournalEntries = ({
 	ctx,
 	payload,
@@ -36,9 +40,10 @@ export const insertJournalEntries = ({
 	payload: string;
 }): string => {
 	const fields = payload.split("\u0000");
+	const ownWriterId = readJournalWriterId({ ctx });
 	const insertEntry = ctx.sqliteDb.query(
-		`INSERT INTO journal_entries (customer_id, seq, appended_at, command_json)
-		VALUES ($customerId, $seq, $appendedAt, $commandJson)`,
+		`INSERT INTO journal_entries (customer_id, writer_id, seq, appended_at, command_json)
+		VALUES ($customerId, $writerId, $seq, $appendedAt, $commandJson)`,
 	);
 	const raiseLastSeq = ctx.sqliteDb.query(
 		`INSERT INTO journal_seqs (customer_id, last_seq) VALUES ($customerId, $seq)
@@ -47,16 +52,18 @@ export const insertJournalEntries = ({
 	ctx.sqliteDb.transaction(() => {
 		for (let at = 0; at < fields.length; at += FIELDS_PER_ENTRY) {
 			const customerId = fields[at] as string;
-			const seq = Number(fields[at + 1]);
-			const appendedAt = Number(fields[at + 2]);
+			const writerId = fields[at + 1] as string;
+			const seq = Number(fields[at + 2]);
+			const appendedAt = Number(fields[at + 3]);
 			insertEntry.run({
 				customerId,
+				writerId,
 				seq,
 				appendedAt,
-				commandJson: fields[at + 3] as string,
+				commandJson: fields[at + 4] as string,
 			});
-			raiseLastSeq.run({ customerId, seq });
-			const key = fields[at + 4];
+			if (writerId === ownWriterId) raiseLastSeq.run({ customerId, seq });
+			const key = fields[at + 5];
 			if (key) insertJournalKey({ ctx, customerId, key, appendedAt });
 		}
 	})();
@@ -71,12 +78,13 @@ export const readOwedJournalEntries = ({
 }): JournalEntry[] =>
 	ctx.sqliteDb
 		.query<JournalEntryRow, []>(
-			`SELECT customer_id AS customerId, seq, appended_at AS appendedAt, command_json AS commandJson
-			FROM journal_entries ORDER BY customer_id, seq`,
+			`SELECT customer_id AS customerId, writer_id AS writerId, seq, appended_at AS appendedAt, command_json AS commandJson
+			FROM journal_entries ORDER BY customer_id, appended_at, seq`,
 		)
 		.all()
 		.map((row) => ({
 			customerId: row.customerId,
+			writerId: row.writerId,
 			seq: Number(row.seq),
 			appendedAt: Number(row.appendedAt),
 			command: JSON.parse(row.commandJson),
@@ -117,12 +125,16 @@ export const deleteJournalEntriesUpTo = ({
 	ctx: JournalContext;
 	payload: string;
 }): string => {
-	const [customerId, seq] = payload.split("\u0000");
+	const [customerId, writerId, seq] = payload.split("\u0000");
 	ctx.sqliteDb
 		.query(
-			"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq <= $seq",
+			"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq <= $seq",
 		)
-		.run({ customerId: customerId as string, seq: Number(seq) });
+		.run({
+			customerId: customerId as string,
+			writerId: writerId as string,
+			seq: Number(seq),
+		});
 	return "";
 };
 
