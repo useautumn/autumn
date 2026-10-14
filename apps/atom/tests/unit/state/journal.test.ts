@@ -178,6 +178,29 @@ describe("journal", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toBe(one);
 	});
 
+	test("an append grows the customer's owed array in place, never copying it; a push that trims it gives a new one", async () => {
+		const journal = open({ databasePath: journalPath() });
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "a" }),
+		});
+		const owed = journal.owed({ customerId: "cus_1" });
+
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+		expect(journal.owed({ customerId: "cus_1" })).toBe(owed);
+		expect(owed.map(({ seq }) => seq)).toEqual([1, 2]);
+
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
+		});
+		expect(journal.owed({ customerId: "cus_1" })).not.toBe(owed);
+		expect(owed.map(({ seq }) => seq)).toEqual([1, 2]);
+	});
+
 	test("a push drops every entry it has seen from this journal's writer, and a dropped seq is never reused", async () => {
 		const databasePath = journalPath();
 		const journal = open({ databasePath });
