@@ -7,6 +7,7 @@ import {
 	FeatureUsageType,
 	isAiCreditSystem,
 	isAnyCreditSystem,
+	isExcludedCreditSchemaItem,
 	type ProductItem,
 	RecaseError,
 } from "@autumn/shared";
@@ -61,7 +62,9 @@ export const validateItemFeatureOverride = ({
 
 	if (!featureOverride.schema) return;
 
+	// Excluding a feature that is gone, or was never there, changes nothing.
 	for (const schemaItem of featureOverride.schema) {
+		if (isExcludedCreditSchemaItem(schemaItem)) continue;
 		const referenced = features.find(
 			(f) => f.id === schemaItem.metered_feature_id,
 		);

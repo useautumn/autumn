@@ -23,6 +23,7 @@ import {
 	ResetInterval,
 } from "@autumn/shared";
 import { applyDiff } from "@autumn/shared/utils/planV1Utils/diff/applyDiff.js";
+import { featureOverrideToKey } from "@autumn/shared/utils/planV1Utils/diff/compareFeatureOverrides.js";
 import { itemsEqual } from "@autumn/shared/utils/planV1Utils/diff/comparePlanItems.js";
 import { diffPlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 
@@ -183,4 +184,11 @@ test("O9 an empty override is the same as no override", () => {
 			to: plan({ items: [creditsItem({ credit_schema: [] })] }),
 		}),
 	).toEqual({});
+});
+
+test("O10 markups {} (sets none) differs from absent markups (inherits)", () => {
+	const schema = override({ creditCost: 2 }).credit_schema;
+	expect(featureOverrideToKey({ credit_schema: schema, markups: {} })).not.toBe(
+		featureOverrideToKey({ credit_schema: schema }),
+	);
 });

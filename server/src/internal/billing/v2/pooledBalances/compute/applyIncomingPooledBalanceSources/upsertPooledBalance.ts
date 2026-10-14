@@ -1,10 +1,13 @@
 import {
 	addSafe,
+	ErrCode,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	featureOverridesAreSame,
 	isBooleanEntitlement,
 	type PooledBalanceIdentity,
 	pooledBalanceIdentityToKey,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addInsertedPooledBalanceToComputeContext } from "../context/pooledBalanceComputeContextUtils";
@@ -88,6 +91,22 @@ export const upsertPooledBalance = ({
 			: contributionAmounts.currentContribution;
 	if (alreadyCountedByPool || isLicenseKeyed) {
 		balanceDelta = 0;
+	}
+
+	// A pool is priced by one rate card, so a contributor with a different one can't join it.
+	const joinsPoolWithOtherRateCard =
+		existingPooledCustomerEntitlement &&
+		!alreadyCountedByPool &&
+		!featureOverridesAreSame({
+			override1: existingPooledCustomerEntitlement.entitlement.feature_override,
+			override2: contributionCustomerEntitlement.entitlement.feature_override,
+		});
+	if (joinsPoolWithOtherRateCard) {
+		throw new RecaseError({
+			message: `Plans with different credit rate overrides can't share a pooled balance for ${contributionCustomerEntitlement.entitlement.feature.id}`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	}
 
 	if (!existingPooledCustomerEntitlement) {

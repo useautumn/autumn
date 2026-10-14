@@ -458,16 +458,11 @@ test.concurrent(
 				],
 			});
 
-			// 4. Excluding a feature that doesn't exist is rejected.
-			await expectAutumnError({
-				errCode: ErrCode.InvalidProductItem,
-				errMessage: "references unknown feature does_not_exist_xyz",
-				func: () =>
-					updatePlan([
-						{ metered_feature_id: keptFeatureId, credit_cost: 5 },
-						{ metered_feature_id: "does_not_exist_xyz", excluded: true },
-					]),
-			});
+			// 4. Excluding a feature that doesn't exist (e.g. since deleted) is a no-op.
+			await updatePlan([
+				{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+				{ metered_feature_id: "does_not_exist_xyz", excluded: true },
+			]);
 
 			// 5. Listing a feature twice (rate + excluded) is rejected.
 			await expectAutumnError({

@@ -27,7 +27,10 @@ export const featureOverrideToKey = (
 	override: ApiFeatureOverride | null | undefined,
 ): string => {
 	if (!override?.credit_schema?.length && override?.markups == null) return "";
-	return `credit_schema:${creditSchemaFingerprint(override.credit_schema)}|markups:${deterministicStringify(override.markups ?? {})}`;
+	// Absent markups inherit the feature's; {} sets none, so they must differ.
+	const markups =
+		override.markups == null ? "" : deterministicStringify(override.markups);
+	return `credit_schema:${creditSchemaFingerprint(override.credit_schema)}|markups:${markups}`;
 };
 
 /** Structural equality of two plan-item rate-card overrides (API shape). */
