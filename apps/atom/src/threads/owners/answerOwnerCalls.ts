@@ -27,6 +27,12 @@ const READS = new Set<OwnerCall["type"]>([
 	"fetchSubjects",
 ]);
 
+/** Half the shadow's and SDK's 300 ms budget: a call queued longer is answered 503 at once, so its caller asks the API
+ *  while it still can, and a deduction it gave up on is never made here as well. */
+export const OWNER_CALL_MAX_WAIT_MS = 150;
+
+const DECISIONS = new Set<OwnerCall["type"]>(["check", "track"]);
+
 /** The call run on the slots this thread owns: the same processor a request arriving here would use. */
 const runOwnerCall = async ({
 	ctx,
@@ -36,6 +42,11 @@ const runOwnerCall = async ({
 	call: OwnerCall;
 }) => {
 	if (READS.has(call.type) && !isThreadReady(ctx.health))
+		throw new OwnerUnavailableError({ thread: ctx.health.thread });
+	if (
+		DECISIONS.has(call.type) &&
+		Date.now() - call.sentAt > OWNER_CALL_MAX_WAIT_MS
+	)
 		throw new OwnerUnavailableError({ thread: ctx.health.thread });
 	const slots = ctx.auth.slotsFor({ atomId: call.atomId });
 	if (!slots) throw new Error(`This Atom holds no folder ${call.atomId}`);

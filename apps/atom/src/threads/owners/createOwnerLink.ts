@@ -98,12 +98,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 			body.type !== "installCatalog" && waiting.size >= MAX_CALLS_IN_FLIGHT;
 		if (!port || shed) throw new OwnerUnavailableError({ thread });
 		const id = nextId++;
-		const reply = {
-			...Promise.withResolvers<OwnerReply>(),
-			sentAt: Date.now(),
-		};
+		const sentAt = Date.now();
+		const reply = { ...Promise.withResolvers<OwnerReply>(), sentAt };
 		waiting.set(id, reply);
-		const message = { id, ...body };
+		const message = { id, sentAt, ...body };
 		port.postMessage(
 			message.type === "setSubject" ? message : JSON.stringify(message),
 		);
