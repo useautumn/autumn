@@ -8,11 +8,11 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { routeChunkForPath } from "./app/routeChunks";
 import { ThemeProvider } from "./contexts/ThemeProvider";
-import { idbPersister } from "./lib/queryPersistence/idbPersister";
 import {
 	PERSISTED_CACHE_MAX_AGE_MS,
+	queryPersister,
 	shouldPersistQuery,
-} from "./lib/queryPersistence/persistedQueries";
+} from "./lib/queryPersistence";
 import { reloadOnStaleChunk } from "./utils/staleChunkReload";
 
 declare const __APP_ENV__: string;
@@ -75,7 +75,7 @@ createRoot(document.getElementById("root")!, {
 		<PersistQueryClientProvider
 			client={queryClient}
 			persistOptions={{
-				persister: idbPersister,
+				persister: queryPersister,
 				maxAge: PERSISTED_CACHE_MAX_AGE_MS,
 				// The entry chunk's hashed URL changes every deploy, so a new build never reads an old cache shape.
 				buster: import.meta.url,

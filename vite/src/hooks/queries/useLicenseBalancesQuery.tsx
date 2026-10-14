@@ -48,11 +48,6 @@ export const useLicenseBalancesQuery = ({
 			return data;
 		},
 		enabled: enabled && Boolean(customerId),
-		// Switching entity keeps the section on screen until the new pools land.
-		placeholderData: (previous, previousQuery) =>
-			previousQuery?.queryKey[1] === (customerId ?? null)
-				? previous
-				: undefined,
 	});
 
 	// All active assignments for the customer; consumers scope by entity so a

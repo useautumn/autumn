@@ -14,7 +14,7 @@ import {
 	ProductsListRoute,
 } from "./app/routeChunks";
 import { useSession } from "./lib/auth-client";
-import { idbPersister } from "./lib/queryPersistence/idbPersister";
+import { queryPersister } from "./lib/queryPersistence";
 import { SSO_CALLBACK_PATH } from "./lib/sso/ssoCallback";
 import { identifyUser } from "./utils/posthogTracking";
 import LoadingScreen from "./views/general/LoadingScreen";
@@ -150,7 +150,7 @@ export default function App() {
 	const { data, isPending } = useSession();
 
 	useEffect(() => {
-		if (!isPending && !data) void idbPersister.removeClient();
+		if (!isPending && !data) void queryPersister.removeClient();
 	}, [isPending, data]);
 
 	useEffect(() => {

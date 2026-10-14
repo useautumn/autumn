@@ -44,21 +44,20 @@ export const useCustomerQueryOptions = () => {
 				]),
 				queryFn: async () => {
 					try {
-						const searchParams = new URLSearchParams();
-						if (includeExpiredLoose) {
-							searchParams.set("include_expired_loose", "true");
-						}
-						if (entityId) searchParams.set("entity_id", entityId);
-						const query = searchParams.toString();
 						const { data } = await axiosInstance.get(
-							`/customers/${customerId}${query ? `?${query}` : ""}`,
+							`/customers/${customerId}`,
+							{
+								params: {
+									include_expired_loose: includeExpiredLoose || undefined,
+									entity_id: entityId ?? undefined,
+								},
+							},
 						);
 						return data;
 					} catch (error) {
 						throwBackendError(error);
 					}
 				},
-				retry: false,
 			}),
 		[axiosInstance, buildKey],
 	);

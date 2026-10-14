@@ -51,7 +51,7 @@ export const useProductQuery = () => {
 
 	// Hold the current version on screen until the next one has fully loaded,
 	// so a version switch swaps atomically. Never carry data across plans.
-	const { data, isLoading, isPlaceholderData, refetch, error } = useQuery({
+	const { data, isLoading, refetch, error } = useQuery({
 		...productDataQueryOptions({ productId, version: queryStates.version }),
 		placeholderData: (previous, previousQuery) =>
 			previousQuery?.queryKey[1] === productId ? previous : undefined,
@@ -73,7 +73,6 @@ export const useProductQuery = () => {
 		numVersions: data?.numVersions || data?.product.version || 1,
 		versionCounts: data?.versionCounts ?? EMPTY_VERSION_COUNTS,
 		isLoading,
-		isSwitchingVersion: isPlaceholderData,
 		refetch: async () => {
 			await refetch();
 			await queryClient.invalidateQueries({ queryKey: ["migrations"] });

@@ -10,7 +10,6 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useProductVersionsQuery } from "@/hooks/queries/useProductVersionsQuery";
 import {
@@ -18,12 +17,12 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
-import { useProductDataQueryOptions } from "../../product/hooks/useProductDataQueryOptions";
 import {
 	useAllVariantsView,
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { usePrefetchPlanPage } from "../hooks/usePrefetchPlanPage";
 import { ActiveVersionDot, PlanVersionOption } from "./PlanVersionOption";
 import { versionLabel } from "./versionLabel";
 
@@ -37,9 +36,8 @@ export const PlanVersionSelect = ({
 	onMigrateCustomers: () => void;
 }) => {
 	const product = useProductStore((s) => s.product);
-	const { versionCounts, isSwitchingVersion } = useProductQuery();
-	const queryClient = useQueryClient();
-	const productDataQueryOptions = useProductDataQueryOptions();
+	const { versionCounts } = useProductQuery();
+	const prefetchPlanPage = usePrefetchPlanPage();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const showAllVariants = useAllVariantsView();
@@ -63,12 +61,7 @@ export const PlanVersionSelect = ({
 		Boolean(row.active) && !isCusPlanEditor ? null : row.version;
 
 	const prefetchVersion = (row: (typeof sortedRows)[number]) =>
-		queryClient.prefetchQuery(
-			productDataQueryOptions({
-				productId: product.id,
-				version: versionQueryParam(row),
-			}),
-		);
+		prefetchPlanPage({ id: product.id, version: versionQueryParam(row) });
 
 	const handleVersionChange = (version: string) => {
 		if (version === MIGRATE_CUSTOMERS) {
@@ -98,11 +91,7 @@ export const PlanVersionSelect = ({
 	const triggerContent = (
 		<SelectTrigger className="w-32 !h-6" size="sm">
 			<span className="flex min-w-0 items-center gap-1.5">
-				{isSwitchingVersion ? (
-					<SmallSpinner size={10} className="text-tertiary-foreground" />
-				) : currentRow.active ? (
-					<ActiveVersionDot active />
-				) : null}
+				{currentRow.active ? <ActiveVersionDot active /> : null}
 				<span className="truncate">
 					{versionLabel({
 						versionSlug: currentRow.version_slug,

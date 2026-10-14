@@ -30,6 +30,7 @@ import { LeafPanel } from "@/views/chat/LeafPanel";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { CustomersListPrefetch } from "@/views/customers/CustomersListPrefetch";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import { CustomerFiltersProvider } from "@/views/customers/hooks/useCustomerFilters";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
@@ -168,7 +169,11 @@ const MainContent = ({
 
 	return (
 		<AppContext.Provider value={{}}>
-			{isCustomersList && <CustomersListPrefetch />}
+			{isCustomersList && (
+				<CustomerFiltersProvider>
+					<CustomersListPrefetch />
+				</CustomerFiltersProvider>
+			)}
 			<main
 				className={cn(
 					"w-full h-screen flex flex-col justify-center overflow-hidden sm:py-3 sm:pr-3 relative",

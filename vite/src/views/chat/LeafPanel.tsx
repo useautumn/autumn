@@ -14,16 +14,10 @@ import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
 import { useLeafPanelStore } from "@/hooks/stores/useLeafPanelStore";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { LeafThreadHistory } from "./components/LeafThreadHistory";
 
-// The chat stack (markdown, math, syntax highlighting) is heavy, so it loads after startup.
-const loadLeafChatContainer = () => import("./LeafChatContainer");
-const LeafChatContainer = lazy(loadLeafChatContainer);
-const CHAT_PRELOAD_DELAY_MS = 5000;
-const LeafThreadHistory = lazy(() =>
-	import("./components/LeafThreadHistory").then((module) => ({
-		default: module.LeafThreadHistory,
-	})),
-);
+// The chat stack (markdown, math, syntax highlighting) is heavy, so it loads on first open.
+const LeafChatContainer = lazy(() => import("./LeafChatContainer"));
 
 // Geometry animates via reflow (right/bottom-anchored in both modes) instead of
 // a motion layout FLIP, which scale-warps children mid-transition.
@@ -55,11 +49,6 @@ export const LeafPanel = () => {
 	// Lazy keep-alive: nothing mounts until first open; afterwards the panel stays
 	// mounted while hidden so the conversation and in-flight streams survive.
 	const [hasOpened, setHasOpened] = useState(false);
-	useEffect(() => {
-		if (!isAdmin || isMobile) return;
-		const timer = setTimeout(loadLeafChatContainer, CHAT_PRELOAD_DELAY_MS);
-		return () => clearTimeout(timer);
-	}, [isAdmin, isMobile]);
 	const panelRef = useRef<HTMLDivElement>(null);
 	useEffect(() => {
 		if (open) setHasOpened(true);
@@ -137,9 +126,7 @@ export const LeafPanel = () => {
 						Leaf
 					</div>
 					<div className="flex items-center gap-1.5">
-						<Suspense fallback={null}>
-							<LeafThreadHistory />
-						</Suspense>
+						<LeafThreadHistory />
 						<IconButton
 							className="cursor-pointer"
 							icon={<PlusIcon size={12} />}

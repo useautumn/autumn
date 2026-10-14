@@ -69,6 +69,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
 		staleTime: 30_000,
+		// The app default is no retries; a failed org load blocks the whole dashboard, so keep retrying.
 		retry: 3,
 		enabled: !!activeOrgId,
 	});

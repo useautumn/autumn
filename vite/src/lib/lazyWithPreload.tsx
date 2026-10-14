@@ -1,4 +1,9 @@
-import { type ComponentType, lazy, useState } from "react";
+import {
+	type ComponentType,
+	lazy,
+	useState,
+	useSyncExternalStore,
+} from "react";
 
 /**
  * React.lazy that renders synchronously once its chunk is preloaded. Plain lazy
@@ -9,13 +14,26 @@ export const lazyWithPreload = <Props extends object>(
 ) => {
 	let loaded: ComponentType<Props> | undefined;
 	let pending: Promise<{ default: ComponentType<Props> }> | undefined;
+	const listeners = new Set<() => void>();
 
 	const preload = () => {
 		pending ??= load().then((module) => {
 			loaded = module.default;
+			for (const listener of listeners) listener();
 			return module;
 		});
 		return pending;
+	};
+
+	const isLoaded = () => loaded !== undefined;
+
+	// Subscribing starts the load, so a caller waiting on the chunk never has to kick it off.
+	const subscribe = (listener: () => void) => {
+		listeners.add(listener);
+		void preload();
+		return () => {
+			listeners.delete(listener);
+		};
 	};
 
 	const LazyComponent = lazy(preload);
@@ -28,8 +46,20 @@ export const lazyWithPreload = <Props extends object>(
 		return <Component {...props} />;
 	};
 
-	return Object.assign(PreloadableComponent, {
-		preload,
-		isLoaded: () => loaded !== undefined,
-	});
+	return Object.assign(PreloadableComponent, { preload, isLoaded, subscribe });
 };
+
+type PreloadableChunk = {
+	isLoaded: () => boolean;
+	subscribe: (listener: () => void) => () => void;
+};
+
+const alwaysLoaded = () => true;
+const noopSubscribe = () => () => {};
+
+/** Loads a preloadable route chunk and reports whether it is in. */
+export const useChunkLoaded = (chunk: PreloadableChunk | undefined) =>
+	useSyncExternalStore(
+		chunk?.subscribe ?? noopSubscribe,
+		chunk?.isLoaded ?? alwaysLoaded,
+	);

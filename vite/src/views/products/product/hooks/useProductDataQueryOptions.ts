@@ -42,9 +42,7 @@ export const useProductDataQueryOptions = () => {
 						throwBackendError(error);
 					}
 				},
-				retry: false,
 				enabled: !!productId,
-				staleTime: 10_000,
 			}),
 		[axiosInstance, buildKey],
 	);
