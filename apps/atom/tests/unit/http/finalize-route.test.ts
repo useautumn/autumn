@@ -189,23 +189,21 @@ describe("a finalize the Atom cannot run for a transport reason", () => {
 		expect(api.calls).toEqual([]);
 	});
 
-	test("handed on to an owner that cannot be reached, or that sheds it, is a 503 marked x-atom-forwarded, never the API's", async () => {
+	test("handed on to an owner that cannot be reached, or that is stopping, is a 503 marked x-atom-forwarded, never the API's", async () => {
 		const api = apiCalls();
-		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			stopping: () => true,
+		});
 		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
 		await storeOnly({ replica: b, customerId: CUSTOMER, readAt: 1700 });
 
 		connect({ replicas: [b], autumn: api.autumn });
 		const unreachable = await finalizeOn(b);
 		disconnect();
-		connect({
-			replicas: [a, b],
-			autumn: api.autumn,
-			replyFrom: async (replica, reply) =>
-				replica === a
-					? Response.json({ code: "atom_overloaded" }, { status: 503 })
-					: reply,
-		});
+		connect({ replicas: [a, b], autumn: api.autumn });
 		const shed = await finalizeOn(b);
 
 		for (const reply of [unreachable, shed]) {
