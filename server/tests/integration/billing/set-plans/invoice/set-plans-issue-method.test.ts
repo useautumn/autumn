@@ -10,7 +10,8 @@
  *   finalize → both open with auto_advance off
  *   send     → both open with auto_advance on
  *   draft    → on a new subscription's first invoice: a draft with auto_advance off, plan pending
- *   errors: issue_method without enabled: true → 400
+ *   errors: issue_method without enabled: true → 400; a draft (issue_method draft or legacy
+ *     finalize: false) when set_plans would also bill accrued usage → 400, nothing invoiced
  */
 
 import { test } from "bun:test";
@@ -167,6 +168,32 @@ test.concurrent(
 					customerId,
 					invoiceMode: { enabled: false, issue_method: "draft" },
 				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set_plans issue_method errors: a draft can't also bill accrued usage, legacy finalize: false included")}`,
+	async () => {
+		const customerId = "set-plans-issue-method-draft-usage";
+		const scenario = await setupUnbilledProInOverage({ customerId });
+
+		for (const invoiceMode of [
+			{ enabled: true, issue_method: "draft", enable_plan_immediately: true },
+			{ enabled: true, finalize: false, enable_plan_immediately: true },
+		] satisfies InvoiceModeInput[]) {
+			await expectAutumnError({
+				errMessage:
+					"draft isn't supported when set_plans would also bill accrued usage",
+				func: () => relistPro({ scenario, customerId, invoiceMode }),
+			});
+		}
+
+		await expectInvoicesIssuedAs({
+			autumnV2_3: scenario.autumnV2_3,
+			customerId,
+			issueMethod: "draft",
+			count: 0,
 		});
 	},
 );
