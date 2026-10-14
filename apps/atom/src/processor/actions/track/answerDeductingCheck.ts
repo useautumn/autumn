@@ -3,6 +3,7 @@ import type { AnswerableCheck } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { checkToCommand, renderCheck } from "../check/answerCheck.js";
+import { readCurrentSubject } from "../readCurrentSubject/readCurrentSubject.js";
 import { deductOnSubject } from "./deductOnSubject.js";
 import { checkToTrackCommand } from "./trackToCommand.js";
 
@@ -21,12 +22,21 @@ export const answerDeductingCheck = async ({
 	subject: CurrentSubject;
 }): Promise<CheckResponseV3> => {
 	const command = checkToCommand({ check, subject });
-	const { result, deducted } = await deductOnSubject({
+	const { result, committed } = deductOnSubject({
 		ctx,
 		subject,
 		command,
 		track: checkToTrackCommand({ command, subject, skipEvent, idempotencyKey }),
 	});
+	// Read before the commit lands: this deduction and those before it, not one appended while it was in flight.
+	const deducted = result.allowed
+		? readCurrentSubject({
+				ctx,
+				customerId: check.customerId,
+				entityId: check.entityId,
+			})
+		: subject;
+	await committed;
 	return renderCheck({
 		ctx,
 		check,
