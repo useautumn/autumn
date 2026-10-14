@@ -33,7 +33,7 @@ export const checkCallToRequest = ({
 	body: unknown;
 	query: Record<string, string>;
 	apiVersionHeader: string | undefined;
-	/** Where the caller names the key: the Idempotency-Key header on a check, the body on a track. */
+	/** The caller's Idempotency-Key header. */
 	idempotencyKey: string | undefined;
 	requestId: string;
 	occurredAt: number;
@@ -45,7 +45,6 @@ export const checkCallToRequest = ({
 		throw new CannotAnswerError({ reason: "unreadable_request" });
 
 	return {
-		kind: "check",
 		requestId,
 		occurredAt,
 		// The API takes an empty key as none.
