@@ -9,10 +9,11 @@ import {
 	journalKeyHash,
 	PRUNE_CHUNK,
 	readJournalKey,
+	readJournalKeysSince,
 } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
-import { addKey, mayHoldKey } from "./keyBloom.js";
+import { addKey, heldKeysSince, mayHoldKey } from "./keyBloom.js";
 import type {
 	Journal,
 	JournalEntry,
@@ -69,6 +70,13 @@ export const openJournal = ({
 	const file = openWrittenFile({ databasePath, kind: "journal" });
 	const ctx = { sqliteDb: file.sqliteDb };
 	const writerId = readJournalWriterId({ ctx });
+	// A restarted thread's filters start empty: the keys this file holds that they would hold go back in before it answers.
+	const openedAt = now();
+	for (const row of readJournalKeysSince({
+		ctx,
+		appendedSince: heldKeysSince({ now: openedAt }),
+	}))
+		addKey({ ...row, now: openedAt });
 	const lastSeqs = readLastJournalSeqs({ ctx });
 	/** Grown in place by an append; anything else that changes it replaces it, so a reader can tell the two apart. */
 	const owedByCustomer = new Map<string, JournalEntry[]>();

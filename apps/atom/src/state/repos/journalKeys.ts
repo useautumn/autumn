@@ -102,3 +102,22 @@ export const readJournalKey = ({
 			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
 		)
 		.get(customerId, keyHash, appendedSince) !== null;
+
+/** Every row appended since `appendedSince`, read one at a time along the age index. */
+export function* readJournalKeysSince({
+	ctx,
+	appendedSince,
+}: {
+	ctx: JournalContext;
+	appendedSince: number;
+}): Generator<{ customerId: string; keyHash: Uint8Array; appendedAt: number }> {
+	for (const row of ctx.sqliteDb
+		.query<
+			{ customerId: string; keyHash: Uint8Array; appendedAt: bigint },
+			[number]
+		>(
+			"SELECT customer_id AS customerId, key_hash AS keyHash, appended_at AS appendedAt FROM journal_keys WHERE appended_at >= ?",
+		)
+		.iterate(appendedSince))
+		yield { ...row, appendedAt: Number(row.appendedAt) };
+}

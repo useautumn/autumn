@@ -40,19 +40,26 @@ const filtersAt = ({ now }: { now: number }): BloomFilter[] => {
 	return filters;
 };
 
+/** The oldest append whose key the filters still hold as of `now`: the start of the oldest window. */
+export const heldKeysSince = ({ now }: { now: number }): number =>
+	(Math.floor(now / BLOOM_WINDOW_MS) - (WINDOWS - 1)) * BLOOM_WINDOW_MS;
+
+/** Into the filter of the window `appendedAt` falls in; a key older than every window held is left out. */
 export const addKey = ({
 	customerId,
 	keyHash,
 	now,
+	appendedAt = now,
 }: {
 	customerId: string;
 	keyHash: Uint8Array;
 	now: number;
+	appendedAt?: number;
 }): void => {
-	const window = Math.floor(now / BLOOM_WINDOW_MS);
-	filtersAt({ now })[window % WINDOWS]?.add(
-		filterValueOf({ customerId, keyHash }),
-	);
+	const held = filtersAt({ now });
+	if (appendedAt < heldKeysSince({ now })) return;
+	const window = Math.floor(appendedAt / BLOOM_WINDOW_MS);
+	held[window % WINDOWS]?.add(filterValueOf({ customerId, keyHash }));
 };
 
 /** False only for a key no append of the last 60 to 90 min took. */
