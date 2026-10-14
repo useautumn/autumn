@@ -40,8 +40,12 @@ export const createDeployedAuth = ({
 		journalForwarder,
 	});
 
+	let verifiedToken: string | undefined;
 	function authorize({ token }: { token: string }) {
-		return tokenMatchesHash({ token, expectedHash: tokenHash }) ? slots : null;
+		if (token === verifiedToken) return slots;
+		if (!tokenMatchesHash({ token, expectedHash: tokenHash })) return null;
+		verifiedToken = token;
+		return slots;
 	}
 
 	/** A push naming a tenant was meant for a multi-tenant Atom, never this one. */
