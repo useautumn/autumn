@@ -10,6 +10,8 @@ import { createPeerApp } from "../../../src/http/createPeerApp.js";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../../../src/pushes/applyPushes.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
+import { createMembership } from "../../../src/replicas/membership/createMembership.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
@@ -95,6 +97,14 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
+	const membership = createMembership({ self: address });
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => ringPeers },
+			own: () => [address],
+			membership,
+		},
+	});
 	const httpContext = {
 		auth,
 		logger: quiet,
@@ -112,16 +122,7 @@ export const createReplica = ({
 		loop: loopOnTime,
 		replication,
 		stopping,
-		peer: {
-			port: PEER_PORT,
-			secret,
-			ring: createReplicaRing({
-				ctx: {
-					resolver: { peers: async () => ringPeers },
-					own: () => [address],
-				},
-			}),
-		},
+		peer: { port: PEER_PORT, secret, ring, membership },
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -146,6 +147,18 @@ export const createReplica = ({
 		peerApp,
 		slots: auth.slots,
 		replication,
+		ring,
+		membership,
+		/** The first step of a planned stop: owner of nothing, and every peer told. */
+		leave: () =>
+			leaveRing({
+				ctx: {
+					ring,
+					membership,
+					peer: { port: PEER_PORT, secret },
+					logger: quiet,
+				},
+			}),
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
