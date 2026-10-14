@@ -65,6 +65,7 @@ const proberOf = ({
 									dropHandedOff() {},
 								},
 							],
+							ownedOpenLocks: () => [],
 						},
 					},
 				],
