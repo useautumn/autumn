@@ -8,18 +8,25 @@
  *  2. Autumn deducts a handed-in track by its own split, exactly as an API track of the same value: the request
  *     names no rows, and rows it names anyway are never read;
  *  3. a body that is not a tracks.append request is 400 unreadable; an unknown token hash is 401 atom_unknown;
+ *  5. a lock's track and its release in one request settle in order: the lock is taken, then given back;
+ *  6. a release handed in after Autumn already settled the lock moves nothing, and its seq still lands;
  *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
  *     once: a seq the customer already holds from that journal deducts nothing again.
  */
 
 import { afterAll, expect, test } from "bun:test";
+import type { WorkerLock } from "@autumn/balance-engine";
 import {
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TRACKS_APPEND_PATH,
 	AtomTracksAppendErrorCode,
 } from "@autumn/byoc";
 import type { AtomSubjectBody } from "@autumn/byoc/subjects";
-import { type ApiCustomerV5, customers } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	customerEntitlements,
+	customers,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -31,7 +38,7 @@ import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
 import { expectBalanceCorrect } from "../utils/expectBalanceCorrect.js";
-import { atomTrack, postAsAtom } from "./utils/atomHandIn.js";
+import { atomRelease, atomTrack, postAsAtom } from "./utils/atomHandIn.js";
 import { atomTestClient } from "./utils/atomTestClient.js";
 import {
 	deleteAtomDeployment,
@@ -295,6 +302,154 @@ test.skipIf(!isBalanceWorkerRoute())(
 			customerId,
 			featureId: TestFeature.Messages,
 			remaining: 79,
+		});
+	},
+	120_000,
+);
+
+/** A customer with 10 monthly messages, the Atom's handle on it, and the lock row Autumn writes for an 8-message lock. */
+const initLockHandIn = async ({ customerId }: { customerId: string }) => {
+	const free = products.base({
+		id: "free",
+		items: [items.monthlyMessages({ includedUsage: 10 })],
+	});
+	const { autumnV2_6 } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+	const atom = await ensureAtomDeployment({ autumn });
+	const tokenHash = atomTokenToHash({ token: atom.token });
+	const writerId = `w_${crypto.randomUUID()}`;
+	const [customer] = await defaultCtx.db
+		.select({ internalId: customers.internal_id })
+		.from(customers)
+		.where(
+			and(
+				eq(customers.org_id, defaultCtx.org.id),
+				eq(customers.env, defaultCtx.env),
+				eq(customers.id, customerId),
+			),
+		);
+	const [grant] = await defaultCtx.db
+		.select({ id: customerEntitlements.id })
+		.from(customerEntitlements)
+		.where(
+			eq(customerEntitlements.internal_customer_id, customer?.internalId ?? ""),
+		);
+	const lockTrack = atomTrack({
+		customerId,
+		value: 8,
+		lock: {
+			id: `lck_${crypto.randomUUID()}`,
+			lockId: customerId,
+			expiresAt: Date.now() + 3_600_000,
+			expiryAction: "release",
+		},
+	});
+	// The only grant takes the whole lock, so this is the row Autumn's own split writes.
+	const lock: WorkerLock = {
+		id: lockTrack.lock?.id ?? "",
+		org_id: defaultCtx.org.id,
+		env: defaultCtx.env,
+		lock_id: customerId,
+		internal_customer_id: customer?.internalId ?? "",
+		customer_id: customerId,
+		entity_id: null,
+		feature_id: TestFeature.Messages,
+		overage_behavior: "overflow",
+		properties: null,
+		deltas: [
+			{
+				table: "customerEntitlements",
+				id: grant?.id ?? "",
+				entityKey: null,
+				balanceDelta: -8,
+				usageDelta: 0,
+				valueDelta: -8,
+				creditCost: 1,
+			},
+		],
+		expires_at: lockTrack.lock?.expiresAt ?? 0,
+		expiry_action: "release",
+		created_at: lockTrack.occurredAt,
+	};
+	const append = async (
+		commands: (ReturnType<typeof atomTrack> | ReturnType<typeof atomRelease>)[],
+		firstSeq: number,
+	) => {
+		const reply = await postAsAtom({
+			autumn,
+			path: ATOM_TRACKS_APPEND_PATH,
+			tokenHash,
+			body: {
+				tracks: commands.map((command, index) => ({
+					writerId,
+					seq: firstSeq + index,
+					command,
+				})),
+			},
+		});
+		expect(reply.status).toBe(204);
+	};
+	const expectSeq = (seq: number) =>
+		pollUntilAsserted({
+			fetch: async () =>
+				(await (
+					await postAsAtom({
+						autumn,
+						path: ATOM_SUBJECT_READ_PATH,
+						tokenHash,
+						body: { customer_id: customerId, entity_id: null },
+					})
+				).json()) as AtomSubjectBody,
+			assert: (body) => expect(body.atom_seqs?.[writerId]).toBe(seq),
+		});
+	return { autumnV2_6, lockTrack, lock, append, expectSeq };
+};
+
+// A handed-in track only lands through the balance worker's log.
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks5: a lock's track and its release in one request settle in order")}`,
+	async () => {
+		const customerId = "atom-tracks5";
+		const { lockTrack, lock, append, expectSeq } = await initLockHandIn({
+			customerId,
+		});
+
+		await append([lockTrack, atomRelease({ lock })], 1);
+
+		await expectSeq(2);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
+		});
+	},
+	120_000,
+);
+
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks6: a release handed in after Autumn settled the lock moves nothing, and its seq lands")}`,
+	async () => {
+		const customerId = "atom-tracks6";
+		const { autumnV2_6, lockTrack, lock, append, expectSeq } =
+			await initLockHandIn({ customerId });
+		await append([lockTrack], 1);
+		await expectSeq(1);
+
+		await autumnV2_6.balances.finalize({
+			lock_id: customerId,
+			action: "confirm",
+			customer_id: customerId,
+		});
+		await append([atomRelease({ lock })], 2);
+
+		await expectSeq(2);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 2,
 		});
 	},
 	120_000,

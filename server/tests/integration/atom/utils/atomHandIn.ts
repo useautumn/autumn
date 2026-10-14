@@ -1,4 +1,9 @@
-import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
+import {
+	type FinalizeCommand,
+	orgToCommandOrg,
+	type TrackCommand,
+	type WorkerLock,
+} from "@autumn/balance-engine";
 import { ATOM_TOKEN_HASH_HEADER } from "@autumn/byoc";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -9,10 +14,13 @@ export const atomTrack = ({
 	customerId,
 	value,
 	idempotencyKey,
+	lock,
 }: {
 	customerId: string;
 	value: number;
 	idempotencyKey?: string;
+	/** Opens this lock over the deduction, as a check with `lock` does. */
+	lock?: TrackCommand["lock"];
 }): TrackCommand => {
 	const requestId = `atom_req_${crypto.randomUUID()}`;
 	const messages = defaultCtx.features.find(
@@ -42,6 +50,36 @@ export const atomTrack = ({
 			key: idempotencyKey ?? `track:${requestId}`,
 			ttlMs: 86_400_000,
 		},
+		...(lock && { lock }),
+	};
+};
+
+/** The Atom's release of `lock`, as it journals the finalize of a lock it took. */
+export const atomRelease = ({
+	lock,
+}: {
+	lock: WorkerLock;
+}): FinalizeCommand => {
+	const requestId = `atom_release_${crypto.randomUUID()}`;
+	return {
+		schemaVersion: 1,
+		requestId,
+		identity: {
+			orgId: lock.org_id,
+			env: lock.env,
+			customerId: lock.customer_id,
+			entityId: lock.entity_id,
+		},
+		occurredAt: Date.now(),
+		type: "finalize",
+		org: orgToCommandOrg({ org: defaultCtx.org }),
+		commandId: requestId,
+		lock,
+		internalFeatureId:
+			defaultCtx.features.find((feature) => feature.id === lock.feature_id)
+				?.internal_id ?? "",
+		finalValue: 0,
+		properties: null,
 	};
 };
 
