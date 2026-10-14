@@ -78,5 +78,10 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
+		receiveHandoff: async ({ handoffs }) => ({
+			held: await ctx.journal.appendForeign({
+				entries: handoffs.flatMap(({ entries }) => entries),
+			}),
+		}),
 	};
 };
