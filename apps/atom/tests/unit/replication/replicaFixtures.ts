@@ -2,7 +2,11 @@ import { spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
+import {
+	parseFinalizeCommand,
+	parseTrackCommand,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
@@ -347,7 +351,10 @@ export const heldEverywhere = async (replica: Replica) =>
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
 
-/** Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from. */
+/**
+ * Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from, and
+ * every hand-in (tracks and finalizes) in the order Autumn took them.
+ */
 export const recordJournals = () => {
 	const appended: {
 		writer: string;
@@ -356,15 +363,21 @@ export const recordJournals = () => {
 		key: string | undefined;
 		value: number;
 	}[] = [];
+	const handedIn: { type: "track" | "finalize"; writer: string }[] = [];
 	const commands: TrackCommand[] = [];
 	const forwarder = createJournalForwarder({
 		ctx: {
 			autumnClient: {
 				appendTracks: async ({ tracks }) => {
 					for (const track of tracks) {
+						if ("finalize" in track) {
+							handedIn.push({ type: "finalize", writer: track.writerId });
+							continue;
+						}
 						if (!("command" in track)) continue;
 						const command = parseTrackCommand({ input: track.command });
 						commands.push(command);
+						handedIn.push({ type: "track", writer: track.writerId });
 						appended.push({
 							writer: track.writerId,
 							owner: command.requestId,
@@ -377,5 +390,5 @@ export const recordJournals = () => {
 			logger: quiet,
 		},
 	});
-	return { forwarder, appended, commands };
+	return { forwarder, appended, handedIn, commands };
 };
