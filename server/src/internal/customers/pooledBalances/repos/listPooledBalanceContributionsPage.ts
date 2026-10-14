@@ -85,6 +85,8 @@ export const listPooledBalanceContributionsPage = async ({
 				current_contribution: pooledBalanceContributions.current_contribution,
 				next_cycle_contribution:
 					pooledBalanceContributions.next_cycle_contribution,
+				competes: pooledBalanceContributions.competes,
+				unlimited: pooledBalanceContributions.unlimited,
 				created_at: pooledBalanceContributions.created_at,
 			})
 			.from(pooledBalanceContributions)
@@ -108,7 +110,9 @@ export const listPooledBalanceContributionsPage = async ({
 				eq(entities.internal_id, customerProducts.internal_entity_id),
 			)
 			.where(and(scopedWhere, searchWhere))
+			// Competing shares first so a max/min pool's candidates land on page one.
 			.orderBy(
+				desc(pooledBalanceContributions.competes),
 				desc(pooledBalanceContributions.created_at),
 				desc(pooledBalanceContributions.id),
 			)

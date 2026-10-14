@@ -1,6 +1,9 @@
 import {
 	type ApiPooledBalanceContributionV0,
 	type DbPooledBalance,
+	type Feature,
+	FeatureCombine,
+	featureToCombine,
 	numberWithCommas,
 } from "@autumn/shared";
 import {
@@ -20,13 +23,16 @@ import {
 	usePooledBalanceContributionsQuery,
 } from "@/hooks/queries/usePooledBalanceContributionsQuery";
 import { useDebounce } from "@/hooks/useDebounce";
+import { cn } from "@/lib/utils";
 import { useGoToEntity } from "../../customer/hooks/useGoToEntity";
 
 /** The plans feeding a pooled balance, labelled by source (entity or customer) and plan. */
 export function PooledBalanceContributions({
 	pooledBalance,
+	feature,
 }: {
 	pooledBalance: DbPooledBalance | undefined;
+	feature: Pick<Feature, "config">;
 }) {
 	const [page, setPage] = useState(0);
 	const [search, setSearch] = useState("");
@@ -51,6 +57,20 @@ export function PooledBalanceContributions({
 	const planLabel = (contribution: ApiPooledBalanceContributionV0) =>
 		contribution.plan_name ?? contribution.plan_id;
 
+	const combine = featureToCombine({ feature });
+	const winnerId = winningContributionId({ contributions, combine });
+
+	const amountLabel = (contribution: ApiPooledBalanceContributionV0) => {
+		if (contribution.competes) {
+			return contribution.unlimited
+				? "Unlimited"
+				: numberWithCommas(contribution.current_contribution);
+		}
+		return pooledBalance.unlimited
+			? "Unlimited"
+			: `+${numberWithCommas(contribution.current_contribution)}`;
+	};
+
 	return (
 		<>
 			<div className="px-4">
@@ -60,6 +80,15 @@ export function PooledBalanceContributions({
 				<h3 className="text-sub mb-3">Pooling</h3>
 				<div className="flex flex-col gap-4">
 					<PoolingCriteria pooledBalance={pooledBalance} />
+
+					{combine !== FeatureCombine.Sum && (
+						<div className="flex items-center justify-between text-sm gap-2">
+							<span className="text-tertiary-foreground">Combine</span>
+							<span className="text-foreground font-medium">
+								{combine === FeatureCombine.Min ? "Min" : "Max"}
+							</span>
+						</div>
+					)}
 
 					<div className="flex flex-col gap-1.5">
 						<Subheading>Contributions</Subheading>
@@ -89,6 +118,8 @@ export function PooledBalanceContributions({
 							<div className="flex flex-col">
 								{contributions.map((contribution) => {
 									const entityId = contribution.entity_id;
+									const outcompeted =
+										contribution.competes && contribution.id !== winnerId;
 									return (
 										<div
 											key={contribution.id}
@@ -113,10 +144,15 @@ export function PooledBalanceContributions({
 												<span className="text-tertiary-foreground truncate max-w-[140px]">
 													{planLabel(contribution)}
 												</span>
-												<span className="text-foreground font-medium tabular-nums">
-													{pooledBalance.unlimited
-														? "Unlimited"
-														: `+${numberWithCommas(contribution.current_contribution)}`}
+												<span
+													className={cn(
+														"font-medium tabular-nums",
+														outcompeted
+															? "text-tertiary-foreground line-through"
+															: "text-foreground",
+													)}
+												>
+													{amountLabel(contribution)}
 												</span>
 											</div>
 										</div>
@@ -140,6 +176,33 @@ export function PooledBalanceContributions({
 			</SheetSection>
 		</>
 	);
+}
+
+/** The competing share that sets the pool: max lets unlimited win, min keeps the lowest limited one. */
+function winningContributionId({
+	contributions,
+	combine,
+}: {
+	contributions: ApiPooledBalanceContributionV0[];
+	combine: FeatureCombine;
+}): string | undefined {
+	const competing = contributions.filter(({ competes }) => competes);
+	const limited = competing.filter(({ unlimited }) => !unlimited);
+	if (combine === FeatureCombine.Max) {
+		const unlimitedShare = competing.find(({ unlimited }) => unlimited);
+		if (unlimitedShare) return unlimitedShare.id;
+	}
+	if (limited.length === 0) return competing[0]?.id;
+
+	const better = (
+		left: ApiPooledBalanceContributionV0,
+		right: ApiPooledBalanceContributionV0,
+	) =>
+		combine === FeatureCombine.Min
+			? right.current_contribution < left.current_contribution
+			: right.current_contribution > left.current_contribution;
+	return limited.reduce((best, share) => (better(best, share) ? share : best))
+		.id;
 }
 
 function Subheading({ children }: { children: ReactNode }) {

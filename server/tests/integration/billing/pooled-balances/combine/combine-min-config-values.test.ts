@@ -6,12 +6,14 @@
  *   - Two unpriced plans granting 48 and 24 give 24, not 72 (PRD case 1).
  *   - Equal values (100 + 100) give 100, not 200 (PRD case 2).
  *   - A plan without the feature is left out, never counting as 0 (PRD case 9).
+ *   - The pool's contributions list both 48 and 24 as competing, first.
  *   - A lower plan granted for a while wins, and its removal restores the
  *     previous winner (the "Grant for free" trial).
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type {
+	ApiPooledBalanceContributionV0,
 	AttachParamsV1Input,
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
@@ -22,6 +24,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { getPooledBalanceDbState } from "../utils/getPooledBalanceDbState.js";
 
 const hoursItem = (hours: number) =>
 	constructFeatureItem({
@@ -54,7 +57,7 @@ test.concurrent(
 			items: [hoursItem(12)],
 		});
 
-		const { autumnV2_3 } = await initScenario({
+		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ testClock: false }),
@@ -83,6 +86,31 @@ test.concurrent(
 			granted: 24,
 			remaining: 24,
 		});
+
+		const { contributions } = await getPooledBalanceDbState({
+			db: ctx.db,
+			customerId,
+		});
+		const { list } = (await autumnV2_3.post(
+			"/pooled_balances.list_contributions",
+			{
+				pooled_balance_id: contributions[0].pooled_balance_id,
+				offset: 0,
+				limit: 10,
+			},
+		)) as { list: ApiPooledBalanceContributionV0[] };
+		expect(
+			list.map(({ current_contribution, competes, unlimited }) => ({
+				current_contribution,
+				competes,
+				unlimited,
+			})),
+		).toEqual(
+			expect.arrayContaining([
+				{ current_contribution: 48, competes: true, unlimited: false },
+				{ current_contribution: 24, competes: true, unlimited: false },
+			]),
+		);
 
 		// ── A plan without the feature changes nothing ─────────────────────
 		await autumnV2_3.billing.attach<AttachParamsV1Input>({
