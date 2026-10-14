@@ -89,7 +89,8 @@ export const startReadinessProber = ({
 			if (state === null) noteUnready(peer);
 			return;
 		}
-		if (state === "leaving" && boot === ctx.membership.bootOf(peer)) return;
+		if (state === "leaving" && ctx.membership.isBootOf({ address: peer, boot }))
+			return;
 		ctx.membership.markReady({ address: peer, boot });
 		unreadySince.delete(peer);
 	}
@@ -97,7 +98,8 @@ export const startReadinessProber = ({
 	/** Dropped by the name and answering from no boot this replica knows: gone, so its row is cleared. */
 	async function forgetGone(peer: string): Promise<void> {
 		const boot = await readyBootOf({ ctx, peer });
-		if (boot !== null && boot === ctx.membership.bootOf(peer)) return;
+		if (boot !== null && ctx.membership.isBootOf({ address: peer, boot }))
+			return;
 		seen.delete(peer);
 		ctx.membership.forget(peer);
 	}
