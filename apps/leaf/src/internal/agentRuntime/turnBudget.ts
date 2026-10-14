@@ -24,11 +24,6 @@ export const TURN_SETTLE_BUDGET_MS = TURN_WALL_MS - SETTLE_GRACE_MS;
  * The only budget that outranks a working child. */
 export const MAX_TURN_DURATION_MS = TURN_WALL_MS * CEILING_WALLS_PER_TURN;
 
-/** The caller's hard kill: the ceiling plus enough grace that leaf settles the
- * turn itself rather than being cut off mid-settle. */
-export const TURN_BACKSTOP_MS =
-	MAX_TURN_DURATION_MS + SETTLE_GRACE_MS + BACKSTOP_GRACE_MS;
-
 /** The one answer to "how long may a stream be quiet before leaf acts": a
  * parent quiet this long with no live child has nothing left to wait for. */
 export const MAX_QUIET_MS = TURN_SETTLE_BUDGET_MS;
@@ -69,3 +64,8 @@ export const MAX_IDLE_RETRIES = 20;
 
 export const turnDeadlineFrom = ({ startedAt }: { startedAt: number }) =>
 	startedAt + TURN_SETTLE_BUDGET_MS;
+
+/** The caller's hard kill: the ceiling plus one idle window and enough grace
+ * that leaf settles the turn itself rather than being cut off mid-settle. */
+export const TURN_BACKSTOP_MS =
+	MAX_TURN_DURATION_MS + STREAM_IDLE_TIMEOUT_MS + BACKSTOP_GRACE_MS;

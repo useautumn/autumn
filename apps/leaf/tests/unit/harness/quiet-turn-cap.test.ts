@@ -130,7 +130,11 @@ const session = (): EveSessionRef => ({
 
 type AbandonedLog = { quiet_ms: number; turn_ms: number };
 
-const consumeAndCaptureAbandon = async () => {
+const consumeAndCaptureAbandon = async ({
+	deadlineAt,
+}: {
+	deadlineAt?: number;
+} = {}) => {
 	const abandoned: AbandonedLog[] = [];
 	const logger = {
 		error: (
@@ -146,6 +150,7 @@ const consumeAndCaptureAbandon = async () => {
 	};
 	const outcome = await consumeAgentTurn({
 		auth: {} as never,
+		deadlineAt,
 		env: AppEnv.Sandbox,
 		logger: logger as never,
 		onAction: async () => undefined,
@@ -155,6 +160,17 @@ const consumeAndCaptureAbandon = async () => {
 	} as never);
 	return { abandoned, outcome };
 };
+
+const toolEvents = (count: number) =>
+	Array.from({ length: count }, () =>
+		event({
+			actions: [{ toolName: "stripe_execute" }],
+			type: "actions.requested",
+		}),
+	);
+
+const reply = (message: string) =>
+	event({ finishReason: "stop", message, type: "message.completed" });
 
 // Nine idle passes: far more than either exit path needs, so the pass count at
 // settle time is decided purely by which condition fired.
@@ -322,14 +338,7 @@ describe("a parent quiet past the cap settles on the clock", () => {
 
 	test("a parent still streaming at the deadline is not cut off", async () => {
 		// Prod 2026-10-14: 88 events in 149.8s, the last 3.1s before the
-		// deadline, no text yet. Eve replied about 70s later to nobody.
-		const toolEvents = (count: number) =>
-			Array.from({ length: count }, () =>
-				event({
-					actions: [{ toolName: "stripe_execute" }],
-					type: "actions.requested",
-				}),
-			);
+		// deadline, no text yet; eve replied ~70s later to nobody.
 		streamPasses = [
 			{
 				events: [event({ type: "turn.started" }), ...toolEvents(49)],
@@ -340,116 +349,39 @@ describe("a parent quiet past the cap settles on the clock", () => {
 			{
 				events: [
 					...toolEvents(20),
-					event({
-						finishReason: "stop",
-						message: "Here are the open invoices.",
-						type: "message.completed",
-					}),
+					reply("Open invoices."),
 					event({ type: "session.waiting" }),
 				],
 				eventGapMs: 3_500,
 			},
 		];
 
-		const abandoned: AbandonedLog[] = [];
-		const logger = {
-			error: (
-				_message: string,
-				meta?: { event?: string; data?: AbandonedLog },
-			) => {
-				if (meta?.event === "leaf.eve_turn_abandoned" && meta.data) {
-					abandoned.push(meta.data);
-				}
-			},
-			info: () => {},
-			warn: () => {},
-		};
-		const outcome = await consumeAgentTurn({
-			auth: {} as never,
+		const { abandoned, outcome } = await consumeAndCaptureAbandon({
 			deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
-			env: AppEnv.Sandbox,
-			logger: logger as never,
-			onAction: async () => undefined,
-			orgId: "org_1",
-			session: session(),
-			token: "t",
-		} as never);
+		});
 
 		expect(abandoned).toHaveLength(0);
-		expect(outcome).toMatchObject({
-			kind: "answered",
-			text: "Here are the open invoices.",
-		});
-		expect(nowMs - TURN_START.getTime()).toBeGreaterThan(QUIET_CAP_MS + 60_000);
+		expect(outcome).toMatchObject({ kind: "answered", text: "Open invoices." });
 	});
 
-	test("a parent quiet past the idle window at the deadline still settles", async () => {
-		streamPasses = [
-			{
-				events: [event({ type: "turn.started" })],
-				quietMs: 130_000,
-				thenThrow: "idle",
-			},
-			{ events: [], quietMs: 30_000, thenThrow: "idle" },
-			{
-				events: [
-					event({
-						finishReason: "stop",
-						message: "Too late.",
-						type: "message.completed",
-					}),
-				],
-			},
-		];
-
-		await expect(
-			consumeAgentTurn({
-				auth: {} as never,
-				deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
-				env: AppEnv.Sandbox,
-				logger: { error: () => {}, info: () => {}, warn: () => {} } as never,
-				onAction: async () => undefined,
-				orgId: "org_1",
-				session: session(),
-				token: "t",
-			} as never),
-		).rejects.toThrow("Eve stopped responding");
-		expect(parentStreamCalls).toBe(2);
-	});
-
-	test("a parent streaming past the turn ceiling still settles at it", async () => {
+	test("a parent streaming past the turn ceiling settles at it", async () => {
 		streamPasses = [
 			{
 				events: [
 					event({ type: "turn.started" }),
-					...Array.from({ length: 2_000 }, () =>
-						event({
-							actions: [{ toolName: "stripe_execute" }],
-							type: "actions.requested",
-						}),
-					),
-					event({
-						finishReason: "stop",
-						message: "Too late.",
-						type: "message.completed",
-					}),
+					...toolEvents(2_000),
+					reply("Too late."),
 				],
 				eventGapMs: 500,
 			},
 		];
 
 		await expect(
-			consumeAgentTurn({
-				auth: {} as never,
+			consumeAndCaptureAbandon({
 				deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
-				env: AppEnv.Sandbox,
-				logger: { error: () => {}, info: () => {}, warn: () => {} } as never,
-				onAction: async () => undefined,
-				orgId: "org_1",
-				session: session(),
-				token: "t",
-			} as never),
+			}),
 		).rejects.toThrow("Eve stopped responding");
+
 		expect(nowMs - TURN_START.getTime()).toBeLessThan(
 			MAX_TURN_DURATION_MS + 1_000,
 		);

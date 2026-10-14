@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { type AppEnv, ms } from "@autumn/shared";
+import { differenceInMilliseconds, isPast } from "date-fns";
 import { AGENT_UNREACHABLE_MESSAGE } from "../../../../../ui/messages.js";
 import type { ActiveRun } from "../../../../runs/runRegistry.js";
 import {
@@ -37,7 +38,12 @@ const PERSIST_CURSOR_EVERY_EVENTS = 10;
  * through reopens; the loop settles on its next check either way. */
 const MIN_IDLE_WINDOW_MS = ms.seconds(1);
 
-/** No window outlives the turn ceiling, which the caller's backstop is sized from. */
+/** A quiet window must end by the time the turn may settle. A full window
+ * opened near the deadline outlives the caller's backstop, which then kills
+ * the run with a timeout warning instead of letting it settle on its own.
+ * Read again at every arm, since each event restarts the window. The deadline
+ * always lands before the quiet cap, because activity starts after it is set.
+ * A working child keeps the full window: the deadline does not settle it. */
 const idleWindowFor = ({
 	activity,
 	deadlineAt,
@@ -45,16 +51,19 @@ const idleWindowFor = ({
 	activity: TurnActivity;
 	deadlineAt?: number;
 }) => {
-	const untilDeadline =
-		deadlineAt !== undefined &&
-		activity.activeChildren() === 0 &&
-		Date.now() < deadlineAt
-			? deadlineAt - Date.now()
-			: STREAM_IDLE_TIMEOUT_MS;
-	const untilCeiling = MAX_TURN_DURATION_MS - activity.msSinceStart();
+	if (
+		deadlineAt === undefined ||
+		activity.activeChildren() > 0 ||
+		isPast(deadlineAt)
+	) {
+		return STREAM_IDLE_TIMEOUT_MS;
+	}
 	return Math.max(
 		MIN_IDLE_WINDOW_MS,
-		Math.min(STREAM_IDLE_TIMEOUT_MS, untilDeadline, untilCeiling),
+		Math.min(
+			STREAM_IDLE_TIMEOUT_MS,
+			differenceInMilliseconds(deadlineAt, Date.now()),
+		),
 	);
 };
 
@@ -371,13 +380,12 @@ export const consumeAgentTurn = async ({
 
 			// A quiet parent is not a done turn — children stream on their own
 			// sessions; MAX_TURN_DURATION_MS still bounds a runaway turn.
-			const parentIsStreaming =
-				turn.progress.turnStarted &&
-				activity.msSinceActivity() < STREAM_IDLE_TIMEOUT_MS;
-			const turnIsWorking = activity.activeChildren() > 0 || parentIsStreaming;
+			const turnIsWorking =
+				activity.activeChildren() > 0 ||
+				(turn.progress.turnStarted &&
+					activity.msSinceActivity() < STREAM_IDLE_TIMEOUT_MS);
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
-			const deadlineReached =
-				deadlineAt !== undefined && Date.now() >= deadlineAt;
+			const deadlineReached = deadlineAt !== undefined && isPast(deadlineAt);
 			if (
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
 				(!turnIsWorking && (quietTooLong || deadlineReached))

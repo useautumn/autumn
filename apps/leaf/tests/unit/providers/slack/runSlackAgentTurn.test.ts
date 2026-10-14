@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, jest, mock, test } from "bun:test";
+import { describe, expect, jest, mock, test } from "bun:test";
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 
 mock.module("../../../../src/lib/env.js", () => ({ env: {} }));
@@ -46,10 +46,6 @@ const { runSlackAgentTurn } = await import(
 );
 
 describe("runSlackAgentTurn", () => {
-	afterEach(() => {
-		jest.useRealTimers();
-	});
-
 	test("delivers the reply of a turn that runs past the settle budget", async () => {
 		jest.useFakeTimers();
 		const settled = runSlackAgentTurn({ text: "list open invoices" } as never);
@@ -63,6 +59,7 @@ describe("runSlackAgentTurn", () => {
 			jest.advanceTimersByTime(1_000);
 		}
 
+		jest.useRealTimers();
 		expect(await outcome).toEqual({
 			result: expect.objectContaining({
 				kind: "reply",
