@@ -475,8 +475,13 @@ const drive = async ({
 	);
 	await waitForReady(autumn.stdout);
 	const gcLog = Bun.file(gcLogPath);
+	// GC_TASKSET pins the replica (its JS thread, collector and markers alike) to these cores, as a container's quota does.
+	const pinned = process.env.GC_TASKSET
+		? ["taskset", "-c", process.env.GC_TASKSET]
+		: [];
 	const replica = Bun.spawn(
 		[
+			...pinned,
 			process.execPath,
 			"--config=./bunfig.toml",
 			import.meta.path,
@@ -595,6 +600,7 @@ const drive = async ({
 			backgroundPlans,
 			pushLagMs,
 			readsPerDeduction,
+			taskset: process.env.GC_TASKSET ?? null,
 			jscEnv: Object.fromEntries(
 				Object.entries(process.env).filter(([key]) =>
 					key.startsWith("BUN_JSC_"),
