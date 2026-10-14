@@ -3,6 +3,7 @@ import { ErrCode } from "@autumn/shared";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -53,8 +54,8 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
-	`${chalk.yellowBright("finalize-customer-id2: at 2.6 a finalize names its customer; another customer's id finds no lock")}`,
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("finalize-customer-id2: at 2.6 a finalize names its customer; another customer's id finds no worker lock")}`,
 	async () => {
 		const customerId = "finalize-customer-id2";
 		const { autumnV2_6 } = await initLocked({ customerId });
@@ -107,6 +108,26 @@ test.concurrent(
 			customerId,
 			featureId: TestFeature.Messages,
 			remaining: 2,
+		});
+	},
+);
+
+test.skipIf(isBalanceWorkerRoute())(
+	`${chalk.yellowBright("finalize-customer-id4: at 2.6 a Redis lock settles by its lock_id, whatever customer the finalize names")}`,
+	async () => {
+		const customerId = "finalize-customer-id4";
+		const { autumnV2_6 } = await initLocked({ customerId });
+
+		await autumnV2_6.balances.finalize({
+			lock_id: customerId,
+			action: "release",
+			customer_id: `${customerId}-other`,
+		});
+
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
 		});
 	},
 );
