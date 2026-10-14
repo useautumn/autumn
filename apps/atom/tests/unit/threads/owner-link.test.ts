@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { LockTermsConflictError } from "@autumn/balance-engine";
 import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { TrackRequest } from "../../../src/processor/types/track.js";
@@ -149,12 +149,12 @@ test("a track crosses to the owner with its API version, once the owner has caug
 	port2.close();
 });
 
-test("a lock_id the owner refuses as open crosses back as the API's 409, never a 500", async () => {
+test("a lock_id the owner refuses on other terms crosses back as the API's 409, never a 500", async () => {
 	const { port1, port2 } = new MessageChannel();
 	const slots = {
 		processorFor: () => ({
 			check: async () => {
-				throw new LockAlreadyExistsError({ lockId: "lock_1" });
+				throw new LockTermsConflictError({ lockId: "lock_1" });
 			},
 		}),
 	} as unknown as Slots;
@@ -176,7 +176,7 @@ test("a lock_id the owner refuses as open crosses back as the API's 409, never a
 	expect(atomErrorOf({ cause: refused as Error })).toEqual({
 		status: 409,
 		code: "lock_already_exists",
-		message: "A lock with this ID already exists",
+		message: "lock_id already used with different terms",
 	});
 
 	link.disconnect();

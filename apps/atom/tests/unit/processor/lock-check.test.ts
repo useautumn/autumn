@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import type { CheckLockParams } from "@autumn/shared";
 import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import {
 	checkRequestFor,
 	checkResponseOf,
+	forwardReasonOf,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
@@ -111,12 +111,86 @@ describe("a lock on the Atom", () => {
 		).toBe(0);
 	});
 
-	test("L10: a lock_id retried after a crash, its lock still open, is refused as the worker refuses it: 409 lock_already_exists", async () => {
+	test("D2: a lock_id retried on the terms it was taken with is the same lock: the reply a fresh lock gets, nothing deducted or journaled again", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		const request = lockCheck({ requiredBalance: 30, lock: {} });
+		const first = await checkResponseOf({ processor, request });
+
+		const retried = await checkResponseOf({
+			processor,
+			request: { ...request, requestId: "req_check_retry" },
+		});
+
+		expect(retried).toEqual(first);
+		expect(retried.allowed).toBe(true);
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+		expect(
+			(await checkResponseOf({ processor, request: checkRequestFor() })).balance
+				?.remaining,
+		).toBe(970);
+	});
+
+	test("D2: a lock_id retried on other terms is refused with the API's 409, and nothing moves", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		await checkResponseOf({
+			processor,
+			request: lockCheck({ requiredBalance: 30, lock: {} }),
+		});
+
+		const conflicts = [
+			lockCheck({ requiredBalance: 40, lock: {} }),
+			lockCheck({ requiredBalance: 30, lock: { overage_behavior: "cap" } }),
+			lockCheck({
+				requiredBalance: 30,
+				lock: { expires_at: 1_900_000_000_000 },
+			}),
+		];
+		for (const request of conflicts) {
+			const refused = await processor
+				.check({ request })
+				.catch((error: Error) => error);
+			expect(atomErrorOf({ cause: refused as Error })).toEqual({
+				status: 409,
+				code: "lock_already_exists",
+				message: "lock_id already used with different terms",
+			});
+		}
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+	});
+
+	test("D2: a lock_id Autumn holds open that this Atom holds no row for cannot be compared here, so it goes to the API", async () => {
+		const { processor, journal } = await openHolding({ balance: 1000 });
+		await processor.setSubject(
+			subjectPushOf({
+				subject: {
+					...storedSubjectWith({ balance: 970, readAt: 2000 }),
+					state: {
+						...storedSubjectWith({ balance: 970 }).state,
+						openLocks: [{ id: "lck_api", lock_id: "lock_1" }],
+					},
+				},
+			}),
+		);
+
+		expect(
+			await forwardReasonOf(() =>
+				processor.check({
+					request: lockCheck({ requiredBalance: 30, lock: {} }),
+				}),
+			),
+		).toBe("lock_not_held");
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
+	});
+
+	test("L10: a lock_id retried after a crash, its lock still owed, is still the same lock: allowed once, one hold, one entry", async () => {
 		const folder = createSlotFolder();
 		cleanups.push(folder.remove);
 		const request = lockCheck({ requiredBalance: 30, lock: {} });
 		const before = await openHolding({ balance: 1000, folder });
-		await checkResponseOf({ processor: before.processor, request });
+		const first = await checkResponseOf({
+			processor: before.processor,
+			request,
+		});
 		before.close();
 		cleanups.splice(cleanups.indexOf(before.close), 1);
 
@@ -125,17 +199,21 @@ describe("a lock on the Atom", () => {
 			journal: openJournal({ databasePath: folder.journalPath }),
 		});
 		cleanups.push(after.close);
-		const retried = await after.processor
-			.check({ request })
-			.catch((error: Error) => error);
-
-		expect(retried).toBeInstanceOf(LockAlreadyExistsError);
-		expect(atomErrorOf({ cause: retried as Error })).toEqual({
-			status: 409,
-			code: "lock_already_exists",
-			message: "A lock with this ID already exists",
+		const retried = await checkResponseOf({
+			processor: after.processor,
+			request: { ...request, requestId: "req_check_retry" },
 		});
+
+		expect(retried).toEqual(first);
 		expect(after.journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+		expect(
+			(
+				await checkResponseOf({
+					processor: after.processor,
+					request: checkRequestFor(),
+				})
+			).balance?.remaining,
+		).toBe(970);
 	});
 
 	test("a journaled lock whose lock_id Autumn already holds open moves nothing in the view, as the worker refuses it", async () => {
