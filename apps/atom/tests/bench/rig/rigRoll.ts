@@ -14,10 +14,13 @@ import {
 	customerIdsOf,
 	drawCustomerRate,
 	emptyRollCounts,
+	emptyRollLockCounts,
 	mergeRollCounts,
+	mergeRollLockCounts,
 	type OwnerClass,
 	type RollCounts,
 	type RollLoadPlan,
+	type RollLockCounts,
 	type RollRouting,
 } from "./rigShared.js";
 
@@ -83,6 +86,8 @@ const loads = Array.from({ length: config.loadProcesses }, (_, index) => {
 		customerIds: slice.map(({ id }) => id),
 		deductionsPerSec: slice.map(({ rate }) => rate),
 		readChecksPerDeduction: roll.readChecksPerDeduction,
+		lockEvery: roll.lockEvery,
+		lockFinalizeAfterMs: roll.lockFinalizeAfterMs,
 	};
 	const planPath = join(outDir, `roll-plan-${index}.json`);
 	writeFileSync(planPath, JSON.stringify(plan));
@@ -219,6 +224,7 @@ const keys = {
 	sends: {} as Record<string, Record<string, unknown>[]>,
 	firsts: new Map<string, unknown[]>(),
 };
+const locks = emptyRollLockCounts();
 const receive = (line: {
 	type: string;
 	second?: number;
@@ -228,7 +234,12 @@ const receive = (line: {
 	ambiguous?: string[];
 	sends?: Record<string, Record<string, unknown>[]>;
 	firsts?: unknown[][];
+	locks?: RollLockCounts;
 }) => {
+	if (line.type === "locks" && line.locks) {
+		mergeRollLockCounts(locks, line.locks);
+		return;
+	}
 	if (line.type === "keys") {
 		keys.allowed.push(...(line.allowed ?? []));
 		keys.ambiguous.push(...(line.ambiguous ?? []));
@@ -343,6 +354,7 @@ const summary = {
 			unexpected: unexpected.slice(0, 5),
 		},
 	},
+	locks,
 	stub: await (await fetch(`${stubUrl}/__rig/stats`)).json(),
 	replicas: {
 		a: await statusOf("a").catch((error) => ({ error: String(error) })),
@@ -351,5 +363,9 @@ const summary = {
 };
 writeFileSync(join(outDir, "summary.json"), JSON.stringify(summary, null, 2));
 log(`P1 ${JSON.stringify(summary.p1)}`);
+if (locks.taken > 0)
+	log(
+		`locks ${JSON.stringify({ ...locks, stubFinalizes: summary.stub.finalizes, stubFinalizeDupes: summary.stub.finalizeDupes })}`,
+	);
 log(`done: ${outDir}/{meta.json,roll.jsonl,health.jsonl,summary.json}`);
 process.exit(0);

@@ -47,8 +47,16 @@ const counts = {
 	/** Hand-ins at or below a writer's seq the customer already holds: Autumn's worker applies nothing for them. */
 	replays: 0,
 	forwardedDeductions: 0,
-	/** Finalizes handed in; the roll load sends none, and the stub applies none. */
+	/** Finalizes handed in; the stub applies none, it only counts each lock's settles. */
 	finalizes: 0,
+	/** Lock ids settled more than once, by hand-in or by a forwarded finalize: a double settle. */
+	finalizeDupes: 0,
+};
+const settledLocks = new Map<string, number>();
+const recordSettled = ({ lockId }: { lockId: string }) => {
+	const n = (settledLocks.get(lockId) ?? 0) + 1;
+	settledLocks.set(lockId, n);
+	if (n === 2) counts.finalizeDupes++;
 };
 /** Each deduction applied, by the key the caller's Idempotency-Key gave it; a count above 1 is a double deduction. */
 const applied = new Map<string, number>();
@@ -202,6 +210,8 @@ const appendTracks = async (request: Request) => {
 	for (const track of parsed.data.tracks) {
 		if (!("command" in track)) {
 			counts.finalizes++;
+			if ("finalize" in track)
+				recordSettled({ lockId: track.finalize.lock_id });
 			continue;
 		}
 		applyTrack({
@@ -228,7 +238,12 @@ const answerForwarded = async (request: Request, pathname: string) => {
 		feature_id?: string;
 		value?: number;
 		send_event?: boolean;
+		lock_id?: string;
 	};
+	if (pathname === "/v1/balances.finalize") {
+		if (body.lock_id) recordSettled({ lockId: body.lock_id });
+		return Response.json({ success: true });
+	}
 	const deducts = pathname === "/v1/track" || body.send_event === true;
 	if (deducts && body.customer_id && body.feature_id) {
 		applyForwardedDeduction({

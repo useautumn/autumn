@@ -200,6 +200,37 @@ export type RollLoadPlan = {
 	customerIds: string[];
 	deductionsPerSec: number[];
 	readChecksPerDeduction: number;
+	lockEvery: number;
+	lockFinalizeAfterMs: number;
+};
+
+/** The locked checks a load process sent and how each finalize ended; summed by the driver. */
+export type RollLockCounts = {
+	taken: number;
+	takeFailed: Record<string, number>;
+	finalized: number;
+	finalizeForwarded: Record<string, number>;
+	finalizeFailed: Record<string, number>;
+};
+
+export const emptyRollLockCounts = (): RollLockCounts => ({
+	taken: 0,
+	takeFailed: {},
+	finalized: 0,
+	finalizeForwarded: {},
+	finalizeFailed: {},
+});
+
+export const mergeRollLockCounts = (
+	into: RollLockCounts,
+	from: RollLockCounts,
+): RollLockCounts => {
+	into.taken += from.taken;
+	into.finalized += from.finalized;
+	mergeRecord(into.takeFailed, from.takeFailed);
+	mergeRecord(into.finalizeForwarded, from.finalizeForwarded);
+	mergeRecord(into.finalizeFailed, from.finalizeFailed);
+	return into;
 };
 
 /** The driver's routing, on each load process's stdin: the replicas new requests go to, as the ALB's targets; then stop. */
