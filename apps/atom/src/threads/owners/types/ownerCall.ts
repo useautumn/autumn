@@ -10,6 +10,7 @@ import type {
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
 import type { HandedEntry } from "../../../state/journal/types/journal.js";
+import type { OpenLock } from "../../../state/openLocks/createOpenLocks.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -42,7 +43,11 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "setSubject"; customerId: string; body: string }
 	| {
 			type: "receiveHandoff";
-			handoffs: { customerId: string; entries: HandedEntry[] }[];
+			handoffs: {
+				customerId: string;
+				entries: HandedEntry[];
+				locks: OpenLock[];
+			}[];
 	  }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
