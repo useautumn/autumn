@@ -18,6 +18,12 @@ envOf() {
 	noconcurrent) echo "BUN_JSC_useConcurrentGC=false" ;;
 	incremental) echo "BUN_JSC_gcIncrementScale=1" ;;
 	shortpause) echo "BUN_JSC_minimumGCPauseMS=0.3 BUN_JSC_gcPauseScale=0.1" ;;
+	pin1) echo "GC_TASKSET=0" ;;
+	pin1-noconcurrent) echo "GC_TASKSET=0 BUN_JSC_useConcurrentGC=false" ;;
+	pin1-markers1) echo "GC_TASKSET=0 BUN_JSC_numberOfGCMarkers=1" ;;
+	pin1-growth2) echo "GC_TASKSET=0 BUN_JSC_largeHeapGrowthFactor=2" ;;
+	pin2) echo "GC_TASKSET=0,1" ;;
+	pin2-noconcurrent) echo "GC_TASKSET=0,1 BUN_JSC_useConcurrentGC=false" ;;
 	*) echo "$1" ;;
 	esac
 }
