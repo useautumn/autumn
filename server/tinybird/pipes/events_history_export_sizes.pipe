@@ -1,0 +1,49 @@
+DESCRIPTION >
+    Row-count estimates for planning events_history_export chunks, read from the customer rollups
+    (level org_env | customer | day) or the events partition counts (level months).
+
+TOKEN events_history_export_runner READ
+
+NODE endpoint
+SQL >
+    %
+    {% set use_monthly = defined(full_month) and Int8(full_month, 0) == 1 %}
+    {% if String(level, 'months') == 'months' %}
+    SELECT toString(toYYYYMM(timestamp)) AS k, '' AS k2, count() AS c
+    FROM events
+    GROUP BY k
+    ORDER BY k
+    {% elif String(level) == 'day' %}
+    SELECT toString(toDate(day)) AS k, '' AS k2, toUInt64(sumMerge(event_count)) AS c
+    FROM events_customer_daily_mv
+    WHERE day >= toStartOfDay(toDateTime({{ String(start_ts) }}))
+      AND day < toDateTime({{ String(end_ts) }})
+      AND org_id = {{ String(org_id) }}
+      AND env = {{ String(env) }}
+      AND customer_id = {{ String(customer_id) }}
+    GROUP BY k
+    ORDER BY k
+    {% else %}
+    SELECT
+        {% if String(level) == 'customer' %} customer_id AS k, '' AS k2,
+        {% else %} org_id AS k, env AS k2,
+        {% end %}
+        toUInt64(sumMerge(event_count)) AS c
+    FROM
+        {% if use_monthly %} events_customer_monthly_mv {% else %} events_customer_daily_mv {% end %}
+    WHERE
+        {% if use_monthly %}
+        month = toDateTime({{ String(start_ts) }})
+        {% else %}
+        day >= toStartOfDay(toDateTime({{ String(start_ts) }}))
+        AND day < toDateTime({{ String(end_ts) }})
+        {% end %}
+        {% if String(level) == 'customer' %}
+        AND org_id = {{ String(org_id) }}
+        AND env = {{ String(env) }}
+        {% end %}
+    GROUP BY k, k2
+    ORDER BY k, k2
+    {% end %}
+
+TYPE endpoint

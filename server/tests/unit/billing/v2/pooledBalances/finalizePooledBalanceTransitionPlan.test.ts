@@ -28,6 +28,8 @@ const currentContribution = ({
 	current_contribution: current,
 	next_cycle_contribution: next,
 	effective_at: null,
+	competes: false,
+	unlimited: false,
 	created_at: 1,
 	updated_at: 1,
 });
@@ -76,6 +78,8 @@ const transitionContext = ({
 	pooledCustomerEntitlementByPoolId: new Map(),
 	pooledCustomerEntitlementByIdentity: new Map(),
 	pooledBalanceIdsWithRemovedContributions: new Set(),
+	pooledBalanceIdsWithReplacedContributions: new Set(),
+	competingContributionsBySourceId: new Map(),
 });
 
 test("identical contribution replacement finalizes to a no-op", () => {

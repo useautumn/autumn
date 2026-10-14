@@ -3,12 +3,12 @@ import {
 	findFeatureById,
 	getFeatureName,
 	numberWithCommas,
+	PRICE_VARIES_LABEL,
 	type SetPlansPreviewPlan,
+	type SetPlansReviewValue,
 } from "@autumn/shared";
-import { PRICE_VARIES_LABEL } from "@/utils/product/basePriceDisplayUtils";
-import { formatMoney } from "./formatMoney";
+import { formatReviewMoney } from "./formatReviewMoney";
 import { priceIntervalSuffix } from "./processorItemPriceLabels";
-import type { ReviewChangeValue } from "./types/reviewChange";
 
 type PlanPrice = SetPlansPreviewPlan["prices"][number];
 
@@ -37,7 +37,7 @@ const featureUnitPrice = ({
 }: {
 	featurePrices: PlanPrice[];
 	features: Feature[];
-}): ReviewChangeValue => {
+}): SetPlansReviewValue => {
 	const [planPrice] = featurePrices;
 	const amount =
 		planPrice?.price.unit_amount ??
@@ -48,7 +48,7 @@ const featureUnitPrice = ({
 
 	const otherPricedCount = featurePrices.length - 1;
 	return {
-		amount: `${planPrice.price.tiers_mode ? "From " : ""}${formatMoney({ amount, currency: planPrice.price.currency })}`,
+		amount: `${planPrice.price.tiers_mode ? "From " : ""}${formatReviewMoney({ amount, currency: planPrice.price.currency })}`,
 		suffix: `/${unitLabel({ planPrice, features })}${otherPricedCount > 0 ? ` +${otherPricedCount}` : ""}`,
 	};
 };
@@ -59,13 +59,13 @@ export const reviewPlanPrice = ({
 }: {
 	prices: PlanPrice[];
 	features: Feature[];
-}): ReviewChangeValue => {
+}): SetPlansReviewValue => {
 	if (prices.length === 0) return { amount: "Free" };
 
 	const basePrice = prices.find((planPrice) => !planPrice.feature_id)?.price;
 	if (basePrice && basePrice.unit_amount !== null) {
 		return {
-			amount: formatMoney({
+			amount: formatReviewMoney({
 				amount: basePrice.unit_amount,
 				currency: basePrice.currency,
 			}),

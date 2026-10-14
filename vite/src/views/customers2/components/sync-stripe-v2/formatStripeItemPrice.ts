@@ -1,6 +1,9 @@
-import { formatAmount, stripeToAtmnAmount } from "@autumn/shared";
+import {
+	formatAmount,
+	intervalSuffix,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 import type Stripe from "stripe";
-import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
 
 const formatStripeCurrency = ({
 	amount,

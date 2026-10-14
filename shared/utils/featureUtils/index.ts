@@ -8,6 +8,7 @@ export { hasCreditDimensionRules } from "@utils/featureUtils/classifyFeature/has
 export { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 export { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCreditSystem";
 export * from "./apiFeatureToDbFeature";
+export * from "./classifyFeature/featureCombine";
 export * from "./classifyFeature/isInvoiceCreditFeature";
 export * from "./convertFeatureUtils";
 export * from "./creditDimensions/creditDimensionRulesEqual";

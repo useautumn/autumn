@@ -15,4 +15,5 @@ export const pooledBalanceIdentityToKey = ({
 		identity.stripeSubscriptionId,
 		identity.customerLicenseLinkId,
 		identity.rolloverSignature,
+		identity.featureOverrideSignature,
 	]);

@@ -21,7 +21,10 @@ import {
 	validateCreditSystemSchemaReferences,
 	validateMeteredConfig,
 } from "../featureUtils.js";
-import { detectFeatureUpdateBlockers } from "../utils/updateFeatureUtils/detectFeatureUpdateBlockers.js";
+import {
+	detectFeatureUpdateBlockers,
+	isBlockableFeatureChange,
+} from "../utils/updateFeatureUtils/detectFeatureUpdateBlockers.js";
 import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUsingFeature.js";
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
@@ -165,7 +168,12 @@ export const updateFeature = async ({
 		feature.config?.usage_type !== updates.config?.usage_type;
 
 	const isChangingName = updates.name && feature.name !== updates.name;
-	if (isChangingType || isChangingId || isChangingUsageType) {
+	if (
+		isChangingType ||
+		isChangingId ||
+		isChangingUsageType ||
+		isBlockableFeatureChange({ feature, updates })
+	) {
 		const objectsUsingFeature = await getObjectsUsingFeature({
 			ctx,
 			feature,

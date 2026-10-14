@@ -97,7 +97,8 @@ test.concurrent(
 						plan_id: planId,
 						name: "Stripe Mint Same V2",
 						items: [prepaidMessagesItem({ amount: 10 })],
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -146,7 +147,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						items: [usageMessagesItem({ amount: 0.9 })],
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -197,7 +199,8 @@ test.concurrent(
 							{ feature_id: TestFeature.Dashboard },
 							prepaidMessagesItem({ amount: 10 }),
 						],
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});

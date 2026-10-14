@@ -6,9 +6,11 @@ import type {
 	SetPlansPreviewPlan,
 	SetPlansPreviewResponse,
 } from "@autumn/shared";
-import { balanceChangesToReviewSection } from "@/components/forms/create-schedule/utils/review/balanceChangesToReviewSection";
-import { plansToReviewSection } from "@/components/forms/create-schedule/utils/review/plansToReviewSection";
-import { processorItemsToReviewSection } from "@/components/forms/create-schedule/utils/review/processorItemsToReviewSection";
+import {
+	renderedBalances as balanceChangesToReviewSection,
+	renderedPlans as plansToReviewSection,
+	renderedSubscription as processorItemsToReviewSection,
+} from "./renderedReviewSections";
 import { monthlyPrice, processorItem } from "./reviewFixtures";
 
 const NOW = Date.UTC(2026, 8, 25);
@@ -453,7 +455,12 @@ test("Stripe phases read as pricing tables: product, price line, qty and total",
 			rows: [
 				["Premium", "US$50.00 / month", "1", "US$50.00 / month"],
 				["Seats", "US$10.00 / month", "4", "US$40.00 / month"],
-				["AI Credits", "US$0.01 per unit / month", "—", "Varies with usage"],
+				[
+					"AI Credits",
+					"US$0.01 per unit / month",
+					undefined,
+					"Varies with usage",
+				],
 			],
 		},
 	]);

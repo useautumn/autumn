@@ -1,9 +1,10 @@
 import { formatAmount } from "@autumn/shared";
 
 const CENTS_FRACTION_DIGITS = 2;
+const REVIEW_LOCALE = "en-US";
 
 /** "$50", or "$13.33" with `showCents`; the narrow symbol keeps "US$" out of the value column. */
-export const formatMoney = ({
+export const formatReviewMoney = ({
 	amount,
 	currency,
 	showCents = false,
@@ -20,4 +21,5 @@ export const formatMoney = ({
 			maxFractionDigits: CENTS_FRACTION_DIGITS,
 		}),
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		locale: REVIEW_LOCALE,
 	});

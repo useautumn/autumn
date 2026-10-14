@@ -382,9 +382,7 @@ test.concurrent(
 						$or: [
 							{ plan_id: guarded, version: 1 },
 							{ plan_id: unguarded, version: 1 },
-						].sort((left, right) =>
-							left.plan_id.localeCompare(right.plan_id),
-						),
+						].sort((left, right) => left.plan_id.localeCompare(right.plan_id)),
 					},
 				},
 			});

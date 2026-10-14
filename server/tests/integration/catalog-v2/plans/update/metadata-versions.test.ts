@@ -55,7 +55,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: planId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						price: { amount: 30, interval: BillingInterval.Month },
 					},
 				],
@@ -99,7 +100,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: planId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						price: { amount: 30, interval: BillingInterval.Month },
 						metadata: { tier: "b" },
 					},
@@ -140,7 +142,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: planId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						price: { amount: 30, interval: BillingInterval.Month },
 					},
 				],
@@ -188,7 +191,8 @@ test.concurrent(
 				plans: [
 					{
 						plan_id: planId,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 						price: { amount: 30, interval: BillingInterval.Month },
 					},
 				],

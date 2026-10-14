@@ -1,3 +1,4 @@
+import type { SetPlansReviewSection } from "@autumn/shared";
 import {
 	MiniCopyButton,
 	Popover,
@@ -8,7 +9,8 @@ import { CaretDownIcon } from "@phosphor-icons/react";
 import type { MouseEvent } from "react";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { truncateMiddle } from "@/utils/formatUtils/formatTextUtils";
-import type { ReviewStripeId } from "../../utils/review/types/reviewChange";
+
+type ReviewStripeId = NonNullable<SetPlansReviewSection["stripe_ids"]>[number];
 
 const stopAccordionToggle = (event: MouseEvent) => event.stopPropagation();
 

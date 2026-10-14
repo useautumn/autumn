@@ -7,6 +7,7 @@ export const formatAmount = ({
 	maxFractionDigits = 10,
 	minFractionDigits = 0,
 	amountFormatOptions,
+	locale,
 }: {
 	org?: Organization;
 	currency?: string | null;
@@ -14,8 +15,9 @@ export const formatAmount = ({
 	maxFractionDigits?: number;
 	minFractionDigits?: number;
 	amountFormatOptions?: Intl.NumberFormatOptions;
+	locale?: string;
 }) => {
-	return new Intl.NumberFormat(undefined, {
+	return new Intl.NumberFormat(locale, {
 		style: "currency",
 		currency: currency || org?.default_currency || "USD",
 		minimumFractionDigits: minFractionDigits,
