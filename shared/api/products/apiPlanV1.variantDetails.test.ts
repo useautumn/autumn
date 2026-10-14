@@ -12,7 +12,12 @@ const cappedPrepaidItem = {
 	},
 };
 
-const customize = { add_items: [cappedPrepaidItem] };
+const licenseCustomize = { add_items: [cappedPrepaidItem] };
+
+const customize = {
+	add_items: [cappedPrepaidItem],
+	upsert_licenses: [{ license_plan_id: "seat", customize: licenseCustomize }],
+};
 
 const plan = {
 	id: "pro_variant",
@@ -53,7 +58,7 @@ describe("ApiPlanV1 response customize", () => {
 						version: 1,
 						included: 1,
 						prepaid_only: true,
-						customize,
+						customize: licenseCustomize,
 					},
 				],
 			}),
