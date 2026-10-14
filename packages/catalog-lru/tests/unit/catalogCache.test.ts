@@ -195,13 +195,17 @@ const createCache = ({
 	db,
 	mutableRowTtlMs = 60_000,
 	maxSizeBytes = 1_000_000,
+	idleExpiryMs = 3_600_000,
+	now,
 }: {
 	db: Pick<CatalogRowsSource, "getCatalogRows">;
 	mutableRowTtlMs?: number;
 	maxSizeBytes?: number;
+	idleExpiryMs?: number;
+	now?: () => number;
 }) =>
 	createCatalogCache({
-		ctx: { db, config: { mutableRowTtlMs, maxSizeBytes } },
+		ctx: { db, config: { mutableRowTtlMs, maxSizeBytes, idleExpiryMs }, now },
 	});
 
 describe("catalog cache", () => {
@@ -277,6 +281,7 @@ describe("catalog cache", () => {
 		cache.put({ rows });
 
 		expect(cache.size()).toBe(2);
+		expect(cache.sizeBytes()).toBe(rowBytes * 2);
 		expect(
 			cache.read({ keys: rows.map(keyOf) }).entitlements,
 		).not.toHaveProperty("ent_1");
@@ -609,5 +614,120 @@ describe("catalog cache: a read raced by an invalidation", () => {
 		});
 
 		expect(cache.read({ keys: trialKeys }).freeTrials.ft_1?.length).toBe(7);
+	});
+});
+
+describe("rows unused for the idle window are purged", () => {
+	const MINUTE = 60_000;
+	const createIdleCache = ({
+		maxSizeBytes,
+	}: {
+		maxSizeBytes?: number;
+	} = {}) => {
+		const clock = { now: 0 };
+		const cache = createCache({
+			db: createFakeDb({ rows: [] }),
+			maxSizeBytes,
+			now: () => clock.now,
+		});
+		return { cache, clock };
+	};
+
+	test("an idle row is dropped from the cache, not just hidden", () => {
+		const { cache, clock } = createIdleCache();
+		const idle = featureRow({ internalId: "feat_idle" });
+		const fresh = featureRow({ internalId: "feat_fresh" });
+		cache.put({ rows: [idle] });
+
+		clock.now = 61 * MINUTE;
+		cache.put({ rows: [fresh] });
+
+		expect(cache.size()).toBe(1);
+		expect(cache.sizeBytes()).toBe(JSON.stringify(fresh).length);
+		expect(
+			cache.read({ keys: [keyOf(idle)], allowStale: true }).features,
+		).toEqual({});
+	});
+
+	test("a row that keeps being read survives well past the window", () => {
+		const { cache, clock } = createIdleCache();
+		const hot = featureRow({ internalId: "feat_hot" });
+		const cold = featureRow({ internalId: "feat_cold" });
+		cache.put({ rows: [hot, cold] });
+
+		for (let minute = 10; minute <= 180; minute += 10) {
+			clock.now = minute * MINUTE;
+			cache.read({ keys: [keyOf(hot)], allowStale: true });
+		}
+
+		const catalog = cache.read({
+			keys: [hot, cold].map(keyOf),
+			allowStale: true,
+		});
+		expect(Object.keys(catalog.features)).toEqual(["feat_hot"]);
+		expect(cache.size()).toBe(1);
+	});
+
+	test("entitlements, which never go stale, still expire when idle", () => {
+		const { cache, clock } = createIdleCache();
+		const ent = entitlementRow({ id: "ent_idle" });
+		cache.put({ rows: [ent] });
+
+		clock.now = 59 * MINUTE;
+		cache.put({ rows: [entitlementRow({ id: "ent_other" })] });
+		expect(cache.size()).toBe(2);
+
+		clock.now = 66 * MINUTE;
+		cache.put({ rows: [entitlementRow({ id: "ent_other" })] });
+		expect(cache.size()).toBe(1);
+		expect(cache.read({ keys: [keyOf(ent)] }).entitlements).toEqual({});
+	});
+
+	test("the size cap still bounds rows that are all in use", () => {
+		const rows = ["ent_1", "ent_2", "ent_3", "ent_4"].map((id) =>
+			entitlementRow({ id }),
+		);
+		const rowBytes = JSON.stringify(rows[0]).length;
+		const { cache } = createIdleCache({ maxSizeBytes: rowBytes * 2 });
+		cache.put({ rows });
+		cache.read({ keys: rows.map(keyOf) });
+
+		expect(cache.size()).toBe(2);
+		expect(cache.sizeBytes()).toBeLessThanOrEqual(rowBytes * 2);
+	});
+
+	test("a row ensured for a decision survives the sweep its own read triggers", async () => {
+		const db = createFakeDb({ rows: [] });
+		db.release();
+		const clock = { now: 0 };
+		const cache = createCache({ db, now: () => clock.now });
+		const ent = entitlementRow({ id: "ent_in_use" });
+		const bystander = entitlementRow({ id: "ent_bystander" });
+		cache.put({ rows: [ent, bystander] });
+
+		// Both rows are hours idle; the read that ensure does is the first call since.
+		clock.now = 180 * MINUTE;
+		await ensureCatalogForKeys({
+			catalogCache: cache,
+			identity,
+			keys: [keyOf(ent)],
+		});
+		expect(db.calls).toHaveLength(0);
+		expect(cache.size()).toBe(1);
+
+		clock.now += 59 * MINUTE;
+		cache.put({ rows: [entitlementRow({ id: "ent_other_customer" })] });
+		const decision = cache.read({ keys: [keyOf(ent)], allowStale: true });
+		expect(Object.keys(decision.entitlements)).toEqual(["ent_in_use"]);
+	});
+
+	test("refuses an idle window no longer than the freshness ttl", () => {
+		expect(() =>
+			createCache({
+				db: createFakeDb({ rows: [] }),
+				mutableRowTtlMs: 60_000,
+				idleExpiryMs: 60_000,
+			}),
+		).toThrow(RangeError);
 	});
 });

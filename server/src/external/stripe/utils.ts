@@ -24,7 +24,6 @@ const calculateMetered1Price = ({
 	let usage = numEvents - allowance;
 
 	let totalPrice = 0;
-	// console.log("Usage: ", usage);
 
 	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
 		const tier = usageConfig.usage_tiers[i];
@@ -65,25 +64,6 @@ export const subToAutumnInterval = (sub: Stripe.Subscription) => {
 	};
 };
 
-// export const stripeToAutumnInterval = ({
-//   interval,
-//   intervalCount,
-// }: {
-//   interval: string;
-//   intervalCount: number;
-// }) => {
-//   if (interval === "month" && intervalCount === 1) {
-//     return BillingInterval.Month;
-//   }
-
-//   // if (interval === "month" && intervalCount === 3) {
-//   //   return BillingInterval.Quarter;
-//   // }
-
-//   // if (interval === "month" && intervalCount === 6) {
-//   //   return BillingInterval.SemiAnnual;
-//   // }
-
 //   if (
 //     (interval === "month" && intervalCount === 12) ||
 //     (interval === "year" && intervalCount === 1)
@@ -96,8 +76,4 @@ const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
 		interval: item.price.recurring?.interval as BillingInterval,
 		intervalCount: item.price.recurring?.interval_count || 1,
 	};
-	// return stripeToAutumnInterval({
-	//   interval: item.price.recurring?.interval!,
-	//   intervalCount: item.price.recurring?.interval_count!,
-	// });
 };

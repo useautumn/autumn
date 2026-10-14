@@ -7,6 +7,7 @@ import { PlanTimingSchema } from "../../../models/billingModels/context/attachBi
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem";
+import { InvoiceLineEditsParamsShape } from "../common/invoiceLineEdits";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { RemoveDiscountsSchema } from "../updateSubscription/removeDiscount";
@@ -58,8 +59,9 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
 	}),
 
+	...InvoiceLineEditsParamsShape,
+
 	processor_subscription_id: z.string().optional().meta({
-		// internal: true,
 		description:
 			"The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.",
 	}),

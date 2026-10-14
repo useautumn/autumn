@@ -120,7 +120,6 @@ async function runListMode(
 		limit,
 	});
 
-	// Output the list
 	outputEventList(
 		response.list,
 		{
@@ -215,7 +214,6 @@ async function runAggregateMode(
 		groupBy,
 	});
 
-	// Output aggregate data
 	outputAggregateData(
 		response.list,
 		response.total,

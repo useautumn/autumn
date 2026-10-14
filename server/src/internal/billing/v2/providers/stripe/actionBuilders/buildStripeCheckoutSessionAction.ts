@@ -3,7 +3,12 @@ import type {
 	BillingContext,
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
-import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
+import {
+	atmnToStripeAmount,
+	billingContextToCurrency,
+	msToSeconds,
+	orgToReturnUrl,
+} from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -11,6 +16,7 @@ import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 import { buildStripeNewSubscriptionAnchorParams } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeNewSubscriptionAnchorParams";
+import { isCustomLineItem } from "@/internal/billing/v2/utils/lineItems/isCustomLineItem";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -50,11 +56,32 @@ export const buildStripeCheckoutSessionAction = ({
 	): Stripe.Checkout.SessionCreateParams.LineItem =>
 		taxRateId ? { ...item, tax_rates: [taxRateId] } : item;
 
+	const currency = billingContextToCurrency({ org, billingContext });
+	const addedLineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = (
+		autumnBillingPlan.lineItems ?? []
+	)
+		.filter(
+			(lineItem) =>
+				isCustomLineItem(lineItem) &&
+				lineItem.chargeImmediately &&
+				lineItem.amount !== 0,
+		)
+		.map((lineItem) => ({
+			price_data: {
+				currency,
+				product_data: { name: lineItem.description },
+				// Checkout applies the session's discounts itself.
+				unit_amount: atmnToStripeAmount({ amount: lineItem.amount, currency }),
+			},
+			quantity: 1,
+		}));
+
 	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
 		...recurringLineItems.filter((item) => item.quantity !== 0),
-		...oneOffLineItems
-			.filter((item) => item.quantity !== 0)
-			.map(applyTaxRateToLineItem),
+		...[
+			...oneOffLineItems.filter((item) => item.quantity !== 0),
+			...addedLineItems,
+		].map(applyTaxRateToLineItem),
 	];
 
 	// A recreate keeps the old subscription's manual tax rates unless the request sets one.

@@ -1,7 +1,11 @@
 "use client";
 
 import type { Event } from "@autumn/shared";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@autumn/ui";
+import {
+	ChartContainer,
+	ChartTooltip,
+	ChartTooltipContent,
+} from "@autumn/ui/components/ui/chart";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -32,8 +36,6 @@ export function CustomerUsageAnalyticsChart({
 	const isSheetOpen = useIsSheetOpen();
 
 	function formatYAxisTick(value: number): string {
-		// if (value === 0) return "";
-
 		const absValue = Math.abs(value);
 
 		if (absValue >= 1_000_000_000) {
@@ -144,7 +146,6 @@ export function CustomerUsageAnalyticsChart({
 						tickMargin={4}
 						axisLine={false}
 						strokeWidth={1}
-						// interval={3}
 						interval="equidistantPreserveStart"
 						stroke="#f7f7f7"
 						tick={{ fontSize: 11, fill: "#666" }}
@@ -176,12 +177,6 @@ export function CustomerUsageAnalyticsChart({
 							barSize={20}
 							fill={`var(--color-${eventName})`}
 							isAnimationActive={!isSheetOpen}
-							// animationDuration={300}
-							// animationEasing="ease-out"
-							// animationBegin={1}
-							// radius={
-							// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-							// }
 						/>
 					))}
 				</BarChart>

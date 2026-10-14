@@ -1,4 +1,3 @@
-// import { endpoint } from "@/utils/constants/constants";
 import { AppEnv, type ApiVersion } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
@@ -39,7 +38,6 @@ export function useAxiosInstance(params?: {
 				if (!config.headers["x-api-version"]) {
 					config.headers["x-api-version"] = version;
 				}
-				// config.headers["Autumn-Version"] = "0.2.0";
 				config.headers["x-client-type"] = "dashboard";
 
 				return config;

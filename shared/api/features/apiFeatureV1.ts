@@ -3,7 +3,10 @@ import {
 	ModelMarkupsSchema,
 	ProviderMarkupsSchema,
 } from "../../models/featureModels/featureConfig/creditConfig";
-import { FeatureType } from "../../models/featureModels/featureEnums";
+import {
+	FeatureCombine,
+	FeatureType,
+} from "../../models/featureModels/featureEnums";
 import { ApiFeatureProcessorsSchema } from "./components/processors.js";
 import { ApiCreditSchemaResponseItemSchema } from "./creditRateCard.js";
 
@@ -28,6 +31,11 @@ export const ApiFeatureV1Schema = z.object({
 	consumable: z.boolean().meta({
 		description:
 			"For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).",
+	}),
+
+	combine: z.enum(FeatureCombine).optional().meta({
+		description:
+			"How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.",
 	}),
 
 	event_names: z.array(z.string()).optional().meta({

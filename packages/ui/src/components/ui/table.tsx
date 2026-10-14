@@ -13,7 +13,6 @@ function Table({
 		>
 			<table
 				data-slot="table"
-				// className="w-full caption-bottom text-sm table-fixed"
 				className={cn(
 					"w-full caption-bottom text-sm",
 					flexibleTableColumns ? "" : "table-fixed",
@@ -28,7 +27,6 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
 	return (
 		<thead
 			data-slot="table-header"
-			// className={cn("[&_tr]:border-b", className)}
 			className={cn("[&:hover_tr]:!bg-transparent", className)}
 			{...props}
 		/>

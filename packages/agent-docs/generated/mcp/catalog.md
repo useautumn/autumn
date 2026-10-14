@@ -736,7 +736,7 @@ Billing controls follow the same rule: `·` lines under the item they guard, in 
 - A prepaid quantity **includes** the included amount, and so does each tier's `to` — the first tier's `to` must exceed `included`.
 - `billingUnits` rounds usage **up** when billing.
 - Set explicitly, never lean on defaults: `billingMethod` and `interval` on every item price, `tierBehavior` on tiered prices, and every trial field (`durationLength`, `durationType`, `cardRequired`, `onEnd`). Explicit defaults cause no spurious diffs.
-- Volume tiers charge the flat amount of the reached tier and are prepaid-only; graduated (the default) sums across brackets.
+- Volume tiers on usage-based items bill only usage past the included amount, at the rate of the tier total usage reaches, plus its flat fee. On prepaid items they charge every unit (included ones too) at the reached tier's rate and flat amount. Graduated (the default) sums across brackets. Volume can't be combined with threshold billing, and allocated volume can't have a tier-1 flat amount.
 - Rollover needs a resetting allowance; `max` and `maxPercentage` are mutually exclusive; `expiryDurationType` is required.
 - `billingControls` is a plain object on the plan with camelCase fields like the rest of the config (`featureId`, `overageLimit`); each control list replaces wholesale on update.
 - Plan `config` (`ignorePastDue`, `anchorToMonthStart`) is unmanaged when omitted. Once stated it is the whole set: a flag left out is off, so `config: {}` turns every flag off.
@@ -1267,7 +1267,9 @@ Autumn:
 2. Finds the tier the total falls into
 3. Charges the flat amount for that tier
 
-Volume tiers are prepaid-only.
+Volume tiers work on prepaid and usage-based (pay-per-use or allocated) items. On usage-based items, volume bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat fee; at or below the included amount nothing is charged. On prepaid items, every unit (the included ones too) is charged at the rate of the tier the total lands in, plus its flat amount. Allocated items can't have a flat amount on the first tier. A plan with volume-priced allocated seats can't yet be attached to more than one entity on the same customer, because their seats would share one Stripe price.
+
+Volume tiers can't be combined with threshold billing.
 
 | Total volume | Matching tier | Charge |
 |-------------|---------------|--------|

@@ -32,6 +32,16 @@ await mockModuleWithRestore("@/external/redis/initRedisV2.js", () => ({
 await mockModuleWithRestore("@/external/logtail/logtailUtils.js", () => ({
 	logger: fakeLogger,
 }));
+const routingStartup = { settled: false };
+await mockModuleWithRestore(
+	"@/external/balanceWorker/balanceWorkerRoutingStartup.js",
+	() => ({
+		hasBalanceWorkerRoutingSettled: () => routingStartup.settled,
+		markBalanceWorkerRoutingSettled: () => {
+			routingStartup.settled = true;
+		},
+	}),
+);
 
 // Cache-busting query: the plain specifier may already be evaluated (initHono
 // imports it), and its module-level startup latch would then carry whatever
@@ -69,8 +79,15 @@ describe("handleHealthCheck startup gate", () => {
 		expect(res.status).toBe(503);
 	});
 
-	test("returns 200 once both Redis clients become ready", async () => {
+	test("returns 503 while worker routing has not caught up, even with both Redis clients ready", async () => {
 		fakeRedisV2.setReady();
+		const res = await callHealthCheck();
+		expect(res.status).toBe(503);
+		expect(res.body).toBe("Worker routing not ready");
+	});
+
+	test("returns 200 once worker routing has caught up", async () => {
+		routingStartup.settled = true;
 		const res = await callHealthCheck();
 		expect(res.status).toBe(200);
 		expect(res.body).toContain("Autumn");

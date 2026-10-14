@@ -9,6 +9,7 @@ import type {
 	PartitionRuntimeFactory,
 	PartitionsConfig,
 	PartitionsDependencies,
+	PartitionUnavailableListener,
 } from "../../../src/partitions/types/partitions.js";
 import {
 	OwnedPartitionRecoveryRequiredError,
@@ -131,6 +132,8 @@ type WorkerOptions = {
 	prepareGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
+	/** Holds the fence a worker writes after claiming for itself. */
+	fenceGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
@@ -148,6 +151,7 @@ const createWorker = ({
 	prepareGate,
 	prepareFailures,
 	activateGate,
+	fenceGate,
 	awaitReadyAnnouncement,
 	acquirePreparation,
 	deaf = false,
@@ -158,9 +162,16 @@ const createWorker = ({
 	const endpoint = `http://${name}`;
 	let listeners: PartitionChangeListeners;
 	const statuses = new Map<number, () => PartitionRuntimeStatus>();
+	const failures = new Map<number, () => void>();
 	const createRuntime: PartitionRuntimeFactory = ({ partition }) => {
 		let status: PartitionRuntimeStatus = "created";
 		statuses.set(partition, () => status);
+		const unavailableListeners = new Set<PartitionUnavailableListener>();
+		failures.set(partition, () => {
+			status = "recovery_required";
+			for (const listener of unavailableListeners)
+				listener({ cause: new Error("runtime failed") });
+		});
 		const record = (event: string) =>
 			events.push(`${name}:${event}:${partition}`);
 		const getHealth = () =>
@@ -191,6 +202,10 @@ const createWorker = ({
 				await activateGate;
 				status = "ready";
 			},
+			fence: async () => {
+				record("fence");
+				await fenceGate;
+			},
 			drain: async () => {
 				record("withdraw");
 				status = "draining";
@@ -203,7 +218,12 @@ const createWorker = ({
 			},
 			waitForQuiescence: async () => undefined,
 			getHealth,
-			subscribeUnavailable: () => () => undefined,
+			subscribeUnavailable: (listener: PartitionUnavailableListener) => {
+				unavailableListeners.add(listener);
+				return () => {
+					unavailableListeners.delete(listener);
+				};
+			},
 			process: async () => {
 				throw new Error("No command fixture");
 			},
@@ -306,6 +326,7 @@ const createWorker = ({
 							? { routeEpoch: event.routeEpoch }
 							: undefined,
 				}),
+			awaitRouteClaim: (params) => publication.awaitClaim(params),
 		};
 		return { runtime, publication, markUnavailable: () => undefined };
 	};
@@ -374,6 +395,7 @@ const createWorker = ({
 		revoke: () => listeners.onRevoked({ causeForPartition }),
 		has: (event: string) => events.includes(`${name}:${event}`),
 		index: (event: string) => events.indexOf(`${name}:${event}`),
+		fail: (partition: number) => failures.get(partition)?.(),
 	};
 };
 
@@ -389,6 +411,24 @@ const ownAlone = async (
 	await waitFor(() =>
 		partitions.every((partition) => worker.status(partition) === "ready"),
 	);
+};
+
+/** The route servers hold: the newest `claimed` for the partition (ownershipReplay applies claims in offset order). */
+const latestClaim = ({
+	log,
+	partition,
+}: {
+	log: ReturnType<typeof createOwnershipLog>;
+	partition: number;
+}) => {
+	let newest: { endpoint: string; routeEpoch: string } | undefined;
+	for (const event of log.records) {
+		if (event.type !== "claimed" || event.partition !== partition) continue;
+		if (newest && BigInt(event.routeEpoch) <= BigInt(newest.routeEpoch))
+			continue;
+		newest = { endpoint: event.endpoint, routeEpoch: event.routeEpoch };
+	}
+	return newest;
 };
 
 const preparesOf = (worker: ReturnType<typeof createWorker>) =>
@@ -633,7 +673,7 @@ describe("partition handoff", () => {
 		}
 	});
 
-	test("a preparation that never becomes ready still ends in a release at the drain cap", async () => {
+	test("a preparation that never becomes ready keeps the predecessor serving past the drain cap", async () => {
 		const log = createOwnershipLog();
 		const prepare = deferred();
 		const A = createWorker({
@@ -648,9 +688,17 @@ describe("partition handoff", () => {
 			await B.ownership.start();
 			B.assign([2]);
 			await waitFor(() => B.has("preparing:2"));
-			await waitFor(() => A.has("release:2"), 400);
-			expect(A.index("withdraw:2")).toBeLessThan(A.index("release:2"));
+			await Bun.sleep(150);
+			expect(A.has("withdraw:2")).toBe(false);
+			expect(A.has("release:2")).toBe(false);
+			expect(A.status(2)).toBe("ready");
+
+			prepare.resolve();
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(A.has("release:2")).toBe(false);
 			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
 		} finally {
 			prepare.resolve();
 			await A.ownership.stop();
@@ -658,7 +706,64 @@ describe("partition handoff", () => {
 		}
 	});
 
-	test("no ready in time: the predecessor withdraws, drains and releases as before", async () => {
+	test("no successor in time: the predecessor keeps serving until one is ready", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+		});
+		const B = createWorker({ name: "B", log });
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await Bun.sleep(100);
+			expect(A.has("withdraw:2")).toBe(false);
+			expect(A.has("release:2")).toBe(false);
+			expect(A.status(2)).toBe("ready");
+			expect(
+				A.ownership.findRuntime({ partition: 2, routeEpoch: "101" }),
+			).toBeDefined();
+
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("drained:2"));
+			expect(A.index("drained:2")).toBeLessThan(A.index("claim:B:2"));
+			expect(A.has("release:2")).toBe(false);
+			expect(A.errors).toEqual([]);
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a partition whose runtime fails while it waits for a successor is withdrawn and released at once", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 60_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await settle();
+			expect(A.has("withdraw:2")).toBe(false);
+			A.fail(2);
+			await waitFor(() => A.has("release:2"));
+			expect(A.index("withdraw:2")).toBeLessThan(A.index("release:2"));
+			expect(
+				A.ownership.findRuntime({ partition: 2, routeEpoch: "101" }),
+			).toBeUndefined();
+			await waitFor(() => A.has("stop:2"));
+		} finally {
+			await A.ownership.stop();
+		}
+	});
+
+	test("a stopping worker with no successor still releases at the ready timeout", async () => {
 		const log = createOwnershipLog();
 		const A = createWorker({
 			name: "A",
@@ -668,18 +773,12 @@ describe("partition handoff", () => {
 		try {
 			await ownAlone(A, [2]);
 			A.revoke();
-			await settle();
-			expect(A.status(2)).toBe("ready");
-			expect(
-				A.ownership.findRuntime({ partition: 2, routeEpoch: "101" }),
-			).toBeDefined();
-			await waitFor(() => A.has("release:2"));
+			await Bun.sleep(60);
+			expect(A.has("release:2")).toBe(false);
+			await A.ownership.stop();
 			expect(A.index("withdraw:2")).toBeLessThan(A.index("drained:2"));
 			expect(A.index("drained:2")).toBeLessThan(A.index("release:2"));
-			expect(
-				A.events.some((e) => e.startsWith("A:claim:") && e !== "A:claim:A:2"),
-			).toBe(false);
-			await waitFor(() => A.has("stop:2"));
+			expect(A.has("stop:2")).toBe(true);
 			expect(A.errors).toEqual([]);
 		} finally {
 			await A.ownership.stop();
@@ -915,6 +1014,166 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("a handoff claim landing after the successor claimed for itself is the route it serves", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const send = deferred();
+		const prepare = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+			drainGate: drain.promise,
+			announceDrainingGate: send.promise,
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20 },
+			prepareGate: prepare.promise,
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			// B is ready only after A's ready timeout, so A hands off to it instead of releasing.
+			await Bun.sleep(60);
+			prepare.resolve();
+			// A's draining record is slow and its drain outlasts B's silence: B claims for itself.
+			await waitFor(() => B.has("claim:B:2"));
+			await waitFor(() => B.status(2) === "ready");
+
+			drain.resolve();
+			send.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			await settle();
+
+			// Servers route by the newest claim; both name B, so B must admit the newest.
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			send.resolve();
+			prepare.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a drain that finishes past the drain cap does not leave the successor on an older route", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("claim:B:2"), 1_000);
+			await waitFor(() => B.status(2) === "ready");
+
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			await settle();
+
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a handoff claim landing while the successor fences its own claim is the route it serves", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const fence = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
+			fenceGate: fence.promise,
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("fence:2"), 1_000);
+
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			fence.resolve();
+			await waitFor(() => B.ownership.isAdmitted({ partition: 2 }));
+
+			const route = latestClaim({ log, partition: 2 });
+			expect(route?.endpoint).toBe(B.endpoint);
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: route?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+		} finally {
+			drain.resolve();
+			fence.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("an older claim delivered after a newer one does not move the admitted route back", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20 },
+		});
+		try {
+			await ownAlone(B, [2]);
+			const admitted = latestClaim({ log, partition: 2 });
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: B.endpoint,
+				routeEpoch: "50",
+			});
+			await settle();
+			expect(
+				B.ownership.findRuntime({
+					partition: 2,
+					routeEpoch: admitted?.routeEpoch ?? "",
+				}),
+			).toBeDefined();
+			expect(
+				B.ownership.findRuntime({ partition: 2, routeEpoch: "50" }),
+			).toBeUndefined();
+		} finally {
+			await B.ownership.stop();
+		}
+	});
+
 	test("A→A: a partition assigned back cancels its handoff and never bounces", async () => {
 		const log = createOwnershipLog();
 		const A = createWorker({
@@ -937,15 +1196,17 @@ describe("partition handoff", () => {
 			);
 			// The kept partition is not paused again: its follower keeps its position.
 			expect(A.pauses).toEqual(["metering:1,2", "commands:1,2"]);
-			// Partition 1 was not assigned back: it takes the release path after the ready timeout.
-			await waitFor(() => A.has("release:1"));
-			await waitFor(() => A.has("stop:1"));
+			expect(A.has("release:1")).toBe(false);
+			expect(A.status(1)).toBe("ready");
 			expect(A.ownership.partitions().map((h) => h.partition)).toEqual([1, 2]);
 
-			// A partition can be handed off more than once: a later revoke waits for ready again.
 			A.revoke();
 			A.assign([]);
-			await waitFor(() => A.has("release:2"));
+			await Bun.sleep(40);
+			expect(A.has("release:2")).toBe(false);
+			await A.ownership.stop();
+			expect(A.has("release:1")).toBe(true);
+			expect(A.has("release:2")).toBe(true);
 			expect(A.errors).toEqual([]);
 		} finally {
 			await A.ownership.stop();
@@ -958,13 +1219,17 @@ describe("partition handoff", () => {
 		const A = createWorker({
 			name: "A",
 			log,
-			config: { handoffReadyTimeoutMs: 1 },
+			config: { handoffReadyTimeoutMs: 1, handoffClaimTimeoutMs: 20 },
 			drainGate: drain.promise,
 		});
+		const B = createWorker({ name: "B", log });
 		try {
 			await ownAlone(A, [2]);
 			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
 			await waitFor(() => A.has("withdraw:2"));
+			B.revoke();
 			A.assign([2]);
 			await settle();
 			expect(A.events.filter((e) => e === "A:prepare:2")).toHaveLength(1);
@@ -980,6 +1245,7 @@ describe("partition handoff", () => {
 		} finally {
 			drain.resolve();
 			await A.ownership.stop();
+			await B.ownership.stop();
 		}
 	});
 

@@ -14,7 +14,7 @@ import {
 } from "@autumn/ui";
 import { ClockIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useParams } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
@@ -40,9 +40,11 @@ import { CustomerPageTitle } from "./CustomerPageTitle";
 import { CustomerSheets } from "./CustomerSheets";
 import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
+import { usePreloadEntityView } from "./hooks/usePreloadEntityView";
 import { Workbench } from "./workbench/Workbench";
 
 export default function CustomerView2() {
+	const { customer_id } = useParams();
 	const {
 		customer,
 		testClockFrozenTimeMs,
@@ -52,6 +54,10 @@ export default function CustomerView2() {
 	useCusReferralQuery();
 	useCusRewardsQuery();
 	const { entityId, setEntityId } = useEntity();
+	const { isLoading: entityViewLoading } = usePreloadEntityView({
+		customerId: customer_id,
+		entityId,
+	});
 	useApprovalSheetFromUrl({
 		resolveSubscriptionItemId: (planId) =>
 			planId
@@ -67,7 +73,9 @@ export default function CustomerView2() {
 
 	const env = useEnv();
 
-	if (cusLoading && !customer) return <LoadingScreen />;
+	if ((cusLoading && !customer) || entityViewLoading) {
+		return <LoadingScreen />;
+	}
 
 	if (!customer) {
 		return (

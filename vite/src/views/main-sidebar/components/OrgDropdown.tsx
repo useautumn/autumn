@@ -29,11 +29,7 @@ import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg, useSwitchActiveOrg } from "@/hooks/common/useOrg";
-import {
-	authClient,
-	useListOrganizations,
-	useSession,
-} from "@/lib/auth-client";
+import { useListOrganizations, useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { OrgAvatar } from "../org-dropdown/components/OrgAvatar";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
@@ -80,8 +76,8 @@ export const OrgDropdown = () => {
 	const { data: session } = useSession();
 
 	const { data: orgsData } = useListOrganizations();
-	const { data: activeOrganization } = authClient.useActiveOrganization();
-	const activeOrgId = activeOrganization?.id;
+	// From the session: better-auth's active-org lookup 403s for an admin who entered an org without membership
+	const activeOrgId = session?.session.activeOrganizationId;
 	const orgs = [...(Array.isArray(orgsData) ? orgsData : [])].sort(
 		(a, b) => Number(b.id === activeOrgId) - Number(a.id === activeOrgId),
 	);

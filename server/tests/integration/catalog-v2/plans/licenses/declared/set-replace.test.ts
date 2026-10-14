@@ -11,12 +11,12 @@ import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { seedChildVersionsThenParent } from "../../migrations/licenses/utils/seedLicenseDraftPlans.js";
 import {
 	expectLatestPlanVersion,
 	expectLicenseLinkCorrect,
 	expectLicenseLinkMissing,
 } from "../utils/expectLicenseLinkCorrect.js";
-import { seedChildVersionsThenParent } from "../../migrations/licenses/utils/seedLicenseDraftPlans.js";
 import {
 	messagesItem,
 	seedParentWithTwoChildren,

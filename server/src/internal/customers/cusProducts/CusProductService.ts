@@ -261,7 +261,6 @@ export class CusProductService {
 		env: AppEnv;
 		inStatuses?: string[];
 	}) {
-		// sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
 		const data = await db.query.customerProducts.findMany({
 			where: (_table, { and, or, inArray }) =>
 				and(
@@ -580,17 +579,6 @@ export class CusProductService {
 			});
 
 		return updated;
-		// const fullUpdated = (await db.query.customerProducts.findMany({
-		// 	where: inArray(
-		// 		customerProducts.id,
-		// 		updated.map((u) => u.id),
-		// 	),
-		// 	with: {
-		// 		product: true,
-		// 		customer: true,
-		// 		...getFullCusProdRelations(),
-		// 	},
-		// })) as FullCusProduct[];
 
 		// return fullUpdated as FullCusProduct[];
 	}

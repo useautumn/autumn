@@ -133,6 +133,7 @@ const buildSyntheticPooledCustomerEntitlement = ({
 			resetMode === PooledBalanceResetMode.Subscription ? "sub_test" : null,
 		customer_license_link_id: null,
 		rollover_signature: "none",
+		feature_override_signature: "none",
 		customer_entitlement_id: customerEntitlement.id,
 		last_applied_reset_at: null,
 		expires_at: null,

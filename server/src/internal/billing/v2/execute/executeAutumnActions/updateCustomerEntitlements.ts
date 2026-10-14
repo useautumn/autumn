@@ -16,6 +16,14 @@ export const updateCustomerEntitlements = async ({
 }) => {
 	const { logger } = ctx;
 
+	const updatedCustomerEntitlementIds = (updates ?? []).map(
+		({ customerEntitlement }) => customerEntitlement.id,
+	);
+	await CusEntService.lockInIdOrder({
+		ctx,
+		ids: updatedCustomerEntitlementIds,
+	});
+
 	for (const updateDetail of updates ?? []) {
 		const {
 			balanceChange = 0,

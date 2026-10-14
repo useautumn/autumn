@@ -1,5 +1,5 @@
 import { formatAmount } from "@autumn/shared";
-import { LoadingShimmerText } from "@autumn/ui";
+import { Button, LoadingShimmerText } from "@autumn/ui";
 import { AxiosError } from "axios";
 import { motion, type Transition } from "motion/react";
 import type { ComponentProps } from "react";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
 import { SHEET_EASE } from "@/views/customers2/customer/customerAnimations";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import type { InvoiceLineEditsController } from "./invoiceLineEdits/useInvoiceLineEdits";
 import { PreviewErrorDisplay } from "./PreviewErrorDisplay";
 import { getPreviewCreditAmount } from "./previewCreditUtils";
 import { buildPreviewTotals } from "./utils/buildPreviewTotals";
@@ -55,6 +56,8 @@ type PreviewData = {
 	invoice_credits?: { balance: number; applied?: number };
 	amount_due?: number;
 	checkout_type?: "stripe_checkout" | "autumn_checkout" | null;
+	invoice_lines_removable?: boolean;
+	invoice_lines_addable?: boolean;
 };
 
 /** Optional fields so confirmation stages can pass a bare `{ data }`. */
@@ -110,6 +113,7 @@ export function PreviewSection({
 	refundBehavior = null,
 	includeNextCycle = true,
 	nextCycleVariant = "secondary",
+	lineEdits,
 }: {
 	previewQuery: PreviewSectionQuery;
 	/** Nothing to preview yet — render nothing at all. */
@@ -129,6 +133,8 @@ export function PreviewSection({
 	refundBehavior?: string | null;
 	includeNextCycle?: boolean;
 	nextCycleVariant?: "primary" | "secondary";
+	/** Lets the user remove and add lines when the preview says the invoice is editable. */
+	lineEdits?: InvoiceLineEditsController;
 }) {
 	const { data: previewData, error: queryError } = previewQuery;
 	const error = resolvePreviewError(queryError);
@@ -139,7 +145,16 @@ export function PreviewSection({
 	if (error && !(suppressErrorWhileLoading && loading)) {
 		return (
 			<SheetSection title={TITLE} withSeparator={false}>
-				<PreviewErrorDisplay error={error} />
+				<div className="flex flex-col gap-2">
+					<PreviewErrorDisplay error={error} />
+					{lineEdits?.hasEdits && (
+						<div>
+							<Button onClick={lineEdits.clear} size="sm" variant="secondary">
+								Clear line edits
+							</Button>
+						</div>
+					)}
+				</div>
 			</SheetSection>
 		);
 	}
@@ -164,11 +179,19 @@ export function PreviewSection({
 	const resolvedLineItems = lineItems ?? previewData.line_items;
 	const creditAmount = getPreviewCreditAmount({ previewData });
 	const creditNoteVisible = showCreditNote && creditAmount > 0;
-	const lineItemsVisible = hasLineItemsContent({
-		lineItems: resolvedLineItems,
-		filterZeroAmounts,
-		totals,
-	});
+	const linesRemovable = !!previewData.invoice_lines_removable;
+	const linesAddable = !!previewData.invoice_lines_addable;
+	const activeLineEdits =
+		lineEdits && (linesRemovable || linesAddable || lineEdits.hasEdits)
+			? lineEdits
+			: undefined;
+	const lineItemsVisible =
+		!!activeLineEdits ||
+		hasLineItemsContent({
+			lineItems: resolvedLineItems,
+			filterZeroAmounts,
+			totals,
+		});
 
 	if (!(creditNoteVisible || lineItemsVisible || totalsBlockVisible)) {
 		return null;
@@ -201,6 +224,10 @@ export function PreviewSection({
 						currency={previewData.currency}
 						totals={totals}
 						filterZeroAmounts={filterZeroAmounts}
+						lineEdits={activeLineEdits}
+						isRefreshing={loading}
+						linesRemovable={linesRemovable}
+						linesAddable={linesAddable}
 					/>
 					{totalsBlockVisible && (
 						<PreviewTotalsBlock previewData={previewData} />

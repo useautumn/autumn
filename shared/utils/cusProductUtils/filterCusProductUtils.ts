@@ -80,10 +80,6 @@ export const filterEntityLevelCustomerEntitlementsFromFullCustomer = ({
 	// 	)
 	// 		return true;
 
-	// 	if (cp.internal_entity_id) {
-	// 		return true;
-	// 	}
-
 	// 	return false;
 	// });
 

@@ -1,11 +1,11 @@
 import { expect } from "bun:test";
 import type { Migration, UpdateCatalogResponse } from "@autumn/shared";
+import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
+import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import {
 	collectCustomerPlanIds,
 	collectPlanFilterPlanIds,
 } from "@autumn/shared/api/products/utils/compare/planFiltersAreSame.js";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 

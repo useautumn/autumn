@@ -1,0 +1,2 @@
+DROP INDEX CONCURRENTLY IF EXISTS "unique_pooled_balance_with_feature_override";--> statement-breakpoint
+CREATE UNIQUE INDEX CONCURRENTLY "unique_pooled_balance_with_feature_override" ON "pooled_balances" USING btree ("internal_customer_id","internal_feature_id","unlimited","interval","interval_count","reset_cycle_anchor","reset_mode","stripe_subscription_id","customer_license_link_id","rollover_signature","feature_override_signature","expires_at") NULLS NOT DISTINCT;

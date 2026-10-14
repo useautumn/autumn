@@ -237,7 +237,6 @@ export const createStripeCoupon = async ({
 		: [];
 
 	const stripeCoupon = await stripeCli.coupons.create({
-		// id: reward.internal_id,
 		id: reward.id,
 		...(couponToStripeDuration({
 			coupon: reward,
@@ -258,7 +257,6 @@ export const createStripeCoupon = async ({
 			: undefined,
 	});
 
-	// Create promo codes
 	for (const promoCode of reward.promo_codes) {
 		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 		const redeemed = redeemedByCode.get(promoCode.code) ?? 0;

@@ -1,9 +1,9 @@
+import { IconButton } from "@autumn/ui";
 import {
-	IconButton,
 	ResizableHandle,
 	ResizablePanel,
 	ResizablePanelGroup,
-} from "@autumn/ui";
+} from "@autumn/ui/components/ui/resizable";
 import {
 	ArrowClockwiseIcon,
 	TerminalWindowIcon,

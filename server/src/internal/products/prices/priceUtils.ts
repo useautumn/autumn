@@ -114,23 +114,11 @@ export const getBillingInterval = (prices: Price[]) => {
 					intervalCount: b.config!.interval_count || 1,
 				},
 			});
-			// return (
-			//   BillingIntervalOrder.indexOf(b.config!.interval!) -
-			//   BillingIntervalOrder.indexOf(a.config!.interval!)
-			// );
 		});
 	} catch (error) {
 		console.log("Error sorting prices:", error);
 		throw error;
 	}
-
-	// console.log(
-	//   "pricesCopy",
-	//   pricesCopy.map((p) => ({
-	//     interval: p.config!.interval,
-	//     intervalCount: p.config!.interval_count,
-	//   }))
-	// );
 
 	if (pricesCopy.length === 0) {
 		throw new RecaseError({

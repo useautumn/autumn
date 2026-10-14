@@ -111,7 +111,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Trial V2",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -173,7 +174,8 @@ test.concurrent(
 						plan_id: planId,
 						name: "Trial V2",
 						free_trial: null,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -234,7 +236,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						free_trial: trial14d,
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});

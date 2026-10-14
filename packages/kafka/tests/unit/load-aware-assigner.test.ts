@@ -60,6 +60,39 @@ function memberOwning(
 	return { memberId, memberMetadata: assigner.protocol({ topics }).metadata };
 }
 
+/** A member the group has assigned partitions to, saying what it was given and what it still serves. */
+function memberAssigned(
+	memberId: string,
+	{
+		assigned,
+		owned = assigned,
+		weights = new Map(),
+	}: {
+		assigned: readonly number[];
+		owned?: readonly number[];
+		weights?: ReadonlyMap<number, number>;
+	},
+) {
+	const assigner = createLoadAwareAssigner({
+		loads: {
+			snapshot: () => weights,
+			owned: () => new Set(owned),
+			assigned: () => new Set(assigned),
+		},
+	})({ cluster: createCluster(), groupId: "test", logger: quietLogger });
+	return { memberId, memberMetadata: assigner.protocol({ topics }).metadata };
+}
+
+function weighing(entries: readonly [number, number][]) {
+	return new Map(entries);
+}
+
+const HOT_PAIR = weighing([
+	[0, 1_000_000],
+	[1, 1_000_000],
+	[2, 10],
+]);
+
 async function assignmentsOf(
 	assigner: ReturnType<PartitionAssigner>,
 	members: { memberId: string; memberMetadata: Buffer }[],
@@ -275,3 +308,148 @@ test("a cold fleet that grew hands newcomers a partition each instead of leaving
 	expect(events("c")).toEqual([4, 5]);
 	expect(events("d")).toEqual([6, 7]);
 });
+
+test("a member that has been assigned partitions says which in its join metadata", () => {
+	const member = memberAssigned("m", { assigned: [2, 0], owned: [0] });
+	const decoded = AssignerProtocol.MemberMetadata.decode(member.memberMetadata);
+	expect(JSON.parse(decoded?.userData.toString("utf8") ?? "")).toEqual({
+		version: 2,
+		weights: [[0, 0]],
+		owned: [0],
+		assigned: [0, 2],
+	});
+});
+
+test("a rebalance with the same members moves nothing, even off a hot member", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", { assigned: [0, 1, 2], weights: HOT_PAIR }),
+		memberAssigned("b", {
+			assigned: [3, 4, 5],
+			weights: weighing([
+				[3, 10],
+				[4, 10],
+				[5, 10],
+			]),
+		}),
+		memberAssigned("c", {
+			assigned: [6, 7],
+			weights: weighing([
+				[6, 10],
+				[7, 10],
+			]),
+		}),
+	]);
+	const events = (memberId: string) => byMember.get(memberId)?.events;
+	expect(events("a")).toEqual([0, 1, 2]);
+	expect(events("b")).toEqual([3, 4, 5]);
+	expect(events("c")).toEqual([6, 7]);
+});
+
+test("a joining member still splits a hot pair", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", { assigned: [0, 1, 2], weights: HOT_PAIR }),
+		memberAssigned("b", { assigned: [3, 4, 5] }),
+		memberAssigned("c", { assigned: [6, 7] }),
+		{ memberId: "d", memberMetadata: Buffer.alloc(0) },
+	]);
+	const ownerOf = ownersIn(byMember);
+	expect(ownerOf.get(0)).not.toBe(ownerOf.get(1));
+});
+
+test("a leaving member's departure still splits a hot pair", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", { assigned: [0, 1, 2], weights: HOT_PAIR }),
+		memberAssigned("b", { assigned: [3, 4, 5] }),
+	]);
+	const ownerOf = ownersIn(byMember);
+	expect(ownerOf.get(0)).not.toBe(ownerOf.get(1));
+	expect([...ownerOf.keys()].sort((a, b) => a - b)).toEqual([
+		0, 1, 2, 3, 4, 5, 6, 7,
+	]);
+});
+
+test("a partition moving between members stays with its new assignee while the old one still serves it", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", {
+			assigned: [0, 1, 2],
+			owned: [0, 1, 2, 3],
+			weights: weighing([
+				[0, 100],
+				[1, 100],
+				[2, 100],
+				[3, 500],
+			]),
+		}),
+		memberAssigned("b", {
+			assigned: [3, 4, 5],
+			weights: weighing([
+				[4, 100],
+				[5, 100],
+			]),
+		}),
+		memberAssigned("c", {
+			assigned: [6, 7],
+			weights: weighing([
+				[6, 100],
+				[7, 100],
+			]),
+		}),
+	]);
+	const events = (memberId: string) => byMember.get(memberId)?.events;
+	expect(events("a")).toEqual([0, 1, 2]);
+	expect(events("b")).toEqual([3, 4, 5]);
+	expect(events("c")).toEqual([6, 7]);
+});
+
+test("an assigned partition nobody serves yet stays with its assignee", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", {
+			assigned: [0, 1, 2],
+			weights: weighing([
+				[0, 10],
+				[1, 10],
+				[2, 10],
+			]),
+		}),
+		memberAssigned("b", {
+			assigned: [3, 4, 5],
+			owned: [4, 5],
+			weights: weighing([
+				[4, 10],
+				[5, 10],
+			]),
+		}),
+		memberAssigned("c", {
+			assigned: [6, 7],
+			weights: weighing([
+				[6, 1],
+				[7, 1],
+			]),
+		}),
+	]);
+	expect(byMember.get("b")?.events).toEqual([3, 4, 5]);
+	expect(byMember.get("c")?.events).toEqual([6, 7]);
+});
+
+test("a partition two members both say they were assigned goes to the one serving it", async () => {
+	const byMember = await assignmentsOf(createAssigner(new Map()), [
+		memberAssigned("a", { assigned: [0, 1, 2, 3], owned: [0, 1, 2] }),
+		memberAssigned("b", { assigned: [3, 4, 5] }),
+		memberAssigned("c", { assigned: [6, 7] }),
+	]);
+	const events = (memberId: string) => byMember.get(memberId)?.events;
+	expect(events("a")).toEqual([0, 1, 2]);
+	expect(events("b")).toEqual([3, 4, 5]);
+	expect(events("c")).toEqual([6, 7]);
+});
+
+function ownersIn(
+	byMember: Map<string, { [topic: string]: number[] }>,
+): Map<number, string> {
+	const ownerOf = new Map<number, string>();
+	for (const [memberId, assignment] of byMember) {
+		for (const partition of assignment.events ?? [])
+			ownerOf.set(partition, memberId);
+	}
+	return ownerOf;
+}

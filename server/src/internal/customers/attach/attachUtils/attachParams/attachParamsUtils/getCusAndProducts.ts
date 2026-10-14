@@ -26,7 +26,6 @@ const getProductsForAttach = async ({
 		product_id,
 		product_ids,
 		version,
-		// products: inputProducts,
 	} = attachBody;
 
 	const products = await ProductService.listFull({

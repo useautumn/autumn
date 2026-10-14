@@ -31,7 +31,6 @@ import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
-import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import {
 	ALL_VARIANTS_VIEW,
 	useAllVariantsView,
@@ -56,13 +55,12 @@ export const EditPlanHeader = () => {
 	const { numVersions, versionCounts } = useProductQuery();
 	const { queryStates } = useProductQueryState();
 	const product = useProductStore((s) => s.product);
-	const { counts } = useProductCountsQuery(
-		product.version ? { version: product.version } : {},
-	);
+	const counts = versionCounts[product.version];
 	const navigate = useNavigate();
 	const isCusPlanEditor = useIsCusPlanEditor();
-	const { mappings } = useRCMappings();
 	const { org } = useOrg({ skipSandbox: false });
+	const revenueCatConnected = !!org?.processor_configs?.revenuecat.connected;
+	const { mappings } = useRCMappings({ enabled: revenueCatConnected });
 	const env = useEnv();
 	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
@@ -85,7 +83,7 @@ export const EditPlanHeader = () => {
 	});
 
 	const hasRCMapping =
-		!!org?.processor_configs?.revenuecat.connected &&
+		revenueCatConnected &&
 		mappings.some(
 			(m) =>
 				m.autumn_product_id === product.id &&

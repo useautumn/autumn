@@ -157,7 +157,6 @@ export const handleNewProductItems = async ({
 
 	newItems = supersedeUnlimitedItems({ items: newItems });
 
-	// Validate product items...
 	const { allFeatures, newFeatures } = validateProductItems({
 		newItems,
 		features,
@@ -257,7 +256,6 @@ export const handleNewProductItems = async ({
 		logPrices({ prices: samePrices, prefix: "Same prices" });
 		logEnts({ ents: sameEnts, prefix: "Same entitlements" });
 	}
-	// throw new Error("test");
 
 	if (newFeatures.length > 0 && saveToDb) {
 		await FeatureService.insert({

@@ -51,7 +51,6 @@ export const getQuantityToRemove = ({
 
 		if (!options) return finalQuantity;
 
-		// Remove quantity
 		finalQuantity = options.upcoming_quantity || options.quantity || 1;
 	}
 

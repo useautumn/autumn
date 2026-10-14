@@ -1,6 +1,7 @@
 import { ExpandParamSchema } from "@api/common/expandParam";
 import { z } from "zod/v4";
 import { BillingPreviewChangeSchema } from "./billingPreviewChange";
+import { RemoveLineSchema } from "./removeLine";
 
 export const BILLING_PREVIEW_RESPONSE_EXAMPLE = {
 	customerId: "charles",
@@ -109,6 +110,11 @@ export const ExtPreviewLineItemSchema = z.object({
 export const PreviewLineItemSchema = ExtPreviewLineItemSchema.extend({
 	object: z.literal("billing_preview_line_item").meta({ internal: true }),
 	custom: z.boolean().meta({ internal: true }),
+	remove_line: RemoveLineSchema.nullable().optional().meta({
+		internal: true,
+		description:
+			"The remove_lines entry that removes exactly this line. Null when the line can't be removed on its own.",
+	}),
 });
 
 export const PreviewUsageLineItemSchema = PreviewLineItemSchema.pick({
@@ -209,6 +215,16 @@ export const BillingPreviewResponseSchema =
 	ExtBillingPreviewResponseSchema.extend({
 		object: z.literal("billing_preview").meta({ internal: true }),
 		line_items: z.array(PreviewLineItemSchema),
+		invoice_lines_removable: z.boolean().optional().meta({
+			internal: true,
+			description:
+				"Whether remove_lines can remove lines from the invoice this request creates.",
+		}),
+		invoice_lines_addable: z.boolean().optional().meta({
+			internal: true,
+			description:
+				"Whether add_lines can add lines to what this request bills now.",
+		}),
 	});
 
 export type ExtBillingPreviewResponse = z.infer<

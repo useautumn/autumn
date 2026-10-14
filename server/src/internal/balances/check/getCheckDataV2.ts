@@ -137,7 +137,6 @@ export const getCheckDataV2 = async ({
 			})
 		: evaluationFeature;
 
-	// Trigger auto top-up
 	triggerAutoTopUp({ ctx, fullSubject, feature: featureToUse }).catch(
 		(error) => {
 			ctx.logger.error(

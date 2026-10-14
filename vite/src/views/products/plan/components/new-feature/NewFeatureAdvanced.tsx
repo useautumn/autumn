@@ -1,10 +1,21 @@
-import { type CreateFeature, FeatureType } from "@autumn/shared";
+import {
+	type CreateFeature,
+	FeatureCombine,
+	FeatureType,
+} from "@autumn/shared";
 import {
 	FormLabel,
+	GroupedTabButton,
 	SheetAccordion,
 	SheetAccordionItem,
 	TagInput,
 } from "@autumn/ui";
+
+const combineOptions = [
+	{ value: FeatureCombine.Sum, label: "Sum" },
+	{ value: FeatureCombine.Max, label: "Max" },
+	{ value: FeatureCombine.Min, label: "Min" },
+];
 
 export function NewFeatureAdvanced({
 	feature,
@@ -46,6 +57,23 @@ export function NewFeatureAdvanced({
 								here.
 							</a>
 						</span>
+					</div>
+					<div className="flex items-center justify-between w-full gap-4">
+						<FormLabel className="mb-0">Combine across plans</FormLabel>
+						<GroupedTabButton
+							value={feature.config?.combine ?? FeatureCombine.Sum}
+							onValueChange={(combine) =>
+								setFeature({
+									...feature,
+									config: {
+										...feature.config,
+										combine: combine as FeatureCombine,
+									},
+								})
+							}
+							options={combineOptions}
+							className="w-44"
+						/>
 					</div>
 				</div>
 			</SheetAccordionItem>

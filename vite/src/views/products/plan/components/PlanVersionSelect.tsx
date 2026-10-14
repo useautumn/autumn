@@ -22,6 +22,7 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { usePrefetchPlanPage } from "../hooks/usePrefetchPlanPage";
 import { ActiveVersionDot, PlanVersionOption } from "./PlanVersionOption";
 import { versionLabel } from "./versionLabel";
 
@@ -36,6 +37,7 @@ export const PlanVersionSelect = ({
 }) => {
 	const product = useProductStore((s) => s.product);
 	const { versionCounts } = useProductQuery();
+	const prefetchPlanPage = usePrefetchPlanPage();
 	const { queryStates, setQueryStates } = useProductQueryState();
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const showAllVariants = useAllVariantsView();
@@ -54,6 +56,13 @@ export const PlanVersionSelect = ({
 		return (right.version ?? 0) - (left.version ?? 0);
 	});
 
+	// Pin unless we know the row is active; a missing flag must not read as active.
+	const versionQueryParam = (row: (typeof sortedRows)[number]) =>
+		Boolean(row.active) && !isCusPlanEditor ? null : row.version;
+
+	const prefetchVersion = (row: (typeof sortedRows)[number]) =>
+		prefetchPlanPage({ id: product.id, version: versionQueryParam(row) });
+
 	const handleVersionChange = (version: string) => {
 		if (version === MIGRATE_CUSTOMERS) {
 			onMigrateCustomers();
@@ -61,12 +70,9 @@ export const PlanVersionSelect = ({
 		}
 		const versionNumber = Number.parseInt(version, 10);
 		const selected = sortedRows.find((row) => row.version === versionNumber);
-		// Pin unless we know the row is active; a missing flag must not read as active.
-		if (Boolean(selected?.active) && !isCusPlanEditor) {
-			setQueryStates({ version: null });
-			return;
-		}
-		setQueryStates({ version: versionNumber });
+		setQueryStates({
+			version: selected ? versionQueryParam(selected) : versionNumber,
+		});
 	};
 
 	const currentRow =
@@ -128,6 +134,8 @@ export const PlanVersionSelect = ({
 								value={String(row.version)}
 								indicator={false}
 								className={cn("*:last:w-full", selected && "bg-accent/70")}
+								onPointerEnter={() => prefetchVersion(row)}
+								onFocus={() => prefetchVersion(row)}
 							>
 								<PlanVersionOption
 									label={versionLabel({

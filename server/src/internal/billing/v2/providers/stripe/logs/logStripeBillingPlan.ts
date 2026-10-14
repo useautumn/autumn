@@ -24,18 +24,6 @@ export const logStripeBillingPlan = ({
 		? `${refundAction.amountInCents} cents from charge ${refundAction.chargeId} (invoice ${refundAction.stripeInvoiceId})`
 		: undefined;
 
-	// const subscription =
-	// 	subscriptionAction?.type === "create" || subscriptionAction?.type === "update"
-	// 		? {
-	// 				type: subscriptionAction.type,
-	// 				items: subscriptionAction.params.items?.map((item) =>
-	// 					formatPhaseItemWithAutumnPrice({ item, pricesWithProduct }),
-	// 				),
-	// 			}
-	// 		: subscriptionAction
-	// 			? { type: subscriptionAction.type }
-	// 			: undefined;
-
 	addToExtraLogs({
 		ctx,
 		extras: {

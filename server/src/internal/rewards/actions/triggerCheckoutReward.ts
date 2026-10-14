@@ -85,7 +85,6 @@ export const runTriggerCheckoutReward = async ({
 				}
 			}
 
-			// Check for trial
 			let hasTrial = false;
 			if (subId) {
 				const sub = await stripeCli.subscriptions.retrieve(subId);
@@ -98,7 +97,6 @@ export const runTriggerCheckoutReward = async ({
 				continue;
 			}
 
-			// Get redemption count
 			const redemptionCount = await referralCodeRepo.getRedemptionCount({
 				db,
 				referralCodeId: referralCode.id,

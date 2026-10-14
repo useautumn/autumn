@@ -14,6 +14,12 @@ export type AttachBillingEdits = z.infer<typeof attachBillingEditsSchema>;
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
+/** The API lets issue_method win over the deprecated finalize. */
+const isDraftInvoice = (invoiceMode: Record<string, unknown>) =>
+	invoiceMode.issue_method !== undefined
+		? invoiceMode.issue_method === "draft"
+		: invoiceMode.finalize === false;
+
 export const attachBillingEditsFromRequest = (
 	request: Record<string, unknown>,
 ): AttachBillingEdits => {
@@ -28,7 +34,7 @@ export const attachBillingEditsFromRequest = (
 	return {
 		access: immediate ? "immediate" : "after_payment",
 		billing: invoiceEnabled
-			? invoiceMode.finalize === false
+			? isDraftInvoice(invoiceMode)
 				? "draft_invoice"
 				: "finalized_invoice"
 			: "checkout",
@@ -61,6 +67,15 @@ export const applyAttachBillingEdits = ({
 		"proration_behavior" in request ||
 		edits.proration !== attachBillingEditsFromRequest(request).proration;
 	const invoiceMode = getRecord(existingInvoiceMode);
+	// An unchanged billing choice keeps the request's issue_method (e.g. a silent finalize).
+	const billingChanged =
+		edits.billing !== attachBillingEditsFromRequest(request).billing;
+	const issueMethod =
+		invoiceMode.issue_method === undefined || !billingChanged
+			? {}
+			: {
+					issue_method: edits.billing === "draft_invoice" ? "draft" : "send",
+				};
 	const updated = {
 		...unchanged,
 		enable_plan_immediately: enablePlanImmediately,
@@ -78,6 +93,7 @@ export const applyAttachBillingEdits = ({
 						enable_plan_immediately: enablePlanImmediately,
 						enabled: true,
 						finalize: edits.billing === "finalized_invoice",
+						...issueMethod,
 					},
 					redirect_mode: "if_required",
 				}),

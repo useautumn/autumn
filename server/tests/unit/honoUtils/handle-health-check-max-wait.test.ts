@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	evaluateStartupGate,
 	STARTUP_GATE_MAX_WAIT_MS,
+	STARTUP_ROUTING_MAX_WAIT_MS,
 } from "@/honoUtils/startupGate.js";
 
 describe("evaluateStartupGate", () => {
@@ -9,6 +10,7 @@ describe("evaluateStartupGate", () => {
 		const res = evaluateStartupGate({
 			redisReady: false,
 			redisV2Ready: false,
+			routingReady: true,
 			elapsedMs: 0,
 		});
 		expect(res.ready).toBe(false);
@@ -18,6 +20,7 @@ describe("evaluateStartupGate", () => {
 		const res = evaluateStartupGate({
 			redisReady: true,
 			redisV2Ready: true,
+			routingReady: true,
 			elapsedMs: 0,
 		});
 		expect(res.ready).toBe(true);
@@ -28,6 +31,7 @@ describe("evaluateStartupGate", () => {
 		const res = evaluateStartupGate({
 			redisReady: true,
 			redisV2Ready: false,
+			routingReady: true,
 			elapsedMs: 5,
 		});
 		expect(res.ready).toBe(false);
@@ -37,6 +41,7 @@ describe("evaluateStartupGate", () => {
 		const res = evaluateStartupGate({
 			redisReady: false,
 			redisV2Ready: false,
+			routingReady: true,
 			elapsedMs: STARTUP_GATE_MAX_WAIT_MS,
 		});
 		expect(res.ready).toBe(true);
@@ -47,9 +52,47 @@ describe("evaluateStartupGate", () => {
 		const res = evaluateStartupGate({
 			redisReady: false,
 			redisV2Ready: false,
+			routingReady: true,
 			elapsedMs: STARTUP_GATE_MAX_WAIT_MS - 1,
 		});
 		expect(res.ready).toBe(false);
+	});
+
+	test("not ready while worker routing is still catching up, even with Redis ready", () => {
+		const res = evaluateStartupGate({
+			redisReady: true,
+			redisV2Ready: true,
+			routingReady: false,
+			elapsedMs: 5,
+		});
+		expect(res.ready).toBe(false);
+		expect(res.reason).toBe("Worker routing not ready");
+	});
+
+	test("latches once max-wait elapses when neither Redis nor worker routing is ready", () => {
+		const res = evaluateStartupGate({
+			redisReady: false,
+			redisV2Ready: false,
+			routingReady: false,
+			elapsedMs: STARTUP_GATE_MAX_WAIT_MS,
+		});
+		expect(res.ready).toBe(true);
+		expect(res.reason).toContain("max wait");
+	});
+
+	test("stops waiting for worker routing after the routing cap once Redis is ready", () => {
+		const res = evaluateStartupGate({
+			redisReady: true,
+			redisV2Ready: true,
+			routingReady: false,
+			elapsedMs: STARTUP_ROUTING_MAX_WAIT_MS,
+		});
+		expect(res.ready).toBe(true);
+		expect(res.reason).toContain("worker routing");
+	});
+
+	test("the routing cap never outlasts one 5s load balancer health-check interval", () => {
+		expect(STARTUP_ROUTING_MAX_WAIT_MS).toBeLessThanOrEqual(5_000);
 	});
 
 	test("max-wait is bounded well under the 60s ECS health-check grace period", () => {

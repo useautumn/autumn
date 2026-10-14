@@ -90,7 +90,6 @@ export const V1_2_ProductChanges = defineVersionChange({
 			id: input.id,
 			name: input.name,
 			group: input.group,
-			// description: input.description,
 			env: input.env,
 			is_add_on: input.add_on,
 			is_default: input.default,

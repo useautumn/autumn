@@ -12,7 +12,6 @@ import {
 } from "./middleware/checkoutMiddleware";
 
 export const publicCheckoutRouter = new Hono<HonoEnv>();
-// publicCheckoutRouter.use(analyticsMiddleware);
 
 // Apply rate limiter to all checkout routes
 publicCheckoutRouter.use("/:checkout_id", checkoutRateLimiter);
