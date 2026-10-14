@@ -34,7 +34,7 @@ const bestOf = ({
 /**
  * A customer belongs to the member with the highest score for it, so a join or leave moves only the customers whose
  * top member changed: 1/N of them. No election and no stored owner; peers come from the resolver's DNS view, counted as
- * members until the membership says they are leaving, and this replica counts until it leaves.
+ * members only while the membership says so (joined, not leaving), and this replica counts until it leaves.
  */
 export const createReplicaRing = ({
 	ctx,
@@ -58,9 +58,7 @@ export const createReplicaRing = ({
 		);
 
 	async function members(): Promise<string[]> {
-		const listed = await peersListed();
-		membership?.keepOnly(listed);
-		const peers = listed.filter(
+		const peers = (await peersListed()).filter(
 			(peer) => !membership || membership.isMember(peer),
 		);
 		const own = membership?.isSelfLeaving() ? [] : [self];
@@ -105,6 +103,18 @@ export const createReplicaRing = ({
 		return bestOf({ members: others, customerId });
 	}
 
+	/** Who owns the customer once `peer` counts: where its entries go before the peer is counted. */
+	async function ownerOnceJoined({
+		customerId,
+		peer,
+	}: {
+		customerId: string;
+		peer: string;
+	}): Promise<string> {
+		const joined = [...new Set([...(await members()), peer])].sort();
+		return bestOf({ members: joined, customerId }) ?? self;
+	}
+
 	return {
 		self,
 		ownerOf,
@@ -112,5 +122,6 @@ export const createReplicaRing = ({
 		members,
 		movedFrom,
 		ownerAfterLeaving,
+		ownerOnceJoined,
 	};
 };
