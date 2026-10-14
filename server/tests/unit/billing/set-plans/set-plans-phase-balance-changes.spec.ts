@@ -210,6 +210,7 @@ const previewBalanceChanges = async ({
 	return setPlansPhaseBalanceChanges({
 		ctx,
 		originalFullCustomer: fullCustomer,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		phaseCustomers,
 	});
 };
@@ -299,6 +300,7 @@ const computeSetPlansBalanceChanges = async ({
 	return setPlansPhaseBalanceChanges({
 		ctx,
 		originalFullCustomer: billingContext.fullCustomer,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		phaseCustomers,
 	});
 };

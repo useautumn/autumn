@@ -74,6 +74,7 @@ export const buildSetPlansPreviewPhases = async ({
 		ctx,
 		originalFullCustomer: fullCustomer,
 		phaseCustomers,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		savedComparisonCustomers: savedComparisonCustomers({
 			ctx,
 			fullCustomer,
