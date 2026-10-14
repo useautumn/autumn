@@ -21,6 +21,7 @@ export const subtractSafe = ({
 /** Rounds to 10 decimal places: enough precision, without the float drift of Lua 5.1 double arithmetic. */
 export const roundCacheBalance = (value: number | null | undefined): number => {
 	if (value === null || value === undefined) return 0;
+	if (Number.isInteger(value)) return value;
 	return new Decimal(value).toDecimalPlaces(10).toNumber();
 };
 
