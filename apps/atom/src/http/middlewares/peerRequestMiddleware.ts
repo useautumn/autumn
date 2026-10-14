@@ -25,7 +25,8 @@ export function peerRequestMiddleware({
 			path: context.req.path,
 			customerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
 			atomId: context.req.header(PEER_FOLDER_HEADER) ?? null,
-			body: await context.req.text(),
+			// Bytes, as a key handoff's body is binary; a JSON body is the same bytes as its text.
+			body: new Uint8Array(await context.req.arrayBuffer()),
 		});
 		if (!verified)
 			return context.json(
