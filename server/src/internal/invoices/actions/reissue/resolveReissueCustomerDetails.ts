@@ -1,5 +1,6 @@
 import type { ReissueCustomerOverrides } from "@autumn/shared";
 import type Stripe from "stripe";
+import { isStripeResourceMissing } from "@/external/stripe/common/utils/isStripeResourceMissing";
 import type { ExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 
@@ -20,10 +21,14 @@ const resolvePaymentMethodAddress = async ({
 	stripeCustomer: ExpandedStripeCustomer;
 }) => {
 	const subscriptionId = stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+	// An ended subscription still carries its card; only a deleted one is gone.
 	const subscription = subscriptionId
-		? await stripeCli.subscriptions.retrieve(subscriptionId, {
-				expand: ["default_payment_method"],
-			})
+		? await stripeCli.subscriptions
+				.retrieve(subscriptionId, { expand: ["default_payment_method"] })
+				.catch((error) => {
+					if (isStripeResourceMissing(error)) return undefined;
+					throw error;
+				})
 		: undefined;
 	const defaultPaymentMethod =
 		subscription?.default_payment_method ??
