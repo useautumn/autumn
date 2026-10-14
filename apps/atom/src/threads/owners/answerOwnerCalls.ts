@@ -27,11 +27,12 @@ const READS = new Set<OwnerCall["type"]>([
 	"fetchSubjects",
 ]);
 
-/** Half the shadow's and SDK's 300 ms budget: a call queued longer is answered 503 at once, so its caller asks the API
- *  while it still can, and a deduction it gave up on is never made here as well. */
-export const OWNER_CALL_MAX_WAIT_MS = 150;
+/** Half the shadow's and SDK's 300 ms budget, counted from the request's arrival at its first replica: one older is
+ *  answered 503 undecided, so its caller asks the API in time and a deduction it gave up on is not made here too. */
+export const DECIDE_BUDGET_MS = 150;
 
-const DECISIONS = new Set<OwnerCall["type"]>(["check", "track"]);
+export const isPastDecideBudget = ({ occurredAt }: { occurredAt: number }) =>
+	Date.now() - occurredAt > DECIDE_BUDGET_MS;
 
 /** The call run on the slots this thread owns: the same processor a request arriving here would use. */
 const runOwnerCall = async ({
@@ -44,8 +45,8 @@ const runOwnerCall = async ({
 	if (READS.has(call.type) && !isThreadReady(ctx.health))
 		throw new OwnerUnavailableError({ thread: ctx.health.thread });
 	if (
-		DECISIONS.has(call.type) &&
-		Date.now() - call.sentAt > OWNER_CALL_MAX_WAIT_MS
+		(call.type === "check" || call.type === "track") &&
+		isPastDecideBudget(call.request)
 	)
 		throw new OwnerUnavailableError({ thread: ctx.health.thread });
 	const slots = ctx.auth.slotsFor({ atomId: call.atomId });

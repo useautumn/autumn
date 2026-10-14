@@ -72,7 +72,7 @@ test("an owner still catching up refuses checks and reads with a 503, so the API
 	const processor = link.processorFor({ atomId: null });
 	const request = {
 		requestId: "req_1",
-		occurredAt: 1,
+		occurredAt: Date.now(),
 		params: { customer_id: "cus_1", feature_id: "messages" },
 		query: {},
 		apiVersion: null,
@@ -129,7 +129,10 @@ test("a track crosses to the owner with its API version, once the owner has caug
 	const link = createOwnerLink({ thread: 1 });
 	link.connect({ port: port1 });
 	const processor = link.processorFor({ atomId: null });
-	const request = trackRequestFor({ idempotencyKey: "evt_1" });
+	const request = {
+		...trackRequestFor({ idempotencyKey: "evt_1" }),
+		occurredAt: Date.now(),
+	};
 
 	await expect(processor.track({ request })).rejects.toBeInstanceOf(
 		OwnerUnavailableError,
@@ -147,7 +150,7 @@ test("a track crosses to the owner with its API version, once the owner has caug
 	port2.close();
 });
 
-test("a check or track that waited past the owner's budget is refused with a 503 and never decided; a push still applies", async () => {
+test("a check or track that arrived longer ago than the decide budget is refused with a 503 and never decided; a push still applies", async () => {
 	const { port1, port2 } = new MessageChannel();
 	const threadsReady = new Int32Array([1, 1]);
 	const decided: string[] = [];
@@ -174,60 +177,33 @@ test("a check or track that waited past the owner's budget is refused with a 503
 		},
 		port: port2,
 	});
-	const replies = new Map<number, { ok: boolean; unavailable?: boolean }>();
-	port1.onmessage = (event: MessageEvent) => {
-		replies.set(event.data.id, event.data);
-	};
-	const stale = Date.now() - 1_000;
-	const track = trackRequestFor();
-	port1.postMessage(
-		JSON.stringify({
-			id: 1,
-			sentAt: stale,
-			atomId: null,
-			type: "track",
-			request: track,
-		}),
-	);
-	port1.postMessage(
-		JSON.stringify({
-			id: 2,
-			sentAt: stale,
-			atomId: null,
-			type: "check",
-			request: {
-				requestId: "req_c",
-				occurredAt: 1,
-				params: { customer_id: "cus_1", feature_id: "messages" },
-				query: {},
-				apiVersion: null,
-			},
-		}),
-	);
-	port1.postMessage({
-		id: 3,
-		sentAt: stale,
-		atomId: null,
-		type: "setSubject",
-		customerId: "cus_1",
-		body: "{}",
-	});
-	port1.postMessage(
-		JSON.stringify({
-			id: 4,
-			sentAt: Date.now(),
-			atomId: null,
-			type: "track",
-			request: track,
-		}),
-	);
-	for (let i = 0; i < 50 && replies.size < 4; i++) await Bun.sleep(5);
+	const link = createOwnerLink({ thread: 1 });
+	link.connect({ port: port1 });
+	const processor = link.processorFor({ atomId: null });
+	const arrivedLongAgo = Date.now() - 1_000;
+	const check = {
+		requestId: "req_c",
+		occurredAt: arrivedLongAgo,
+		params: { customer_id: "cus_1", feature_id: "messages" },
+		query: {},
+		apiVersion: null,
+	} as unknown as CheckRequest;
 
-	expect(replies.get(1)).toMatchObject({ ok: false, unavailable: true });
-	expect(replies.get(2)).toMatchObject({ ok: false, unavailable: true });
-	expect(replies.get(3)).toMatchObject({ ok: true });
-	expect(replies.get(4)).toMatchObject({ ok: true });
+	await expect(
+		processor.track({
+			request: { ...trackRequestFor(), occurredAt: arrivedLongAgo },
+		}),
+	).rejects.toBeInstanceOf(OwnerUnavailableError);
+	await expect(processor.check({ request: check })).rejects.toBeInstanceOf(
+		OwnerUnavailableError,
+	);
+	expect(
+		await processor.setSubject({ customerId: "cus_1", body: "{}" }),
+	).toEqual({ stored: true, entityId: null });
+	await processor.track({
+		request: { ...trackRequestFor(), occurredAt: Date.now() },
+	});
 	expect(decided).toEqual(["push:cus_1", "track:atom_req_1"]);
-	port1.close();
+	link.disconnect();
 	port2.close();
 });

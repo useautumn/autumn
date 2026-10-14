@@ -1,5 +1,7 @@
 import type { Context } from "hono";
 import { checkCallToRequest } from "../../lib/contracts/checkContract.js";
+import { isPastDecideBudget } from "../../threads/owners/answerOwnerCalls.js";
+import { overloaded } from "../middlewares/admissionMiddleware.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 export const API_VERSION_HEADER = "x-api-version";
@@ -34,6 +36,7 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 		...arrivalOf(context),
 	});
 	context.set("idempotencyKey", request.idempotencyKey);
+	if (isPastDecideBudget(request)) return overloaded(context);
 	const processor = context
 		.get("slots")
 		.processorFor({ customerId: request.params.customer_id });
