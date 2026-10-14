@@ -17,6 +17,7 @@ import {
 } from "@autumn/balance-engine";
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import {
+	fullSubjectRowsMemoStats,
 	EntInterval,
 	FeatureType,
 	getUsageWindowBounds,
@@ -310,7 +311,9 @@ const runReplica = async ({
 	let stageClockAtReset = stageClockNow();
 	let cpuAtReset = jsThreadCpuMs();
 	let wallAtReset = performance.now();
+	let flattensAtReset = fullSubjectRowsMemoStats.builds;
 	const reset = () => {
+		flattensAtReset = fullSubjectRowsMemoStats.builds;
 		stages.clear();
 		stageClockAtReset = stageClockNow();
 		timedTopLevelMs = 0;
@@ -352,6 +355,7 @@ const runReplica = async ({
 						]),
 					),
 					heapMb: Math.round(heapSize() / 1024 ** 2),
+					rowFlattens: fullSubjectRowsMemoStats.builds - flattensAtReset,
 					rssMb: Math.round(process.memoryUsage().rss / 1024 ** 2),
 					loopLagAvgMs: lagTotalMs / Math.max(1, lagTicks),
 					loopLagMaxMs: lagMaxMs,
