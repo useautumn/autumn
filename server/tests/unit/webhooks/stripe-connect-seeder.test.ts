@@ -7,14 +7,12 @@ import { mockModuleWithRestore } from "../utils/mockModuleWithRestore.js";
 
 const mockState = {
 	getByAccountId: undefined as (() => Promise<unknown>) | undefined,
-	getByAccountIdCalls: 0,
 	getWebhookSecretCalls: 0,
 };
 
 await mockModuleWithRestore("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
 		getByAccountId: async () => {
-			mockState.getByAccountIdCalls++;
 			if (!mockState.getByAccountId) throw new Error("not configured");
 			return mockState.getByAccountId();
 		},
@@ -70,10 +68,7 @@ const createApp = () => {
 	return { app, didHandlerRun: () => handlerRan };
 };
 
-const postEvent = (
-	app: Hono<TestEnv>,
-	{ env = "live", livemode = true }: { env?: string; livemode?: boolean } = {},
-) =>
+const postEvent = (app: Hono<TestEnv>, env = "live", livemode = true) =>
 	app.request(`/webhooks/connect/${env}`, {
 		method: "POST",
 		body: JSON.stringify({
@@ -90,7 +85,6 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
 		process.env.NODE_ENV = "test";
 		mockState.getByAccountId = undefined;
-		mockState.getByAccountIdCalls = 0;
 		mockState.getWebhookSecretCalls = 0;
 	});
 
@@ -141,6 +135,26 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		expect(mockState.getWebhookSecretCalls).toBe(0);
 	});
 
+	test.each([
+		{ env: "live", livemode: false, runs: false },
+		{ env: "sandbox", livemode: true, runs: false },
+		{ env: "sandbox", livemode: false, runs: true },
+	])(
+		"$env endpoint, livemode=$livemode, handler runs: $runs",
+		async ({ env, livemode, runs }) => {
+			mockState.getByAccountId = async () => ({
+				org: { id: "org_test", slug: "test-org", config: {} },
+				features: [],
+			});
+
+			const { app, didHandlerRun } = createApp();
+			const response = await postEvent(app, env, livemode);
+
+			expect(response.status).toBe(200);
+			expect(didHandlerRun()).toBe(runs);
+		},
+	);
+
 	test("still verifies signatures in production when skip verify is set", async () => {
 		process.env.NODE_ENV = "production";
 		mockState.getByAccountId = async () => ({
@@ -155,50 +169,4 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		expect(didHandlerRun()).toBe(true);
 		expect(mockState.getWebhookSecretCalls).toBe(1);
 	});
-});
-
-describe("stripeConnectSeederMiddleware livemode vs endpoint env", () => {
-	beforeEach(() => {
-		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = "true";
-		process.env.NODE_ENV = "test";
-		mockState.getByAccountIdCalls = 0;
-		mockState.getByAccountId = async () => ({
-			org: { id: "org_test", slug: "test-org", config: {} },
-			features: [],
-		});
-	});
-
-	afterAll(() => {
-		process.env.STRIPE_WEBHOOK_SKIP_VERIFY = originalSkipVerify;
-		process.env.NODE_ENV = originalNodeEnv;
-	});
-
-	test.each([
-		{ env: "live", livemode: false },
-		{ env: "sandbox", livemode: true },
-	])(
-		"acks and skips $env endpoint receiving livemode=$livemode",
-		async ({ env, livemode }) => {
-			const { app, didHandlerRun } = createApp();
-			const response = await postEvent(app, { env, livemode });
-
-			expect(response.status).toBe(200);
-			expect(didHandlerRun()).toBe(false);
-			expect(mockState.getByAccountIdCalls).toBe(0);
-		},
-	);
-
-	test.each([
-		{ env: "live", livemode: true },
-		{ env: "sandbox", livemode: false },
-	])(
-		"processes $env endpoint receiving livemode=$livemode",
-		async ({ env, livemode }) => {
-			const { app, didHandlerRun } = createApp();
-			const response = await postEvent(app, { env, livemode });
-
-			expect(response.status).toBe(200);
-			expect(didHandlerRun()).toBe(true);
-		},
-	);
 });

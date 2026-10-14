@@ -4,7 +4,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { stripeEventMatchesEnv } from "../common/stripeEventMatchesEnv.js";
 import { runStripeWebhookHandlers } from "../runStripeWebhookHandlers.js";
 import { isStripeWebhookLockRequired } from "../webhookMiddlewares/classifyStripeWebhookAckMode.js";
 import {
@@ -51,14 +50,6 @@ export const runStripeWebhookReplay = async ({
 }) => {
 	const { stripeEvent } = payload;
 	const { logger } = ctx;
-
-	// Drains replays queued before the Connect seeder started skipping these.
-	if (!stripeEventMatchesEnv({ event: stripeEvent, env: ctx.env })) {
-		logger.warn(
-			`[stripeWebhookReplay] Skipping ${stripeEvent.type} (${stripeEvent.id}): livemode=${stripeEvent.livemode} does not match ${ctx.env}`,
-		);
-		return;
-	}
 
 	const webhookCtx: StripeWebhookContext = {
 		...ctx,
