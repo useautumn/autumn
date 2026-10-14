@@ -43,10 +43,10 @@ export const updatePendingCustomerProduct = async ({
 			deferredData,
 		}));
 	if (liveUpdate) {
-		await discardPendingCustomerProduct({ ctx, customerProduct });
 		return (await billingActions.updateSubscription({
 			ctx,
 			params: liveUpdate,
+			contextOverride: { supersededPendingCustomerProduct: customerProduct },
 		})) as PendingUpdateResult;
 	}
 

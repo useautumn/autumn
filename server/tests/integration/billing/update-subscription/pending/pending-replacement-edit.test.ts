@@ -161,6 +161,22 @@ test.concurrent(
 		const oldInvoice = await ctx.stripeCli.invoices.retrieve(oldInvoiceId!);
 		expect(unchanged.total * 100).toBe(oldInvoice.total);
 
+		// A failed edit leaves the unpaid change and its invoice untouched.
+		await expect(
+			autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				customer_product_id: pending.id,
+				plan_id: dedicated.id,
+				feature_quantities: [{ feature_id: TestFeature.Users, quantity: 2 }],
+			}),
+		).rejects.toThrow();
+		expect((await listRows()).map((row) => row.id).sort()).toEqual(
+			[live.id, pending.id].sort(),
+		);
+		expect((await ctx.stripeCli.invoices.retrieve(oldInvoiceId!)).status).toBe(
+			"open",
+		);
+
 		const edit: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			customer_product_id: pending.id,

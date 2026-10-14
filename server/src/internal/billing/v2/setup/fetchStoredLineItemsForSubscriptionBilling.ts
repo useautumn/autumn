@@ -15,7 +15,7 @@ export const fetchStoredLineItemsForSubscriptionBilling = async ({
 	fullCustomer: FullCustomer;
 	stripeSubscription?: Stripe.Subscription;
 	outgoingCusProductIds: string[];
-	excludeStripeInvoiceId?: string;
+	excludeStripeInvoiceId?: string | null;
 }) => {
 	const siblingIds = getSiblingCusProductIds({
 		fullCustomer,

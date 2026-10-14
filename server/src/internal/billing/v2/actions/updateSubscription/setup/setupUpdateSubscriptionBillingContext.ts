@@ -32,6 +32,7 @@ import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setup
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
+import { MetadataService } from "@/internal/metadata/MetadataService";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
@@ -255,13 +256,21 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
+	const supersededPending = contextOverride.supersededPendingCustomerProduct;
 	const { storedChargeLineItems, storedRefundLineItems } =
 		await fetchStoredLineItemsForSubscriptionBilling({
 			db: ctx.db,
 			fullCustomer,
 			stripeSubscription,
 			outgoingCusProductIds: [customerProduct.id],
-			excludeStripeInvoiceId: contextOverride.discardedStripeInvoiceId,
+			excludeStripeInvoiceId:
+				supersededPending?.metadata_id &&
+				(
+					await MetadataService.get({
+						db: ctx.db,
+						id: supersededPending.metadata_id,
+					})
+				)?.stripe_invoice_id,
 		});
 
 	return {

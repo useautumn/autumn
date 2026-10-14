@@ -99,8 +99,8 @@ export interface UpdateSubscriptionBillingContextOverride
 		customEnts?: Entitlement[];
 	};
 
-	/** An invoice the caller voids before this update runs, so its stored line items don't count. */
-	discardedStripeInvoiceId?: string;
+	/** An unpaid pending change to the plan being updated: its invoice doesn't count, and it is discarded when the update executes. */
+	supersededPendingCustomerProduct?: FullCusProduct;
 
 	/** Build the context against this customer instead of fetching from DB.
 	 * For fold-style callers (multiUpdate) whose customer carries prior updates. */

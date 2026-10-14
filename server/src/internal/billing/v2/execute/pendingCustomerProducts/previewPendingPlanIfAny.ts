@@ -10,9 +10,8 @@ import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pe
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { billingPlanToUpdateSubscriptionPreviewIntent } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent";
-import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/** Previews an edit that re-attaches a pending plan, mirroring updatePendingPlanIfAny. */
+/** Previews an edit or cancel of a pending plan, mirroring updatePendingPlanIfAny. */
 export const previewPendingPlanIfAny = async ({
 	ctx,
 	params,
@@ -43,19 +42,12 @@ export const previewPendingPlanIfAny = async ({
 		deferredData,
 	});
 	if (liveUpdate) {
-		// The update runs after the pending invoice is voided, so its line items don't count.
-		const metadata = await MetadataService.get({
-			db: ctx.db,
-			id: customerProduct.metadata_id!,
-		});
 		const { billingContext, billingPlan } =
 			await billingActions.updateSubscription({
 				ctx,
 				params: liveUpdate,
 				preview: true,
-				contextOverride: {
-					discardedStripeInvoiceId: metadata?.stripe_invoice_id ?? undefined,
-				},
+				contextOverride: { supersededPendingCustomerProduct: customerProduct },
 			});
 		return billingPlanToUpdateSubscriptionPreview({
 			ctx,
