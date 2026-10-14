@@ -4,13 +4,17 @@ import {
 	type StructuralDifference,
 } from "../findStructuralDifference.js";
 
-/** Only the worker's apply of an Atom's track writes it; the Atom's own replay of the same track never does. */
-const withoutAtomSeqs = (state: SubjectState): SubjectState => ({
+/**
+ * The rows alone. The revision is the worker's count since it last loaded the customer, which a resend or a reload
+ * moves; atom_seqs only the worker's apply of an Atom's track writes, never the Atom's own replay of it.
+ */
+const rowsOf = (state: SubjectState) => ({
 	...state,
+	revision: undefined,
 	customer: { ...state.customer, atom_seqs: undefined },
 });
 
-/** Where two states first differ; null when the same mutations were applied to both. */
+/** Where two states' rows first differ; null when they hold the same rows. */
 export const findSubjectStateDifference = ({
 	left,
 	right,
@@ -19,6 +23,6 @@ export const findSubjectStateDifference = ({
 	right: SubjectState;
 }): StructuralDifference | null =>
 	findStructuralDifference({
-		left: withoutAtomSeqs(left),
-		right: withoutAtomSeqs(right),
+		left: rowsOf(left),
+		right: rowsOf(right),
 	});

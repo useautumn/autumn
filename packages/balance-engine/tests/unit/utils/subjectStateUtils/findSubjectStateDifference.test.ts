@@ -58,19 +58,15 @@ describe("findSubjectStateDifference", () => {
 		).toBeNull();
 	});
 
-	test("a different revision is a different state: Autumn applied something else", () => {
+	test("the revision is not compared: it is the worker's count since it loaded the customer, which resends and reloads move", () => {
 		const state = tracked({ state: createState({ balance: 10 }) });
 
 		expect(
 			findSubjectStateDifference({
 				left: state,
-				right: { ...state, revision: state.revision + 1 },
+				right: { ...state, revision: 0 },
 			}),
-		).toEqual({
-			path: "revision",
-			left: state.revision,
-			right: state.revision + 1,
-		});
+		).toBeNull();
 	});
 
 	test("a different balance, or a row more, is a different state, named by the first path that differs", () => {

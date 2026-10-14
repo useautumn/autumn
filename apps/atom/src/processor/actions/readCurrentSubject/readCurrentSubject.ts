@@ -110,7 +110,6 @@ let viewFoldKept = 0;
 const viewFoldRebuilt: Record<RebuildReason, number> = {
 	noFold: 0,
 	trim: 0,
-	revision: 0,
 	catalog: 0,
 	state: 0,
 };
@@ -124,7 +123,6 @@ export const readViewFoldThreadStats = () => ({
 	),
 	viewFoldRebuiltNoFold: viewFoldRebuilt.noFold,
 	viewFoldRebuiltTrim: viewFoldRebuilt.trim,
-	viewFoldRebuiltRevision: viewFoldRebuilt.revision,
 	viewFoldRebuiltCatalog: viewFoldRebuilt.catalog,
 	viewFoldRebuiltState: viewFoldRebuilt.state,
 });
