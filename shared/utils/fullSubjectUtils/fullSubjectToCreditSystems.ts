@@ -26,12 +26,19 @@ export const fullSubjectToCreditSystems = ({
 	featureId: string;
 	features: Feature[];
 }): Feature[] => {
+	const candidates = features.filter(
+		(candidate) =>
+			candidate.type === FeatureType.CreditSystem && candidate.id !== featureId,
+	);
+	if (candidates.length === 0) return [];
 	const cusEntsByCreditSystemId = new Map<
 		string,
 		FullCusEntWithFullCusProductView[]
 	>();
+	// Only the candidates' own rows decide: selecting just those skips sorting every row the subject holds.
 	for (const customerEntitlement of fullSubjectToCustomerEntitlements({
 		fullSubject,
+		featureIds: candidates.map(({ id }) => id),
 	})) {
 		const entitlementFeature = customerEntitlement.entitlement.feature;
 		if (entitlementFeature.type !== FeatureType.CreditSystem) continue;
@@ -41,14 +48,7 @@ export const fullSubjectToCreditSystems = ({
 		cusEntsByCreditSystemId.set(entitlementFeature.id, group);
 	}
 
-	return features.filter((candidate) => {
-		if (
-			candidate.type !== FeatureType.CreditSystem ||
-			candidate.id === featureId
-		) {
-			return false;
-		}
-
+	return candidates.filter((candidate) => {
 		const attachedCusEnts = cusEntsByCreditSystemId.get(candidate.id);
 		if (attachedCusEnts?.length) {
 			return attachedCusEnts.some((customerEntitlement) =>
