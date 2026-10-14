@@ -1,5 +1,6 @@
 import {
 	ACTIVE_STATUSES,
+	cp,
 	type DeferredAutumnBillingPlanData,
 	type FullCusProduct,
 	type UpdateSubscriptionV1Params,
@@ -20,6 +21,9 @@ export const pendingReplacementToLiveUpdate = async ({
 	customerProduct: FullCusProduct;
 	deferredData: DeferredAutumnBillingPlanData;
 }): Promise<UpdateSubscriptionV1Params | undefined> => {
+	const stripeSubscriptionId = customerProduct.subscription_ids?.[0];
+	if (!stripeSubscriptionId) return;
+
 	const { customer_products } = await CusService.getFull({
 		ctx,
 		idOrInternalId: params.customer_id,
@@ -29,11 +33,12 @@ export const pendingReplacementToLiveUpdate = async ({
 	});
 	const livePlan = customer_products.find(
 		(live) =>
-			live.product.id === customerProduct.product.id &&
-			live.internal_entity_id === customerProduct.internal_entity_id &&
-			live.subscription_ids?.some((id) =>
-				customerProduct.subscription_ids?.includes(id),
-			),
+			cp(live)
+				.hasProductId({ productId: customerProduct.product.id })
+				.onEntity({
+					internalEntityId: customerProduct.internal_entity_id ?? undefined,
+				})
+				.onStripeSubscription({ stripeSubscriptionId }).valid,
 	);
 	if (!livePlan) return;
 
