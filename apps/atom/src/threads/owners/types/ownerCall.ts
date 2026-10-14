@@ -9,7 +9,10 @@ import type {
 } from "../../../processor/types/finalize.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
-import type { HandedEntry } from "../../../state/journal/types/journal.js";
+import type {
+	HandedEntry,
+	HandedKey,
+} from "../../../state/journal/types/journal.js";
 import type { OpenLock } from "../../../state/openLocks/createOpenLocks.js";
 import type {
 	AppliedSubject,
@@ -48,6 +51,7 @@ export type OwnerCallBody = { atomId: string | null } & (
 				entries: HandedEntry[];
 				locks: OpenLock[];
 			}[];
+			keys: HandedKey[];
 	  }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }

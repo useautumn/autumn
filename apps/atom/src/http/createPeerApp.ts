@@ -3,7 +3,10 @@ import { receiveDeleteAtom } from "../multiTenant/receiveDeleteAtom.js";
 import { receiveListAtoms } from "../multiTenant/receiveListAtoms.js";
 import { receivePutAtom } from "../multiTenant/receivePutAtom.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
-import { PEER_HANDOFF_PATH } from "../replicas/handover/handoffContract.js";
+import {
+	PEER_HANDOFF_PATH,
+	PEER_KEY_HANDOFF_PATH,
+} from "../replicas/handover/handoffContract.js";
 import { PEER_LEAVING_PATH } from "../replicas/handover/leavingContract.js";
 import {
 	PEER_ATOMS_LIST_PATH,
@@ -16,6 +19,7 @@ import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorH
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveJournalHandoff } from "./handlers/receiveJournalHandoff.js";
+import { receiveKeyHandoff } from "./handlers/receiveKeyHandoff.js";
 import { receiveLeaving } from "./handlers/receiveLeaving.js";
 import {
 	receiveCatalogSince,
@@ -91,6 +95,7 @@ export function createPeerApp({
 	folder.post(PEER_SUBJECTS_FETCH_PATH, receiveSubjectsFetch({ ctx }));
 	folder.post(PEER_CATALOG_SINCE_PATH, receiveCatalogSince({ ctx }));
 	folder.post(PEER_HANDOFF_PATH, receiveJournalHandoff({ ctx }));
+	folder.post(PEER_KEY_HANDOFF_PATH, receiveKeyHandoff);
 	app.route("/", folder);
 	return app;
 }
