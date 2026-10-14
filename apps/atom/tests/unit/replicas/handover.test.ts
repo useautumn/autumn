@@ -10,6 +10,7 @@ import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContrac
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	ATOM_TOKEN,
+	bodyFor,
 	cleanUpReplicas,
 	connect,
 	createReplica,
@@ -111,6 +112,28 @@ const deductOnA = async ({ a, times }: { a: Replica; times: number }) => {
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 	}
+};
+
+/** The subject as Autumn pushes it once its worker applied a lock's track: the writer's seq seen, the lock open. */
+const appliedLockBodyFor = ({
+	customerId,
+	readAt,
+	balance,
+	writerSeqs,
+	openLock,
+}: {
+	customerId: string;
+	readAt: number;
+	balance: number;
+	writerSeqs: Record<string, number>;
+	openLock: { id: string; lock_id: string };
+}) => {
+	const body = JSON.parse(bodyFor({ customerId, readAt, balance })) as {
+		state: { customer: Record<string, unknown>; openLocks?: unknown[] };
+	};
+	body.state.customer.atom_seqs = { atom_1: writerSeqs };
+	body.state.openLocks = [openLock];
+	return JSON.stringify(body);
 };
 
 const journalOwing = (replica: Replica) =>
@@ -631,6 +654,55 @@ describe("a lock taken on the leaving owner", () => {
 			{ type: "track", writer: "a" },
 			{ type: "finalize", writer: "b" },
 		]);
+	});
+
+	test("whose track Autumn already applied (nothing owed) is still settled on the new owner, from the row the leaver hands with its entries", async () => {
+		const calls: string[] = [];
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({
+			aForwarder: journals.forwarder,
+			bForwarder: journals.forwarder,
+		});
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		expect((await lockOn(a)).status).toBe(200);
+		await until(() => journals.handedIn.length === 1);
+		const aWriter = journalOwing(a)?.writerId ?? "";
+		// The row's id is the track's lock id, as the worker inserts it.
+		const rowId = journals.commands[0]?.lock?.id ?? "";
+		expect(rowId).not.toBe("");
+		// Autumn's worker applied the lock's track: its push names A's seq and shows the lock open, so nothing stays owed.
+		for (const replica of [a, b])
+			await replica.slots.processorFor({ customerId: CUSTOMER }).setSubject({
+				customerId: CUSTOMER,
+				body: appliedLockBodyFor({
+					customerId: CUSTOMER,
+					readAt: 1800,
+					balance: 7,
+					writerSeqs: { [aWriter]: 1 },
+					openLock: { id: rowId, lock_id: "lock_1" },
+				}),
+			});
+		expect(journalOwing(a)).toBeUndefined();
+
+		await a.leave();
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await reply.json()).toEqual({ success: true });
+		expect(calls).toEqual([]);
+		expect(await remainingAt(b)).toBe(10);
+		await until(() => journals.handedIn.length === 2);
+		expect(journals.handedIn[1]).toEqual({
+			type: "finalize",
+			writer: journalOwing(b)?.writerId ?? "",
+		});
 	});
 
 	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
