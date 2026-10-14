@@ -8,13 +8,18 @@ import { classifyQueuedFailure } from "./settleQueuedFailure.js";
 import type { ConsumeContext } from "./types/consume.js";
 import type { QueuedCommand } from "./types/queuedCommand.js";
 
+/** No other path holds an Atom's key for its own request id, and its atom_seqs already refuse a resend. */
+const isAtomOwnKey = ({ command }: { command: TrackCommand }): boolean =>
+	command.source !== undefined &&
+	command.idempotency?.key === `track:${command.requestId}`;
+
 /** The item owns its claim: its fan-out commands and redeliveries resume it, any other item is a duplicate. */
 const claimOf = ({
 	command,
 }: {
 	command: TrackCommand;
 }): IdempotencyClaim | undefined => {
-	if (!command.idempotency) return undefined;
+	if (!command.idempotency || isAtomOwnKey({ command })) return undefined;
 	const { storageKey } = buildIdempotencyStorageKey({
 		orgId: command.identity.orgId,
 		env: command.identity.env,
