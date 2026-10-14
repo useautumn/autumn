@@ -22,9 +22,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
+import { uniqueTestId } from "../../../catalog-v2/utils/uniqueTestId.js";
 import { expectCombinePoolCorrect } from "./utils/expectCombinePoolCorrect.js";
 
-const featureId = "combine_heal_messages";
+const featureId = uniqueTestId("combine_heal_messages");
 
 const setFeatureCombine = async ({
 	autumn,
@@ -33,17 +34,7 @@ const setFeatureCombine = async ({
 	autumn: AutumnInt;
 	combine: FeatureCombine;
 }) => {
-	try {
-		await autumn.post("/features.update", { feature_id: featureId, combine });
-	} catch {
-		await autumn.post("/features.create", {
-			feature_id: featureId,
-			name: "Combine heal messages",
-			type: FeatureType.Metered,
-			consumable: true,
-			combine,
-		});
-	}
+	await autumn.post("/features.update", { feature_id: featureId, combine });
 };
 
 test(
@@ -53,9 +44,12 @@ test(
 	async () => {
 		const customerId = "combine-heal-existing-grants";
 		const autumn = new AutumnInt({ version: ApiVersion.V2_1 });
-		// Leaving max is blocked while a customer holds the feature, so drop the customer first.
-		await autumn.customers.delete(customerId).catch(() => undefined);
-		await setFeatureCombine({ autumn, combine: FeatureCombine.Sum });
+		await autumn.post("/features.create", {
+			feature_id: featureId,
+			name: "Combine heal messages",
+			type: FeatureType.Metered,
+			consumable: true,
+		});
 
 		const pro = products.base({
 			id: "combine-heal-pro",
@@ -87,32 +81,27 @@ test(
 			remaining: 200,
 		});
 
-		try {
-			await setFeatureCombine({ autumn, combine: FeatureCombine.Max });
-			await autumnV2_3.billing.attach<AttachParamsV1Input>({
-				customer_id: customerId,
-				plan_id: module.id,
-			});
+		await setFeatureCombine({ autumn, combine: FeatureCombine.Max });
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: module.id,
+		});
 
-			await expectCombinePoolCorrect({
-				db: ctx.db,
-				customerId,
-				featureId,
-				granted: 5000,
-				balance: 4200,
-				competingContributions: [1000, 5000],
-			});
-			await expectBalanceCorrect({
-				customerId,
-				autumn: autumnV2_3,
-				featureId,
-				granted: 5000,
-				remaining: 4200,
-				usage: 800,
-			});
-		} finally {
-			await autumn.customers.delete(customerId).catch(() => undefined);
-			await setFeatureCombine({ autumn, combine: FeatureCombine.Sum });
-		}
+		await expectCombinePoolCorrect({
+			db: ctx.db,
+			customerId,
+			featureId,
+			granted: 5000,
+			balance: 4200,
+			competingContributions: [1000, 5000],
+		});
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			featureId,
+			granted: 5000,
+			remaining: 4200,
+			usage: 800,
+		});
 	},
 );
