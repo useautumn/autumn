@@ -10,6 +10,7 @@ import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
+import { createOpenLocks } from "../state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
@@ -114,7 +115,14 @@ export const openSlots = ({
 		return {
 			sqliteStore,
 			processor: createSlotProcessor({
-				ctx: { sqliteStore, catalogStore, logger, subjectPulls, journal },
+				ctx: {
+					sqliteStore,
+					catalogStore,
+					logger,
+					subjectPulls,
+					journal,
+					openLocks: createOpenLocks(),
+				},
 			}),
 		};
 	});

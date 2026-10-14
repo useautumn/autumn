@@ -10,6 +10,7 @@ import {
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**
  * A lock is decided by its track, as the worker decides it: what applies is held, and a lock_id already open is
@@ -61,12 +62,31 @@ export const deductOnSubject = ({
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
+	// D2: a lock_id this slot took is the same lock on its terms (nothing moves or is journaled), a conflict on any other.
+	const lockId = track.lock?.lockId;
+	const held = lockId
+		? ctx.openLocks.trackOf({
+				customerId,
+				lockId,
+				owed: ctx.journal.owed({ customerId }),
+			})
+		: null;
+	if (lockId && held) {
+		if (!isSameLock({ held, retry: track }))
+			throw new LockTermsConflictError({ lockId });
+		const answer = computeCheck({ fullSubject: subject.fullSubject, command });
+		return {
+			result: { ...answer, allowed: true, reason: null, limitType: null },
+			committed: Promise.resolve(),
+		};
+	}
 	const result = track.lock
 		? decideLockedTrack({ subject, command, track })
 		: computeCheck({ fullSubject: subject.fullSubject, command });
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });
+	ctx.openLocks.hold({ track });
 	return {
 		result,
 		committed: committed.catch(() => {
