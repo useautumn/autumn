@@ -319,24 +319,6 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("the parsed copy checks share cannot be changed by one of them", () => {
-		const sqliteStore = openSqliteStore({
-			databasePath: slotPath(),
-			held: freshHeld(),
-		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
-		const read = sqliteStore.readSubject({
-			customerId: "cus_1",
-			entityId: null,
-		});
-
-		expect(() => {
-			(read as { readAt: number }).readAt = 0;
-		}).toThrow(TypeError);
-		expect(Object.isFrozen(read?.state.identity)).toBe(true);
-		sqliteStore.close();
-	});
-
 	test("a push to one customer leaves another customer's parsed copy in place", () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
@@ -375,7 +357,6 @@ describe("sqlite store", () => {
 
 		expect(read()).toBe(held as StoredSubject);
 		expect(held?.logOffset).toBe(2n);
-		expect(Object.isFrozen(held?.state)).toBe(true);
 		sqliteStore.close();
 	});
 

@@ -9,7 +9,6 @@ import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
-import { deepFreeze } from "../../../state/deepFreeze.js";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
@@ -266,8 +265,6 @@ export const readCurrentSubject = ({
 		catalog,
 		entityId,
 	});
-	// Every check until the next push or append shares it.
-	deepFreeze(current);
 	const fold: ViewFold = { customer, shared, owed, customerState, current };
 	subjectJoinCache.set(target, fold);
 	if (!entity) keepFold({ fold, previous: isSameCopy ? joined : carried });
