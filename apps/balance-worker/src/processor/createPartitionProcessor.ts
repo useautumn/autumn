@@ -14,6 +14,7 @@ import type {
 	TrackCommand,
 	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
+import { parseWorkerLock } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
 import { check as checkPartition } from "./commands/check.js";
@@ -152,6 +153,19 @@ function createProcessor({
 			accepted: scope.accepted,
 			operation: readSubjectStatePartition({ scope, command }),
 		});
+	}
+
+	function pendingLockRow(
+		params: Parameters<PartitionProcessor["pendingLockRow"]>[0],
+	) {
+		return scope.ctx.writer.pendingLockRow(params);
+	}
+
+	async function readLockRows({
+		keys,
+	}: Parameters<PartitionProcessor["readLockRows"]>[0]) {
+		const rows = await scope.ctx.db.readLockRows({ keys });
+		return rows.map((row) => parseWorkerLock({ input: row }));
 	}
 
 	function applyBillingPlan({ request }: { request: ApplyBillingPlanRequest }) {
@@ -333,6 +347,8 @@ function createProcessor({
 		check,
 		applyBillingPlan,
 		readSubjectState,
+		pendingLockRow,
+		readLockRows,
 		initialize,
 		evict,
 		evictResident,
