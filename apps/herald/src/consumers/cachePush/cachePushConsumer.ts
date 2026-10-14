@@ -11,6 +11,8 @@ import { recordsToCacheSubjects } from "./utils/recordsToCacheSubjects.js";
 
 /** Pushes in flight per herald task: each is a worker read plus an Atom write, so throughput is concurrency over latency. */
 export const CACHE_PUSH_CONCURRENCY = 64;
+/** How long a subject waits from its first change, so a hot customer's changes meanwhile cost its Atoms one push, not each. */
+export const CACHE_PUSH_LINGER_MS = 50;
 /** Subjects waiting before a slice blocks, so the log is not read far ahead of what reached the Atoms. */
 export const CACHE_PUSH_MAX_PENDING = 20_000;
 
@@ -28,6 +30,7 @@ export function createCachePushConsumer({
 		push: pushAndRecord,
 		concurrency: CACHE_PUSH_CONCURRENCY,
 		maxPending: CACHE_PUSH_MAX_PENDING,
+		lingerMs: CACHE_PUSH_LINGER_MS,
 	});
 	const stats = createCachePushStats({
 		logger: ctx.logger,

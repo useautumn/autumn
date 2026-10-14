@@ -10,6 +10,7 @@ import {
 	identity,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
+import { isDeletedSubject } from "../../../src/state/types/storedSubject.js";
 import { atomOrg } from "../../unit/utils/atomFixtures.js";
 import {
 	createSimNetwork,
@@ -38,6 +39,8 @@ const PUSH_TIMEOUT_MS = 2_000;
 const CHECK_TIMEOUT_MS = 5_000;
 
 export type Version = { readAt: number; logOffset: bigint };
+/** The balance a deleted customer is recorded at: no check may be answered from it, nor from any copy older than it. */
+export const DELETED_BALANCE = -1;
 const newer = (a: Version, b: Version) =>
 	a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
@@ -206,26 +209,55 @@ export const createSimCluster = ({
 		};
 	};
 
+	/** What Autumn pushes once the customer's worker no longer holds it. */
+	const deletedSubjectBody = ({
+		customerId,
+		readAt,
+	}: {
+		customerId: string;
+		readAt: number;
+	}) => {
+		logOffset += 1n;
+		return {
+			version: { readAt, logOffset },
+			text: JSON.stringify({
+				identity: { ...identity, customerId, entityId: null },
+				log_offset: logOffset.toString(),
+				read_at: readAt,
+			}),
+		};
+	};
+
 	const boundAddress = (): string | null => {
 		const routable = network.routable();
 		return routable.length === 0 ? null : rng.pick(routable);
 	};
 
+	/** Customers Autumn deleted: never pushed again, so every replica must end on their deletion. */
+	const deletedCustomers = new Set<string>();
+	const liveCustomerIds = () =>
+		customerIds.filter((customerId) => !deletedCustomers.has(customerId));
+
 	/** Autumn's next read of a customer: a newer version, pushed to whichever replica the balancer picks. */
 	async function push({
-		customerId = rng.pick(customerIds),
+		customerId = rng.pick(liveCustomerIds()),
 		entityId = entities > 0 && rng.chance(0.5)
 			? `ent_${rng.int(1, entities)}`
 			: null,
 		readAt = clock.now(),
+		deleted = false,
 	}: {
 		customerId?: string;
 		entityId?: string | null;
 		readAt?: number;
+		/** Autumn deleted the customer: its tombstone, at the next version. */
+		deleted?: boolean;
 	} = {}) {
+		if (deleted) deletedCustomers.add(customerId);
 		const key = subjectKey({ customerId, entityId });
-		const balance = (versions.get(key) ?? 0) + 1;
-		versions.set(key, balance);
+		// A deletion moves no balance: an entity view still in flight records the customer's own as it last was.
+		const balance = deleted ? DELETED_BALANCE : (versions.get(key) ?? 0) + 1;
+		if (!deleted) versions.set(key, balance);
 		// Now and then an entity's view is where a customer learns its own plan ended: it carries no customer rows.
 		const endsPlan =
 			entityId !== null &&
@@ -233,12 +265,9 @@ export const createSimCluster = ({
 			rng.chance(planEndRate);
 		if (endsPlan) planEnded.add(customerId);
 		if (!entityId) planEnded.delete(customerId);
-		const { version, text } = subjectBody({
-			customerId,
-			entityId,
-			balance,
-			readAt,
-		});
+		const { version, text } = deleted
+			? deletedSubjectBody({ customerId, readAt })
+			: subjectBody({ customerId, entityId, balance, readAt });
 		const to = boundAddress();
 		if (!to) {
 			say(`push ${customerId}@${balance} lost: nothing listening`);
@@ -247,7 +276,7 @@ export const createSimCluster = ({
 		const sentAt = clock.now();
 		try {
 			const reply = await outsideFetch(
-				`http://${to}:${SIM_PORT}/v1/subjects.set`,
+				`http://${to}:${SIM_PORT}/v1/${deleted ? "subjects.delete" : "subjects.set"}`,
 				{
 					method: "POST",
 					headers: {
@@ -498,6 +527,7 @@ export const createSimCluster = ({
 		checksPerSecond = 10,
 		catalogPushesPerMinute = 1,
 		newCustomersPerSecond = 0,
+		deletesPerSecond = 0,
 		onStep,
 	}: {
 		ms: number;
@@ -506,6 +536,8 @@ export const createSimCluster = ({
 		catalogPushesPerMinute?: number;
 		/** Customers Autumn pushes for the first time, never checked again: what fills an Atom's disk. */
 		newCustomersPerSecond?: number;
+		/** Customers Autumn deletes, for good, each pushed as its deletion. */
+		deletesPerSecond?: number;
 		onStep?: (step: { at: number }) => void;
 	}) {
 		const STEP_MS = 100;
@@ -517,6 +549,12 @@ export const createSimCluster = ({
 				rng.chance((newCustomersPerSecond * STEP_MS) / 1000)
 			)
 				track(push({ customerId: `new_${++newCustomers}`, entityId: null }));
+			if (
+				deletesPerSecond > 0 &&
+				liveCustomerIds().length > 1 &&
+				rng.chance((deletesPerSecond * STEP_MS) / 1000)
+			)
+				track(push({ entityId: null, deleted: true }));
 			if (rng.chance((checksPerSecond * STEP_MS) / 1000)) track(check());
 			if (rng.chance((catalogPushesPerMinute * STEP_MS) / 60_000))
 				track(pushCatalog());
@@ -539,6 +577,20 @@ export const createSimCluster = ({
 			});
 			for (const { subject } of subjects) {
 				const { customerId, entityId } = subject.state.identity;
+				const version = {
+					readAt: subject.readAt,
+					logOffset: subject.logOffset,
+				};
+				if (isDeletedSubject(subject)) {
+					byCustomer.set(
+						subjectKey({ customerId, entityId: entityId ?? null }),
+						{
+							version,
+							balance: DELETED_BALANCE,
+						},
+					);
+					continue;
+				}
 				// An entity's part holds its own rows only; the customer's view holds the customer's.
 				const ownerId = entityId
 					? (subject.state.entity?.internal_id ?? null)
@@ -547,7 +599,7 @@ export const createSimCluster = ({
 					(row) => (row.internal_entity_id ?? null) === ownerId,
 				);
 				byCustomer.set(subjectKey({ customerId, entityId: entityId ?? null }), {
-					version: { readAt: subject.readAt, logOffset: subject.logOffset },
+					version,
 					// A customer whose plan ended holds no rows of its own: 0.
 					balance: own?.balance ?? (entityId ? Number.NaN : 0),
 				});

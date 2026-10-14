@@ -58,7 +58,7 @@ export const checkOnAtom = async ({
 	};
 };
 
-/** Polls until the Atom answers the check itself (or forwards it for `forwarded`) with `allowed`: a change reaches it through the worker's log and herald, a moment after the API answers.
+/** Polls until the Atom answers the check itself (or forwards it for `forwarded`) with `allowed` when given: a change reaches it through the worker's log and herald, a moment after the API answers.
  * With `api`, the reply must also equal that client's own answer to the same check. A `timeoutMs` of 0 asks once. */
 export const expectAtomCheckCorrect = async ({
 	atom,
@@ -78,7 +78,7 @@ export const expectAtomCheckCorrect = async ({
 	entityId?: string;
 	featureId: string;
 	requiredBalance: number;
-	allowed: boolean;
+	allowed?: boolean;
 	forwarded?: string | null;
 	api?: AutumnInt;
 	timeoutMs?: number;
@@ -105,7 +105,8 @@ export const expectAtomCheckCorrect = async ({
 		},
 		assert: ({ atomReply, apiBody }) => {
 			expect(atomReply.forwarded).toBe(forwarded);
-			expect(atomReply.body).toMatchObject({ allowed });
+			if (allowed !== undefined)
+				expect(atomReply.body).toMatchObject({ allowed });
 			if (api) expect(atomReply.body).toEqual(apiBody);
 		},
 		timeoutMs,

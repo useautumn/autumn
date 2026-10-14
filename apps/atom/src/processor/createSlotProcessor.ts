@@ -1,7 +1,9 @@
+import { deletePushToDeletedSubject } from "../lib/contracts/deleteSubjectContract.js";
 import { subjectPushToStoredSubject } from "../lib/contracts/subjectContract.js";
 import { CannotAnswerError } from "../lib/forward/cannotAnswerError.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
+import { deleteSubject } from "./actions/deleteSubject/deleteSubject.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
 import type {
 	SlotProcessor,
@@ -40,5 +42,7 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
+		deleteSubject: async (params) =>
+			deleteSubject({ ctx, subject: deletePushToDeletedSubject(params) }),
 	};
 };

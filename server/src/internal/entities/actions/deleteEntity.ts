@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { releaseEntityAllocations } from "@/internal/balances/allocate/actions/refreshAllocationScale";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer";
+import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -153,6 +154,9 @@ export const deleteEntity = async ({
 		internalIds: [entity.internal_id],
 		orgId: org.id,
 		env,
+	});
+	await queueBalanceWorkerEvicts({
+		customers: [{ orgId: org.id, env, customerId, entityId }],
 	});
 
 	logger.info(` ✅ Finished deleting entity ${entityId}`);

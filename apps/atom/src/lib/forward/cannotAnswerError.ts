@@ -10,7 +10,10 @@ export type ForwardReason =
 	| "customer_data"
 	| "skip_cache"
 	| "customer_not_stored"
+	/** Autumn deleted the customer: no copy read before the delete is answered from. */
+	| "customer_deleted"
 	| "entity_not_stored"
+	| "entity_deleted"
 	/** The entity was read before its customer's latest evict, which may have replaced its rows. */
 	| "entity_stale"
 	| "feature_not_stored"

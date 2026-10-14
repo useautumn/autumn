@@ -1,7 +1,7 @@
-import { type PriceTier, TierBehavior, UsageModel } from "@autumn/shared";
+import { type PriceTier, TierBehavior } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
@@ -61,17 +61,6 @@ export function PriceTiers({
 	const { item, setItem } = useProductItemContext();
 	const { org } = useOrg();
 	const currency = org?.default_currency?.toUpperCase() ?? "USD";
-
-	// Auto-select prepaid when volume-based is active with multiple tiers
-	useEffect(() => {
-		if (
-			item?.tier_behavior === TierBehavior.VolumeBased &&
-			(item?.tiers?.length ?? 0) > 1 &&
-			item?.usage_model !== UsageModel.Prepaid
-		) {
-			setItem({ ...item, usage_model: UsageModel.Prepaid });
-		}
-	}, [item?.tier_behavior, item?.tiers?.length]);
 
 	if (!item) return null;
 
@@ -150,6 +139,13 @@ export function PriceTiers({
 	const isFlatMode = volumePricingMode === "flat";
 	const amountField = isFlatMode ? "flat_amount" : "amount";
 
+	// Volume bills every unit at one tier, so graduated "then" wording doesn't apply.
+	const tierLabel = (index: number) => {
+		if (item.tier_behavior === TierBehavior.VolumeBased) return "usage up to";
+		if (Number(includedUsage) === 0 && index === 0) return "first";
+		return "then, up to";
+	};
+
 	return (
 		<div className="space-y-2">
 			{tiers.map((tier: PriceTier, index: number) => {
@@ -158,9 +154,7 @@ export function PriceTiers({
 				return (
 					<div key={`tier-${index}`} className="flex gap-2 w-full items-center">
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
-							{Number(includedUsage) === 0 && index === 0
-								? "first"
-								: "then, up to"}
+							{tierLabel(index)}
 						</span>
 
 						<TierToInput index={index} />

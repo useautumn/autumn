@@ -109,6 +109,14 @@ export const createAtomClient = ({
 				},
 				delivery: ctx.subjects,
 			}),
+		deleteSubject: ({ body }) =>
+			postToAtom({
+				ctx,
+				path: "/v1/subjects.delete",
+				body,
+				headers: { [ATOM_CUSTOMER_ID_HEADER]: body.identity.customerId },
+				delivery: ctx.subjects,
+			}),
 		setCatalog: ({ rows, readAt }) =>
 			postToAtom({
 				ctx,

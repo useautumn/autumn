@@ -4,9 +4,9 @@ import {
 	formatInterval,
 	formatTiers,
 	getProductItemDisplay,
+	isVolumeFlatFeeTiers,
 	type ProductItem,
 	TierBehavior,
-	TierInfinite,
 	UsageModel,
 } from "@autumn/shared";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils";
 import { intervalIsNone } from "@/utils/product/productItemUtils";
 import { AdditionalCurrenciesHint } from "@/views/products/plan/components/plan-card/AdditionalCurrenciesHint";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
+import {
+	itemToTierRows,
+	itemToVolumeTierRule,
+} from "@/views/products/plan/utils/tierUtils";
 import { getItemAdditionalCurrencies } from "./planItemCurrencyUtils";
 
 export const CustomDotIcon = () => (
@@ -62,20 +66,18 @@ const itemCanRollOver = (item: ProductItem): boolean => {
 	return includedUsage > 0 || item.usage_model === UsageModel.Prepaid;
 };
 
-/** Volume-based tiers priced as a flat amount per band — the real price lives in
- * `flat_amount`, matching getFeaturePriceItemDisplay's formatting. */
-const isVolumeFlatAmountItem = (item: ProductItem): boolean =>
-	item.tier_behavior === TierBehavior.VolumeBased &&
-	(item.tiers ?? []).every((tier) => tier.amount === 0) &&
-	(item.tiers ?? []).some((tier) => (tier.flat_amount ?? 0) > 0);
-
 /** The exact price substring the shared display embeds in `secondary_text`,
  * for both tiered and flat per-unit prices. */
 const priceString = (
 	item: ProductItem,
 	currency: string,
 ): string | undefined => {
-	if (isVolumeFlatAmountItem(item)) {
+	if (
+		isVolumeFlatFeeTiers({
+			tierBehavior: item.tier_behavior,
+			tiers: item.tiers,
+		})
+	) {
 		return formatTiers({
 			item,
 			currency,
@@ -129,44 +131,6 @@ function priceFieldRows(item: ProductItem): { label: string; value: string }[] {
 	return rows;
 }
 
-function priceTierRows(
-	item: ProductItem,
-	currency: string,
-): { range: string; value: string }[] {
-	// Tiers store `to` relative to the granted usage, so add it back to show the
-	// same absolute boundaries as the editor (PriceTiers' getTierToDisplay).
-	const includedUsage =
-		typeof item.included_usage === "number" ? item.included_usage : 0;
-
-	const fmt = (amount: number) =>
-		formatAmount({
-			currency,
-			amount,
-			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-		});
-
-	const rows: { range: string; value: string }[] = [];
-	if (includedUsage > 0) {
-		rows.push({ range: `0–${includedUsage}`, value: "Included" });
-	}
-
-	let from = includedUsage;
-	for (const tier of item.tiers ?? []) {
-		const isInfinite = tier.to === TierInfinite;
-		const to = typeof tier.to === "number" ? tier.to + includedUsage : tier.to;
-		const range = isInfinite ? `${from}+` : `${from}–${to}`;
-		if (!isInfinite && typeof to === "number") from = to;
-
-		const parts: string[] = [];
-		if (tier.amount) parts.push(fmt(tier.amount));
-		if (tier.flat_amount) parts.push(`${fmt(tier.flat_amount)} flat`);
-
-		rows.push({ range, value: parts.length > 0 ? parts.join(" + ") : "Free" });
-	}
-
-	return rows;
-}
-
 function KeyValueRow({ label, value }: { label: string; value: string }) {
 	return (
 		<div className="flex items-center justify-between gap-6">
@@ -186,6 +150,7 @@ function TierBreakdownChip({
 	currency: string;
 	priceStr: string;
 }) {
+	const volumeRule = itemToVolumeTierRule({ item });
 	return (
 		<Tooltip delayDuration={TIER_TOOLTIP_DELAY_MS}>
 			<TooltipTrigger asChild>
@@ -209,7 +174,7 @@ function TierBreakdownChip({
 						))}
 					</div>
 					<div className="flex flex-col gap-0.5 border-t border-border/40 pt-1.5">
-						{priceTierRows(item, currency).map((tier) => (
+						{itemToTierRows({ item, currency }).map((tier) => (
 							<KeyValueRow
 								key={`${tier.range}-${tier.value}`}
 								label={tier.range}
@@ -217,6 +182,11 @@ function TierBreakdownChip({
 							/>
 						))}
 					</div>
+					{volumeRule && (
+						<p className="text-body-secondary border-t border-border/40 pt-1.5">
+							{volumeRule}
+						</p>
+					)}
 				</div>
 			</TooltipContent>
 		</Tooltip>

@@ -1,6 +1,7 @@
 import {
 	type AdditionalCurrencyPrice,
 	type AdditionalCurrencyTier,
+	type PriceTier,
 	type ProductItem,
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
@@ -166,8 +167,12 @@ export const updateTierCurrencyAmount = ({
 	const tier = tiers[tierIndex];
 	if (!tier) return item;
 
+	// Currency flat fees need a base flat field to survive save-time alignment.
+	const flatAmount =
+		field === "flat_amount" ? (tier.flat_amount ?? 0) : tier.flat_amount;
 	tiers[tierIndex] = {
 		...tier,
+		flat_amount: flatAmount,
 		additional_currencies: (tier.additional_currencies ?? []).map((entry) =>
 			entry.currency.toLowerCase() === code.toLowerCase()
 				? {
@@ -203,18 +208,28 @@ export const migrateTierCurrenciesForMode = ({
 				},
 	);
 
-// The API rejects currency tiers whose flat_amount presence differs from the
-// base tier, so realign entries before building request payloads.
+// The API rejects currency tiers whose flat_amount presence differs from the base tier.
+// When the base has one, only add a missing 0, so currency rates and fees are kept.
+const alignCurrencyEntries = (tier: PriceTier) => {
+	if (tier.flat_amount == null) {
+		return migrateTierCurrenciesForMode({
+			entries: tier.additional_currencies,
+			mode: "per_unit",
+		});
+	}
+	return tier.additional_currencies?.map((entry) => ({
+		...entry,
+		flat_amount: entry.flat_amount ?? 0,
+	}));
+};
+
 export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
 	if (!item.tiers) return item;
 	return {
 		...item,
 		tiers: item.tiers.map((tier) => ({
 			...tier,
-			additional_currencies: migrateTierCurrenciesForMode({
-				entries: tier.additional_currencies,
-				mode: tier.flat_amount != null ? "flat" : "per_unit",
-			}),
+			additional_currencies: alignCurrencyEntries(tier),
 		})),
 	};
 };

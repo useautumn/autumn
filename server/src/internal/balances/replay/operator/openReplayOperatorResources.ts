@@ -1,4 +1,5 @@
 import type { KafkaSaslCredentials } from "@autumn/kafka";
+import { getPostgresPools } from "@autumn/postgres";
 import type { ReplayManifest } from "../manifest/replayManifestContracts.js";
 import type { ValidatedReplayStagingTarget } from "../targets/replayStagingTargetContracts.js";
 import {
@@ -17,10 +18,6 @@ import {
 const REPLAY_OPERATOR_CLIENT_ID = "autumn-shadow-operator";
 const REPLAY_OWNERSHIP_GROUP_PREFIX = "autumn-shadow-operator";
 const REPLAY_WORKER_REQUEST_TIMEOUT_MS = 5_000;
-const REPLAY_DATABASE_MAX_CONNECTIONS = 4;
-/** initDrizzle takes seconds and overrides poolConfig.connectionTimeoutMillis. */
-const REPLAY_DATABASE_CONNECT_TIMEOUT_SECONDS = 2;
-const REPLAY_DATABASE_QUERY_TIMEOUT_MS = 2_000;
 const REPLAY_DATABASE_READ_ONLY_OPTIONS = "-c default_transaction_read_only=on";
 const REPLAY_KAFKA_LIMITS = {
 	connectionTimeoutMs: 10_000,
@@ -106,12 +103,8 @@ function createReplayDatabase({
 }) {
 	return modules.initDrizzle({
 		databaseUrl,
-		maxConnections: REPLAY_DATABASE_MAX_CONNECTIONS,
-		connectTimeout: REPLAY_DATABASE_CONNECT_TIMEOUT_SECONDS,
-		poolConfig: {
-			options: REPLAY_DATABASE_READ_ONLY_OPTIONS,
-			query_timeout: REPLAY_DATABASE_QUERY_TIMEOUT_MS,
-		},
+		pool: getPostgresPools().replay,
+		poolConfig: { options: REPLAY_DATABASE_READ_ONLY_OPTIONS },
 	});
 }
 

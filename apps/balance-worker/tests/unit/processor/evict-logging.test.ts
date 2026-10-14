@@ -286,7 +286,7 @@ describe("queued evict logging", () => {
 });
 
 describe("evict logging", () => {
-	test("on, an evict appends one empty record naming the customer, after dropping it", async () => {
+	test("on, an evict appends one empty record naming the subject it was sent for, after dropping the customer", async () => {
 		const { processor, appended } = await createProcessor({ logsEvicts: true });
 
 		const reply = await processor.evict({ command: evictCommand });
@@ -296,12 +296,22 @@ describe("evict logging", () => {
 		const [record] = appended;
 		expect(record?.command.type).toBe("evict");
 		expect(record?.changes).toEqual([]);
-		expect(record?.identity).toEqual({
-			...evictCommand.identity,
-			entityId: null,
-		});
+		expect(record?.identity).toEqual(evictCommand.identity);
 		expect(record?.revision).toEqual({ before: 0, after: 1 });
 		expect(record?.id).toBe(record?.command.commandId);
+	});
+
+	test("an evict sent for the customer alone names no entity", async () => {
+		const { processor, appended } = await createProcessor({ logsEvicts: true });
+
+		await processor.evict({
+			command: {
+				...evictCommand,
+				identity: { ...evictCommand.identity, entityId: null },
+			},
+		});
+
+		expect(appended[0]?.identity.entityId).toBeNull();
 	});
 
 	test("each evict is its own record, never deduped as a retry", async () => {
