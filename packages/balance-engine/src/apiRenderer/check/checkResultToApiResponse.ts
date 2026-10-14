@@ -7,6 +7,7 @@ import {
 	type Feature,
 	findFeatureById,
 	fullSubjectToCustomerEntitlements,
+	fullSubjectToRelevantFeatures,
 	getApiFlag,
 	type SharedContext,
 	scopeExpandForCtx,
@@ -73,8 +74,18 @@ export const checkResultToApiResponse = ({
 					feature,
 				}).data
 			: null;
+	// The legacy map is sent only when it names two features or more: with fewer, it is not built at all.
+	const isMapSent =
+		isDeductingCheck &&
+		result.allowed &&
+		attachedSubject !== null &&
+		fullSubjectToRelevantFeatures({
+			fullSubject: attachedSubject,
+			featureId: command.featureId,
+			features: ctx.features,
+		}).length >= 2;
 	const balances =
-		isDeductingCheck && result.allowed && attachedSubject
+		isMapSent && attachedSubject
 			? workerSubjectsToApiBalances({
 					ctx,
 					subjects: [
