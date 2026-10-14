@@ -49,6 +49,8 @@ const defaults = {
 	},
 	/** How a deduction is sent: a send_event check, as the shadow mirrors one, or `/v1/track`. */
 	deductionRoute: "check" as "check" | "track",
+	/** The share of deductions sent with a unique Idempotency-Key header, as the staging shadow mints one per call. */
+	deductionKeyedPercent: 0,
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,
 	/** Load generator processes on the driver box; the generator must never be the bottleneck. */

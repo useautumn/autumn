@@ -88,7 +88,10 @@ const send = async ({
 			`${url}/v1/${asTrack ? "track" : "balances.check"}`,
 			{
 				method: "POST",
-				headers,
+				headers:
+					deducts && Math.random() * 100 < config.deductionKeyedPercent
+						? { ...headers, "idempotency-key": `rig_${crypto.randomUUID()}` }
+						: headers,
 				body: JSON.stringify(body),
 				keepalive: config.keepAlive,
 				signal: AbortSignal.timeout(config.requestTimeoutMs),
