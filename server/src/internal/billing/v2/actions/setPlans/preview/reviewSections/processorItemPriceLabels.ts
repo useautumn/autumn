@@ -1,10 +1,10 @@
 import {
+	intervalSuffix,
 	numberWithCommas,
 	type ProcessorItem,
 	type ProcessorItemPrice,
+	type SetPlansReviewValue,
 } from "@autumn/shared";
-import { intervalSuffix } from "@/utils/formatUtils/intervalSuffix";
-import type { ReviewChangeValue } from "./types/reviewChange";
 
 const ONE_OFF_SUFFIX = "one-off";
 
@@ -111,7 +111,7 @@ export const pricingTableQuantity = (item: ProcessorItem) =>
 /** The Total column: "US$37,500.00 / year", or how it varies when usage decides it. */
 export const pricingTableTotal = (
 	item: ProcessorItem,
-): ReviewChangeValue | undefined => {
+): SetPlansReviewValue | undefined => {
 	const { price } = item;
 	if (!price) return undefined;
 	if (item.amount !== null) {
@@ -123,7 +123,7 @@ export const pricingTableTotal = (
 		};
 	}
 	if (price.usage_type === "metered")
-		return { amount: "Varies with usage", isBasis: true };
-	if (price.tiers_mode) return { amount: "Varies by tier", isBasis: true };
+		return { amount: "Varies with usage", is_basis: true };
+	if (price.tiers_mode) return { amount: "Varies by tier", is_basis: true };
 	return undefined;
 };

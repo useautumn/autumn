@@ -14,7 +14,7 @@ const REVIEW_GROUPS: {
 	value: string;
 	system: ReviewChangeSystem;
 	title: string;
-	sectionKey: "plans" | "balances" | "processor";
+	sectionKey: "plans" | "balances" | "subscription";
 	layout?: ReviewChangeLayout;
 }[] = [
 	{ value: "plans", system: "autumn", title: "Plans", sectionKey: "plans" },
@@ -28,7 +28,7 @@ const REVIEW_GROUPS: {
 		value: "subscription",
 		system: "stripe",
 		title: "Subscription",
-		sectionKey: "processor",
+		sectionKey: "subscription",
 		layout: "pricing_table",
 	},
 ];

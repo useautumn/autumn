@@ -7,6 +7,7 @@ import {
 import { ApiDiscountSchema } from "@api/others/apiDiscount";
 import { z } from "zod/v4";
 import { InvoiceModeParamsSchema } from "../common/invoiceModeParams";
+import { SetPlansPreviewReviewSchema } from "./setPlansPreviewReview";
 import { SetPlansTextPartSchema } from "./setPlansTextParts";
 
 export const ProcessorChangeSchema = z.object({
@@ -193,7 +194,13 @@ export const SetPlansPreviewChangesSchema = z.object({
 });
 
 export const SetPlansPreviewResponseSchema = AttachPreviewResponseSchema.extend(
-	SetPlansPreviewChangesSchema.shape,
+	{
+		...SetPlansPreviewChangesSchema.shape,
+		review: SetPlansPreviewReviewSchema.meta({
+			description:
+				"The preview as the dashboard shows it, ready to render: plan, balance and subscription changes per phase.",
+		}),
+	},
 );
 
 export type ProcessorChange = z.infer<typeof ProcessorChangeSchema>;

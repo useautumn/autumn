@@ -1,9 +1,9 @@
 import type { CustomerStatePhase } from "@/components/forms/customer-state/customerStateSchema";
 import { groupRowsByScope } from "./groupRowsByScope";
 
-export type SkeletonScope = { entityId: string | null; rowCount: number };
+export type SkeletonScope = { entity_id: string | null; rowCount: number };
 
-const EMPTY_PHASE: SkeletonScope[] = [{ entityId: null, rowCount: 1 }];
+const EMPTY_PHASE: SkeletonScope[] = [{ entity_id: null, rowCount: 1 }];
 
 /** The review's plan rows as the form already knows them: one scope group per entity, one row per plan. */
 export const formPhasesToSkeletonPhases = ({
@@ -14,7 +14,10 @@ export const formPhasesToSkeletonPhases = ({
 	phases.map((phase) => {
 		const chosenPlans = phase.plans.filter((plan) => plan.productId);
 		if (chosenPlans.length === 0) return EMPTY_PHASE;
-		return groupRowsByScope({ rows: chosenPlans }).map(
-			({ entityId, rows }) => ({ entityId, rowCount: rows.length }),
-		);
+		return groupRowsByScope({
+			rows: chosenPlans.map((plan) => ({ entity_id: plan.entityId })),
+		}).map(({ entityId, rows }) => ({
+			entity_id: entityId,
+			rowCount: rows.length,
+		}));
 	});

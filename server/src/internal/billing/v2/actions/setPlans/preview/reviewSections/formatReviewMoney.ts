@@ -3,7 +3,7 @@ import { formatAmount } from "@autumn/shared";
 const CENTS_FRACTION_DIGITS = 2;
 
 /** "$50", or "$13.33" with `showCents`; the narrow symbol keeps "US$" out of the value column. */
-export const formatMoney = ({
+export const formatReviewMoney = ({
 	amount,
 	currency,
 	showCents = false,

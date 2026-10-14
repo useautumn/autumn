@@ -1,3 +1,7 @@
+import type {
+	SetPlansReviewChangeLine,
+	SetPlansReviewRow,
+} from "@autumn/shared";
 import {
 	StatusChip,
 	StatusChipIcon,
@@ -8,11 +12,11 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
-import type {
-	ReviewChangeLine,
-	ReviewChangeLineState,
-} from "../../utils/review/planChangeLines";
-import type { ReviewChangeStatus } from "../../utils/review/types/reviewChange";
+import { formatReviewText } from "../../utils/review/formatReviewText";
+
+type ReviewChangeStatus = NonNullable<SetPlansReviewRow["status"]>;
+type ReviewChangeLineState = SetPlansReviewChangeLine["state"];
+
 import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
 
 const REVIEW_STATUSES: Record<
@@ -27,7 +31,6 @@ const REVIEW_STATUSES: Record<
 	removed: { label: "Removed", tone: "red", glyph: "minus" },
 	reset: { label: "Resets", tone: "amber", glyph: "refresh" },
 	carried: { label: "Carried over", tone: "blue", glyph: "check" },
-	unmanaged: { label: "Not in Autumn", tone: "amber", glyph: "alert" },
 };
 
 export function ReviewStatusChip({
@@ -35,7 +38,7 @@ export function ReviewStatusChip({
 	changes = [],
 }: {
 	status: ReviewChangeStatus;
-	changes?: ReviewChangeLine[];
+	changes?: SetPlansReviewChangeLine[];
 }) {
 	const { label, tone, glyph } = REVIEW_STATUSES[status];
 	const hasTooltip = changes.length > 0;
@@ -75,7 +78,7 @@ const CHANGE_LINE_ICONS: Record<
 };
 
 /** Old values sit muted beside the foreground new value; a removed feature is struck through. */
-function ReviewChangeLineRow({ change }: { change: ReviewChangeLine }) {
+function ReviewChangeLineRow({ change }: { change: SetPlansReviewChangeLine }) {
 	const isRemoved = change.state === "removed";
 	return (
 		<span className="flex min-w-56 items-center gap-2">
@@ -91,7 +94,9 @@ function ReviewChangeLineRow({ change }: { change: ReviewChangeLine }) {
 			<span className="flex items-baseline gap-1.5 tabular-nums">
 				{change.before && (
 					<>
-						<span className="text-tertiary-foreground">{change.before}</span>
+						<span className="text-tertiary-foreground">
+							{formatReviewText(change.before)}
+						</span>
 						<span className="text-tertiary-foreground/70">→</span>
 					</>
 				)}
@@ -103,7 +108,7 @@ function ReviewChangeLineRow({ change }: { change: ReviewChangeLine }) {
 								: "font-medium text-foreground",
 						)}
 					>
-						{change.after}
+						{formatReviewText(change.after)}
 					</span>
 				)}
 			</span>

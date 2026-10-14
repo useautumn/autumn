@@ -1,14 +1,13 @@
+import type { SetPlansReviewPhase, SetPlansReviewRow } from "@autumn/shared";
 import type { ReactNode } from "react";
 import {
 	TABLE_TRAY_SURFACE_CLASS,
 	TABLE_TRAY_SURFACE_DIVIDER_CLASS,
 } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import type {
-	ReviewChangePhase,
-	ReviewChangeRow,
-	ReviewPhaseBadge,
-} from "../../utils/review/types/reviewChange";
+import { formatReviewText } from "../../utils/review/formatReviewText";
+
+type ReviewPhaseBadge = NonNullable<SetPlansReviewPhase["badge"]>;
 
 const NO_TOTAL = "—";
 
@@ -68,7 +67,7 @@ export function PricingTablePhase({
 	);
 }
 
-function PricingTableRow({ row }: { row: ReviewChangeRow }) {
+function PricingTableRow({ row }: { row: SetPlansReviewRow }) {
 	return (
 		<div className={PRICING_TABLE_ROW_CLASS}>
 			<div className="flex min-w-0 flex-1 flex-col">
@@ -77,7 +76,7 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 				</span>
 				{row.description && (
 					<span className="truncate text-xs text-tertiary-foreground">
-						{row.description}
+						{formatReviewText(row.description)}
 					</span>
 				)}
 			</div>
@@ -94,7 +93,7 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 				className={cn(
 					PRICING_TABLE_TOTAL_CLASS,
 					"text-sm tabular-nums",
-					row.value && !row.value.isBasis
+					row.value && !row.value.is_basis
 						? "text-foreground"
 						: "text-tertiary-foreground",
 				)}
@@ -109,7 +108,7 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 export function ReviewPricingTable({
 	phases,
 }: {
-	phases: ReviewChangePhase[];
+	phases: SetPlansReviewPhase[];
 }) {
 	return (
 		<div className="flex flex-col gap-5">
@@ -119,7 +118,7 @@ export function ReviewPricingTable({
 					title={
 						<>
 							<span className="text-[13px] font-semibold text-foreground">
-								{phase.range ?? phase.label}
+								{formatReviewText(phase.range ?? phase.label)}
 							</span>
 							{phase.badge && <PricingTablePhaseBadge badge={phase.badge} />}
 						</>

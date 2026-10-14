@@ -1,3 +1,4 @@
+import type { SetPlansReviewSection } from "@autumn/shared";
 import {
 	AccordionContent,
 	AccordionItem,
@@ -8,12 +9,12 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
+import { formatReviewText } from "../../utils/review/formatReviewText";
 import type { SkeletonScope } from "../../utils/review/formPhasesToSkeletonPhases";
 import { hasScopedRows } from "../../utils/review/groupRowsByScope";
 import { reviewValueColumnWidth } from "../../utils/review/reviewValueColumnWidth";
 import type {
 	ReviewChangeLayout,
-	ReviewChangeSection,
 	ReviewChangeSystem,
 } from "../../utils/review/types/reviewChange";
 import { ReviewChangePhaseBlock } from "./ReviewChangePhaseBlock";
@@ -25,8 +26,8 @@ import { ReviewStripeIdsPopover } from "./ReviewStripeIdsPopover";
 import { ReviewSystemMark } from "./ReviewSystemMark";
 import { ReviewValueColumnProvider } from "./ReviewValueColumnContext";
 
-const hasContent = (section: ReviewChangeSection) =>
-	section.phases.length > 0 || Boolean(section.stripeIds?.length);
+const hasContent = (section: SetPlansReviewSection) =>
+	section.phases.length > 0 || Boolean(section.stripe_ids?.length);
 
 /** Renders a skeleton in the same slots until `section` resolves, so nothing shifts on load. */
 export function ReviewChangeGroup({
@@ -41,15 +42,11 @@ export function ReviewChangeGroup({
 	system: ReviewChangeSystem;
 	title: string;
 	layout?: ReviewChangeLayout;
-	section?: ReviewChangeSection;
+	section?: SetPlansReviewSection;
 	placeholderPhases?: SkeletonScope[][];
 }) {
 	const showsStatus = Boolean(
-		section?.phases.some((phase) =>
-			phase.rows.some(
-				(row) => row.status || row.items?.some((item) => item.status),
-			),
-		),
+		section?.phases.some((phase) => phase.rows.some((row) => row.status)),
 	);
 
 	const isEmpty = section ? !hasContent(section) : false;
@@ -70,7 +67,7 @@ export function ReviewChangeGroup({
 				<span className="shrink-0 text-sm font-medium text-foreground">
 					{title}
 				</span>
-				<ReviewStripeIdsPopover stripeIds={section?.stripeIds ?? []} />
+				<ReviewStripeIdsPopover stripeIds={section?.stripe_ids ?? []} />
 				<span className="flex-1" />
 				{section && section.phases.length > 1 ? (
 					<ReviewPhaseTimeline phases={section.phases} system={system} />
@@ -78,10 +75,12 @@ export function ReviewChangeGroup({
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="min-w-0 truncate text-xs font-normal text-tertiary-foreground">
-								{section.summary}
+								{formatReviewText(section.summary)}
 							</span>
 						</TooltipTrigger>
-						<TooltipContent side="top">{section.summary}</TooltipContent>
+						<TooltipContent side="top">
+							{formatReviewText(section.summary)}
+						</TooltipContent>
 					</Tooltip>
 				) : (
 					<Skeleton className="h-3.5 w-24 rounded-sm" />
@@ -110,7 +109,7 @@ function ReviewChangeGroupBody({
 	showsScopes,
 }: {
 	layout: ReviewChangeLayout;
-	section?: ReviewChangeSection;
+	section?: SetPlansReviewSection;
 	placeholderPhases: SkeletonScope[][];
 	showsStatus: boolean;
 	showsScopes: boolean;

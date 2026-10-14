@@ -72,9 +72,9 @@ export function ReviewChangeSkeletonPhases({
 						</div>
 					}
 				>
-					{scopes.map(({ entityId, rowCount }, scopeIndex) => (
-						<div key={entityId ?? `customer-${scopeIndex}`}>
-							{showsScopes && <ReviewScopeHeader entityId={entityId} />}
+					{scopes.map(({ entity_id, rowCount }, scopeIndex) => (
+						<div key={entity_id ?? `customer-${scopeIndex}`}>
+							{showsScopes && <ReviewScopeHeader entityId={entity_id} />}
 							{Array.from({ length: rowCount }, (_, rowIndex) => (
 								<SkeletonPlanRow key={rowIndex} index={scopeIndex + rowIndex} />
 							))}

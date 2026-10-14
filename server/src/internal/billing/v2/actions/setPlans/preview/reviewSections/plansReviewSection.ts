@@ -4,22 +4,22 @@ import type {
 	SetPlansPreviewPhase,
 	SetPlansPreviewPlan,
 	SetPlansPreviewRemovedPhase,
+	SetPlansReviewPhase,
+	SetPlansReviewRow,
+	SetPlansReviewSection,
 } from "@autumn/shared";
-import { formatPhaseDate } from "../schedulePhaseTiming";
-import { formatMoney } from "./formatMoney";
-import { phaseLabel, phaseSummaryLabel } from "./phaseTiming";
+import { formatReviewMoney } from "./formatReviewMoney";
 import { findPlanChange, planChangeLines } from "./planChangeLines";
 import { reviewPlanPrice } from "./reviewPlanPrice";
 import {
+	dateText,
 	joinDetail,
+	phaseLabel,
+	phaseSummaryLabel,
+	reviewText,
 	summarizeCounts,
 	withoutEmptyPhases,
-} from "./reviewSectionText";
-import type {
-	ReviewChangePhase,
-	ReviewChangeRow,
-	ReviewChangeSection,
-} from "./types/reviewChange";
+} from "./reviewText";
 
 /** "$13.33 credited" for the unused time a plan ending now is refunded. */
 const planCreditDetail = ({
@@ -31,7 +31,7 @@ const planCreditDetail = ({
 }) =>
 	plan.credit === null
 		? undefined
-		: `${formatMoney({ amount: Math.abs(plan.credit), currency, showCents: true })} credited`;
+		: `${formatReviewMoney({ amount: Math.abs(plan.credit), currency, showCents: true })} credited`;
 
 const updatedChanges = ({
 	plan,
@@ -61,35 +61,33 @@ const isChanged = (plan: SetPlansPreviewPlan) => plan.status !== "kept";
 
 const planToRow = ({
 	plan,
-	phaseIndex,
-	planIndex,
+	rowKey,
 	planChanges,
 	features,
 	currency,
 	nowMs,
 }: {
 	plan: SetPlansPreviewPlan;
-	phaseIndex: number;
-	planIndex: number;
+	rowKey: string;
 	planChanges: CustomerPlanChange[];
 	features: Feature[];
 	currency: string;
 	nowMs: number;
-}): ReviewChangeRow => ({
-	key: `plan-${phaseIndex}-${planIndex}-${plan.plan_id}`,
+}): SetPlansReviewRow => ({
+	key: `${rowKey}-${plan.plan_id}`,
 	title: plan.name,
 	description: joinDetail([
 		planCreditDetail({ plan, currency }),
 		plan.custom ? "Custom" : undefined,
 		endsLater(plan) && plan.expires_at !== null
-			? `Ends ${formatPhaseDate({ startsAt: plan.expires_at })}`
+			? reviewText("Ends ", dateText(plan.expires_at))
 			: undefined,
 	]),
-	entityId: plan.entity_id ?? null,
+	entity_id: plan.entity_id ?? null,
 	status: plan.status,
 	ongoing: plan.ongoing,
 	changes: updatedChanges({ plan, planChanges, features, currency }),
-	trialEndsAt:
+	trial_ends_at:
 		plan.status !== "ends" &&
 		plan.trial_ends_at !== null &&
 		plan.trial_ends_at > nowMs
@@ -99,8 +97,8 @@ const planToRow = ({
 });
 
 /** A phase repeating the one before it has no changes of its own, so it lists the plans it keeps. */
-const withRepeatedPhaseRows = (phases: ReviewChangePhase[]) => {
-	const filled: ReviewChangePhase[] = [];
+const withRepeatedPhaseRows = (phases: SetPlansReviewPhase[]) => {
+	const filled: SetPlansReviewPhase[] = [];
 	for (const phase of phases) {
 		const previous = filled.at(-1);
 		if (phase.rows.length > 0 || !previous) {
@@ -121,57 +119,27 @@ const withRepeatedPhaseRows = (phases: ReviewChangePhase[]) => {
 	return filled;
 };
 
-const removedPhaseToReviewPhase = ({
-	removedPhase,
-	features,
-	currency,
-	nowMs,
-}: {
-	removedPhase: SetPlansPreviewRemovedPhase;
-	features: Feature[];
-	currency: string;
-	nowMs: number;
-}): ReviewChangePhase => ({
-	key: `removed-${removedPhase.starts_at}`,
-	label: formatPhaseDate({ startsAt: removedPhase.starts_at }),
-	startsAt: removedPhase.starts_at,
-	removed: true,
-	rows: removedPhase.plans.map((plan, planIndex) =>
-		planToRow({
-			plan,
-			phaseIndex: -1 - planIndex,
-			planIndex,
-			planChanges: [],
-			features,
-			currency,
-			nowMs,
-		}),
-	),
-});
-
-export const plansToReviewSection = ({
+export const plansReviewSection = ({
 	phases,
-	removedPhases = [],
+	removedPhases,
 	features,
 	currency,
 	nowMs,
 }: {
 	phases: SetPlansPreviewPhase[];
-	removedPhases?: SetPlansPreviewRemovedPhase[];
+	removedPhases: SetPlansPreviewRemovedPhase[];
 	features: Feature[];
 	currency: string;
 	nowMs: number;
-}): ReviewChangeSection => {
+}): SetPlansReviewSection => {
 	const requestPhases = withRepeatedPhaseRows(
 		phases.map((phase, phaseIndex) => ({
 			key: `plans-${phaseIndex}`,
-			label: phaseLabel({ phase }),
-			startsAt: phase.starts_at,
+			label: phaseLabel(phase),
 			rows: phase.plans.map((plan, planIndex) =>
 				planToRow({
 					plan,
-					phaseIndex,
-					planIndex,
+					rowKey: `plan-${phaseIndex}-${planIndex}`,
 					planChanges: phase.plan_changes,
 					features,
 					currency,
@@ -179,24 +147,44 @@ export const plansToReviewSection = ({
 				}),
 			),
 		})),
-	);
-	const removedReviewPhases = removedPhases.map((removedPhase) =>
-		removedPhaseToReviewPhase({ removedPhase, features, currency, nowMs }),
-	);
+	).map((phase, phaseIndex) => ({
+		phase,
+		startsAt: phases[phaseIndex].starts_at,
+	}));
+	const removedReviewPhases = removedPhases.map((removedPhase) => ({
+		startsAt: removedPhase.starts_at,
+		phase: {
+			key: `removed-${removedPhase.starts_at}`,
+			label: dateText(removedPhase.starts_at),
+			removed: true,
+			rows: removedPhase.plans.map((plan, planIndex) =>
+				planToRow({
+					plan,
+					rowKey: `removed-${removedPhase.starts_at}-${planIndex}`,
+					planChanges: [],
+					features,
+					currency,
+					nowMs,
+				}),
+			),
+		},
+	}));
 	const removedCount = removedReviewPhases.length;
 
 	return {
 		phases: withoutEmptyPhases(
-			[...requestPhases, ...removedReviewPhases].sort(
-				(first, second) => (first.startsAt ?? 0) - (second.startsAt ?? 0),
-			),
+			[...requestPhases, ...removedReviewPhases]
+				.sort((first, second) => first.startsAt - second.startsAt)
+				.map(({ phase }) => phase),
 		),
 		summary: summarizeCounts({
 			counts: [
-				...phases.map((phase): [string, number] => [
-					phaseSummaryLabel({ phase }),
-					phase.plans.filter(isChanged).length,
-				]),
+				...phases.map(
+					(phase): [ReturnType<typeof phaseSummaryLabel>, number] => [
+						phaseSummaryLabel(phase),
+						phase.plans.filter(isChanged).length,
+					],
+				),
 				[`phase${removedCount === 1 ? "" : "s"} removed`, removedCount],
 			],
 			emptyLabel: "No changes",

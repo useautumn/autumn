@@ -1,4 +1,4 @@
-import { numberWithCommas } from "@autumn/shared";
+import { numberWithCommas, type SetPlansReviewRow } from "@autumn/shared";
 import {
 	StatusChip,
 	Tooltip,
@@ -6,14 +6,10 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { format } from "date-fns";
-import type { ReactNode } from "react";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import { formatReviewText } from "../../utils/review/formatReviewText";
 import { isRemovedReviewRow } from "../../utils/review/isRemovedReviewRow";
-import type {
-	ReviewChangeRow,
-	ReviewPooledBalance,
-} from "../../utils/review/types/reviewChange";
 import { ReviewStatusChip } from "./ReviewStatusChip";
 import { useReviewValueColumnWidth } from "./ReviewValueColumnContext";
 import { REVIEW_RICH_TOOLTIP_CLASS } from "./reviewRichTooltip";
@@ -23,7 +19,7 @@ export function ReviewChangeRowItem({
 	row,
 	showsStatus,
 }: {
-	row: ReviewChangeRow;
+	row: SetPlansReviewRow;
 	showsStatus: boolean;
 }) {
 	return (
@@ -47,7 +43,7 @@ export function ReviewChangeRowItem({
 				</span>
 				{row.description && (
 					<span className="truncate text-xs text-tertiary-foreground">
-						{row.description}
+						{formatReviewText(row.description)}
 					</span>
 				)}
 			</div>
@@ -56,10 +52,12 @@ export function ReviewChangeRowItem({
 	);
 }
 
-const poolTotalLabel = ({ previousTotal, total }: ReviewPooledBalance) =>
-	previousTotal === null || previousTotal === total
+type ReviewPooledBalance = NonNullable<SetPlansReviewRow["pooled"]>;
+
+const poolTotalLabel = ({ previous_total, total }: ReviewPooledBalance) =>
+	previous_total === null || previous_total === total
 		? numberWithCommas(total)
-		: `${numberWithCommas(previousTotal)} → ${numberWithCommas(total)}`;
+		: `${numberWithCommas(previous_total)} → ${numberWithCommas(total)}`;
 
 function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
 	return (
@@ -76,7 +74,7 @@ function PooledChip({ pooled }: { pooled: ReviewPooledBalance }) {
 			</TooltipTrigger>
 			<TooltipContent side="top" className={REVIEW_RICH_TOOLTIP_CLASS}>
 				<div className="flex w-[250px] flex-col gap-0.5">
-					<span className="font-medium text-foreground">{`Shared ${pooled.featureName} pool`}</span>
+					<span className="font-medium text-foreground">{`Shared ${pooled.feature_name} pool`}</span>
 					<div className="flex justify-between gap-3 text-tertiary-foreground">
 						<span>Pool total</span>
 						<span className="tabular-nums">{poolTotalLabel(pooled)}</span>
@@ -111,26 +109,22 @@ function OngoingChip() {
 	);
 }
 
-/** Trial, status and value columns, shared by plain and grouped rows so they align. */
-export function ReviewChangeRowTrailing({
+/** Trial, status and value columns, in fixed widths so rows align. */
+function ReviewChangeRowTrailing({
 	row,
 	showsStatus,
-	valueOverride,
-	isNested = false,
 }: {
-	row: ReviewChangeRow;
+	row: SetPlansReviewRow;
 	showsStatus: boolean;
-	valueOverride?: ReactNode;
-	isNested?: boolean;
 }) {
 	const valueColumnWidth = useReviewValueColumnWidth();
 	return (
 		<>
 			{row.ongoing && <OngoingChip />}
 			{row.pooled && <PooledChip pooled={row.pooled} />}
-			{row.trialEndsAt !== undefined && (
+			{row.trial_ends_at !== undefined && (
 				<StatusChip tone="blue" glyph="clock" className="shrink-0">
-					{`Trial · ends ${format(row.trialEndsAt, "MMM d")}`}
+					{`Trial · ends ${format(row.trial_ends_at, "MMM d")}`}
 				</StatusChip>
 			)}
 			{showsStatus && (
@@ -144,27 +138,25 @@ export function ReviewChangeRowTrailing({
 				className="flex min-w-[104px] shrink-0 items-baseline justify-end gap-[3px] whitespace-nowrap"
 				style={valueColumnWidth ? { width: valueColumnWidth } : undefined}
 			>
-				{valueOverride ??
-					(row.value && (
-						<>
-							<span
-								className={cn(
-									"text-sm tabular-nums",
-									row.value.isBasis
-										? "text-tertiary-foreground"
-										: "text-foreground",
-									!(isNested || row.value.isBasis) && "font-medium",
-								)}
-							>
-								{row.value.amount}
-							</span>
-							{row.value.suffix && (
-								<span className="text-xs text-tertiary-foreground">
-									{row.value.suffix}
-								</span>
+				{row.value && (
+					<>
+						<span
+							className={cn(
+								"text-sm tabular-nums",
+								row.value.is_basis
+									? "text-tertiary-foreground"
+									: "font-medium text-foreground",
 							)}
-						</>
-					))}
+						>
+							{row.value.amount}
+						</span>
+						{row.value.suffix && (
+							<span className="text-xs text-tertiary-foreground">
+								{row.value.suffix}
+							</span>
+						)}
+					</>
+				)}
 			</span>
 		</>
 	);
