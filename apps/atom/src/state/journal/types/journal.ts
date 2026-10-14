@@ -19,7 +19,7 @@ export type JournalEntry = {
 /** An owed entry as it crosses to another journal: with whether Autumn already took it, so the receiver sends it or not. */
 export type HandedEntry = JournalEntry & { sent: boolean };
 
-/** A caller's key as it moves between replicas with its customer: the log row's hash, hex, and when it was taken. */
+/** A caller's key as it moves between replicas with its customer: its journal_keys hash, hex, and when it was taken. */
 export type HandedKey = {
 	customerId: string;
 	keyHash: string;
@@ -82,6 +82,6 @@ export type Journal = {
 	holdsKey(params: { customerId: string; key: string }): boolean;
 	/** The caller keys logged since `since`, once the commits in flight land: for the replica their customers move to. */
 	keysSince(params: { since: number }): Promise<HandedKey[]>;
-	/** Keys another replica logged: held from the call on, in one transaction; resolves once they are in memory. */
+	/** Keys another replica took: written in one transaction, a key already held keeps its row; resolves once committed. */
 	takeKeys(params: { keys: HandedKey[] }): Promise<void>;
 };

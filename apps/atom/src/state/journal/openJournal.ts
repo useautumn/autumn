@@ -6,7 +6,11 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
+import {
+	PRUNE_CHUNK,
+	readJournalKey,
+	readJournalKeysSince,
+} from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
@@ -213,11 +217,10 @@ export const openJournal = ({
 		const fresh = entries.filter((entry) => !isHeld(entry));
 		if (fresh.length === 0) return 0;
 		const plain = fresh.map(({ sent: _, ...entry }) => entry);
-		const keyRowids = await file.write(
+		await file.write(
 			"insertJournalEntries",
 			encodeJournalEntries({ entries: plain }),
 		);
-		holdKeys({ entries: plain, keyRowids });
 		for (const customerId of new Set(plain.map((entry) => entry.customerId)))
 			setOwed({
 				customerId,
@@ -409,29 +412,18 @@ export const openJournal = ({
 		);
 	}
 
+	/** One transaction; a key this journal already holds keeps its row. */
 	async function takeKeys({ keys }: { keys: HandedKey[] }): Promise<void> {
 		if (keys.length === 0) return;
-		const rowids = (
-			await file.write(
-				"appendHandedJournalKeys",
-				keys
-					.map(
-						({ customerId, keyHash, appendedAt }) =>
-							`${customerId}\u0000${keyHash}\u0000${appendedAt}`,
-					)
-					.join("\u0000"),
-			)
-		).split(",");
-		keys.forEach(({ customerId, keyHash, appendedAt }, at) => {
-			recentKeys.add({
-				fingerprint: keyFingerprint({
-					customerHash: customerKeyHash({ customerId }),
-					keyHash: Buffer.from(keyHash, "hex"),
-				}),
-				rowid: Number(rowids[at]),
-				appendedAt,
-			});
-		});
+		await file.write(
+			"insertHandedJournalKeys",
+			keys
+				.map(
+					({ customerId, keyHash, appendedAt }) =>
+						`${customerId}\u0000${keyHash}\u0000${appendedAt}`,
+				)
+				.join("\u0000"),
+		);
 	}
 
 	let closed = false;
