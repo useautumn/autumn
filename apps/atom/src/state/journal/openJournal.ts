@@ -62,15 +62,45 @@ export const openJournal = ({
 	const owedByCustomer = new Map<string, JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
 	unsentByJournal.add(unsent);
+	/** Each customer's unsent entries in seq order, from `head`: those sent since leave the front as it is next settled. */
+	const unsentByCustomer = new Map<
+		string,
+		{ entries: JournalEntry[]; head: number }
+	>();
 	let notifyCommitted = () => {};
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
 		unsentOnThread++;
+		const queue = unsentByCustomer.get(entry.customerId);
+		if (queue) queue.entries.push(entry);
+		else unsentByCustomer.set(entry.customerId, { entries: [entry], head: 0 });
 	}
 
 	function releaseUnsent(entry: JournalEntry): void {
 		if (unsent.delete(entry)) unsentOnThread--;
+	}
+
+	/** O(1) amortised: each entry leaves the front once, and the array is copied only once half of it has left. */
+	function oldestUnsent({
+		customerId,
+	}: {
+		customerId: string;
+	}): JournalEntry | undefined {
+		const queue = unsentByCustomer.get(customerId);
+		if (!queue) return undefined;
+		const { entries } = queue;
+		let oldest = entries[queue.head];
+		while (oldest && !unsent.has(oldest)) oldest = entries[++queue.head];
+		if (!oldest) {
+			unsentByCustomer.delete(customerId);
+			return undefined;
+		}
+		if (queue.head > entries.length / 2) {
+			queue.entries = entries.slice(queue.head);
+			queue.head = 0;
+		}
+		return oldest;
 	}
 
 	const groupCommit = createGroupCommit({
@@ -150,16 +180,17 @@ export const openJournal = ({
 
 	function markSent({ entries }: { entries: JournalEntry[] }): void {
 		for (const entry of entries) releaseUnsent(entry);
+		for (const customerId of new Set(entries.map((entry) => entry.customerId)))
+			oldestUnsent({ customerId });
 	}
 
 	function isBackedUp({ customerId }: { customerId: string }): boolean {
 		const entries = owed({ customerId });
 		if (unsentOnThread > MAX_UNSENT_PER_THREAD) return true;
 		if (entries.length > MAX_OWED_PER_CUSTOMER) return true;
-		const oldestUnsent = entries.find((entry) => unsent.has(entry));
+		const oldest = oldestUnsent({ customerId });
 		return (
-			oldestUnsent !== undefined &&
-			now() - oldestUnsent.appendedAt > MAX_UNSENT_AGE_MS
+			oldest !== undefined && now() - oldest.appendedAt > MAX_UNSENT_AGE_MS
 		);
 	}
 
@@ -179,12 +210,14 @@ export const openJournal = ({
 		if (unseen.length === entries.length) return;
 		deleteJournalEntriesUpTo({ ctx, customerId, seq: atomSeq });
 		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
+		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
 	}
 
 	function forget({ customerId }: { customerId: string }): void {
 		deleteCustomerJournalEntries({ ctx, customerId });
 		for (const entry of owed({ customerId })) releaseUnsent(entry);
+		unsentByCustomer.delete(customerId);
 		setOwed({ customerId, entries: [] });
 	}
 
