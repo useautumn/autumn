@@ -14,44 +14,49 @@ export const journalKeyHash = ({ key }: { key: string }): Uint8Array => {
 	return hash;
 };
 
-/** Additive: an older build ignores the table, and a file from one gains it here, so the schema version stays. */
+/** BENCH ONLY (#369 key-log prototype): keys append in time order, so a commit dirties the log's last page, not a random leaf. */
 export const createJournalKeysTable = ({
 	database,
 }: {
 	database: Database;
 }) => {
+	database.run("DROP TABLE IF EXISTS journal_keys");
 	database.run(`
-		CREATE TABLE IF NOT EXISTS journal_keys (
-			customer_id TEXT NOT NULL,
-			key_hash BLOB NOT NULL,
+		CREATE TABLE IF NOT EXISTS journal_key_log (
 			appended_at INTEGER NOT NULL,
-			PRIMARY KEY (customer_id, key_hash)
-		) WITHOUT ROWID
+			customer_id TEXT NOT NULL,
+			key_hash BLOB NOT NULL
+		)
 	`);
-	database.run(
-		"CREATE INDEX IF NOT EXISTS journal_keys_age ON journal_keys (appended_at)",
-	);
 };
 
-/** A row past its age is new again; the prune only reclaims its space. */
-export const readJournalKey = ({
+/** The keys taken since `since`, oldest first: what a journal holds in memory as it opens. */
+export const readJournalKeysSince = ({
 	ctx,
-	customerId,
-	key,
 	since,
 }: {
 	ctx: JournalContext;
-	customerId: string;
-	key: string;
 	since: number;
-}): boolean =>
+}): { customerId: string; keyHashLow: bigint; appendedAt: number }[] =>
 	ctx.sqliteDb
-		.query<{ held: bigint }, [string, Uint8Array, number]>(
-			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
+		.query<
+			{ customerId: string; keyHash: Uint8Array; appendedAt: bigint },
+			[number]
+		>(
+			"SELECT customer_id AS customerId, key_hash AS keyHash, appended_at AS appendedAt FROM journal_key_log WHERE appended_at >= ? ORDER BY rowid",
 		)
-		.get(customerId, journalKeyHash({ key }), since) !== null;
+		.all(since)
+		.map(({ customerId, keyHash, appendedAt }) => ({
+			customerId,
+			keyHashLow: new DataView(
+				keyHash.buffer,
+				keyHash.byteOffset,
+				8,
+			).getBigUint64(0),
+			appendedAt: Number(appendedAt),
+		}));
 
-/** Inside the entries' transaction; a key past its age (not yet pruned) is taken again. */
+/** Inside the entries' transaction. */
 export const insertJournalKey = ({
 	ctx,
 	customerId,
@@ -65,13 +70,12 @@ export const insertJournalKey = ({
 }): void => {
 	ctx.sqliteDb
 		.query(
-			`INSERT INTO journal_keys (customer_id, key_hash, appended_at) VALUES ($customerId, $keyHash, $appendedAt)
-			ON CONFLICT (customer_id, key_hash) DO UPDATE SET appended_at = excluded.appended_at`,
+			"INSERT INTO journal_key_log (appended_at, customer_id, key_hash) VALUES ($appendedAt, $customerId, $keyHash)",
 		)
 		.run({ customerId, keyHash: journalKeyHash({ key }), appendedAt });
 };
 
-/** One chunk of rows older than the cutoff in `payload`; answers how many it deleted and the writer's ms, `rows:ms`. */
+/** One chunk off the log's front, the oldest rows, those older than the cutoff; answers `rows:ms`. */
 export const pruneJournalKeys = ({
 	ctx,
 	payload,
@@ -82,9 +86,9 @@ export const pruneJournalKeys = ({
 	const startedAt = performance.now();
 	const { changes } = ctx.sqliteDb
 		.query(
-			`DELETE FROM journal_keys WHERE (customer_id, key_hash) IN (
-				SELECT customer_id, key_hash FROM journal_keys WHERE appended_at < $cutoff LIMIT ${PRUNE_CHUNK}
-			)`,
+			`DELETE FROM journal_key_log WHERE rowid IN (
+				SELECT rowid FROM journal_key_log ORDER BY rowid LIMIT ${PRUNE_CHUNK}
+			) AND appended_at < $cutoff`,
 		)
 		.run({ cutoff: Number(payload) });
 	return `${changes}:${performance.now() - startedAt}`;

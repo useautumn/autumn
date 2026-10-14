@@ -138,7 +138,7 @@ export const deleteCustomerJournalEntries = ({
 			.query("DELETE FROM journal_entries WHERE customer_id = $customerId")
 			.run({ customerId });
 		ctx.sqliteDb
-			.query("DELETE FROM journal_keys WHERE customer_id = $customerId")
+			.query("DELETE FROM journal_key_log WHERE customer_id = $customerId")
 			.run({ customerId });
 	})();
 	return "";

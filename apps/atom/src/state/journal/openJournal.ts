@@ -7,10 +7,14 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
+import {
+	PRUNE_CHUNK,
+	readJournalKeysSince,
+} from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { callerKeyOf } from "./callerKeyOf.js";
 import { createGroupCommit } from "./createGroupCommit.js";
+import { createRecentKeys, keyFingerprint } from "./createRecentKeys.js";
 import type { Journal, JournalEntry } from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
@@ -164,11 +168,42 @@ export const openJournal = ({
 		return oldest;
 	}
 
+	const recentKeys = createRecentKeys({ windowMs: KEY_ROW_TTL_MS });
+	const fingerprintOf = ({
+		customerId,
+		key,
+	}: {
+		customerId: string;
+		key: string;
+	}) =>
+		keyFingerprint({
+			customerId,
+			keyHashLow: BigInt.asUintN(64, BigInt(Bun.hash.xxHash3(key, 0n))),
+		});
+	for (const row of readJournalKeysSince({
+		ctx,
+		since: now() - KEY_ROW_TTL_MS,
+	}))
+		recentKeys.add({
+			fingerprint: keyFingerprint(row),
+			at: row.appendedAt,
+			now: now(),
+		});
+
 	const groupCommit = createGroupCommit({
 		commit: async (entries: JournalEntry[]) => {
 			await timeStage("journalAppend", () =>
 				file.write("insertJournalEntries", encodeJournalEntries({ entries })),
 			);
+			for (const entry of entries) {
+				const key = callerKeyOf({ command: entry.command });
+				if (key)
+					recentKeys.add({
+						fingerprint: fingerprintOf({ customerId: entry.customerId, key }),
+						at: entry.appendedAt,
+						now: now(),
+					});
+			}
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
@@ -276,7 +311,10 @@ export const openJournal = ({
 			"journalKeyCheck",
 			() =>
 				inFlightKeys.get(customerId)?.has(key) === true ||
-				readJournalKey({ ctx, customerId, key, since: now() - KEY_ROW_TTL_MS }),
+				recentKeys.has({
+					fingerprint: fingerprintOf({ customerId, key }),
+					since: now() - KEY_ROW_TTL_MS,
+				}),
 		);
 		recordKeyCheck({ us: (performance.now() - startedAt) * 1000, held });
 		return held;

@@ -62,7 +62,7 @@ const keyRowsIn = ({ databasePath }: { databasePath: string }) => {
 	try {
 		return database
 			.query<{ customerId: string }, []>(
-				"SELECT customer_id AS customerId FROM journal_keys ORDER BY customer_id",
+				"SELECT customer_id AS customerId FROM journal_key_log ORDER BY customer_id",
 			)
 			.all();
 	} finally {
@@ -175,7 +175,7 @@ describe("journal keys", () => {
 		before.close();
 		journals.splice(journals.indexOf(before), 1);
 		const database = new Database(databasePath);
-		database.run("DROP TABLE journal_keys");
+		database.run("DROP TABLE journal_key_log");
 		database.close();
 
 		const reopened = open({ databasePath });
