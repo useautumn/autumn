@@ -385,7 +385,8 @@ export const consumeAgentTurn = async ({
 				(turn.progress.turnStarted &&
 					activity.msSinceActivity() < STREAM_IDLE_TIMEOUT_MS);
 			const quietTooLong = activity.msSinceActivity() >= MAX_QUIET_MS;
-			const deadlineReached = deadlineAt !== undefined && isPast(deadlineAt);
+			const deadlineReached =
+				deadlineAt !== undefined && Date.now() >= deadlineAt;
 			if (
 				activity.msSinceStart() >= MAX_TURN_DURATION_MS ||
 				(!turnIsWorking && (quietTooLong || deadlineReached))
