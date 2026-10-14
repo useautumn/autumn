@@ -2,18 +2,26 @@ import { readFileSync } from "node:fs";
 
 /** Where a thread's busy time goes; each is the stage's own time, without the stages it runs inside it. */
 export const STAGES = [
+	/** Hono's dispatch, middleware and handlers, each up to its first await; the stages they run are their own. */
+	"honoRoute",
 	/** The request body parsed and the response's JSON written. */
 	"httpParseRespond",
 	/** A check this replica does not own: signed and handed to the owner. */
 	"hopForward",
 	/** A check handed here by a peer: its signature verified. */
 	"hopServe",
-	/** The engine's decision and the rows it moves: computeCheck, computeTrack, applyMutation. */
-	"engineStep",
+	/** The engine's decision on a check: computeCheck. */
+	"engineDecision",
+	/** A fold's replay of owed deductions onto a view, an append's continuation included: computeTrack, applyMutation. */
+	"engineFoldStep",
+	/** The replay of a push's acknowledged deductions onto the old copy, to tell whether the fold carries across it. */
+	"engineFoldCheck",
 	/** A customer's view joined, compared across a push, and rendered in the API's shape. */
 	"viewRender",
 	/** The journal's group commit, its fsync included. */
 	"journalAppend",
+	/** What the journal owes a customer, and whether it is backed up. */
+	"journalOwed",
 	/** A pushed, relayed or pulled subject parsed, stored and reconciled. */
 	"pushApply",
 	/** An operation signed and sent to the other replicas. */
@@ -60,7 +68,7 @@ const fieldOf = (stage: string) =>
 	`stage${stage[0]?.toUpperCase()}${stage.slice(1)}Us`;
 
 /**
- * Each stage's time since boot as its thread stat field (`stageEngineStepUs`), and the thread's busy time no stage
+ * Each stage's time since boot as its thread stat field (`stageEngineDecisionUs`), and the thread's busy time no stage
  * holds and its idle time beside them, all in µs. `aliveUs` is how long the thread has run.
  */
 export const readStageClock = ({

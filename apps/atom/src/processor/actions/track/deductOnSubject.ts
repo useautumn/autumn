@@ -29,7 +29,7 @@ export const deductOnSubject = async ({
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
-	const result = timeStage("engineStep", () =>
+	const result = timeStage("engineDecision", () =>
 		computeCheck({ fullSubject: subject.fullSubject, command }),
 	);
 	if (!result.allowed) return { result, deducted: subject };
