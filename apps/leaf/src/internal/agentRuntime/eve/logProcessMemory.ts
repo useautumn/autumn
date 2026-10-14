@@ -18,15 +18,22 @@ const readRssMb = async (pid: number) => {
 	}
 };
 
+const readRssMbOf = (pid: number | undefined) =>
+	pid === undefined ? undefined : readRssMb(pid);
+
 /** The task's memory metric sums leaf and eve, so each is logged on its own
  * to show which process grows. */
-export const logProcessMemory = ({ evePid }: { evePid: number }) => {
+export const logProcessMemory = ({
+	evePid,
+}: {
+	evePid: () => number | undefined;
+}) => {
 	const timer = setInterval(async () => {
 		const { heapUsed, rss } = process.memoryUsage();
 		logger.info("Process memory", {
 			event: "leaf.process_memory",
 			data: {
-				eve_rss_mb: await readRssMb(evePid),
+				eve_rss_mb: await readRssMbOf(evePid()),
 				leaf_heap_used_mb: toMb(heapUsed),
 				leaf_rss_mb: toMb(rss),
 			},
