@@ -8,6 +8,7 @@ import {
 	atomTokenToHash,
 	generateAtomToken,
 } from "@/internal/byoc/utils/atomTokenUtils.js";
+import { createReplicaRing } from "../../../../../../apps/atom/src/replicas/createReplicaRing.js";
 import { createReplicaBalancer } from "./createReplicaBalancer.js";
 import { cutKey, PEER_VIEW_REREAD_MS, writePeerViews } from "./peerViews.js";
 import {
@@ -205,6 +206,23 @@ const close = async ({
 	await balancer.stop();
 };
 
+const ownerIndexOf = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: ReplicaSetContext;
+	customerId: string;
+}): Promise<number> => {
+	const hostnames = ctx.replicas.map(({ hostname }) => hostname);
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => hostnames },
+			own: () => hostnames.slice(0, 1),
+		},
+	});
+	return hostnames.indexOf(await ring.ownerOf({ customerId }));
+};
+
 /**
  * Starts `size` replicas of the org's own Atom on this machine and registers them, behind one balancer, as the org's Atom.
  * Each replica listens on its own loopback address with its own volume; the set's files are kept under `dir` for reading after a run.
@@ -252,6 +270,7 @@ export const createReplicaSet = async ({
 		scaleTo: (size) => scaleTo({ ctx, size }),
 		cutPeer: (left, right) => cutPeer({ ctx, left, right }),
 		healPeers: () => healPeers({ ctx }),
+		ownerIndexOf: ({ customerId }) => ownerIndexOf({ ctx, customerId }),
 		routeTo: balancer.routeTo,
 		pushes: balancer.pushes,
 		restore: (size) => restore({ ctx, balancer, size }),
