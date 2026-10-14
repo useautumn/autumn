@@ -95,8 +95,8 @@ export const createJournalForwarder = ({
 		if (!first) return;
 		await ctx.autumnClient.appendTracks({
 			tokenHash: first.forwarded.tokenHash(),
-			tracks: batch.map(({ forwarded, entry }) =>
-				journalEntryToHandIn({ writerId: forwarded.journal.writerId, entry }),
+			tracks: batch.map(({ entry }) =>
+				journalEntryToHandIn({ writerId: entry.writerId, entry }),
 			),
 		});
 	}
@@ -183,7 +183,7 @@ export const createJournalForwarder = ({
 		ctx.logger.warn(
 			{
 				type: "atom_journal_track_parked",
-				writerId: forwarded.journal.writerId,
+				writerId: entry.writerId,
 				customerId: entry.customerId,
 				seq: entry.seq,
 			},
