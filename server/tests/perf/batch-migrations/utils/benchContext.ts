@@ -16,6 +16,7 @@ import {
 import { getFeatures, TestFeature } from "@tests/setup/v2Features.js";
 import { and, eq, sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { startBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -253,7 +254,11 @@ const ensureBenchProducts = async ({
 
 /** Resolve-or-create the dedicated bench org (never the shared test org),
  * its features, and the three bench plans covering every anchor-ladder rung. */
-export const getBenchContext = async (): Promise<BenchContext> => {
+export const getBenchContext = async ({
+	startBalanceWorker = false,
+}: {
+	startBalanceWorker?: boolean;
+} = {}): Promise<BenchContext> => {
 	assertBenchDatabaseSafe();
 	const { db } = initDrizzle();
 
@@ -271,6 +276,7 @@ export const getBenchContext = async (): Promise<BenchContext> => {
 	await ensureAllUsersAreMembers({ db, org });
 	const features = await ensureFeatures({ db, org });
 	const benchProducts = await ensureBenchProducts({ db, org, features });
+	if (startBalanceWorker) await startBalanceWorkerClient();
 
 	const ctx: AutumnContext = {
 		org,

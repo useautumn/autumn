@@ -57,7 +57,9 @@ const GROUP_ENTITLEMENT_PREFIX = "ent_bench_planrep_g_";
 
 const main = async () => {
 	const { customers, pages, groups, cleanup } = parseArgs();
-	const { ctx, org, benchProducts } = await getBenchContext();
+	const { ctx, org, benchProducts } = await getBenchContext({
+		startBalanceWorker: !cleanup,
+	});
 	const { db } = ctx;
 	const prefixes = BENCH_PLANREP_PREFIXES;
 
@@ -351,9 +353,7 @@ const main = async () => {
 	console.log(
 		`bench: repointed ${counts.repointed}, stale ${counts.stale}${ranToCompletion ? " (expected 0 stale)" : ""}`,
 	);
-	console.log(
-		`bench: wrong balance ${counts.wrong_balance} (expected 0)`,
-	);
+	console.log(`bench: wrong balance ${counts.wrong_balance} (expected 0)`);
 	console.log(
 		`bench: shared dataset rows ${counts.shared} (expected ${sharedBefore}, untouched)`,
 	);

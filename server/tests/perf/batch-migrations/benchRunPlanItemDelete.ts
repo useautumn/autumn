@@ -57,7 +57,9 @@ const parseArgs = () => {
 
 const main = async () => {
 	const { customers, pages, cleanup } = parseArgs();
-	const { ctx, org, benchProducts } = await getBenchContext();
+	const { ctx, org, benchProducts } = await getBenchContext({
+		startBalanceWorker: !cleanup,
+	});
 	const { db } = ctx;
 
 	const cleanupStarted = Date.now();

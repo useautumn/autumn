@@ -1,5 +1,6 @@
 import {
 	AllowanceType,
+	BillingVersion,
 	CusProductStatus,
 	EntInterval,
 	entitlements,
@@ -195,7 +196,7 @@ export const seedBenchPlanItems = async ({
 	await db.execute(sql`
 		INSERT INTO customer_products (
 			id, internal_customer_id, internal_product_id, created_at, status,
-			starts_at, is_custom, product_id, customer_id, options
+			starts_at, is_custom, product_id, customer_id, options, billing_version
 		)
 		SELECT
 			${prefixes.customerProduct} || i,
@@ -207,7 +208,8 @@ export const seedBenchPlanItems = async ({
 			false,
 			${planProductId},
 			${prefixes.customerId} || i,
-			'{}'::jsonb[]
+			'{}'::jsonb[],
+			${BillingVersion.V1}
 		FROM ${series}
 		ON CONFLICT DO NOTHING
 	`);

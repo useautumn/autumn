@@ -82,7 +82,9 @@ const main = async () => {
 		cleanup,
 		skipSeed,
 	} = parseArgs();
-	const { ctx, org } = await getBenchContext();
+	const { ctx, org } = await getBenchContext({
+		startBalanceWorker: !cleanup,
+	});
 	const { db } = ctx;
 
 	if (cleanup) {
