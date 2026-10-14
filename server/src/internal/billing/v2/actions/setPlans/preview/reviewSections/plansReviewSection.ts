@@ -108,48 +108,51 @@ export const plansReviewSection = ({
 	features: Feature[];
 	currentEpochMs: number;
 }): SetPlansReviewSection => {
-	const requestPhases = phases.map((phase, phaseIndex) => ({
-		startsAt: phase.starts_at,
-		phase: {
+	const toRows = ({
+		plans,
+		keyPrefix,
+		planChanges = [],
+	}: {
+		plans: SetPlansPreviewPlan[];
+		keyPrefix: string;
+		planChanges?: CustomerPlanChange[];
+	}) =>
+		plans.map((plan, planIndex) =>
+			planToRow({
+				plan,
+				rowKey: `${keyPrefix}-${planIndex}`,
+				planChanges,
+				features,
+				currency,
+				currentEpochMs,
+			}),
+		);
+	const datedPhases = [
+		...phases.map((phase, phaseIndex) => ({
+			startsAt: phase.starts_at,
 			key: `plans-${phaseIndex}`,
 			label: phaseLabel(phase),
-			rows: phase.plans.map((plan, planIndex) =>
-				planToRow({
-					plan,
-					rowKey: `plan-${phaseIndex}-${planIndex}`,
-					planChanges: phase.plan_changes,
-					features,
-					currency,
-					currentEpochMs,
-				}),
-			),
-		},
-	}));
-	const removedReviewPhases = removedPhases.map((removedPhase) => ({
-		startsAt: removedPhase.starts_at,
-		phase: {
-			key: `removed-${removedPhase.starts_at}`,
-			label: dateText(removedPhase.starts_at),
+			rows: toRows({
+				plans: phase.plans,
+				keyPrefix: `plan-${phaseIndex}`,
+				planChanges: phase.plan_changes,
+			}),
+		})),
+		...removedPhases.map(({ starts_at, plans }) => ({
+			startsAt: starts_at,
+			key: `removed-${starts_at}`,
+			label: dateText(starts_at),
 			removed: true,
-			rows: removedPhase.plans.map((plan, planIndex) =>
-				planToRow({
-					plan,
-					rowKey: `removed-${removedPhase.starts_at}-${planIndex}`,
-					planChanges: [],
-					features,
-					currency,
-					currentEpochMs,
-				}),
-			),
-		},
-	}));
-	const removedCount = removedReviewPhases.length;
+			rows: toRows({ plans, keyPrefix: `removed-${starts_at}` }),
+		})),
+	];
+	const removedCount = removedPhases.length;
 
 	return {
 		phases: withoutEmptyPhases(
-			[...requestPhases, ...removedReviewPhases]
+			datedPhases
 				.sort((first, second) => first.startsAt - second.startsAt)
-				.map(({ phase }) => phase),
+				.map(({ startsAt: _startsAt, ...phase }) => phase),
 		),
 		summary: summarizeCounts({
 			counts: [
