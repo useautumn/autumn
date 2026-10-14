@@ -117,7 +117,7 @@ export const answerCheck = ({
 	subject: CurrentSubject;
 }): CheckDecided => {
 	const command = checkToCommand({ check, subject });
-	const result = timeStage("engineStep", () =>
+	const result = timeStage("engineDecision", () =>
 		computeCheck({ fullSubject: subject.fullSubject, command }),
 	);
 	return renderCheck({ ctx, check, command, result, subject });

@@ -45,7 +45,7 @@ export const answerDeductingCheck = async ({
 		idempotencyKey,
 		kind,
 	});
-	const result = timeStage("engineStep", () =>
+	const result = timeStage("engineDecision", () =>
 		computeCheck({ fullSubject: subject.fullSubject, command }),
 	);
 	if (!result.allowed && kind === "track")

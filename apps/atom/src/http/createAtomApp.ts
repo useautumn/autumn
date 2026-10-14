@@ -12,6 +12,7 @@ import { checkHopMiddleware } from "./middlewares/checkHopMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
+import { timedRoute } from "./stages/timedRoute.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
 
 /** What the public endpoint serves. Nothing here trusts another replica: peers talk on their own port (createPeerApp). */
@@ -20,9 +21,12 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
-	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
-	app.use("/v1/track", admissionMiddleware({ ctx }));
-	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
+	app.use("/v1/balances.check", timedRoute(admissionMiddleware({ ctx })));
+	app.use("/v1/track", timedRoute(admissionMiddleware({ ctx })));
+	app.use(
+		timedRoute(requestLogMiddleware({ ctx, handleError })),
+		timedRoute(requestBodyMiddleware),
+	);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
 		mountMultiTenantRoutes({
@@ -35,15 +39,15 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	const authorized = new Hono<AtomHttpEnv>();
 	authorized.post(
 		"/balances.check",
-		checkHopMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveCheck,
+		timedRoute(checkHopMiddleware({ ctx })),
+		timedRoute(clientAuthMiddleware({ ctx })),
+		timedRoute(receiveCheck),
 	);
 	authorized.post(
 		"/track",
-		checkHopMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveTrack,
+		timedRoute(checkHopMiddleware({ ctx })),
+		timedRoute(clientAuthMiddleware({ ctx })),
+		timedRoute(receiveTrack),
 	);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));
