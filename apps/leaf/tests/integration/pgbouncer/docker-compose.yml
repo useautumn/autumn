@@ -1,0 +1,35 @@
+# Prod's chat database shape: Postgres behind a transaction-mode PgBouncer.
+# docker compose -f apps/leaf/tests/integration/pgbouncer/docker-compose.yml up -d --wait
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: leaf
+      POSTGRES_PASSWORD: leaf
+      POSTGRES_DB: chat
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "leaf", "-d", "chat"]
+      interval: 1s
+      retries: 30
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_USER: leaf
+      DB_PASSWORD: leaf
+      DB_NAME: chat
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_PREPARED_STATEMENTS: "200"
+      LISTEN_PORT: "6432"
+    ports:
+      - "56432:6432"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "nc -z 127.0.0.1 6432"]
+      interval: 1s
+      retries: 30

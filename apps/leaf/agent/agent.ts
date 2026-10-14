@@ -16,9 +16,12 @@ if (!isProduction && !process.env.WORKFLOW_QUEUE_NAMESPACE) {
 	process.env.WORKFLOW_QUEUE_NAMESPACE = `local_${process.env.USER ?? "dev"}`;
 }
 
+// Self-referenced through package.json exports: eve imports the world from its build dir.
+const LEAF_POSTGRES_WORLD = "@autumn/leaf/workflow-world";
+
 const workflowWorld =
 	process.env.EVE_WORKFLOW_WORLD ??
-	(chatDatabaseUrl ? "@workflow/world-postgres" : undefined);
+	(chatDatabaseUrl ? LEAF_POSTGRES_WORLD : undefined);
 
 export default defineAgent({
 	build: { externalDependencies: ["@vercel/otel"] },
