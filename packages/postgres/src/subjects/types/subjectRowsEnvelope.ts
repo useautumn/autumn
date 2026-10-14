@@ -30,8 +30,8 @@ export const subjectRowsEnvelopeSchema = z.object({
 	pooled_balances: z.array(PooledBalanceSchema),
 	/** License pools on the customer's products: seat counters the worker serves on `customers.get`. */
 	customer_licenses: z.array(CustomerLicenseRowSchema),
-	/** Ids only: the rest of a lock row is read at finalize, never held in memory. */
-	open_locks: z.array(z.object({ id: z.string(), lock_id: z.string() })),
+	/** Whole rows: an Atom's finalize names only its lock and is settled from the row the worker holds. */
+	open_locks: z.array(z.record(z.string(), z.unknown())),
 	entity: EntitySchema.nullable(),
 });
 

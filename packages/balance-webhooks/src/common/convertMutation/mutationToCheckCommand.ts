@@ -17,7 +17,7 @@ export const mutationToTrackedFeature = ({
 	if (command.type === "track") {
 		return { featureId: command.featureId, properties: command.properties };
 	}
-	if (command.type === "finalize") {
+	if (command.type === "finalize" && command.lock) {
 		return {
 			featureId: command.lock.feature_id,
 			properties: command.properties ?? command.lock.properties,

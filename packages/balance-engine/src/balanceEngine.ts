@@ -96,7 +96,10 @@ export type { RebalanceRequest } from "./common/rebalance/types/rebalanceRequest
 // deduction
 export { deduct } from "./deduction/deduct.js";
 export type { DeductionContext } from "./deduction/types/deductionContext.js";
-export type { DeductionDecision } from "./deduction/types/deductionDecision.js";
+export type {
+	DeductionDecision,
+	FinalizeDecision,
+} from "./deduction/types/deductionDecision.js";
 export type { DeductionDelta } from "./deduction/types/deductionDelta.js";
 export type { DeductionOutcome } from "./deduction/types/deductionOutcome.js";
 export type { DeductionRow } from "./deduction/types/deductionRow.js";
@@ -121,6 +124,7 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
@@ -168,10 +172,7 @@ export type { WorkerCustomerLicense } from "./models/subject/rows/workerCustomer
 export type { WorkerCustomerPrice } from "./models/subject/rows/workerCustomerPrice.js";
 export type { WorkerCustomerProduct } from "./models/subject/rows/workerCustomerProduct.js";
 export type { WorkerEntity } from "./models/subject/rows/workerEntity.js";
-export type {
-	OpenLock,
-	WorkerLock,
-} from "./models/subject/rows/workerLock.js";
+export type { WorkerLock } from "./models/subject/rows/workerLock.js";
 export type { WorkerPooledBalance } from "./models/subject/rows/workerPooledBalance.js";
 export type { WorkerPooledContribution } from "./models/subject/rows/workerPooledContribution.js";
 export type { WorkerReplaceable } from "./models/subject/rows/workerReplaceable.js";

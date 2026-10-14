@@ -24,13 +24,14 @@ export const subjectsToBalanceWebhooks = ({
 	after,
 }: {
 	mutation: SubjectStateMutation;
-	outcome: DeductionOutcome;
+	outcome: DeductionOutcome | null;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): BalanceWebhookEffect[] => {
 	// Only a mutation that moved a tracked feature can call for one; others are never crossed.
 	const tracked = mutationToTrackedFeature({ mutation });
-	if (!tracked || !mutation.changes.some(isBalanceChange)) return [];
+	if (!tracked || !outcome || !mutation.changes.some(isBalanceChange))
+		return [];
 
 	const commands = outcomeToAffectedFeatures({
 		outcome,

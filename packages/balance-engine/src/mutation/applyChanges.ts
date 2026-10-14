@@ -8,7 +8,7 @@ import type {
 } from "../models/mutation/rowChange.js";
 import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
 import type { WorkerCustomer } from "../models/subject/rows/workerCustomer.js";
-import type { OpenLock } from "../models/subject/rows/workerLock.js";
+import type { WorkerLock } from "../models/subject/rows/workerLock.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
 import { incrementRow } from "./incrementRow.js";
 
@@ -97,21 +97,21 @@ const applyToCustomer = ({
 	return { ...customer, ...change.after };
 };
 
-/** Memory keeps only the ids of an open lock; the row the change carries is for Postgres. */
+/** Memory keeps an open lock's whole row: an Atom's finalize names only the lock, and is settled from it. */
 const applyToOpenLocks = ({
 	openLocks,
 	change,
 }: {
-	openLocks: OpenLock[];
+	openLocks: WorkerLock[];
 	change: LockRowChange;
-}): OpenLock[] => {
+}): WorkerLock[] => {
 	if (change.op === "insert") {
 		const { id, lock_id } = change.row;
 		const isAlreadyOpen = openLocks.some(
 			(openLock) => openLock.id === id || openLock.lock_id === lock_id,
 		);
 		if (isAlreadyOpen) throw new StaleMutationError({ subject: id });
-		return [...openLocks, { id, lock_id }];
+		return [...openLocks, change.row];
 	}
 	const remaining = openLocks.filter((openLock) => openLock.id !== change.id);
 	if (remaining.length === openLocks.length)

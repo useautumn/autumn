@@ -1,5 +1,5 @@
 import type {
-	DeductionDecision,
+	FinalizeDecision,
 	MutationEffect,
 	WorkerFullSubject,
 } from "@autumn/balance-engine";
@@ -12,7 +12,7 @@ export const decideEffects = ({
 	before,
 	after,
 }: {
-	decision: DeductionDecision;
+	decision: FinalizeDecision;
 	before: WorkerFullSubject;
 	after: WorkerFullSubject;
 }): MutationEffect[] => [

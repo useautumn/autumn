@@ -36,9 +36,9 @@ export const workerLockSchema = z
 
 export type WorkerLock = z.infer<typeof workerLockSchema>;
 
-/** What memory keeps of an open lock: enough to refuse a duplicate and to name the row at finalize. The rest stays in Postgres. */
-export const openLockSchema = workerLockSchema
+/** A lock named without its row: the row's id and the caller's. */
+export const lockIdsSchema = workerLockSchema
 	.pick({ id: true, lock_id: true })
 	.loose();
 
-export type OpenLock = z.infer<typeof openLockSchema>;
+export type LockIds = z.infer<typeof lockIdsSchema>;

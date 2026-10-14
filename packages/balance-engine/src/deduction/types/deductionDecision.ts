@@ -6,3 +6,8 @@ export type DeductionDecision = {
 	mutation: SubjectStateMutation;
 	outcome: DeductionOutcome;
 };
+
+/** A finalize that settled nothing moved no balance, so no deduction stands behind it. */
+export type FinalizeDecision = Omit<DeductionDecision, "outcome"> & {
+	outcome: DeductionOutcome | null;
+};
