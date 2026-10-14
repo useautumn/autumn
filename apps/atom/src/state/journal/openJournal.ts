@@ -1,5 +1,4 @@
 import type { TrackCommand } from "@autumn/balance-engine";
-import { deepFreeze } from "../deepFreeze.js";
 import {
 	deleteCustomerJournalEntries,
 	deleteJournalEntriesUpTo,
@@ -82,8 +81,7 @@ export const openJournal = ({
 		},
 	});
 
-	for (const read of readOwedJournalEntries({ ctx })) {
-		const entry = deepFreeze(read);
+	for (const entry of readOwedJournalEntries({ ctx })) {
 		owe({ entry });
 		holdUnsent(entry);
 	}
@@ -124,7 +122,7 @@ export const openJournal = ({
 	}): Promise<JournalEntry> {
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
-		const entry = deepFreeze({ customerId, seq, appendedAt: now(), command });
+		const entry = { customerId, seq, appendedAt: now(), command };
 		owe({ entry });
 		try {
 			await groupCommit.add(entry);
