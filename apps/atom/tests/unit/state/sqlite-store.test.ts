@@ -484,6 +484,31 @@ describe("sqlite store", () => {
 		reopened.close();
 	});
 
+	test("the shared slice outlives a collection while a held subject still holds it", () => {
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const store = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		store.setSubject({ subject: asCustomer("cus_1") });
+		Bun.gc(true);
+		store.setSubject({ subject: asCustomer("cus_2") });
+		const read = (customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read("cus_2")?.catalog).toBe(
+			read("cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read("cus_2")?.org).toBe(read("cus_1")?.org as StoredSubject["org"]);
+		store.close();
+	});
+
 	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", () => {
 		const databasePath = slotPath();
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });

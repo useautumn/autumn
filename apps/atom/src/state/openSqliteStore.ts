@@ -23,8 +23,14 @@ import type { StoredSubject } from "./types/storedSubject.js";
 let storesOpened = 0;
 
 type Slice = Pick<StoredSubject, "catalog" | "org">;
-/** By slice hash, across every customer the thread holds: customers on one plan hold one catalog, not one each. */
-const slicesByHash = new Map<string, WeakRef<Slice>>();
+/**
+ * By slice hash, across every customer the thread holds: customers on one plan hold one catalog, not one each. Weak on
+ * the catalog and org themselves, which the held subjects hold, so a slice goes with the last subject holding it.
+ */
+const slicesByHash = new Map<
+	string,
+	{ catalog: WeakRef<Slice["catalog"]>; org: WeakRef<Slice["org"]> }
+>();
 
 /** The held copy of this slice when any customer holds one, else this one, kept for the next. */
 const sharedSlice = ({
@@ -34,10 +40,15 @@ const sharedSlice = ({
 	hash: string;
 	slice: Slice;
 }): Slice => {
-	const held = slicesByHash.get(hash)?.deref();
-	if (held) return held;
+	const held = slicesByHash.get(hash);
+	const catalog = held?.catalog.deref();
+	const org = held?.org.deref();
+	if (catalog && org) return { catalog, org };
 	const shared = deepFreeze({ catalog: slice.catalog, org: slice.org });
-	slicesByHash.set(hash, new WeakRef(shared));
+	slicesByHash.set(hash, {
+		catalog: new WeakRef(shared.catalog),
+		org: new WeakRef(shared.org),
+	});
 	return shared;
 };
 
