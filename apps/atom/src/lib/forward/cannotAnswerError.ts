@@ -11,6 +11,8 @@ export type ForwardReason =
 	| "lock_version"
 	/** A lock the API refuses or answers itself: on an allocated feature, or one nothing funds. */
 	| "lock_unsupported"
+	/** A lock_id open at Autumn that this slot holds no row for (the API's own): only the API can compare its terms. */
+	| "lock_not_held"
 	| "with_preview"
 	| "customer_data"
 	| "skip_cache"

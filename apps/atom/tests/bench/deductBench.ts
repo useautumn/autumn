@@ -17,6 +17,7 @@ import { createSlotProcessor } from "../../src/processor/createSlotProcessor.js"
 import { createHeldSubjects } from "../../src/state/heldSubjects/createHeldSubjects.js";
 import { openJournal } from "../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../src/state/openCatalogStore.js";
+import { createOpenLockRows } from "../../src/state/openLockRows/createOpenLockRows.js";
 import { openSqliteStore } from "../../src/state/openSqliteStore.js";
 import {
 	atomOrg,
@@ -52,6 +53,7 @@ const ctx = {
 	logger: getAtomLogger(),
 	subjectPulls: noFolderPulls,
 	journal,
+	openLockRows: createOpenLockRows(),
 };
 const processor = createSlotProcessor({ ctx });
 let appendCalls = 0;

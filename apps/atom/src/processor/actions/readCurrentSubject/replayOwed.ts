@@ -2,8 +2,9 @@ import {
 	applyMutation,
 	type Catalog,
 	computeTrack,
-	LockAlreadyExistsError,
+	LockTermsConflictError,
 	type SubjectState,
+	type SubjectStateMutation,
 	subjectStateToFullSubject,
 	UnsupportedCommandError,
 	type WorkerFullSubject,
@@ -19,12 +20,15 @@ export const replayOwed = ({
 	state,
 	catalog,
 	fullSubject: stateFullSubject = null,
+	onApplied,
 }: {
 	owed: readonly JournalEntry[];
 	state: SubjectState;
 	catalog: Catalog;
 	/** `state` already joined to `catalog`, when a cached view holds it: the first step need not build it again. */
 	fullSubject?: WorkerFullSubject | null;
+	/** Told each mutation applied, for a caller that keeps what a step wrote, such as a lock's row. */
+	onApplied?: (mutation: SubjectStateMutation) => void;
 }): SubjectState =>
 	owed.reduce((current, { command }) => {
 		const fullSubject =
@@ -36,14 +40,13 @@ export const replayOwed = ({
 						entityId: command.identity.entityId,
 					});
 		try {
-			return applyMutation({
-				state: current,
-				mutation: computeTrack({ fullSubject, command }),
-			});
+			const mutation = computeTrack({ fullSubject, command });
+			onApplied?.(mutation);
+			return applyMutation({ state: current, mutation });
 		} catch (error) {
 			if (
 				error instanceof UnsupportedCommandError ||
-				error instanceof LockAlreadyExistsError
+				error instanceof LockTermsConflictError
 			)
 				return current;
 			throw error;
