@@ -580,7 +580,7 @@ describe("one writer per journal file", () => {
 		await until(() => journals.every((journal) => nothingUnsent({ journal })));
 
 		for (const journal of journals)
-			journal.reconcile({
+			await journal.reconcile({
 				customerId: "cus_1",
 				atomSeqs: { atom_1: { [w1.writerId]: 1 } },
 			});

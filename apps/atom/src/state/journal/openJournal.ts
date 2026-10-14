@@ -1,13 +1,11 @@
 import {
-	deleteCustomerJournalEntries,
-	deleteJournalEntriesUpTo,
-	insertJournalEntries,
+	encodeJournalEntries,
 	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
+import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
-import { openJournalDatabase } from "./openJournalDatabase.js";
 import type {
 	Journal,
 	JournalEntry,
@@ -57,7 +55,8 @@ export const openJournal = ({
 	databasePath: string;
 	now?: () => number;
 }): Journal => {
-	const ctx = { sqliteDb: openJournalDatabase({ databasePath }) };
+	const file = openWrittenFile({ databasePath, kind: "journal" });
+	const ctx = { sqliteDb: file.sqliteDb };
 	const writerId = readJournalWriterId({ ctx });
 	const lastSeqs = readLastJournalSeqs({ ctx });
 	/** Grown in place by an append; anything else that changes it replaces it, so a reader can tell the two apart. */
@@ -110,8 +109,11 @@ export const openJournal = ({
 	}
 
 	const groupCommit = createGroupCommit({
-		commit: (entries: JournalEntry[]) => {
-			insertJournalEntries({ ctx, entries });
+		commit: async (entries: JournalEntry[]) => {
+			await file.write(
+				"insertJournalEntries",
+				encodeJournalEntries({ entries }),
+			);
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
@@ -209,31 +211,35 @@ export const openJournal = ({
 	}: {
 		customerId: string;
 		atomSeqs: Record<string, Record<string, number>> | null;
-	}): void {
+	}): Promise<void> {
 		const atomSeq = Object.values(atomSeqs ?? {}).find(
 			(writerSeqs) => writerId in writerSeqs,
 		)?.[writerId];
-		if (atomSeq === undefined) return;
+		if (atomSeq === undefined) return Promise.resolve();
 		const entries = owed({ customerId });
 		const unseen = entries.filter(({ seq }) => seq > atomSeq);
-		if (unseen.length === entries.length) return;
-		deleteJournalEntriesUpTo({ ctx, customerId, seq: atomSeq });
+		if (unseen.length === entries.length) return Promise.resolve();
 		for (const entry of entries) if (entry.seq <= atomSeq) releaseUnsent(entry);
 		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
+		return file
+			.write("deleteJournalEntriesUpTo", `${customerId}\u0000${atomSeq}`)
+			.then(() => {});
 	}
 
-	function forget({ customerId }: { customerId: string }): void {
-		deleteCustomerJournalEntries({ ctx, customerId });
+	function forget({ customerId }: { customerId: string }): Promise<void> {
 		for (const entry of owed({ customerId })) releaseUnsent(entry);
 		unsentByCustomer.delete(customerId);
 		setOwed({ customerId, entries: [] });
+		return file
+			.write("deleteCustomerJournalEntries", customerId)
+			.then(() => {});
 	}
 
 	function close(): void {
 		for (const entry of [...unsent]) releaseUnsent(entry);
 		unsentByJournal.delete(unsent);
-		ctx.sqliteDb.close();
+		file.close();
 	}
 
 	return {

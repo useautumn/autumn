@@ -48,12 +48,13 @@ export type Journal = {
 	/**
 	 * After a push is stored: every entry at or below the seq its customer row holds for this journal's writer leaves the
 	 * journal. `atomSeqs` is that row's, by atom id then writer id; a writer id is unique, so any atom id may hold it.
+	 * They leave what is owed at once; the promise settles once the file's delete has committed.
 	 */
 	reconcile(params: {
 		customerId: string;
 		atomSeqs: Record<string, Record<string, number>> | null;
-	}): void;
+	}): Promise<void>;
 	/** The customer is gone from Autumn: nothing it owes can ever apply. */
-	forget(params: { customerId: string }): void;
+	forget(params: { customerId: string }): Promise<void>;
 	close(): void;
 };

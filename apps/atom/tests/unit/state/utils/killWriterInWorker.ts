@@ -4,10 +4,13 @@ import {
 	createTrackCommand,
 } from "../../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { openJournal } from "../../../../src/state/journal/openJournal.js";
-import { shareSqliteOpenLock } from "../../../../src/state/newSqliteConnection.js";
+import {
+	newSqliteConnection,
+	shareSqliteOpenLock,
+} from "../../../../src/state/newSqliteConnection.js";
 import { terminateSqliteWriter } from "../../../../src/state/writer/getSqliteWriter.js";
 
-/** Run as a serving thread: commits one append, then loses its writer with a second in flight, and says how that one ended. */
+/** Run as a serving thread: commits one append, then loses its writer with a second posted to it, and says how that one ended. */
 export const KILL_WRITER_PATH = import.meta.path;
 
 const commandOf = ({ commandId }: { commandId: string }) => ({
@@ -27,13 +30,19 @@ if (!isMainThread) {
 		command: commandOf({ commandId: "first" }),
 	});
 	parentPort?.postMessage("first committed");
+	// Holds the file's write lock, so the writer cannot commit the second append before it is ended.
+	const blocker = newSqliteConnection({ path, options: { readwrite: true } });
+	blocker.run("BEGIN IMMEDIATE");
 	const second = journal.append({
 		customerId: "cus_1",
 		command: commandOf({ commandId: "second" }),
 	});
-	terminateSqliteWriter();
 	second.then(
 		() => parentPort?.postMessage("second acknowledged"),
-		(error: Error) => parentPort?.postMessage(`second failed: ${error.message}`),
+		(error: Error) =>
+			parentPort?.postMessage(`second failed: ${error.message}`),
 	);
+	await Bun.sleep(50);
+	terminateSqliteWriter();
+	blocker.run("ROLLBACK");
 }
