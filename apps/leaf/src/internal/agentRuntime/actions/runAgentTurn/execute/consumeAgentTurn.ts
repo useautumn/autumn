@@ -143,6 +143,9 @@ const streamPassEvents = async ({
 		})) {
 			if (!sawEvent) onFirstStreamEvent?.();
 			sawEvent = true;
+			if (activity.msSinceStart() >= MAX_TURN_DURATION_MS) {
+				return { progress, sawEvent };
+			}
 			activity.touch();
 			advanceStreamCursor(session);
 

@@ -107,6 +107,9 @@ await mockLeafModule({
 	}),
 });
 
+const { MAX_TURN_DURATION_MS } = await import(
+	"../../../src/internal/agentRuntime/turnBudget.js"
+);
 const { consumeAgentTurn } = await import(
 	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/consumeAgentTurn.js"
 );
@@ -412,5 +415,43 @@ describe("a parent quiet past the cap settles on the clock", () => {
 			} as never),
 		).rejects.toThrow("Eve stopped responding");
 		expect(parentStreamCalls).toBe(2);
+	});
+
+	test("a parent streaming past the turn ceiling still settles at it", async () => {
+		streamPasses = [
+			{
+				events: [
+					event({ type: "turn.started" }),
+					...Array.from({ length: 2_000 }, () =>
+						event({
+							actions: [{ toolName: "stripe_execute" }],
+							type: "actions.requested",
+						}),
+					),
+					event({
+						finishReason: "stop",
+						message: "Too late.",
+						type: "message.completed",
+					}),
+				],
+				eventGapMs: 500,
+			},
+		];
+
+		await expect(
+			consumeAgentTurn({
+				auth: {} as never,
+				deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
+				env: AppEnv.Sandbox,
+				logger: { error: () => {}, info: () => {}, warn: () => {} } as never,
+				onAction: async () => undefined,
+				orgId: "org_1",
+				session: session(),
+				token: "t",
+			} as never),
+		).rejects.toThrow("Eve stopped responding");
+		expect(nowMs - TURN_START.getTime()).toBeLessThan(
+			MAX_TURN_DURATION_MS + 1_000,
+		);
 	});
 });
