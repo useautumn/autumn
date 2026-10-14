@@ -12,9 +12,23 @@ describe("tracks.append contract", () => {
 				tracks: [{ seq: 1, command }],
 			}),
 		).toEqual({ writer: "w_1", tracks: [{ seq: 1, command }] });
+		expect(
+			AtomTracksAppendRequestSchema.parse({
+				tracks: [
+					{ writer: "w_1", seq: 1, command },
+					{ writer: "w_2", seq: 1, command },
+				],
+			}).tracks.map(({ writer }) => writer),
+		).toEqual(["w_1", "w_2"]);
 		for (const unreadable of [
 			{ writer: "w_1", tracks: [{ seq: 0, command }] },
 			{ tracks: [{ seq: 1, command }] },
+			{
+				tracks: [
+					{ writer: "w_1", seq: 1, command },
+					{ seq: 1, command },
+				],
+			},
 		])
 			expect(AtomTracksAppendRequestSchema.safeParse(unreadable).success).toBe(
 				false,

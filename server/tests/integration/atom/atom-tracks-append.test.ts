@@ -7,7 +7,9 @@
  *     Postgres, so a worker that reads the customer afresh (after a customer update evicts it) still carries it;
  *  2. Autumn deducts a handed-in track by its own split, exactly as an API track of the same value: the request
  *     names no rows, and rows it names anyway are never read;
- *  3. a body that is not a tracks.append request is 400 unreadable; an unknown token hash is 401 atom_unknown.
+ *  3. a body that is not a tracks.append request is 400 unreadable; an unknown token hash is 401 atom_unknown;
+ *  4. a journal resent whole, identical or under request ids nothing remembers (an Atom replica restart), deducts
+ *     once: a seq the customer already holds from that journal deducts nothing again.
  */
 
 import { afterAll, expect, test } from "bun:test";
@@ -217,3 +219,66 @@ test(`${chalk.yellowBright("atom-tracks3: an unreadable body is 400 unreadable; 
 		code: AtomTracksAppendErrorCode.AtomUnknown,
 	});
 });
+
+// A handed-in track only lands through the balance worker's log.
+test.skipIf(!isBalanceWorkerRoute())(
+	`${chalk.yellowBright("atom-tracks4: a journal resent whole, identical or under fresh request ids, deducts once")}`,
+	async () => {
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { customerId } = await initScenario({
+			customerId: "atom-tracks4",
+			setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+			actions: [s.billing.attach({ productId: free.id })],
+		});
+		const atom = await ensureAtomDeployment({ autumn });
+		const tokenHash = atomTokenToHash({ token: atom.token });
+		const writer = `w_${crypto.randomUUID()}`;
+		const journal = () =>
+			[1, 2].map((seq) => ({
+				seq,
+				command: atomTrack({ customerId, value: 10 }),
+			}));
+		const sent = journal();
+		const append = (tracks: typeof sent) =>
+			postAsAtom({
+				autumn,
+				path: ATOM_TRACKS_APPEND_PATH,
+				tokenHash,
+				body: { writer, tracks },
+			});
+
+		const replies = [
+			await append(sent),
+			await append(sent),
+			await append(journal()),
+		];
+
+		expect(replies.map((reply) => reply.status)).toEqual([204, 204, 204]);
+		await pollUntilAsserted({
+			fetch: async () =>
+				(await (
+					await postAsAtom({
+						autumn,
+						path: ATOM_SUBJECT_READ_PATH,
+						tokenHash,
+						body: { customer_id: customerId, entity_id: null },
+					})
+				).json()) as AtomSubjectBody,
+			assert: (body) => expect(body.atom_seqs?.[writer]).toBe(2),
+		});
+		// One customer's commands apply in order: a later seq landing means every resend before it was decided.
+		const marker = await append([
+			{ seq: 3, command: atomTrack({ customerId, value: 1 }) },
+		]);
+		expect(marker.status).toBe(204);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 79,
+		});
+	},
+	120_000,
+);

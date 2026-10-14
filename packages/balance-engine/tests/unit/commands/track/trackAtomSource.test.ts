@@ -77,4 +77,42 @@ describe("a track an Atom handed in", () => {
 			).toBe(false);
 		},
 	);
+
+	test.concurrent(
+		"a seq at or below the journal's held one is a replay: it deducts nothing and changes no row",
+		() => {
+			const state = stateHolding({ atom_1: { w_1: 7 } });
+
+			for (const seq of [3, 7]) {
+				const mutation = trackOn({
+					state,
+					source: { atomId: "atom_1", writerId: "w_1", seq },
+				});
+				expect(mutation.changes).toEqual([]);
+				expect(mutation.result).toMatchObject({
+					status: "applied",
+					deltas: [],
+				});
+			}
+		},
+	);
+
+	test.concurrent(
+		"a seq past the held one deducts as any track does, across a gap too",
+		() => {
+			for (const seq of [8, 12]) {
+				const mutation = trackOn({
+					state: stateHolding({ atom_1: { w_1: 7 } }),
+					source: { atomId: "atom_1", writerId: "w_1", seq },
+				});
+
+				expect(mutation.result).toMatchObject({ status: "applied" });
+				expect(
+					mutation.changes.some(
+						(change) => change.table === "customerEntitlements",
+					),
+				).toBe(true);
+			}
+		},
+	);
 });

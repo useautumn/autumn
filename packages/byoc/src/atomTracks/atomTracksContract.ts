@@ -11,18 +11,26 @@ const trackCommandOnWire = z.custom<TrackCommand>(
 );
 
 /**
- * One journal's tracks: `writer` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up
- * to #N from that journal". A new file is a new writer, so its numbering never collides with an old one's.
+ * Journaled tracks: `writer` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up to
+ * #N from that journal". A new file is a new writer. A track names its own writer, so one request carries every journal
+ * of a thread; the request-level `writer` is for an Atom that sends one journal per request.
  */
-export const AtomTracksAppendRequestSchema = z.object({
-	writer: z.string().min(1),
-	tracks: z.array(
-		z.object({
-			seq: z.number().int().positive(),
-			command: trackCommandOnWire,
-		}),
-	),
-});
+export const AtomTracksAppendRequestSchema = z
+	.object({
+		writer: z.string().min(1).optional(),
+		tracks: z.array(
+			z.object({
+				writer: z.string().min(1).optional(),
+				seq: z.number().int().positive(),
+				command: trackCommandOnWire,
+			}),
+		),
+	})
+	.refine(
+		({ writer, tracks }) =>
+			tracks.every((track) => (track.writer ?? writer) !== undefined),
+		{ message: "Every track names its journal's writer, or the request does" },
+	);
 
 export type AtomTracksAppendRequest = z.infer<
 	typeof AtomTracksAppendRequestSchema

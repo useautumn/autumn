@@ -11,6 +11,7 @@ import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.j
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
+import { isAtomReplay, trackOfNothing } from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** No grant funds the feature; an overdue block that removed every grant is a refusal instead. */
@@ -25,11 +26,17 @@ const isDeductingCheck = ({ command }: { command: TrackCommand }): boolean =>
 /** Pure: the same subject and command always yield the same decision. Dedup is the writer's job. */
 export const computeTrackDecision = ({
 	fullSubject,
-	command,
+	command: sent,
 }: {
 	fullSubject: WorkerFullSubject;
 	command: TrackCommand;
 }): DeductionDecision => {
+	const command = isAtomReplay({
+		command: sent,
+		customer: fullSubject.customer,
+	})
+		? trackOfNothing({ command: sent })
+		: sent;
 	assertCommandSupported({ fullSubject, command });
 
 	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
