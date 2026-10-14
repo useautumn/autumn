@@ -27,6 +27,7 @@ import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { expirePendingPlanForVoidedInvoice } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanForVoidedInvoice";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
 	addStripeInvoiceLines,
@@ -436,6 +437,10 @@ const issueReplacement = async ({
 			});
 		}
 		if (!originalIsDraft) await voidInvoice({ ctx, invoiceId });
+		// A parked draft is never voided, so its pending plan is expired here instead.
+		if (originalIsDraft && !repointsDeferred) {
+			await expirePendingPlanForVoidedInvoice({ ctx, stripeInvoice });
+		}
 	} catch (error) {
 		// The original keeps standing; retire the replacement instead.
 		if (repointsDeferred) {

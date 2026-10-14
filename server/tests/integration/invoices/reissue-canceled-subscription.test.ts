@@ -215,3 +215,63 @@ test(`${chalk.yellowBright("invoices.reissue: subscription canceled, card origin
 		| undefined;
 	expect(paymentIntent?.payment_method).toBe(cardA.id);
 });
+
+test(`${chalk.yellowBright("invoices.reissue: subscription canceled, deferred draft original → parked and its pending plan expires")}`, async () => {
+	const customerId = `inv-reissue-canceled-sub-draft-${Date.now()}`;
+	const pro = products.base({
+		id: "pro-reissue-canceled-sub-draft",
+		items: [items.monthlyPrice({ price: 20 })],
+	});
+	const { autumnV2_3, autumnV2_4, customer } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+		actions: [],
+	});
+
+	await autumnV2_4.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		invoice_mode: {
+			enabled: true,
+			finalize: false,
+			enable_plan_immediately: false,
+			net_terms_days: 7,
+		},
+	});
+	const findPlan = async () =>
+		(
+			await CusProductService.list({
+				db: ctx.db,
+				internalCustomerId: customer?.internal_id ?? "",
+				inStatuses: ALL_STATUSES,
+			})
+		).find((customerProduct) => customerProduct.product.id === pro.id);
+	expect((await findPlan())?.status).toBe(CusProductStatus.Pending);
+
+	const { list } = (await autumnV2_3.post("/invoices.list", {
+		customer_id: customerId,
+	})) as { list: ApiListInvoiceV1[] };
+	const originalRow = list[0];
+	const originalStripe = await ctx.stripeCli.invoices.retrieve(
+		originalRow.stripe_id,
+	);
+	expect(originalStripe.status).toBe("draft");
+	expect(originalStripe.metadata?.autumn_metadata_id).toBeTruthy();
+	const stripeSubId = stripeInvoiceToStripeSubscriptionId(originalStripe);
+	if (!stripeSubId) throw new Error("original invoice has no subscription");
+	await ctx.stripeCli.subscriptions.cancel(stripeSubId);
+
+	const { invoice, voided_invoice_id } = (await autumnV2_3.post(
+		"/invoices.reissue",
+		{ invoice_id: originalRow.id },
+	)) as ReissueResponse;
+
+	expect(voided_invoice_id).toBeNull();
+	expect(
+		(await ctx.stripeCli.invoices.retrieve(originalRow.stripe_id)).status,
+	).toBe("draft");
+	const replacement = await ctx.stripeCli.invoices.retrieve(invoice.stripe_id);
+	expect(stripeInvoiceToStripeSubscriptionId(replacement)).toBeUndefined();
+	expect(replacement.metadata?.autumn_metadata_id).toBeUndefined();
+	expect((await findPlan())?.status).toBe(CusProductStatus.Expired);
+});
