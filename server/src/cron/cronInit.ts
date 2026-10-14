@@ -1,5 +1,5 @@
-import { flushErrorReports } from "@autumn/errors";
 import { getPostgresPools } from "@autumn/postgres";
+import { flushTelemetry } from "@/utils/logging/initLogger.js";
 import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
@@ -185,7 +185,7 @@ const shutdown = async (signal: string) => {
 	await shutdownSqsSendBatchers();
 	await client.end();
 	await probeClient.end();
-	await flushErrorReports({ timeoutMs: 2_000 });
+	await flushTelemetry();
 	process.exit(0);
 };
 

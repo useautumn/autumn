@@ -41,3 +41,28 @@ test("a claimed partition is owned until released; its weight outlives the relea
 	expect([...load.owned()]).toEqual([4]);
 	expect(load.snapshot().get(9)).toBe(50);
 });
+
+test("the latest assignment is reported until the next replaces it, and nothing before the first", () => {
+	const load = createPartitionLoad({ now: () => 0 });
+	expect(load.assigned()).toBeUndefined();
+	load.assign({ partitions: [9, 4] });
+	expect([...(load.assigned() ?? [])].sort()).toEqual([4, 9]);
+	load.assign({ partitions: [] });
+	expect(load.assigned()?.size).toBe(0);
+});
+
+test("a partition given up while still assigned is not reported as assigned until it is claimed again", () => {
+	const load = createPartitionLoad({ now: () => 0 });
+	load.assign({ partitions: [4, 9] });
+	load.claim({ partition: 4 });
+	load.claim({ partition: 9 });
+	load.release({ partition: 4 });
+	expect([...(load.assigned() ?? [])].sort()).toEqual([4, 9]);
+	load.relinquish({ partition: 9 });
+	expect([...(load.assigned() ?? [])]).toEqual([4]);
+	load.claim({ partition: 9 });
+	expect([...(load.assigned() ?? [])].sort()).toEqual([4, 9]);
+	load.relinquish({ partition: 9 });
+	load.assign({ partitions: [9] });
+	expect([...(load.assigned() ?? [])]).toEqual([9]);
+});

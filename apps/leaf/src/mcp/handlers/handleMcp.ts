@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { createAutumnOperationsMCPServer } from "@autumn/mcp";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
 import { OAuthHttpError } from "../auth/protectedResourceMetadata.js";
@@ -61,7 +60,8 @@ export const createHandleMcp =
 			httpPath: path,
 			req: c.env.incoming,
 			res: c.env.outgoing,
-			options: { sessionIdGenerator: randomUUID },
+			// Stateful sessions live until the client sends DELETE, which most never do.
+			options: { serverless: true },
 		});
 		return RESPONSE_ALREADY_SENT;
 	};

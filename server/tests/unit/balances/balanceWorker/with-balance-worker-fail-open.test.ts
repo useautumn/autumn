@@ -113,6 +113,7 @@ describe("withBalanceWorkerFailOpen", () => {
 			refreshes: 0,
 			followedHint: true,
 			notReadyAnswers: 4,
+			ownerlessWaits: 0,
 		};
 		const warnings: unknown[][] = [];
 		const base = contexts.create({});

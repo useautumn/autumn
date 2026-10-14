@@ -52,7 +52,8 @@ export const requiresTaxLocation = ({
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 }) => {
-	if (!billingContext.invoiceMode) return false;
+	if (!billingContext.invoiceMode && !billingContext.subscriptionInvoiceTerms)
+		return false;
 	if (!wantsStripeAutomaticTax({ ctx, billingContext })) return false;
 	if (isTaxExemptCustomer({ billingContext })) return false;
 	if (billingContext.billingDetails?.address?.country) return false;
