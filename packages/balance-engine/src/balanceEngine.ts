@@ -211,7 +211,10 @@ export {
 	parseWorkerCustomerEntitlement,
 	parseWorkerLock,
 } from "./parsers.js";
-export { changesKeepCatalogKeys } from "./utils/catalogUtils/classifyCatalogUtils.js";
+export {
+	changesKeepCatalogKeys,
+	isSameCatalog,
+} from "./utils/catalogUtils/classifyCatalogUtils.js";
 export {
 	catalogKeyToString,
 	catalogRowsToCatalog,
@@ -235,6 +238,7 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { isSameSubjectState } from "./utils/subjectStateUtils/classifySubjectStateUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,

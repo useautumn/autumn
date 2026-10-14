@@ -1,9 +1,9 @@
 import {
+	type Catalog,
 	mergeCatalogs,
 	mergeSubjectStates,
 	type SubjectState,
 	subjectStateToFullSubject,
-	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import {
 	CannotAnswerError,
@@ -15,8 +15,10 @@ import type { SharedCatalog } from "../../../state/types/catalogStore.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { foldAcrossPush } from "./foldAcrossPush.js";
 import { freshestCatalog } from "./freshestCatalog.js";
 import { replayOwed } from "./replayOwed.js";
+import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
 const subjectNotStored = ({
@@ -77,24 +79,6 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
-/** The parts a subject was joined from: the view is current while the store and journal still hold these very copies. */
-type SubjectJoinCacheEntry = {
-	customer: StoredSubject;
-	shared: SharedCatalog | null;
-	owed: readonly JournalEntry[];
-	/** The customer's own rows with `owed` applied, which a later append continues from. */
-	customerState: SubjectState;
-	current: CurrentSubject;
-};
-
-/** What a view's customer rows start from: the stored copy, or a cached view that already applied `applied`. */
-type ReplayBase = {
-	state: SubjectState;
-	applied: readonly JournalEntry[];
-	/** `state` joined, when the cached view is the customer's own: its fullSubject is exactly that. */
-	fullSubject: WorkerFullSubject | null;
-};
-
 /** Only appends happened since `previous`: anything else (a drop, a refusal, a restart) replaces an entry before its end. */
 const isAppendedTo = ({
 	owed,
@@ -110,7 +94,45 @@ const isAppendedTo = ({
 const FREEZES_VIEWS = process.env.NODE_ENV === "test";
 
 /** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
-const subjectJoinCache = new WeakMap<StoredSubject, SubjectJoinCacheEntry>();
+const subjectJoinCache = new WeakMap<StoredSubject, ViewFold>();
+/** A customer's own fold, keyed by the last entry it applied: it outlives the copy a push replaces, and leaves with that entry. */
+const foldByLastEntry = new WeakMap<JournalEntry, ViewFold>();
+
+/** Pushes that replaced a customer's copy while it owed: the fold continued, or replayed from the push. Module state is the thread's own. */
+let viewFoldKept = 0;
+let viewFoldRebuilt = 0;
+
+export const readViewFoldThreadStats = () => ({
+	viewFoldKept,
+	viewFoldRebuilt,
+});
+
+/** The customer's fold whose last applied entry is still owed: the newest one, so found from the end. */
+const foldStillOwed = ({
+	owed,
+}: {
+	owed: readonly JournalEntry[];
+}): ViewFold | null => {
+	for (let index = owed.length - 1; index >= 0; index--) {
+		const fold = foldByLastEntry.get(owed[index] as JournalEntry);
+		if (fold) return fold;
+	}
+	return null;
+};
+
+/** The customer's fold moves to the entry it now ends on, so a customer holds one fold at most. */
+const keepFold = ({
+	fold,
+	previous,
+}: {
+	fold: ViewFold;
+	previous: ViewFold | null;
+}): void => {
+	const previousLast = previous?.owed.at(-1);
+	if (previousLast) foldByLastEntry.delete(previousLast);
+	const last = fold.owed.at(-1);
+	if (last) foldByLastEntry.set(last, fold);
+};
 
 /**
  * The subject a request is decided on: as Autumn last sent it, with what the Atom owes Autumn for the customer replayed
@@ -133,33 +155,61 @@ export const readCurrentSubject = ({
 	const joined = subjectJoinCache.get(target);
 	const isSameCopy = joined?.customer === customer && joined.shared === shared;
 	if (isSameCopy && joined.owed === owed) return joined.current;
+	const catalog = joinedCatalogOf({ customer, entity, shared });
+	// A customer's own fold survives a new copy: a push that only acknowledged its deductions replays nothing.
+	const isOwedOnNewCopy = !entity && !isSameCopy && owed.length > 0;
+	const carried = isOwedOnNewCopy ? foldStillOwed({ owed }) : null;
+	const carriedBase = carried
+		? foldAcrossPush({ fold: carried, customer, owed, catalog })
+		: null;
+	if (isOwedOnNewCopy && carriedBase) viewFoldKept++;
+	else if (isOwedOnNewCopy) viewFoldRebuilt++;
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
-		isSameCopy && isAppendedTo({ owed, previous: joined.owed })
+		carriedBase ??
+		(isSameCopy && isAppendedTo({ owed, previous: joined.owed })
 			? {
 					state: joined.customerState,
 					applied: joined.owed,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
-			: { state: customer.state, applied: [], fullSubject: null };
+			: { state: customer.state, applied: [], fullSubject: null });
 	const { current, customerState } = joinSubject({
 		customer,
 		entity,
 		shared,
 		owed,
 		base,
+		catalog,
 		entityId,
 	});
 	// Every check until the next push or append shares it: frozen under test, so a mutation fails there.
 	if (FREEZES_VIEWS) deepFreeze(current);
-	subjectJoinCache.set(target, {
-		customer,
-		shared,
-		owed,
-		customerState,
-		current,
-	});
+	const fold: ViewFold = { customer, shared, owed, customerState, current };
+	subjectJoinCache.set(target, fold);
+	if (!entity) keepFold({ fold, previous: isSameCopy ? joined : carried });
 	return current;
+};
+
+/** The part read later is merged last, so where both hold a row its copy is the one kept. */
+const joinedCatalogOf = ({
+	customer,
+	entity,
+	shared,
+}: {
+	customer: StoredSubject;
+	entity: StoredSubject | null;
+	shared: SharedCatalog | null;
+}): Catalog => {
+	const parts = entity ? [customer, entity] : [customer];
+	const partsOldestFirst = [...parts].sort(
+		(left, right) => left.readAt - right.readAt,
+	);
+	return mergeCatalogs({
+		catalogs: partsOldestFirst.map((stored) =>
+			freshestCatalog({ stored, shared }),
+		),
+	});
 };
 
 const joinSubject = ({
@@ -168,6 +218,7 @@ const joinSubject = ({
 	shared,
 	owed,
 	base,
+	catalog,
 	entityId,
 }: {
 	customer: StoredSubject;
@@ -175,19 +226,9 @@ const joinSubject = ({
 	shared: SharedCatalog | null;
 	owed: readonly JournalEntry[];
 	base: ReplayBase;
+	catalog: Catalog;
 	entityId: string | null;
 }): { current: CurrentSubject; customerState: SubjectState } => {
-	// The part read later is merged last, so where both hold a row its copy is the one kept.
-	const parts = entity ? [customer, entity] : [customer];
-	const partsOldestFirst = [...parts].sort(
-		(left, right) => left.readAt - right.readAt,
-	);
-	const catalog = mergeCatalogs({
-		catalogs: partsOldestFirst.map((stored) =>
-			freshestCatalog({ stored, shared }),
-		),
-	});
-
 	// Only a customer's own deductions are owed, and they move only the customer's own rows.
 	const unapplied = owed.slice(base.applied.length);
 	const customerState =
