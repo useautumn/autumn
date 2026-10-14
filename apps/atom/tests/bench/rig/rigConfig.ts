@@ -1,7 +1,7 @@
 /** The rig's one config: every spike after this is first an edit here (Bun JSC flags, threads, keep-alive, the mix). */
 const defaults = {
 	/** Which code the boxes run; set by the branch, recorded in every run. */
-	variant: "chain-top" as "chain-top" | "chain-top+4765",
+	variant: "chain-top+4765" as "chain-top" | "chain-top+4765",
 	tenant: {
 		atomId: "atom_rig",
 		token: "atom_token_rig",
