@@ -1,13 +1,36 @@
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
-import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
+import {
+	type PlanItemFilter,
+	PlanItemFilterSchema,
+} from "@api/products/items/filter/planItemFilter";
 import {
 	CustomizePlanLicenseSchema,
 	licensePatchIssues,
 } from "@models/licenseModels/licenseModels.js";
 import { z } from "zod/v4";
 import { UpdatePlanItemParamsV1Schema } from "../../../../billing/common/customizePlan/customizePlanV1.js";
+import { ApiFeatureOverrideSchema } from "../../../../features/apiFeatureOverride.js";
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
+
+/** A remove filter plus the matched item's old override, for display only; execution never reads it. */
+export const MigrationRemoveItemSchema = z
+	.object({
+		...PlanItemFilterSchema.shape,
+		previous_feature_override: ApiFeatureOverrideSchema.optional().meta({
+			internal: true,
+			description:
+				"The matched item's feature_override before the update; empty when it inherited the feature's.",
+		}),
+	})
+	.refine(
+		(filter: PlanItemFilter) => PlanItemFilterSchema.safeParse(filter).success,
+		{
+			message: "PlanItemFilter must have at least one field set.",
+		},
+	);
+
+export type MigrationRemoveItem = z.infer<typeof MigrationRemoveItemSchema>;
 
 export const MigrationUpdatePlanCustomizeSchema = z
 	.object({
@@ -18,7 +41,7 @@ export const MigrationUpdatePlanCustomizeSchema = z
 				"Base price before the plan update that created this migration. Display-only.",
 		}),
 		add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
-		remove_items: z.array(PlanItemFilterSchema).optional(),
+		remove_items: z.array(MigrationRemoveItemSchema).optional(),
 		update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
 			description:
 				"Deprecated. Use remove_items and add_items to replace matched plan items.",

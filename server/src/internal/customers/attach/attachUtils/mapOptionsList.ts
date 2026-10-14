@@ -53,8 +53,6 @@ export const mapOptionsList = ({
 			});
 		}
 
-		// const ent = getPriceEntitlement(prepaidPrice, entitlements)
-
 		const config = prepaidPrice.config as UsagePriceConfig;
 
 		const dividedQuantity = new Decimal(options.quantity!)

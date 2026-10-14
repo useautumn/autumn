@@ -320,24 +320,26 @@ describe("Ownership publication and admission", () => {
 			f.events.indexOf("disconnect:2"),
 		);
 	});
-	test("keeps serving after a revoke, then withdraws and waits for accepted local apply before releasing", async () => {
+	test("keeps serving after a revoke, then on stop withdraws and waits for accepted local apply before releasing", async () => {
 		const drain = deferred();
 		const f = fixture({ drainGate: drain.promise });
 		await f.ownership.start();
 		f.assign();
 		await waitFor(() => f.events.includes("claimed:2"));
 		f.revoke();
+		await Bun.sleep(10);
 		expect(f.ownership.findRuntime({ partition: 2, routeEpoch: "100" })).toBe(
 			f.runtimes.get(2)?.runtime,
 		);
-		// No successor announces itself here, so the ready wait times out into the release path.
+		expect(f.events).not.toContain("gate-closed:2");
+		const stopping = f.ownership.stop();
 		await waitFor(() => f.events.includes("gate-closed:2"));
 		expect(
 			f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 		).toBeUndefined();
 		expect(f.events).not.toContain("release:2");
 		drain.resolve();
-		await f.ownership.stop();
+		await stopping;
 		expect(f.events.indexOf("applied:2")).toBeLessThan(
 			f.events.indexOf("release:2"),
 		);
@@ -428,10 +430,13 @@ describe("Ownership publication and admission", () => {
 		await f.ownership.stop();
 	});
 	test("unproven quiescence stops the worker and refuses every later assignment", async () => {
-		const f = fixture({ quiescenceError: new Error("replay stop failed") });
+		const f = fixture({
+			quiescenceError: new Error("replay stop failed"),
+			unready: true,
+		});
 		await f.ownership.start();
 		f.assign();
-		await waitFor(() => f.events.includes("claimed:2"));
+		await waitFor(() => f.events.includes("ready:2"));
 		f.revoke();
 		await waitFor(() => f.events.includes("consumer-stop"));
 		expect(f.events).toContain("service-stopped");

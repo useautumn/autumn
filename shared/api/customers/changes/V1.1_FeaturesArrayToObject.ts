@@ -188,7 +188,6 @@ export const V1_1_FeaturesArrayToObject = defineVersionChange({
 					rollovers: feature.rollovers,
 					unlimited: feature.unlimited,
 					overage_allowed: feature.overage_allowed,
-					// credit_schema: feature.credit_schema,
 				} satisfies ApiCusFeatureV2);
 			}
 		}

@@ -67,6 +67,14 @@ describe("automatic tax in invoice mode", () => {
 		}
 	});
 
+	test("a send_invoice subscription's inherited invoicing also needs a location", () => {
+		const billingContext = invoiceModeContext({
+			invoiceMode: undefined,
+			subscriptionInvoiceTerms: { daysUntilDue: 30 },
+		});
+		expect(requiresTaxLocation({ ctx: ctx(), billingContext })).toBe(true);
+	});
+
 	test("reverse-charge customers still need a location", () => {
 		const billingContext = invoiceModeContext({
 			billingDetails: { tax_exempt: "reverse" },

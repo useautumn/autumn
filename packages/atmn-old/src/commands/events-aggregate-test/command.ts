@@ -23,7 +23,6 @@ export async function eventsAggregateTestCommand(options: AggregateOptions) {
 	console.log(chalk.gray(`Environment: ${environment}`));
 	console.log(chalk.gray(`Limit: ${options.limit}`));
 
-	// Fetch events
 	console.log(chalk.yellow(`\nFetching events...`));
 	const response = await fetchEvents({
 		secretKey,

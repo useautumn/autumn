@@ -235,5 +235,6 @@ export function createOwnershipPublisher({
 		awaitDraining,
 		awaitForeignClaim,
 		awaitClaim,
+		awaitRouteClaim: awaitClaim,
 	};
 }

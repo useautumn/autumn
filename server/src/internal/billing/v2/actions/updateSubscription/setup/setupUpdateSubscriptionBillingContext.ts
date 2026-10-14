@@ -28,6 +28,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 import { isRevertTrialContext } from "@/internal/billing/v2/setup/trialContext/isRevertTrialContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
@@ -291,6 +292,10 @@ export const setupUpdateSubscriptionBillingContext = async ({
 				: params.proration_behavior,
 
 		invoiceMode,
+		subscriptionInvoiceTerms: setupSubscriptionInvoiceTerms({
+			params,
+			stripeSubscription,
+		}),
 		paymentBehaviorIntent: contextOverride.paymentBehaviorIntent,
 		billingUpdatedTags: contextOverride.billingUpdatedTags,
 		featureQuantities,

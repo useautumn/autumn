@@ -80,7 +80,6 @@ export const formatItem = ({
 		item,
 		features,
 		currency: "usd",
-		// fullDisplay: true,
 		amountFormatOptions: {
 			currencyDisplay: "narrowSymbol",
 		},

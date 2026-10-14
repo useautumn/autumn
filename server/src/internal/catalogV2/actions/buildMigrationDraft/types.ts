@@ -1,4 +1,8 @@
-import { type DiffedCustomizePlanV1, toBasePriceParams } from "@autumn/shared";
+import {
+	type ApiPlanItemV1,
+	type DiffedCustomizePlanV1,
+	toBasePriceParams,
+} from "@autumn/shared";
 
 type PreviousPrice = ReturnType<typeof toBasePriceParams> | null;
 
@@ -9,6 +13,7 @@ export type MigrationTarget = {
 	/** Migratable keys only (`price` / `add_items` / `remove_items` / `upsert_licenses`). */
 	customize: DiffedCustomizePlanV1;
 	previousPrice: PreviousPrice;
+	previousItems?: ApiPlanItemV1[];
 	hasBillingChanges: boolean;
 	includeCustom: boolean;
 };

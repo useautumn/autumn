@@ -40,6 +40,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
@@ -505,6 +506,10 @@ export const setupImmediateMultiProductBillingContext = async ({
 					.map((featureQuantity) => featureQuantity.feature_id) ?? [],
 		),
 		invoiceMode,
+		subscriptionInvoiceTerms: setupSubscriptionInvoiceTerms({
+			params,
+			stripeSubscription,
+		}),
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		currentEpochMs,
 		billingCycleAnchorMs,

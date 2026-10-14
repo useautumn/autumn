@@ -30,7 +30,6 @@ export type AttachParams = {
 	rewards?: Reward[];
 
 	org: Organization;
-	// customer: Customer;
 	customer: FullCustomer;
 	cusProduct?: FullCusProduct; // cus product to expire or cancel...
 	products: FullProduct[];

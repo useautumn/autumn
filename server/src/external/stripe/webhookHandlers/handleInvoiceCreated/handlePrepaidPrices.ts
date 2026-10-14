@@ -68,13 +68,6 @@ export const handlePrepaidPrices = async ({
 		persistFreeOverage: orgPersistFreeOverage({ org }),
 	});
 
-	// console.log("--------------------------------");
-	// console.log(`Entity ID: ${cusProduct.entity_id}`);
-	// console.log(`Upcoming quantity: ${options?.upcoming_quantity}`);
-	// console.log(`Quantity: ${options?.quantity}`);
-	// console.log(`New allowance: ${newAllowance}`);
-	// console.log(`RESET UPDATE: ${JSON.stringify(resetUpdate)}`);
-
 	const ent = cusEnt.entitlement;
 
 	const rolloverUpdate = getRolloverUpdates({

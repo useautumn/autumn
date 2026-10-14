@@ -56,15 +56,12 @@ export const getDowngradeProductPreview = async ({
 			features: attachParams.features,
 		}),
 		features: attachParams.features,
-		// anchorToUnix,
 	});
 
 	const latestPeriodEnd = sub ? getLatestPeriodEnd({ sub }) * 1000 : undefined;
 	const nextCycleAt = curCusProduct?.trial_ends_at
 		? curCusProduct.trial_ends_at
 		: latestPeriodEnd;
-
-	// console.log("Items:", items);
 
 	return {
 		currency: orgToCurrency({ org: attachParams.org }),

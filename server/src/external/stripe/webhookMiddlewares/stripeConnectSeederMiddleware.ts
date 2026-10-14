@@ -52,9 +52,6 @@ export const stripeConnectSeederMiddleware = async (
 
 	let event: Stripe.Event;
 	if (skipVerify) {
-		// logger.warn(
-		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
-		// );
 		try {
 			event = JSON.parse(rawBody) as Stripe.Event;
 		} catch (err: unknown) {
@@ -82,7 +79,6 @@ export const stripeConnectSeederMiddleware = async (
 			return c.json({ error: message }, 400);
 		}
 	}
-	// const event = (await c.req.json()) as Stripe.Event;
 
 	// Step 4: Get org from account ID
 	const accountId = event.account;

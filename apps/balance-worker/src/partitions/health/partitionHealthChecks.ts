@@ -120,6 +120,7 @@ export function respondToPartitionFailure({
 		isPartitionLogUnreadableCause({ cause }) ||
 		isPartitionRestartableCause({ cause });
 	if (canBeParked && !entry?.publicationFailed) {
+		ctx.served?.relinquish({ partition });
 		retryPartition({ ctx, state, partition, entry, allocationGeneration });
 		return "partition_parked";
 	}

@@ -12,7 +12,6 @@ export const registerConnectWebhook = async ({
 	ctx: AutumnContext;
 }) => {
 	const { db, org, env, logger } = ctx;
-	// Init master stripe
 	const stripeCli = initPlatformStripe({ masterOrg: org, env });
 
 	const curWebhookEndpoints = await stripeCli.webhookEndpoints.list();

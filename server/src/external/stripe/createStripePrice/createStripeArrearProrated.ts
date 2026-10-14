@@ -213,7 +213,6 @@ export const createStripeArrearProrated = async ({
 		});
 	}
 
-	// let tiers = arrearProratedToStripeTiers(price, relatedEnt);
 	const tiers = priceToStripeUnitTiers({
 		price,
 		entitlement: relatedEnt,

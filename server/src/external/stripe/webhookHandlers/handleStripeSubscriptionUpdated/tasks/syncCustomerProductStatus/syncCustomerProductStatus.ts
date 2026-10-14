@@ -142,7 +142,6 @@ export const syncCustomerProductStatus = async ({
 
 		if (!valid) continue;
 
-		// Build updates
 		const updates: Partial<InsertCustomerProduct> = {};
 
 		// Update status if changed

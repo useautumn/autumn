@@ -145,7 +145,6 @@ export function DataTable<T>({
 		[data.length, selectedIndex, visibleRowCount],
 	);
 
-	// Get the visible slice
 	const visibleData = data.slice(start, end);
 
 	return (

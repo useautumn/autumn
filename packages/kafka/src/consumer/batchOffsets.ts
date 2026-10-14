@@ -1,3 +1,4 @@
+import { isKafkaProtocolError } from "../client/kafkaErrorClassification.js";
 import {
 	parseKafkaOffset,
 	parseKafkaTimestamp,
@@ -8,6 +9,12 @@ import type {
 	TopicConsumerContext,
 	TopicConsumerState,
 } from "./types/consumer.js";
+
+/** The group moved on (classic generation or KIP-848 member epoch); the new owner commits for itself. */
+const SUPERSEDED_GENERATION_TYPES: ReadonlySet<string> = new Set([
+	"ILLEGAL_GENERATION",
+	"STALE_MEMBER_EPOCH",
+]);
 
 export function hasCurrentBatchGeneration({
 	state,
@@ -64,9 +71,11 @@ export async function commitBatchOffsets({
 		return;
 	const offset = readPendingOffset(payload);
 	if (offset !== null && commitsGroupOffsets({ ctx })) {
-		await payload.commitOffsetsIfNecessary({
-			topics: [{ topic, partitions: [{ partition, offset }] }],
+		const committed = await commitUnlessSuperseded({
+			payload,
+			offsets: { topics: [{ topic, partitions: [{ partition, offset }] }] },
 		});
+		if (!committed) return;
 	}
 	if (
 		!payload.isRunning() ||
@@ -89,6 +98,23 @@ export async function commitBatchOffsets({
 		}),
 	});
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
+}
+
+async function commitUnlessSuperseded({
+	payload,
+	offsets,
+}: {
+	payload: EachBatchPayload;
+	offsets: Parameters<EachBatchPayload["commitOffsetsIfNecessary"]>[0];
+}): Promise<boolean> {
+	try {
+		await payload.commitOffsetsIfNecessary(offsets);
+		return true;
+	} catch (cause) {
+		if (isKafkaProtocolError({ cause, types: SUPERSEDED_GENERATION_TYPES }))
+			return false;
+		throw cause;
+	}
 }
 
 function commitsGroupOffsets({ ctx }: { ctx: TopicConsumerContext }): boolean {

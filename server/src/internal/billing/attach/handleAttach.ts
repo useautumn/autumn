@@ -40,7 +40,6 @@ export const handleAttach = createRoute({
 			: undefined,
 
 	handler: async (c) => {
-		// await handleAttachRaceCondition({ req, res });
 		const ctx = c.get("ctx");
 		const attachBody = c.req.valid("json");
 

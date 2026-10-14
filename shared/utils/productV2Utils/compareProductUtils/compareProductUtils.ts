@@ -91,15 +91,6 @@ export const compareDetails = ({
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);
 
-	// if (!detailsSame) {
-	// 	console.log(
-	// 		"Product details different:",
-	// 		Object.values(checks)
-	// 			.filter((d) => !d.condition)
-	// 			.map((d) => d.message),
-	// 	);
-	// }
-
 	return detailsSame;
 };
 
@@ -343,11 +334,6 @@ export const productsAreSame = ({
 		// biome-ignore lint/style/noNonNullAssertion: either one is provided
 		newProduct: newProductV2 || newProductV1!,
 	});
-
-	// console.log(`items same: `, itemsSame);
-	// console.log(`details same: `, detailsSame);
-	// console.log(`free trials same: `, freeTrialsSame);
-	// console.log(`options same: `, optionsSame);
 
 	const same =
 		itemsSame &&

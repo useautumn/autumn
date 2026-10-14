@@ -21,7 +21,6 @@ interface PlanCardToolbarProps {
 
 export const PlanCardToolbar = ({
 	onEdit,
-	// onDeleteSuccess,
 	editDisabled,
 }: PlanCardToolbarProps) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -52,7 +51,6 @@ export const PlanCardToolbar = ({
 			/>
 			<div className="flex flex-row items-center gap-1">
 				<IconButton
-					// icon={<PencilSimpleIcon />}
 					onClick={onEdit}
 					aria-label={settingsLabel}
 					variant="secondary"

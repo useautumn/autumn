@@ -275,7 +275,6 @@ export const updateFeature = async ({
 	const shouldClearCreditSystemCustomerCache =
 		rateCardChanged || markupsChanged || aiMarkupConfigChanged;
 
-	// Update the feature
 	const updatedFeature = await FeatureService.update({
 		db: ctx.db,
 		id: featureId,

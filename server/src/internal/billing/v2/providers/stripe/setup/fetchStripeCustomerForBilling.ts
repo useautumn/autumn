@@ -47,7 +47,6 @@ export const fetchStripeCustomerForBilling = async ({
 	const testClock =
 		stripeCus?.test_clock as Stripe.TestHelpers.TestClock | null;
 
-	// let now = testClock ? testClock.frozen_time * 1000 : Date.now();
 	const now = testClock ? testClock.frozen_time * 1000 : undefined;
 
 	const invoiceSettingsPaymentMethod =

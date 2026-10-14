@@ -444,7 +444,7 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("a partition assigned back after a rebalance keeps its runtime; one assigned away retires", async () => {
+	test("a partition assigned back after a rebalance keeps its runtime; one assigned away keeps serving until the worker stops", async () => {
 		const fixture = createStoreFixture();
 		try {
 			initializePartitions({ store: fixture.store });
@@ -454,6 +454,7 @@ describe("Kafka owned partition group", () => {
 			const unavailable: unknown[] = [];
 			const claimed: number[] = [];
 			const released: number[] = [];
+			const assignments: number[][] = [];
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -474,6 +475,10 @@ describe("Kafka owned partition group", () => {
 					release: ({ partition }) => {
 						released.push(partition);
 					},
+					assign: ({ partitions }) => {
+						assignments.push([...partitions]);
+					},
+					relinquish: () => undefined,
 				},
 				onError: () => undefined,
 				onUnhealthyPartition: () => undefined,
@@ -506,13 +511,19 @@ describe("Kafka owned partition group", () => {
 			consumer.emitRebalancing();
 			consumer.emitGroupJoin([1]);
 			await waitFor(() => started.length === 2);
-			await waitFor(() => stopped.length === 1);
+			await new Promise<void>((resolve) => setTimeout(resolve, 20));
 			expect(started).toEqual([0, 1]);
-			expect(stopped).toEqual([0]);
+			expect(stopped).toEqual([]);
 			expect(unavailable).toEqual([]);
 			expect(claimed).toEqual([0, 1]);
-			expect(released).toEqual([0]);
+			expect(assignments).toEqual([[0], [0], [1]]);
+			expect(released).toEqual([]);
+			expect(
+				group.findRuntime({ partition: 0, routeEpoch: "0" }),
+			).toBeDefined();
 			await group.stop();
+			expect([...stopped].sort()).toEqual([0, 1]);
+			expect(released).toContain(0);
 		} finally {
 			closeStoreFixture(fixture);
 		}
@@ -1103,6 +1114,7 @@ describe("Kafka owned partition group", () => {
 				(failure: { cause: unknown }) => void
 			>();
 			const failedAttempt = new Map<number, number>();
+			const relinquished: number[] = [];
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
 				partitionOffsets: createPartitionOffsets(),
@@ -1112,6 +1124,14 @@ describe("Kafka owned partition group", () => {
 				partitionsConsumedConcurrently: 2,
 				healthRefreshIntervalMs: 5,
 				partitionBootstrapRetryIntervalMs: 5,
+				served: {
+					claim: () => undefined,
+					release: () => undefined,
+					assign: () => undefined,
+					relinquish: ({ partition }) => {
+						relinquished.push(partition);
+					},
+				},
 				createRuntime: ({ partition }) => ({
 					start: async () => {
 						startAttempts.set(
@@ -1175,6 +1195,7 @@ describe("Kafka owned partition group", () => {
 			await waitFor(() => startAttempts.get(1) === 2);
 
 			expect(released).toEqual([1]);
+			expect(relinquished).toEqual([1]);
 			expect(startAttempts.get(0)).toBe(1);
 			expect(consumer.lifecycle).not.toContain("consumer-stop");
 			expect(events).toEqual([]);

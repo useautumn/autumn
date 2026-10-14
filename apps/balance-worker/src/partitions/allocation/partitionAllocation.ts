@@ -69,6 +69,7 @@ function applyPartitionAllocation({
 	change,
 }: PartitionsScope & { change: PartitionAssignment }): void {
 	if (state.status !== "running") return;
+	ctx.served?.assign({ partitions: change.partitions });
 	noteConsumerJoined({ ctx, state });
 	discardUnallocatedHealth({ state, partitions: change.partitions });
 	clearPartitionRetries({ state });

@@ -59,6 +59,10 @@ export type PartitionOwnershipPublication = {
 	}): Promise<{ endpoint: string }>;
 	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
 	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
+	/** As `awaitClaim`, for routing only: the epoch is never taken as the owner epoch the writer stamps and fences with. */
+	awaitRouteClaim(params: {
+		signal: AbortSignal;
+	}): Promise<{ routeEpoch: string }>;
 };
 
 export type PartitionRuntimeResources = {
@@ -139,6 +143,8 @@ export type PartitionsDependencies = {
 	served?: {
 		claim(entry: { partition: number }): void;
 		release(entry: { partition: number }): void;
+		assign(entry: { partitions: readonly number[] }): void;
+		relinquish(entry: { partition: number }): void;
 	};
 	/** The ownership tail and the plain producer behind `announceReady`; started before the group is joined. */
 	ownershipLink?: { start(): Promise<void>; stop(): Promise<void> };

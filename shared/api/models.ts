@@ -83,10 +83,6 @@ export * from "./utils/zodToJSDoc.js";
 
 // NOTE: productsOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 
-// export * from "./products/ApiFreeTrial.js";
-// export * from "./products/apiProduct.js";
-// export * from "./products/apiProductItem.js";
-
 export * from "./balances/check/checkParams.js";
 export * from "./balances/check/checkResponseV2.js";
 export * from "./balances/check/checkResponseV3.js";

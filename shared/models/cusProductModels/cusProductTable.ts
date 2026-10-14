@@ -37,7 +37,6 @@ export const customerProducts = pgTable(
 		updated_at: numeric({ mode: "number" }),
 		status: text(),
 		processor: jsonb().$type<CustomerProductProcessor>(),
-		// processors: jsonb().$type<ExternalCusProductProcessors>(),
 
 		canceled: boolean("canceled").default(false),
 		canceled_at: numeric({ mode: "number" }),

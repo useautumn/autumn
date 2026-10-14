@@ -30,8 +30,4 @@ export const featureUsageToDescription = ({
 
 	// billingUnits > 1 ? plural :
 	return `${usageStr} ${featureName}`;
-	// if (billingUnits === 1) {
-	// } else {
-	// 	return `${usageStr} x ${billingUnits} ${featureName}`;
-	// }
 };

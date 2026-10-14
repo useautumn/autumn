@@ -8,7 +8,7 @@ export const ApiCusFeatureV2Schema = z.object({
 	interval: z.enum(EntInterval).nullish(),
 	interval_count: z.number().nullish(),
 	unlimited: z.boolean().nullish(),
-	balance: z.number().nullish(), //
+	balance: z.number().nullish(),
 	usage: z.number().nullish(),
 	included_usage: z.number().nullish(),
 	next_reset_at: z.number().nullish(),

@@ -67,9 +67,6 @@ const initCusPrice = ({
 const initCusProduct = ({
 	customer,
 	product,
-	// subscriptionId,
-	// subscriptionScheduleId,
-	// lastInvoiceId,
 	cusProdId,
 	startsAt,
 	optionsList,
@@ -141,9 +138,6 @@ const initCusProduct = ({
 
 		processor: {
 			type: processor ?? ProcessorType.Stripe,
-			// subscription_id: subscriptionId,
-			// subscription_schedule_id: subscriptionScheduleId,
-			// last_invoice_id: lastInvoiceId,
 		},
 
 		starts_at: startsAt || now,
@@ -469,7 +463,6 @@ export const createFullCusProduct = async ({
 		cusPrices.push(cusPrice);
 	}
 
-	// let entityId = customer.entity?.id;
 	const cusProd = initCusProduct({
 		cusProdId,
 		customer,

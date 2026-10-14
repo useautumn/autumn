@@ -96,7 +96,6 @@ export function Card({ title, children }: CardProps) {
 			}
 		}
 
-		// Add overhead for border and padding
 		return maxLineWidth + BORDER_PADDING_OVERHEAD;
 	}, [title, children]);
 

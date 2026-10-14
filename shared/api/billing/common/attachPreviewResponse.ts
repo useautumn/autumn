@@ -28,7 +28,6 @@ export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 	invoice_credits: PreviewInvoiceCreditsSchema.optional().meta({
 		description: "Stripe customer invoice credits preview.",
 	}),
-	// redirect_type: z.enum(["stripe_checkout", "autumn_checkout", "none"]),
 });
 
 export const ExtAttachPreviewResponseSchema = AttachPreviewResponseSchema;

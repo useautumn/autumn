@@ -140,7 +140,6 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 
 				<IconCheckbox
 					icon={<CalendarXIcon />}
-					// iconOrientation="center"
 					iconOrientation="left"
 					variant="secondary"
 					size="default"

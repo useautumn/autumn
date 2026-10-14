@@ -95,12 +95,21 @@ const adminS3 = z.object({
 	S3_REGION: z.string().trim().min(1).default("us-east-2"),
 });
 
+const runtime = z.object({
+	/** Works around oven-sh/bun#43279; set "false" to compare a canary without it. */
+	BALANCE_WORKER_DEDUPE_CJS_CHILDREN: z
+		.enum(["true", "false"])
+		.default("true")
+		.transform((value) => value === "true"),
+});
+
 const balanceWorkerEnvSchema = kafka
 	.merge(listener)
 	.merge(state)
 	.merge(postgres)
 	.merge(adminS3)
 	.merge(dynamo)
+	.merge(runtime)
 	.superRefine(validateBalanceWorkerEnv);
 
 export function createBalanceWorkerEnv(

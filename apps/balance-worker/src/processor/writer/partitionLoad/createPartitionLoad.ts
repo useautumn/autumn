@@ -17,6 +17,9 @@ export type PartitionLoad = {
 	/** The partition left this worker; its weight stays. */
 	release(entry: { partition: number }): void;
 	owned(): ReadonlySet<number>;
+	assign(entry: { partitions: readonly number[] }): void;
+	relinquish(entry: { partition: number }): void;
+	assigned(): ReadonlySet<number> | undefined;
 };
 
 export function createPartitionLoad({
@@ -54,17 +57,38 @@ export function createPartitionLoad({
 	}
 
 	const served = new Set<number>();
+	let latestAssignment: ReadonlySet<number> | undefined;
+	const relinquished = new Set<number>();
 
 	function claim({ partition }: { partition: number }): void {
 		served.add(partition);
+		relinquished.delete(partition);
 	}
 
 	function release({ partition }: { partition: number }): void {
 		served.delete(partition);
 	}
 
+	function relinquish({ partition }: { partition: number }): void {
+		if (latestAssignment?.has(partition)) relinquished.add(partition);
+	}
+
 	function owned(): ReadonlySet<number> {
 		return new Set(served);
+	}
+
+	function assign({ partitions }: { partitions: readonly number[] }): void {
+		latestAssignment = new Set(partitions);
+		relinquished.clear();
+	}
+
+	function assigned(): ReadonlySet<number> | undefined {
+		if (latestAssignment === undefined) return undefined;
+		const kept = new Set<number>();
+		for (const partition of latestAssignment) {
+			if (!relinquished.has(partition)) kept.add(partition);
+		}
+		return kept;
 	}
 
 	function snapshot(): ReadonlyMap<number, number> {
@@ -76,5 +100,15 @@ export function createPartitionLoad({
 		return weights;
 	}
 
-	return { record, forget, snapshot, claim, release, owned };
+	return {
+		record,
+		forget,
+		snapshot,
+		claim,
+		release,
+		owned,
+		assign,
+		relinquish,
+		assigned,
+	};
 }

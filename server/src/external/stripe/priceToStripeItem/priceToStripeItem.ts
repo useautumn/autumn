@@ -76,10 +76,6 @@ export const priceToStripeItem = ({
 	const billingType = getBillingType(price.config!);
 	const stripeProductId = product.processor?.id;
 
-	// const quantityMultiplier = notNullish(productOptions?.quantity)
-	// 	? productOptions?.quantity
-	// 	: 1;
-
 	const quantityMultiplier = 1;
 
 	if (!stripeProductId) {
