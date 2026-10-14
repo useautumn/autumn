@@ -277,6 +277,7 @@ describe("catalog cache", () => {
 		cache.put({ rows });
 
 		expect(cache.size()).toBe(2);
+		expect(cache.sizeBytes()).toBe(rowBytes * 2);
 		expect(
 			cache.read({ keys: rows.map(keyOf) }).entitlements,
 		).not.toHaveProperty("ent_1");
