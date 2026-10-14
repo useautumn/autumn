@@ -14,6 +14,7 @@ import {
 	setActiveOrg,
 	setLastSwitchedOrgId,
 } from "@/lib/orgSync";
+import { PERSIST_META } from "@/lib/queryPersistence";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { useActiveOrgId } from "./useActiveOrgId";
@@ -69,6 +70,7 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
 		staleTime: 30_000,
+		meta: PERSIST_META,
 		// The app default is no retries; a failed org load blocks the whole dashboard, so keep retrying.
 		retry: 3,
 		enabled: !!activeOrgId,

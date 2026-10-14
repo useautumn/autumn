@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { PERSIST_META } from "@/lib/queryPersistence";
 import type { PlanVariant } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
@@ -43,6 +44,7 @@ export const useProductDataQueryOptions = () => {
 					}
 				},
 				enabled: !!productId,
+				meta: PERSIST_META,
 			}),
 		[axiosInstance, buildKey],
 	);

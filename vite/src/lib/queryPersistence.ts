@@ -1,29 +1,26 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import type { Query } from "@tanstack/react-query";
+import { defaultShouldDehydrateQuery } from "@tanstack/react-query";
+import type { PersistQueryClientOptions } from "@tanstack/react-query-persist-client";
+import { millisecondsInSecond, millisecondsInWeek } from "date-fns/constants";
 import { del, get, set } from "idb-keyval";
 
-export const queryPersister = createAsyncStoragePersister({
-	key: "autumn-dashboard-queries",
-	storage: { getItem: get, setItem: set, removeItem: del },
-	throttleTime: 1000,
-});
+/** Opt a query into the IndexedDB cache. Catalog and org config only: customer data never leaves memory. */
+export const PERSIST_META = { persist: true };
 
-export const PERSISTED_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
-
-// Catalog and org config only: customer data never leaves memory.
-const PERSISTED_ROOTS = new Set([
-	"features",
-	"rewards",
-	"products",
-	"product",
-	"product_counts",
-]);
-
-/** ["org", env, orgId] or its sandbox form, not the ["org", id, "stripe" | "sso"] sub-queries. */
-const isOrgQuery = (key: readonly unknown[]) =>
-	key[0] === "org" && (key.length === 3 || key[3] === "sandbox");
-
-export const shouldPersistQuery = (query: Query) =>
-	query.state.status === "success" &&
-	(PERSISTED_ROOTS.has(query.queryKey[0] as string) ||
-		isOrgQuery(query.queryKey));
+export const queryPersistOptions: Omit<
+	PersistQueryClientOptions,
+	"queryClient"
+> = {
+	persister: createAsyncStoragePersister({
+		key: "autumn-dashboard-queries",
+		storage: { getItem: get, setItem: set, removeItem: del },
+		throttleTime: millisecondsInSecond,
+	}),
+	maxAge: millisecondsInWeek,
+	// The entry chunk's hashed URL changes every deploy, so a new build never reads an old cache shape.
+	buster: import.meta.url,
+	dehydrateOptions: {
+		shouldDehydrateQuery: (query) =>
+			defaultShouldDehydrateQuery(query) && query.meta?.persist === true,
+	},
+};

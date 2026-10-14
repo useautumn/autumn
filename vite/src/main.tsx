@@ -8,11 +8,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { routeChunkForPath } from "./app/routeChunks";
 import { ThemeProvider } from "./contexts/ThemeProvider";
-import {
-	PERSISTED_CACHE_MAX_AGE_MS,
-	queryPersister,
-	shouldPersistQuery,
-} from "./lib/queryPersistence";
+import { queryPersistOptions } from "./lib/queryPersistence";
 import { reloadOnStaleChunk } from "./utils/staleChunkReload";
 
 declare const __APP_ENV__: string;
@@ -59,10 +55,10 @@ const queryClient = new QueryClient({
 	},
 });
 
-/** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
 // Fetch the landing page's chunk alongside the session check rather than after it.
 void routeChunkForPath(window.location.pathname)?.preload();
 
+/** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
 const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
 	console.error(error, errorInfo.componentStack);
 });
@@ -74,13 +70,7 @@ createRoot(document.getElementById("root")!, {
 	<StrictMode>
 		<PersistQueryClientProvider
 			client={queryClient}
-			persistOptions={{
-				persister: queryPersister,
-				maxAge: PERSISTED_CACHE_MAX_AGE_MS,
-				// The entry chunk's hashed URL changes every deploy, so a new build never reads an old cache shape.
-				buster: import.meta.url,
-				dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
-			}}
+			persistOptions={queryPersistOptions}
 		>
 			<ThemeProvider>
 				<App />

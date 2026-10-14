@@ -1,6 +1,7 @@
 import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { PERSIST_META } from "@/lib/queryPersistence";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 // Stable empty object reference to prevent infinite re-renders
@@ -45,6 +46,7 @@ export const useProductsQuery = ({
 		queryKey: buildKey(["products", allVersions ? "all" : "latest"]),
 		queryFn: fetchProducts,
 		enabled,
+		meta: PERSIST_META,
 	});
 
 	const {
@@ -55,6 +57,7 @@ export const useProductsQuery = ({
 		queryKey: buildKey(["product_counts"]),
 		queryFn: fetchProductCounts,
 		enabled,
+		meta: PERSIST_META,
 	});
 
 	/**
