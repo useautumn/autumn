@@ -12,7 +12,16 @@ export const notNullish = <T>(value: T | null | undefined): value is T =>
 export const idRegex = /^[a-zA-Z0-9_-]+$/;
 
 export const sumValues = (vals: number[]) => {
-	return vals.reduce((acc, curr) => acc.add(curr), new Decimal(0)).toNumber();
+	// Safe integers add exactly as doubles, so Decimal is only needed past them.
+	let sum = 0;
+	for (const val of vals) {
+		sum += val;
+		if (!Number.isSafeInteger(val) || !Number.isSafeInteger(sum))
+			return vals
+				.reduce((acc, curr) => acc.add(curr), new Decimal(0))
+				.toNumber();
+	}
+	return sum;
 };
 
 export const keyToTitle = (
