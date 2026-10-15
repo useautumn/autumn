@@ -1,4 +1,6 @@
+import { AppEnv } from "@autumn/shared";
 import type { Context } from "hono";
+import type { LogOrg } from "../../../lib/logging/getAtomLogger.js";
 import type { AtomHttpEnv } from "../../types/atomHttp.js";
 
 const FORWARDED_HEADER = "x-atom-forwarded";
@@ -31,6 +33,30 @@ export const requestFieldsOf = ({
 		...(Array.isArray(body.rows) && { catalog_rows: body.rows.length }),
 	};
 };
+
+/** The env a secret key opens, by its prefix as Autumn issues it. */
+const envOfKey = (authorization: string | undefined): AppEnv | undefined => {
+	if (authorization?.startsWith("Bearer am_sk_live_")) return AppEnv.Live;
+	if (authorization?.startsWith("Bearer am_sk_test_")) return AppEnv.Sandbox;
+	return undefined;
+};
+
+/** The server's `context.*` fields, from what the request already carries: no lookups. */
+export const requestContextOf = ({
+	context,
+	org,
+	fields,
+}: {
+	context: Context<AtomHttpEnv>;
+	org: LogOrg | undefined;
+	fields: Record<string, unknown>;
+}) => ({
+	...org,
+	env: envOfKey(context.req.header("authorization")),
+	customer_id: fields.customer_id,
+	entity_id: fields.entity_id,
+	api_version: context.req.header("x-api-version"),
+});
 
 /** What came back, at `res`: a failure's body, or an answered check's verdict where its body has it; a reply the API sent is never read. */
 export const loggedResponseOf = async ({

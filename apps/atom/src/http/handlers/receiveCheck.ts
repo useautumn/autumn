@@ -15,10 +15,12 @@ const DENY_REASON_HEADER = "x-atom-deny-reason";
 export const newRequestId = () => `atom_req_${crypto.randomUUID()}`;
 
 export const arrivalOf = (context: Context<AtomHttpEnv>) => {
-	const requestId = context.get("relayed")
+	const relayedId = context.get("relayed")
 		? context.req.header(REQUEST_ID_HEADER)
 		: undefined;
-	if (!requestId) return { requestId: newRequestId(), occurredAt: Date.now() };
+	const requestId = relayedId ?? newRequestId();
+	context.set("requestId", requestId);
+	if (!relayedId) return { requestId, occurredAt: Date.now() };
 	return {
 		requestId,
 		occurredAt: Number(context.req.header(OCCURRED_AT_HEADER) ?? Date.now()),

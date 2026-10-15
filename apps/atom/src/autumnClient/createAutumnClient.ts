@@ -5,6 +5,7 @@ import {
 	AtomKeysResponseSchema,
 	type AtomTracksAppendRequest,
 } from "@autumn/byoc";
+import { setLogOrg } from "../lib/logging/getAtomLogger.js";
 import { postToAutumn } from "./postToAutumn.js";
 import type { AutumnClient } from "./types/autumnClient.js";
 
@@ -25,7 +26,11 @@ const findInvalidKeys = async ({
 		tokenHash,
 		body: { key_hashes: keyHashes },
 	});
-	return AtomKeysResponseSchema.parse(await reply.json()).invalid_key_hashes;
+	const { invalid_key_hashes, org } = AtomKeysResponseSchema.parse(
+		await reply.json(),
+	);
+	if (org) setLogOrg({ org_id: org.id, org_slug: org.slug });
+	return invalid_key_hashes;
 };
 
 const readSubject = async ({
