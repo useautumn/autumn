@@ -4,7 +4,10 @@ import type { TrackResponseV3 } from "@autumn/shared";
 import type { HandoffBarrier } from "../../replicas/handover/createHandoffBarrier.js";
 import type { CustomerHandoff } from "../../replicas/handover/types/customerHandoff.js";
 import type { ReplicaRing } from "../../replicas/types/replicaRing.js";
-import type { Journal } from "../../state/journal/types/journal.js";
+import type {
+	Journal,
+	JournalKeyRow,
+} from "../../state/journal/types/journal.js";
 import type { OpenLocks } from "../../state/openLocks/createOpenLocks.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
@@ -58,6 +61,10 @@ export type SlotProcessor = {
 	/** What another replica handed over with its customers: the entries into this slot's journal, in one transaction, under their own writers; the locks into its open locks. */
 	receiveHandoff(params: {
 		handoffs: CustomerHandoff[];
+	}): Promise<{ held: number }>;
+	/** Idempotency keys another replica took for this slot's customers: a replay of one is refused here too. */
+	receiveRelayedKeys(params: {
+		keys: JournalKeyRow[];
 	}): Promise<{ held: number }>;
 	/** A `subjects.delete` body as JSON text, routed and refused the same way. False when a newer read is already held. */
 	deleteSubject(params: { customerId: string; body: string }): Promise<boolean>;

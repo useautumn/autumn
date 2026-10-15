@@ -10,6 +10,7 @@ import type {
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
 import type { TrackRequest } from "../../../processor/types/track.js";
 import type { CustomerHandoff } from "../../../replicas/handover/types/customerHandoff.js";
+import type { JournalKeyRow } from "../../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -41,6 +42,7 @@ export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "finalize"; request: FinalizeRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "receiveHandoff"; handoffs: CustomerHandoff[] }
+	| { type: "receiveRelayedKeys"; keys: JournalKeyRow[] }
 	| { type: "deleteSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
 	| { type: "installCatalog"; catalog: CatalogUpdate }
@@ -63,6 +65,13 @@ export type OwnerCallBody = { atomId: string | null } & (
 			type: "fetchSubjects";
 			slot: number;
 			keys: { customerId: string; entityId: string }[];
+	  }
+	/** A page of the slot's idempotency keys of the last 90 min, for a replica copying them as it boots. */
+	| {
+			type: "recentKeys";
+			slot: number;
+			after: JournalKeyRow | null;
+			limit: number;
 	  }
 );
 
@@ -103,6 +112,7 @@ export type OwnerReply =
 				| boolean
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[]
+				| JournalKeyRow[]
 				| { held: number };
 	  }
 	| {

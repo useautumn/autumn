@@ -8,10 +8,12 @@ import { PEER_HANDOFF_PATH } from "../replicas/handover/handoffContract.js";
 import {
 	PEER_ATOMS_LIST_PATH,
 	PEER_CATALOG_SINCE_PATH,
+	PEER_KEYS_RECENT_PATH,
 	PEER_SUBJECTS_DIGEST_PATH,
 	PEER_SUBJECTS_FETCH_PATH,
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
+import { KEYS_RELAY } from "../replication/keys/createKeyRelay.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveAnnouncement } from "./handlers/receiveAnnouncement.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
@@ -20,10 +22,12 @@ import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveJournalHandoff } from "./handlers/receiveJournalHandoff.js";
 import {
 	receiveCatalogSince,
+	receiveRecentKeys,
 	receiveSubjectsDigest,
 	receiveSubjectsFetch,
 	receiveSubjectsSince,
 } from "./handlers/receivePeerReads.js";
+import { receiveRelayedKeys } from "./handlers/receiveRelayedKeys.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
 import { receiveTrack } from "./handlers/receiveTrack.js";
@@ -83,6 +87,8 @@ export function createPeerApp({
 	folder.post(PEER_SUBJECTS_DIGEST_PATH, receiveSubjectsDigest({ ctx }));
 	folder.post(PEER_SUBJECTS_FETCH_PATH, receiveSubjectsFetch({ ctx }));
 	folder.post(PEER_CATALOG_SINCE_PATH, receiveCatalogSince({ ctx }));
+	folder.post(KEYS_RELAY.path, receiveRelayedKeys);
+	folder.post(PEER_KEYS_RECENT_PATH, receiveRecentKeys({ ctx }));
 	folder.post(PEER_HANDOFF_PATH, receiveJournalHandoff({ ctx }));
 	app.route("/", folder);
 	return app;

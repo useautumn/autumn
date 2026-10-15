@@ -5,6 +5,7 @@ import type {
 	PushedSubject,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
+import type { JournalKeyRow } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -61,6 +62,13 @@ export type OwnerLink = {
 		slot: number;
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
+	/** A page of the idempotency keys a slot the other thread owns took in the last 90 min. */
+	recentKeys(params: {
+		atomId: string | null;
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]>;
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
@@ -95,6 +103,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		| boolean
 		| AppliedSubjectOnWire[]
 		| SubjectDigestOnWire[]
+		| JournalKeyRow[]
 		| { held: number }
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
@@ -145,6 +154,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 				})) as PushedSubject,
 			receiveHandoff: async ({ handoffs }) =>
 				(await call({ type: "receiveHandoff", atomId, handoffs })) as {
+					held: number;
+				},
+			receiveRelayedKeys: async ({ keys }) =>
+				(await call({ type: "receiveRelayedKeys", atomId, keys })) as {
 					held: number;
 				},
 			deleteSubject: async ({ customerId, body }) =>
@@ -206,6 +219,15 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		return wires.map(wireToAppliedSubject);
 	}
 
+	async function recentKeys(params: {
+		atomId: string | null;
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]> {
+		return (await call({ type: "recentKeys", ...params })) as JournalKeyRow[];
+	}
+
 	function connect({ port: next }: { port: MessagePort }): void {
 		port = next;
 		port.onmessage = receiveReply;
@@ -229,6 +251,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		listSince,
 		digestSince,
 		fetchSubjects,
+		recentKeys,
 		connect,
 		disconnect,
 	};

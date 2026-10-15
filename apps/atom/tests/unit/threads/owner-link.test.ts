@@ -182,3 +182,46 @@ test("a lock_id the owner refuses as open crosses back as the API's 409, never a
 	link.disconnect();
 	port2.close();
 });
+
+test("relayed idempotency keys cross to the slot's owner even while it catches up; its recent keys are read only once it has", async () => {
+	const { port1, port2 } = new MessageChannel();
+	const threadsReady = new Int32Array(2);
+	const key = { customerId: "cus_1", keyHash: "ab".repeat(16), appendedAt: 1 };
+	const received: unknown[] = [];
+	const slots = {
+		processorFor: () => ({
+			receiveRelayedKeys: async ({ keys }: { keys: unknown[] }) => {
+				received.push(...keys);
+				return { held: keys.length };
+			},
+		}),
+		recentKeys: async () => [key],
+	} as unknown as Slots;
+	answerOwnerCalls({
+		ctx: {
+			auth: { slotsFor: () => slots },
+			health: { threadsReady, thread: 1 },
+		},
+		port: port2,
+	});
+	const link = createOwnerLink({ thread: 1 });
+	link.connect({ port: port1 });
+	const recentKeys = () =>
+		link.recentKeys({ atomId: null, slot: 0, after: null, limit: 10 });
+
+	expect(
+		await link
+			.processorFor({ atomId: null })
+			.receiveRelayedKeys({ keys: [key] }),
+	).toEqual({ held: 1 });
+	expect(received).toEqual([key]);
+	expect(await recentKeys().catch((error) => error)).toBeInstanceOf(
+		OwnerUnavailableError,
+	);
+
+	Atomics.store(threadsReady, 1, 1);
+	expect(await recentKeys()).toEqual([key]);
+
+	link.disconnect();
+	port2.close();
+});

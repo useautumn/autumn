@@ -1,5 +1,6 @@
+import { Database } from "bun:sqlite";
 import { spyOn } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
@@ -22,6 +23,10 @@ import { createReplicaSync } from "../../../src/replication/createReplicaSync.js
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
+import {
+	createKeyRelay,
+	KEYS_RELAY,
+} from "../../../src/replication/keys/createKeyRelay.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import {
 	createThreadStatsBuffer,
@@ -51,6 +56,7 @@ const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
 registry.register(DELETE_PUSH);
 registry.register(CATALOG_PUSH);
+registry.register(KEYS_RELAY);
 
 const cleanups: (() => void)[] = [];
 export const cleanUpReplicas = () => {
@@ -101,18 +107,6 @@ export const createReplica = ({
 		},
 	});
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
-	const auth = createDeployedAuth({
-		journalForwarder,
-		dataDir,
-		tokenHash: TOKEN_HASH,
-		slotCount: SLOT_COUNT,
-		owners: allSlotsOwnedHere,
-		held: freshHeld(),
-		now,
-		subjectPulls: noSubjectPulls,
-		barrier,
-		ring,
-	});
 	const replication = createReplication({
 		ctx: {
 			secret,
@@ -124,6 +118,19 @@ export const createReplica = ({
 			now,
 			sleep: async () => {},
 		},
+	});
+	const auth = createDeployedAuth({
+		journalForwarder,
+		dataDir,
+		tokenHash: TOKEN_HASH,
+		slotCount: SLOT_COUNT,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
+		now,
+		subjectPulls: noSubjectPulls,
+		barrier,
+		ring,
+		keyRelay: createKeyRelay({ ctx: { replication } }),
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {
@@ -342,6 +349,29 @@ export const heldEverywhere = async (replica: Replica) =>
 	).flat();
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+/** The idempotency key rows in every journal file of the replica's folder, oldest first. */
+export const keyRowsOn = ({ dataDir }: { dataDir: string }) =>
+	readdirSync(dataDir)
+		.filter((file) => file.startsWith("journal-") && file.endsWith(".sqlite"))
+		.flatMap((file) => {
+			const database = new Database(join(dataDir, file), { readonly: true });
+			try {
+				return database
+					.query<{ customerId: string; appendedAt: number }, []>(
+						"SELECT customer_id AS customerId, appended_at AS appendedAt FROM journal_keys",
+					)
+					.all();
+			} finally {
+				database.close();
+			}
+		})
+		.sort((left, right) => left.appendedAt - right.appendedAt);
+
+/** Waits up to a second for a relay to land; the assertion after it says whether one did. */
+export const relayLanded = async (landed: () => boolean) => {
+	for (let tries = 0; tries < 500 && !landed(); tries++) await Bun.sleep(2);
+};
 
 /**
  * Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from, and

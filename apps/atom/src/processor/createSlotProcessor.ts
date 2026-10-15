@@ -153,6 +153,9 @@ export const createSlotProcessor = ({
 				ctx.barrier?.arrived({ customerId });
 			return { held };
 		},
+		receiveRelayedKeys: async ({ keys }) => ({
+			held: await ctx.journal.receiveKeys({ keys }),
+		}),
 		deleteSubject: async (params) =>
 			deleteSubject({ ctx, subject: deletePushToDeletedSubject(params) }),
 	};

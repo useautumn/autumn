@@ -26,7 +26,10 @@ import {
 	createMultiTenantFolders,
 } from "../replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../replication/handlers/createHandlerRegistry.js";
-import type { ReplicaFolders } from "../replication/types/replicaFolders.js";
+import {
+	createKeyRelay,
+	KEYS_RELAY,
+} from "../replication/keys/createKeyRelay.js";
 import type { Slots } from "../slots/types/slots.js";
 import { shareSqliteOpenLock } from "../state/newSqliteConnection.js";
 import { createSubjectPulls } from "../subjectPulls/createSubjectPulls.js";
@@ -74,6 +77,9 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	});
 	// On this thread, where a moved customer's handoff and its requests both land.
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
+	const replication = openReplication({ env, resolver, counters, logger });
+	// Per thread too: the idempotency keys its slots' journals take are batched here on their way to the other replicas.
+	const keyRelay = createKeyRelay({ ctx: { replication } });
 	const { auth, multiTenant, held } = openAuth({
 		env,
 		owners,
@@ -81,6 +87,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		journalForwarder,
 		barrier,
 		ring,
+		keyRelay,
 	});
 	const health = {
 		bootedAt: init.bootedAt,
@@ -96,14 +103,17 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	const folders = multiTenant
 		? createMultiTenantFolders({ auth: multiTenant.auth })
 		: createDeployedFolders({ slots: ownFolder({ auth }) });
-	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
-	const replicas = openReplicas({
-		env,
-		resolver,
+	// Built before the thread listens: the point each folder fell behind at must not move once live relays land.
+	const sync = createReplicaSync({
+		ctx: {
+			replication,
+			port: env.ATOM_PEER_PORT,
+			secret: env.ATOM_PEER_SECRET,
+			logger,
+			now: Date.now,
+			isStopping: () => stopping,
+		},
 		folders,
-		counters,
-		logger,
-		isStopping: () => stopping,
 	});
 	const server = createAtomServer({
 		ctx: {
@@ -114,7 +124,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			counters,
 			held,
 			folders,
-			replication: replicas.replication,
+			replication,
 			journalForwarder,
 			membership,
 			ring,
@@ -141,10 +151,10 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	/** Listens first, so peers can relay to it, then copies what it missed before it answers from its own files. */
 	async function start(): Promise<void> {
 		await server.start();
-		await replicas.sync.catchUp();
+		await sync.catchUp();
 		await server.probePeers?.();
 		Atomics.store(health.threadsReady, index, 1);
-		void replicas.sync.runPasses();
+		void sync.runPasses();
 	}
 
 	/** Pulls stop first, so none lands in a folder as it closes. */
@@ -165,21 +175,17 @@ const ownFolder = ({ auth }: { auth: Auth }): Slots => {
 	return slots;
 };
 
-/** The pushes and tenants this thread applies, on their way to every other replica, and what this one copies back from them. */
-const openReplicas = ({
+/** Every Atom keeps its replicas in step: the pushes, tenants and idempotency keys this thread applies, on their way to every other replica. */
+const openReplication = ({
 	env,
 	resolver,
-	folders,
 	counters,
 	logger,
-	isStopping,
 }: {
 	env: ThreadInit["env"];
 	resolver: PeerResolver;
-	folders: ReplicaFolders;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
-	isStopping: () => boolean;
 }) => {
 	const registry = createHandlerRegistry();
 	registry.register(SUBJECT_PUSH);
@@ -187,7 +193,8 @@ const openReplicas = ({
 	registry.register(CATALOG_PUSH);
 	registry.register(ATOM_PUT);
 	registry.register(ATOM_DELETE);
-	const replication = createReplication({
+	registry.register(KEYS_RELAY);
+	return createReplication({
 		ctx: {
 			secret: env.ATOM_PEER_SECRET,
 			port: env.ATOM_PEER_PORT,
@@ -197,19 +204,6 @@ const openReplicas = ({
 			logger,
 		},
 	});
-	// Built before the thread listens: the point each folder fell behind at must not move once live relays land.
-	const sync = createReplicaSync({
-		ctx: {
-			replication,
-			port: env.ATOM_PEER_PORT,
-			secret: env.ATOM_PEER_SECRET,
-			logger,
-			now: Date.now,
-			isStopping,
-		},
-		folders,
-	});
-	return { replication, sync };
 };
 
 /** Runs in a worker the main thread started: everything it does is told to it, in order, over its parent port. */

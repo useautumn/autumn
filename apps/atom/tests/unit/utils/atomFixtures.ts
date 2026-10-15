@@ -240,6 +240,7 @@ export const allSlotsOwnedHere: SlotOwners = {
 	listSinceOn: noOtherThread,
 	digestSinceOn: noOtherThread,
 	fetchSubjectsOn: noOtherThread,
+	recentKeysOn: noOtherThread,
 };
 
 /** A thread's held subjects, roomy enough that a test never evicts by accident. */

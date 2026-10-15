@@ -3,6 +3,8 @@ import { isServing } from "../../init/atomHealth.js";
 import {
 	type CatalogSinceRequest,
 	catalogSinceResponse,
+	type RecentKeysRequest,
+	type RecentKeysResponse,
 	type SubjectsFetchRequest,
 	type SubjectsSinceRequest,
 	subjectsDigestResponse,
@@ -112,4 +114,13 @@ export const receiveCatalogSince = ({ ctx }: { ctx: PeerReadContext }) =>
 		return context.json(
 			catalogSinceResponse(asked.slots.catalogSince(asked.body)),
 		);
+	};
+
+/** A page of one slot's idempotency keys of the last 90 min, for a peer copying them before it serves. */
+export const receiveRecentKeys = ({ ctx }: { ctx: PeerReadContext }) =>
+	async function receive(context: Context<AtomHttpEnv>) {
+		const asked = peerRead<RecentKeysRequest>({ ctx, context });
+		if ("refused" in asked) return asked.refused;
+		const keys = await asked.slots.recentKeys(asked.body);
+		return context.json({ keys } satisfies RecentKeysResponse);
 	};
