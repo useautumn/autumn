@@ -1,4 +1,5 @@
-import type { ApprovalRule, ApprovalRuleWithSubjects } from "@autumn/shared";
+import type { ApprovalRule } from "@autumn/shared";
+import type { ApprovalRuleWithSubjects } from "@autumn/shared/models/approvalModels/index";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { listUserNames } from "../repos/listUserNames.js";
 import { ruleRowToApprovalRule } from "../utils/ruleRowToApprovalRule.js";

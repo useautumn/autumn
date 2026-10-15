@@ -1,9 +1,6 @@
-import type {
-	ApprovalAction,
-	ApprovalRuleVersionRow,
-	ApprovalRuleWhen,
-} from "@autumn/shared";
+import type { ApprovalAction, ApprovalRuleWhen } from "@autumn/shared";
 import type { ApprovalRuleVersion } from "@autumn/shared/api/approvals/crud/approvalRuleVersion";
+import type { ApprovalRuleVersionRow } from "@autumn/shared/models/approvalModels/index";
 import { rowToRuleSubject } from "./rowToRuleSubject.js";
 
 export const versionRowToApprovalRuleVersion = ({
