@@ -162,49 +162,43 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 	} catch (error) {
 		if (isTransientDbError({ error })) {
 			// executeAutumnBillingPlan is not atomic — don't replay Stripe after a drop.
-			ctx.logger.warn(
-				"run-migration: skipping customer after connection drop",
-				{
-					data: {
-						customerId: item.id ?? item.internal_id,
-						internalId: item.internal_id,
-						error: error instanceof Error ? error.message : String(error),
-					},
+			ctx.logger.warn("run-migration: failing customer after connection drop", {
+				data: {
+					customerId: item.id ?? item.internal_id,
+					internalId: item.internal_id,
+					error: error instanceof Error ? error.message : String(error),
 				},
-			);
+			});
 
 			// The drop often starves the pool for this write too; a failed write would strand the `running` claim.
 			await runWithTransientDbRetry({
 				maxAttempts: MIGRATION_ITEM_SETTLE_DB_ATTEMPTS,
 				delayMs: MIGRATION_ITEM_SETTLE_DB_RETRY_DELAY_MS,
 				run: () =>
-					markItemRunFinished({
+					migrationItemRunRepo.markFailed({
 						ctx,
 						migrationInternalId,
 						migrationRunId,
 						dryRun,
-						item,
-						status: "skipped",
-						skipReason: MigrationItemRunSkipReason.Ineligible,
+						itemKind: item.kind,
+						itemId: item.internal_id,
 					}),
 			});
 
-			const response = {
-				skipped: {
-					reason: "connection_dropped",
-					error: error instanceof Error ? error.message : String(error),
-				},
-				skip_reason: MigrationItemRunSkipReason.Ineligible,
-			};
 			await recordMigrationItemEvent({
 				ctx,
 				migrationInternalId,
 				migrationRunId,
 				dryRun,
 				item,
-				status: "skipped",
+				status: "failed",
 				itemPreview: itemToPreview(item),
-				response,
+				response: {
+					error: {
+						reason: "connection_dropped",
+						message: error instanceof Error ? error.message : String(error),
+					},
+				},
 			});
 
 			return;
