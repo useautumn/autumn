@@ -49,7 +49,10 @@ describe("lock sweep", () => {
 		);
 		expect(passes).toEqual([
 			{ expiryAction: "confirm", dueBefore: 1_000_000 },
-			{ expiryAction: "release", dueBefore: 1_000_000 - RELEASE_TIMER_GRACE_MS },
+			{
+				expiryAction: "release",
+				dueBefore: 1_000_000 - RELEASE_TIMER_GRACE_MS,
+			},
 		]);
 	});
 
