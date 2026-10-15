@@ -51,4 +51,5 @@ export type MigrationBatchOutcome = {
 	newestProducedAt: number;
 	residentSubjects: number;
 	droppedCapacity: number;
+	fenceWaits: number;
 };

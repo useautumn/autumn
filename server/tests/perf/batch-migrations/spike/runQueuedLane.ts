@@ -271,7 +271,6 @@ export const runQueuedLane = async ({
 		});
 		if (unrouted.length > 0)
 			throw new Error("Spike lane runs with every customer routed");
-		onPageClaimed?.({ customers: routed });
 		const { plans, candidatesMs } = await plansForPage({
 			ctx,
 			scenario,
@@ -306,7 +305,7 @@ export const runQueuedLane = async ({
 				partitionCount,
 				forceColdRollback: pages === 1 && partition === rollbackPartition,
 			});
-			records.set(customer.internalId, record);
+			if (rollbackPartition !== null) records.set(customer.internalId, record);
 			pageRecords.push(record);
 		}
 		phases.plans += Date.now() - plansStartedAt;
@@ -324,6 +323,7 @@ export const runQueuedLane = async ({
 		const produceStartedAt = Date.now();
 		if (firstProduceAt === 0) firstProduceAt = produceStartedAt;
 		await produceRecords({ producer, topic, records: pageRecords });
+		onPageClaimed?.({ customers: routed });
 		lastProduceAt = Date.now();
 		phases.produce += lastProduceAt - produceStartedAt;
 		produced += pageRecords.length;

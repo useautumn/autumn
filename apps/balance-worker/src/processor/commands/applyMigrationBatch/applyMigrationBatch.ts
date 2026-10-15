@@ -322,5 +322,6 @@ export async function applyMigrationBatch({
 		newestProducedAt,
 		residentSubjects: usage.residentSubjects,
 		droppedCapacity: usage.droppedSubjects.capacity,
+		fenceWaits: scope.ctx.writer.readMigrationFenceWaits(),
 	};
 }

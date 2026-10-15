@@ -183,7 +183,10 @@ export function createPartitionWriter({
 		customerKey,
 	}: Parameters<PartitionWriter["waitForEvicted"]>[0]) {
 		const fence = scope.state.migrationFences.get(customerKey);
-		if (fence) return fence;
+		if (fence) {
+			scope.state.migrationFenceWaits += 1;
+			return fence;
+		}
 		return scope.state.subjects.isEvicting({ customerKey })
 			? allStored({ state: scope.state })
 			: null;
@@ -192,7 +195,14 @@ export function createPartitionWriter({
 	function waitForFence({
 		customerKey,
 	}: Parameters<PartitionWriter["waitForFence"]>[0]) {
-		return scope.state.migrationFences.get(customerKey) ?? null;
+		const fence = scope.state.migrationFences.get(customerKey);
+		if (!fence) return null;
+		scope.state.migrationFenceWaits += 1;
+		return fence;
+	}
+
+	function readMigrationFenceWaits(): number {
+		return scope.state.migrationFenceWaits;
 	}
 
 	function holdsCustomer({
@@ -251,6 +261,7 @@ export function createPartitionWriter({
 		waitForFence,
 		holdsCustomer,
 		fenceCustomers,
+		readMigrationFenceWaits,
 		decide,
 		decideHeld,
 		decideHeldGroup,

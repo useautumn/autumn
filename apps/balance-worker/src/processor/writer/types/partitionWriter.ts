@@ -100,6 +100,7 @@ export type PartitionWriter = {
 	waitForFence(params: { customerKey: string }): Promise<void> | null;
 	/** Whether anything of the customer is in memory: resident or hidden rows, a pending write, or a fence. */
 	holdsCustomer(params: { customerKey: string; subjectKey: string }): boolean;
+	readMigrationFenceWaits(): number;
 	/** Fences the customers synchronously; the returned release lets their loads through. */
 	fenceCustomers(params: { customerKeys: readonly string[] }): () => void;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
@@ -284,6 +285,8 @@ export type PartitionWriterState = {
 	heldGroupBytes: number;
 	/** Cold customers whose migration is being written straight to Postgres: their loads wait for the write to settle. */
 	migrationFences: Map<string, Promise<void>>;
+	/** Loads and refresh reads that found their customer fenced and waited. */
+	migrationFenceWaits: number;
 };
 
 export type StoreWaiter = {
