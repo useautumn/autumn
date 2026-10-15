@@ -42,6 +42,11 @@ export const previewMultiAttachPriceTierSchema = z.object({
 		.optional(),
 });
 
+export const previewMultiAttachCreditSchema3Schema = z.object({
+	meteredFeatureId: z.string(),
+	excluded: z.literal(true),
+});
+
 export const previewMultiAttachDimensionsMatch4Schema = z.union([
 	z.string(),
 	z.number(),
@@ -356,6 +361,11 @@ export const previewMultiAttachExpiryOutboundSchema = z.object({
 	length: z.number(),
 });
 
+export const previewMultiAttachCreditSchema3OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	excluded: z.literal(true),
+});
+
 export const previewMultiAttachDimensionsMatch4OutboundSchema = z.union([
 	z.string(),
 	z.number(),
@@ -522,6 +532,7 @@ export const previewMultiAttachCreditSchema1OutboundSchema = z.object({
 export const previewMultiAttachCreditSchemaUnionOutboundSchema = z.union([
 	previewMultiAttachCreditSchema1OutboundSchema,
 	previewMultiAttachCreditSchema2OutboundSchema,
+	previewMultiAttachCreditSchema3OutboundSchema,
 ]);
 
 export const previewMultiAttachProviderMarkupsOutboundSchema = z.object({
@@ -559,6 +570,7 @@ export const previewMultiAttachFeatureOverrideOutboundSchema = z.object({
 				z.union([
 					previewMultiAttachCreditSchema1OutboundSchema,
 					previewMultiAttachCreditSchema2OutboundSchema,
+					previewMultiAttachCreditSchema3OutboundSchema,
 				]),
 			),
 			z.undefined(),
@@ -934,6 +946,7 @@ export const previewMultiAttachCreditSchema1Schema = z.object({
 export const previewMultiAttachCreditSchemaUnionSchema = z.union([
 	previewMultiAttachCreditSchema1Schema,
 	previewMultiAttachCreditSchema2Schema,
+	previewMultiAttachCreditSchema3Schema,
 ]);
 
 export const previewMultiAttachFeatureOverrideSchema = z.object({
@@ -943,6 +956,7 @@ export const previewMultiAttachFeatureOverrideSchema = z.object({
 				z.union([
 					previewMultiAttachCreditSchema1Schema,
 					previewMultiAttachCreditSchema2Schema,
+					previewMultiAttachCreditSchema3Schema,
 				]),
 			),
 			z.undefined(),

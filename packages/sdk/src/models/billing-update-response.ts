@@ -47,14 +47,47 @@ import {
   BillingUpdateUpsertLicenseReset,
   BillingUpdateUpsertLicenseReset$Outbound,
   BillingUpdateUpsertLicenseReset$outboundSchema,
-  BillingUpdateUpsertLicenseRollover,
-  BillingUpdateUpsertLicenseRollover$Outbound,
-  BillingUpdateUpsertLicenseRollover$outboundSchema,
   BillingUpdateUpsertLicenseThresholdBilling,
   BillingUpdateUpsertLicenseThresholdBilling$Outbound,
   BillingUpdateUpsertLicenseThresholdBilling$outboundSchema,
-} from "./billing-update-upsert-license-rollover.js";
+} from "./billing-update-upsert-license-proration.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const BillingUpdateUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type BillingUpdateUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof BillingUpdateUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type BillingUpdateUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: BillingUpdateUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
 
 export const BillingUpdateUpsertLicenseDuration = {
   Day: "day",
@@ -72,6 +105,17 @@ export type BillingUpdateUpsertLicenseDuration = ClosedEnum<
 export type BillingUpdateUpsertLicenseExpiry = {
   duration: BillingUpdateUpsertLicenseDuration;
   length: number;
+};
+
+export type BillingUpdateCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type BillingUpdateDimensionsUpsertLicenseMatch4 =
@@ -331,7 +375,8 @@ export type BillingUpdateCreditSchemaUpsertLicense1 = {
 
 export type BillingUpdateUpsertLicenseCreditSchemaUnion =
   | BillingUpdateCreditSchemaUpsertLicense1
-  | BillingUpdateCreditSchemaUpsertLicense2;
+  | BillingUpdateCreditSchemaUpsertLicense2
+  | BillingUpdateCreditSchemaUpsertLicense3;
 
 export type BillingUpdateUpsertLicenseProviderMarkups = {
   markup: number;
@@ -372,12 +417,13 @@ export type BillingUpdateUpsertLicenseMarkups = {
  */
 export type BillingUpdateUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | BillingUpdateCreditSchemaUpsertLicense1
       | BillingUpdateCreditSchemaUpsertLicense2
+      | BillingUpdateCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -1193,6 +1239,51 @@ export type BillingUpdateResponse = {
 };
 
 /** @internal */
+export const BillingUpdateUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof BillingUpdateUpsertLicenseExpiryDurationType> = z.enum(
+    BillingUpdateUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export type BillingUpdateUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
+  BillingUpdateUpsertLicenseRollover$Outbound,
+  BillingUpdateUpsertLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType:
+      BillingUpdateUpsertLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function billingUpdateUpsertLicenseRolloverToJSON(
+  billingUpdateUpsertLicenseRollover: BillingUpdateUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    BillingUpdateUpsertLicenseRollover$outboundSchema.parse(
+      billingUpdateUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
 export const BillingUpdateUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateUpsertLicenseDuration
 > = z.enum(BillingUpdateUpsertLicenseDuration);
@@ -1218,6 +1309,40 @@ export function billingUpdateUpsertLicenseExpiryToJSON(
   return JSON.stringify(
     BillingUpdateUpsertLicenseExpiry$outboundSchema.parse(
       billingUpdateUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const BillingUpdateCreditSchemaUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateCreditSchemaUpsertLicense3$Outbound,
+    BillingUpdateCreditSchemaUpsertLicense3
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      excluded: z.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+      });
+    }),
+  );
+
+export function billingUpdateCreditSchemaUpsertLicense3ToJSON(
+  billingUpdateCreditSchemaUpsertLicense3:
+    BillingUpdateCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    BillingUpdateCreditSchemaUpsertLicense3$outboundSchema.parse(
+      billingUpdateCreditSchemaUpsertLicense3,
     ),
   );
 }
@@ -1966,7 +2091,8 @@ export function billingUpdateCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type BillingUpdateUpsertLicenseCreditSchemaUnion$Outbound =
   | BillingUpdateCreditSchemaUpsertLicense1$Outbound
-  | BillingUpdateCreditSchemaUpsertLicense2$Outbound;
+  | BillingUpdateCreditSchemaUpsertLicense2$Outbound
+  | BillingUpdateCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const BillingUpdateUpsertLicenseCreditSchemaUnion$outboundSchema:
@@ -1976,6 +2102,7 @@ export const BillingUpdateUpsertLicenseCreditSchemaUnion$outboundSchema:
   > = smartUnion([
     z.lazy(() => BillingUpdateCreditSchemaUpsertLicense1$outboundSchema),
     z.lazy(() => BillingUpdateCreditSchemaUpsertLicense2$outboundSchema),
+    z.lazy(() => BillingUpdateCreditSchemaUpsertLicense3$outboundSchema),
   ]);
 
 export function billingUpdateUpsertLicenseCreditSchemaUnionToJSON(
@@ -2105,6 +2232,7 @@ export type BillingUpdateUpsertLicenseFeatureOverride$Outbound = {
     | Array<
       | BillingUpdateCreditSchemaUpsertLicense1$Outbound
       | BillingUpdateCreditSchemaUpsertLicense2$Outbound
+      | BillingUpdateCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: BillingUpdateUpsertLicenseMarkups$Outbound | undefined;
@@ -2122,6 +2250,7 @@ export const BillingUpdateUpsertLicenseFeatureOverride$outboundSchema:
         z.lazy(() =>
           BillingUpdateCreditSchemaUpsertLicense2$outboundSchema
         ),
+        z.lazy(() => BillingUpdateCreditSchemaUpsertLicense3$outboundSchema),
       ]))),
       markups: z.optional(z.lazy(() =>
         BillingUpdateUpsertLicenseMarkups$outboundSchema
@@ -2181,7 +2310,9 @@ export const BillingUpdateUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     reset: z.optional(BillingUpdateUpsertLicenseReset$outboundSchema),
     price: z.optional(BillingUpdateUpsertLicensePrice$outboundSchema),
     proration: z.optional(BillingUpdateUpsertLicenseProration$outboundSchema),
-    rollover: z.optional(BillingUpdateUpsertLicenseRollover$outboundSchema),
+    rollover: z.optional(
+      z.lazy(() => BillingUpdateUpsertLicenseRollover$outboundSchema),
+    ),
     expiry: z.optional(
       z.lazy(() => BillingUpdateUpsertLicenseExpiry$outboundSchema),
     ),

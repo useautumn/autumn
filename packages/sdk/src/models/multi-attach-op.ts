@@ -332,6 +332,17 @@ export type MultiAttachExpiry = {
   length: number;
 };
 
+export type MultiAttachCreditSchema3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
 export type MultiAttachDimensionsMatch4 = string | number | boolean;
 
 export type MultiAttachDimensions4 = {
@@ -559,7 +570,8 @@ export type MultiAttachCreditSchema1 = {
 
 export type MultiAttachCreditSchemaUnion =
   | MultiAttachCreditSchema1
-  | MultiAttachCreditSchema2;
+  | MultiAttachCreditSchema2
+  | MultiAttachCreditSchema3;
 
 export type MultiAttachProviderMarkups = {
   markup: number;
@@ -597,10 +609,14 @@ export type MultiAttachMarkups = {
  */
 export type MultiAttachFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<MultiAttachCreditSchema1 | MultiAttachCreditSchema2>
+    | Array<
+      | MultiAttachCreditSchema1
+      | MultiAttachCreditSchema2
+      | MultiAttachCreditSchema3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -1658,6 +1674,36 @@ export function multiAttachExpiryToJSON(
 }
 
 /** @internal */
+export type MultiAttachCreditSchema3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const MultiAttachCreditSchema3$outboundSchema: z.ZodMiniType<
+  MultiAttachCreditSchema3$Outbound,
+  MultiAttachCreditSchema3
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    excluded: z.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+    });
+  }),
+);
+
+export function multiAttachCreditSchema3ToJSON(
+  multiAttachCreditSchema3: MultiAttachCreditSchema3,
+): string {
+  return JSON.stringify(
+    MultiAttachCreditSchema3$outboundSchema.parse(multiAttachCreditSchema3),
+  );
+}
+
+/** @internal */
 export type MultiAttachDimensionsMatch4$Outbound = string | number | boolean;
 
 /** @internal */
@@ -2290,7 +2336,8 @@ export function multiAttachCreditSchema1ToJSON(
 /** @internal */
 export type MultiAttachCreditSchemaUnion$Outbound =
   | MultiAttachCreditSchema1$Outbound
-  | MultiAttachCreditSchema2$Outbound;
+  | MultiAttachCreditSchema2$Outbound
+  | MultiAttachCreditSchema3$Outbound;
 
 /** @internal */
 export const MultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
@@ -2299,6 +2346,7 @@ export const MultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => MultiAttachCreditSchema1$outboundSchema),
   z.lazy(() => MultiAttachCreditSchema2$outboundSchema),
+  z.lazy(() => MultiAttachCreditSchema3$outboundSchema),
 ]);
 
 export function multiAttachCreditSchemaUnionToJSON(
@@ -2415,7 +2463,9 @@ export function multiAttachMarkupsToJSON(
 export type MultiAttachFeatureOverride$Outbound = {
   credit_schema?:
     | Array<
-      MultiAttachCreditSchema1$Outbound | MultiAttachCreditSchema2$Outbound
+      | MultiAttachCreditSchema1$Outbound
+      | MultiAttachCreditSchema2$Outbound
+      | MultiAttachCreditSchema3$Outbound
     >
     | undefined;
   markups?: MultiAttachMarkups$Outbound | undefined;
@@ -2432,6 +2482,7 @@ export const MultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
       z.lazy(() =>
         MultiAttachCreditSchema2$outboundSchema
       ),
+      z.lazy(() => MultiAttachCreditSchema3$outboundSchema),
     ]))),
     markups: z.optional(z.lazy(() =>
       MultiAttachMarkups$outboundSchema

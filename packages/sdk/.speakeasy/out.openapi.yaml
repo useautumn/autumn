@@ -2510,7 +2510,20 @@ components:
                             - metered_feature_id
                             - credit_cost
                           additionalProperties: false
-                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                        - type: object
+                          properties:
+                            metered_feature_id:
+                              type: string
+                              minLength: 1
+                              description: ID of the metered feature to remove from the credit system.
+                            excluded:
+                              const: true
+                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                          required:
+                            - metered_feature_id
+                            - excluded
+                          additionalProperties: false
+                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                   markups:
                     type: object
                     properties:
@@ -3429,7 +3442,20 @@ components:
                                     - metered_feature_id
                                     - credit_cost
                                   additionalProperties: false
-                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                - type: object
+                                  properties:
+                                    metered_feature_id:
+                                      type: string
+                                      minLength: 1
+                                      description: ID of the metered feature to remove from the credit system.
+                                    excluded:
+                                      const: true
+                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                  required:
+                                    - metered_feature_id
+                                    - excluded
+                                  additionalProperties: false
+                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                           markups:
                             type: object
                             properties:
@@ -4301,7 +4327,20 @@ components:
                                                   - metered_feature_id
                                                   - credit_cost
                                                 additionalProperties: false
-                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              - type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    type: string
+                                                    minLength: 1
+                                                    description: ID of the metered feature to remove from the credit system.
+                                                  excluded:
+                                                    const: true
+                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                required:
+                                                  - metered_feature_id
+                                                  - excluded
+                                                additionalProperties: false
+                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                         markups:
                                           type: object
                                           properties:
@@ -11360,7 +11399,20 @@ paths:
                                     - metered_feature_id
                                     - credit_cost
                                   additionalProperties: false
-                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                - type: object
+                                  properties:
+                                    metered_feature_id:
+                                      type: string
+                                      minLength: 1
+                                      description: ID of the metered feature to remove from the credit system.
+                                    excluded:
+                                      const: true
+                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                  required:
+                                    - metered_feature_id
+                                    - excluded
+                                  additionalProperties: false
+                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                           markups:
                             type: object
                             properties:
@@ -11961,7 +12013,20 @@ paths:
                                                   - metered_feature_id
                                                   - credit_cost
                                                 additionalProperties: false
-                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              - type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    type: string
+                                                    minLength: 1
+                                                    description: ID of the metered feature to remove from the credit system.
+                                                  excluded:
+                                                    const: true
+                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                required:
+                                                  - metered_feature_id
+                                                  - excluded
+                                                additionalProperties: false
+                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                         markups:
                                           type: object
                                           properties:
@@ -13029,7 +13094,20 @@ paths:
                                       - metered_feature_id
                                       - credit_cost
                                     additionalProperties: false
-                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        type: string
+                                        minLength: 1
+                                        description: ID of the metered feature to remove from the credit system.
+                                      excluded:
+                                        const: true
+                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                    required:
+                                      - metered_feature_id
+                                      - excluded
+                                    additionalProperties: false
+                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                             markups:
                               type: object
                               properties:
@@ -13948,7 +14026,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -14820,7 +14911,20 @@ paths:
                                                             - metered_feature_id
                                                             - credit_cost
                                                           additionalProperties: false
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature to remove from the credit system.
+                                                            excluded:
+                                                              const: true
+                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                          required:
+                                                            - metered_feature_id
+                                                            - excluded
+                                                          additionalProperties: false
+                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                   markups:
                                                     type: object
                                                     properties:
@@ -15480,7 +15584,20 @@ paths:
                                                 - metered_feature_id
                                                 - credit_cost
                                               additionalProperties: false
-                                        description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                            - type: object
+                                              properties:
+                                                metered_feature_id:
+                                                  type: string
+                                                  minLength: 1
+                                                  description: ID of the metered feature to remove from the credit system.
+                                                excluded:
+                                                  const: true
+                                                  description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                              required:
+                                                - metered_feature_id
+                                                - excluded
+                                              additionalProperties: false
+                                        description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                       markups:
                                         type: object
                                         properties:
@@ -16386,7 +16503,20 @@ paths:
                                       - metered_feature_id
                                       - credit_cost
                                     additionalProperties: false
-                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        type: string
+                                        minLength: 1
+                                        description: ID of the metered feature to remove from the credit system.
+                                      excluded:
+                                        const: true
+                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                    required:
+                                      - metered_feature_id
+                                      - excluded
+                                    additionalProperties: false
+                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                             markups:
                               type: object
                               properties:
@@ -17305,7 +17435,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -18177,7 +18320,20 @@ paths:
                                                             - metered_feature_id
                                                             - credit_cost
                                                           additionalProperties: false
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature to remove from the credit system.
+                                                            excluded:
+                                                              const: true
+                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                          required:
+                                                            - metered_feature_id
+                                                            - excluded
+                                                          additionalProperties: false
+                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                   markups:
                                                     type: object
                                                     properties:
@@ -18837,7 +18993,20 @@ paths:
                                                 - metered_feature_id
                                                 - credit_cost
                                               additionalProperties: false
-                                        description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                            - type: object
+                                              properties:
+                                                metered_feature_id:
+                                                  type: string
+                                                  minLength: 1
+                                                  description: ID of the metered feature to remove from the credit system.
+                                                excluded:
+                                                  const: true
+                                                  description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                              required:
+                                                - metered_feature_id
+                                                - excluded
+                                              additionalProperties: false
+                                        description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                       markups:
                                         type: object
                                         properties:
@@ -19724,7 +19893,20 @@ paths:
                                             - metered_feature_id
                                             - credit_cost
                                           additionalProperties: false
-                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                        - type: object
+                                          properties:
+                                            metered_feature_id:
+                                              type: string
+                                              minLength: 1
+                                              description: ID of the metered feature to remove from the credit system.
+                                            excluded:
+                                              const: true
+                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                          required:
+                                            - metered_feature_id
+                                            - excluded
+                                          additionalProperties: false
+                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                   markups:
                                     type: object
                                     properties:
@@ -20643,7 +20825,20 @@ paths:
                                                     - metered_feature_id
                                                     - credit_cost
                                                   additionalProperties: false
-                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                - type: object
+                                                  properties:
+                                                    metered_feature_id:
+                                                      type: string
+                                                      minLength: 1
+                                                      description: ID of the metered feature to remove from the credit system.
+                                                    excluded:
+                                                      const: true
+                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                  required:
+                                                    - metered_feature_id
+                                                    - excluded
+                                                  additionalProperties: false
+                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                           markups:
                                             type: object
                                             properties:
@@ -21515,7 +21710,20 @@ paths:
                                                                   - metered_feature_id
                                                                   - credit_cost
                                                                 additionalProperties: false
-                                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                              - type: object
+                                                                properties:
+                                                                  metered_feature_id:
+                                                                    type: string
+                                                                    minLength: 1
+                                                                    description: ID of the metered feature to remove from the credit system.
+                                                                  excluded:
+                                                                    const: true
+                                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                required:
+                                                                  - metered_feature_id
+                                                                  - excluded
+                                                                additionalProperties: false
+                                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                         markups:
                                                           type: object
                                                           properties:
@@ -22175,7 +22383,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -22817,7 +23038,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -23681,7 +23915,20 @@ paths:
                                                                     - metered_feature_id
                                                                     - credit_cost
                                                                   additionalProperties: false
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      type: string
+                                                                      minLength: 1
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                    excluded:
+                                                                      const: true
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
+                                                                  additionalProperties: false
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                           markups:
                                                             type: object
                                                             properties:
@@ -24448,7 +24695,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -25569,7 +25829,20 @@ paths:
                                     - metered_feature_id
                                     - credit_cost
                                   additionalProperties: false
-                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                - type: object
+                                  properties:
+                                    metered_feature_id:
+                                      type: string
+                                      minLength: 1
+                                      description: ID of the metered feature to remove from the credit system.
+                                    excluded:
+                                      const: true
+                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                  required:
+                                    - metered_feature_id
+                                    - excluded
+                                  additionalProperties: false
+                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                           markups:
                             type: object
                             properties:
@@ -26170,7 +26443,20 @@ paths:
                                                   - metered_feature_id
                                                   - credit_cost
                                                 additionalProperties: false
-                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              - type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    type: string
+                                                    minLength: 1
+                                                    description: ID of the metered feature to remove from the credit system.
+                                                  excluded:
+                                                    const: true
+                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                required:
+                                                  - metered_feature_id
+                                                  - excluded
+                                                additionalProperties: false
+                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                         markups:
                                           type: object
                                           properties:
@@ -27153,7 +27439,20 @@ paths:
                                                   - metered_feature_id
                                                   - credit_cost
                                                 additionalProperties: false
-                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              - type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    type: string
+                                                    minLength: 1
+                                                    description: ID of the metered feature to remove from the credit system.
+                                                  excluded:
+                                                    const: true
+                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                required:
+                                                  - metered_feature_id
+                                                  - excluded
+                                                additionalProperties: false
+                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                         markups:
                                           type: object
                                           properties:
@@ -28053,7 +28352,20 @@ paths:
                                                                 - metered_feature_id
                                                                 - credit_cost
                                                               additionalProperties: false
-                                                        description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            - type: object
+                                                              properties:
+                                                                metered_feature_id:
+                                                                  type: string
+                                                                  minLength: 1
+                                                                  description: ID of the metered feature to remove from the credit system.
+                                                                excluded:
+                                                                  const: true
+                                                                  description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                              required:
+                                                                - metered_feature_id
+                                                                - excluded
+                                                              additionalProperties: false
+                                                        description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                       markups:
                                                         type: object
                                                         properties:
@@ -28862,7 +29174,20 @@ paths:
                                       - metered_feature_id
                                       - credit_cost
                                     additionalProperties: false
-                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                  - type: object
+                                    properties:
+                                      metered_feature_id:
+                                        type: string
+                                        minLength: 1
+                                        description: ID of the metered feature to remove from the credit system.
+                                      excluded:
+                                        const: true
+                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                    required:
+                                      - metered_feature_id
+                                      - excluded
+                                    additionalProperties: false
+                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                             markups:
                               type: object
                               properties:
@@ -29781,7 +30106,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -30653,7 +30991,20 @@ paths:
                                                             - metered_feature_id
                                                             - credit_cost
                                                           additionalProperties: false
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature to remove from the credit system.
+                                                            excluded:
+                                                              const: true
+                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                          required:
+                                                            - metered_feature_id
+                                                            - excluded
+                                                          additionalProperties: false
+                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                   markups:
                                                     type: object
                                                     properties:
@@ -31313,7 +31664,20 @@ paths:
                                                 - metered_feature_id
                                                 - credit_cost
                                               additionalProperties: false
-                                        description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                            - type: object
+                                              properties:
+                                                metered_feature_id:
+                                                  type: string
+                                                  minLength: 1
+                                                  description: ID of the metered feature to remove from the credit system.
+                                                excluded:
+                                                  const: true
+                                                  description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                              required:
+                                                - metered_feature_id
+                                                - excluded
+                                              additionalProperties: false
+                                        description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                       markups:
                                         type: object
                                         properties:
@@ -35365,7 +35729,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -35905,7 +36282,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -36805,7 +37195,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -38248,7 +38651,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -38788,7 +39204,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -39656,7 +40085,20 @@ paths:
                                                             - metered_feature_id
                                                             - credit_cost
                                                           additionalProperties: false
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              type: string
+                                                              minLength: 1
+                                                              description: ID of the metered feature to remove from the credit system.
+                                                            excluded:
+                                                              const: true
+                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                          required:
+                                                            - metered_feature_id
+                                                            - excluded
+                                                          additionalProperties: false
+                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                   markups:
                                                     type: object
                                                     properties:
@@ -40399,7 +40841,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -40939,7 +41394,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -41799,7 +42267,20 @@ paths:
                                                                     - metered_feature_id
                                                                     - credit_cost
                                                                   additionalProperties: false
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      type: string
+                                                                      minLength: 1
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                    excluded:
+                                                                      const: true
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
+                                                                  additionalProperties: false
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                           markups:
                                                             type: object
                                                             properties:
@@ -42556,7 +43037,20 @@ paths:
                                                     - metered_feature_id
                                                     - credit_cost
                                                   additionalProperties: false
-                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                - type: object
+                                                  properties:
+                                                    metered_feature_id:
+                                                      type: string
+                                                      minLength: 1
+                                                      description: ID of the metered feature to remove from the credit system.
+                                                    excluded:
+                                                      const: true
+                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                  required:
+                                                    - metered_feature_id
+                                                    - excluded
+                                                  additionalProperties: false
+                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                           markups:
                                             type: object
                                             properties:
@@ -43096,7 +43590,20 @@ paths:
                                                     - metered_feature_id
                                                     - credit_cost
                                                   additionalProperties: false
-                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                - type: object
+                                                  properties:
+                                                    metered_feature_id:
+                                                      type: string
+                                                      minLength: 1
+                                                      description: ID of the metered feature to remove from the credit system.
+                                                    excluded:
+                                                      const: true
+                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                  required:
+                                                    - metered_feature_id
+                                                    - excluded
+                                                  additionalProperties: false
+                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                           markups:
                                             type: object
                                             properties:
@@ -43956,7 +44463,20 @@ paths:
                                                                   - metered_feature_id
                                                                   - credit_cost
                                                                 additionalProperties: false
-                                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                              - type: object
+                                                                properties:
+                                                                  metered_feature_id:
+                                                                    type: string
+                                                                    minLength: 1
+                                                                    description: ID of the metered feature to remove from the credit system.
+                                                                  excluded:
+                                                                    const: true
+                                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                required:
+                                                                  - metered_feature_id
+                                                                  - excluded
+                                                                additionalProperties: false
+                                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                         markups:
                                                           type: object
                                                           properties:
@@ -44845,7 +45365,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -46038,7 +46571,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -46578,7 +47124,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -47478,7 +48037,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -49058,7 +49630,20 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          - type: object
+                                            properties:
+                                              metered_feature_id:
+                                                type: string
+                                                minLength: 1
+                                                description: ID of the metered feature to remove from the credit system.
+                                              excluded:
+                                                const: true
+                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                            required:
+                                              - metered_feature_id
+                                              - excluded
+                                            additionalProperties: false
+                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                     markups:
                                       type: object
                                       properties:
@@ -50558,7 +51143,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -51098,7 +51696,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -51998,7 +52609,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -53250,7 +53874,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -53790,7 +54427,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -54690,7 +55340,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -56904,7 +57567,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -57444,7 +58120,20 @@ paths:
                                         - metered_feature_id
                                         - credit_cost
                                       additionalProperties: false
-                                description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                    - type: object
+                                      properties:
+                                        metered_feature_id:
+                                          type: string
+                                          minLength: 1
+                                          description: ID of the metered feature to remove from the credit system.
+                                        excluded:
+                                          const: true
+                                          description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                      required:
+                                        - metered_feature_id
+                                        - excluded
+                                      additionalProperties: false
+                                description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                               markups:
                                 type: object
                                 properties:
@@ -58344,7 +59033,20 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        type: string
+                                                        minLength: 1
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                      excluded:
+                                                        const: true
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
+                                                    additionalProperties: false
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                             markups:
                                               type: object
                                               properties:
@@ -65152,7 +65854,7 @@ paths:
                                               - metered_feature_id
                                               - credit_cost
                                             additionalProperties: false
-                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                      description: Replaces the feature's credit_schema entirely for this invoice.
                                   additionalProperties: false
                                   description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
                               required:
@@ -65656,7 +66358,7 @@ paths:
                                                     - metered_feature_id
                                                     - credit_cost
                                                   additionalProperties: false
-                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                            description: Replaces the feature's credit_schema entirely for this invoice.
                                         additionalProperties: false
                                         description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
                                     required:
@@ -68099,7 +68801,7 @@ paths:
                                                       - metered_feature_id
                                                       - credit_cost
                                                     additionalProperties: false
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              description: Replaces the feature's credit_schema entirely for this invoice.
                                           additionalProperties: false
                                           description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
                                       required:
@@ -68603,7 +69305,7 @@ paths:
                                                             - metered_feature_id
                                                             - credit_cost
                                                           additionalProperties: false
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                    description: Replaces the feature's credit_schema entirely for this invoice.
                                                 additionalProperties: false
                                                 description: "For credit-system features: a credit rate card to use when converting `usage` on this invoice."
                                             required:
@@ -79531,7 +80233,7 @@ webhooks:
                                           type: object
                                           properties:
                                             credit_schema:
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                               type: array
                                               items:
                                                 anyOf:
@@ -79796,6 +80498,20 @@ webhooks:
                                                     required:
                                                       - metered_feature_id
                                                       - credit_cost
+                                                    additionalProperties: false
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                        type: string
+                                                        minLength: 1
+                                                      excluded:
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                        type: boolean
+                                                        const: true
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
                                                     additionalProperties: false
                                             markups:
                                               description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -80497,7 +81213,7 @@ webhooks:
                                                   type: object
                                                   properties:
                                                     credit_schema:
-                                                      description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                      description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                       type: array
                                                       items:
                                                         anyOf:
@@ -80762,6 +81478,20 @@ webhooks:
                                                             required:
                                                               - metered_feature_id
                                                               - credit_cost
+                                                            additionalProperties: false
+                                                          - type: object
+                                                            properties:
+                                                              metered_feature_id:
+                                                                description: ID of the metered feature to remove from the credit system.
+                                                                type: string
+                                                                minLength: 1
+                                                              excluded:
+                                                                description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                type: boolean
+                                                                const: true
+                                                            required:
+                                                              - metered_feature_id
+                                                              - excluded
                                                             additionalProperties: false
                                                     markups:
                                                       description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -81394,7 +82124,7 @@ webhooks:
                                                                 type: object
                                                                 properties:
                                                                   credit_schema:
-                                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                                     type: array
                                                                     items:
                                                                       anyOf:
@@ -81659,6 +82389,20 @@ webhooks:
                                                                           required:
                                                                             - metered_feature_id
                                                                             - credit_cost
+                                                                          additionalProperties: false
+                                                                        - type: object
+                                                                          properties:
+                                                                            metered_feature_id:
+                                                                              description: ID of the metered feature to remove from the credit system.
+                                                                              type: string
+                                                                              minLength: 1
+                                                                            excluded:
+                                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                              type: boolean
+                                                                              const: true
+                                                                          required:
+                                                                            - metered_feature_id
+                                                                            - excluded
                                                                           additionalProperties: false
                                                                   markups:
                                                                     description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -82754,7 +83498,7 @@ webhooks:
                                           type: object
                                           properties:
                                             credit_schema:
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                               type: array
                                               items:
                                                 anyOf:
@@ -83019,6 +83763,20 @@ webhooks:
                                                     required:
                                                       - metered_feature_id
                                                       - credit_cost
+                                                    additionalProperties: false
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                        type: string
+                                                        minLength: 1
+                                                      excluded:
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                        type: boolean
+                                                        const: true
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
                                                     additionalProperties: false
                                             markups:
                                               description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -83349,7 +84107,7 @@ webhooks:
                                           type: object
                                           properties:
                                             credit_schema:
-                                              description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                              description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                               type: array
                                               items:
                                                 anyOf:
@@ -83614,6 +84372,20 @@ webhooks:
                                                     required:
                                                       - metered_feature_id
                                                       - credit_cost
+                                                    additionalProperties: false
+                                                  - type: object
+                                                    properties:
+                                                      metered_feature_id:
+                                                        description: ID of the metered feature to remove from the credit system.
+                                                        type: string
+                                                        minLength: 1
+                                                      excluded:
+                                                        description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                        type: boolean
+                                                        const: true
+                                                    required:
+                                                      - metered_feature_id
+                                                      - excluded
                                                     additionalProperties: false
                                             markups:
                                               description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -84246,7 +85018,7 @@ webhooks:
                                                         type: object
                                                         properties:
                                                           credit_schema:
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                             type: array
                                                             items:
                                                               anyOf:
@@ -84511,6 +85283,20 @@ webhooks:
                                                                   required:
                                                                     - metered_feature_id
                                                                     - credit_cost
+                                                                  additionalProperties: false
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                      type: string
+                                                                      minLength: 1
+                                                                    excluded:
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                      type: boolean
+                                                                      const: true
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
                                                                   additionalProperties: false
                                                           markups:
                                                             description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -85069,7 +85855,7 @@ webhooks:
                                                 type: object
                                                 properties:
                                                   credit_schema:
-                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                     type: array
                                                     items:
                                                       anyOf:
@@ -85334,6 +86120,20 @@ webhooks:
                                                           required:
                                                             - metered_feature_id
                                                             - credit_cost
+                                                          additionalProperties: false
+                                                        - type: object
+                                                          properties:
+                                                            metered_feature_id:
+                                                              description: ID of the metered feature to remove from the credit system.
+                                                              type: string
+                                                              minLength: 1
+                                                            excluded:
+                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                              type: boolean
+                                                              const: true
+                                                          required:
+                                                            - metered_feature_id
+                                                            - excluded
                                                           additionalProperties: false
                                                   markups:
                                                     description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -86035,7 +86835,7 @@ webhooks:
                                                         type: object
                                                         properties:
                                                           credit_schema:
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                             type: array
                                                             items:
                                                               anyOf:
@@ -86300,6 +87100,20 @@ webhooks:
                                                                   required:
                                                                     - metered_feature_id
                                                                     - credit_cost
+                                                                  additionalProperties: false
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                      type: string
+                                                                      minLength: 1
+                                                                    excluded:
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                      type: boolean
+                                                                      const: true
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
                                                                   additionalProperties: false
                                                           markups:
                                                             description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -86932,7 +87746,7 @@ webhooks:
                                                                       type: object
                                                                       properties:
                                                                         credit_schema:
-                                                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                                           type: array
                                                                           items:
                                                                             anyOf:
@@ -87197,6 +88011,20 @@ webhooks:
                                                                                 required:
                                                                                   - metered_feature_id
                                                                                   - credit_cost
+                                                                                additionalProperties: false
+                                                                              - type: object
+                                                                                properties:
+                                                                                  metered_feature_id:
+                                                                                    description: ID of the metered feature to remove from the credit system.
+                                                                                    type: string
+                                                                                    minLength: 1
+                                                                                  excluded:
+                                                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                                    type: boolean
+                                                                                    const: true
+                                                                                required:
+                                                                                  - metered_feature_id
+                                                                                  - excluded
                                                                                 additionalProperties: false
                                                                         markups:
                                                                           description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -87779,7 +88607,7 @@ webhooks:
                                                         type: object
                                                         properties:
                                                           credit_schema:
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                             type: array
                                                             items:
                                                               anyOf:
@@ -88044,6 +88872,20 @@ webhooks:
                                                                   required:
                                                                     - metered_feature_id
                                                                     - credit_cost
+                                                                  additionalProperties: false
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                      type: string
+                                                                      minLength: 1
+                                                                    excluded:
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                      type: boolean
+                                                                      const: true
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
                                                                   additionalProperties: false
                                                           markups:
                                                             description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -88745,7 +89587,7 @@ webhooks:
                                                                 type: object
                                                                 properties:
                                                                   credit_schema:
-                                                                    description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                    description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                                     type: array
                                                                     items:
                                                                       anyOf:
@@ -89010,6 +89852,20 @@ webhooks:
                                                                           required:
                                                                             - metered_feature_id
                                                                             - credit_cost
+                                                                          additionalProperties: false
+                                                                        - type: object
+                                                                          properties:
+                                                                            metered_feature_id:
+                                                                              description: ID of the metered feature to remove from the credit system.
+                                                                              type: string
+                                                                              minLength: 1
+                                                                            excluded:
+                                                                              description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                              type: boolean
+                                                                              const: true
+                                                                          required:
+                                                                            - metered_feature_id
+                                                                            - excluded
                                                                           additionalProperties: false
                                                                   markups:
                                                                     description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -89642,7 +90498,7 @@ webhooks:
                                                                               type: object
                                                                               properties:
                                                                                 credit_schema:
-                                                                                  description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                                  description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                                                   type: array
                                                                                   items:
                                                                                     anyOf:
@@ -89907,6 +90763,20 @@ webhooks:
                                                                                         required:
                                                                                           - metered_feature_id
                                                                                           - credit_cost
+                                                                                        additionalProperties: false
+                                                                                      - type: object
+                                                                                        properties:
+                                                                                          metered_feature_id:
+                                                                                            description: ID of the metered feature to remove from the credit system.
+                                                                                            type: string
+                                                                                            minLength: 1
+                                                                                          excluded:
+                                                                                            description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                                            type: boolean
+                                                                                            const: true
+                                                                                        required:
+                                                                                          - metered_feature_id
+                                                                                          - excluded
                                                                                         additionalProperties: false
                                                                                 markups:
                                                                                   description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -91002,7 +91872,7 @@ webhooks:
                                                         type: object
                                                         properties:
                                                           credit_schema:
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                             type: array
                                                             items:
                                                               anyOf:
@@ -91267,6 +92137,20 @@ webhooks:
                                                                   required:
                                                                     - metered_feature_id
                                                                     - credit_cost
+                                                                  additionalProperties: false
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                      type: string
+                                                                      minLength: 1
+                                                                    excluded:
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                      type: boolean
+                                                                      const: true
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
                                                                   additionalProperties: false
                                                           markups:
                                                             description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -91597,7 +92481,7 @@ webhooks:
                                                         type: object
                                                         properties:
                                                           credit_schema:
-                                                            description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                            description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                             type: array
                                                             items:
                                                               anyOf:
@@ -91862,6 +92746,20 @@ webhooks:
                                                                   required:
                                                                     - metered_feature_id
                                                                     - credit_cost
+                                                                  additionalProperties: false
+                                                                - type: object
+                                                                  properties:
+                                                                    metered_feature_id:
+                                                                      description: ID of the metered feature to remove from the credit system.
+                                                                      type: string
+                                                                      minLength: 1
+                                                                    excluded:
+                                                                      description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                      type: boolean
+                                                                      const: true
+                                                                  required:
+                                                                    - metered_feature_id
+                                                                    - excluded
                                                                   additionalProperties: false
                                                           markups:
                                                             description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -92494,7 +93392,7 @@ webhooks:
                                                                       type: object
                                                                       properties:
                                                                         credit_schema:
-                                                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                                                           type: array
                                                                           items:
                                                                             anyOf:
@@ -92759,6 +93657,20 @@ webhooks:
                                                                                 required:
                                                                                   - metered_feature_id
                                                                                   - credit_cost
+                                                                                additionalProperties: false
+                                                                              - type: object
+                                                                                properties:
+                                                                                  metered_feature_id:
+                                                                                    description: ID of the metered feature to remove from the credit system.
+                                                                                    type: string
+                                                                                    minLength: 1
+                                                                                  excluded:
+                                                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                                                    type: boolean
+                                                                                    const: true
+                                                                                required:
+                                                                                  - metered_feature_id
+                                                                                  - excluded
                                                                                 additionalProperties: false
                                                                         markups:
                                                                           description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."
@@ -93213,7 +94125,7 @@ webhooks:
                                       type: object
                                       properties:
                                         credit_schema:
-                                          description: "For credit system features: replaces the feature's credit_schema entirely for customers on this plan."
+                                          description: "For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."
                                           type: array
                                           items:
                                             anyOf:
@@ -93478,6 +94390,20 @@ webhooks:
                                                 required:
                                                   - metered_feature_id
                                                   - credit_cost
+                                                additionalProperties: false
+                                              - type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    description: ID of the metered feature to remove from the credit system.
+                                                    type: string
+                                                    minLength: 1
+                                                  excluded:
+                                                    description: Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+                                                    type: boolean
+                                                    const: true
+                                                required:
+                                                  - metered_feature_id
+                                                  - excluded
                                                 additionalProperties: false
                                         markups:
                                           description: "For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."

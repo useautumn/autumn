@@ -508,6 +508,24 @@ class PreviewMultiAttachExpiry(BaseModel):
     length: float
 
 
+class PreviewMultiAttachCreditSchema3TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+    excluded: Literal[True]
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class PreviewMultiAttachCreditSchema3(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+
+    excluded: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="excluded"),
+    ] = True
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
 PreviewMultiAttachDimensionsMatch4TypedDict = TypeAliasType(
     "PreviewMultiAttachDimensionsMatch4TypedDict", Union[str, float, bool]
 )
@@ -1014,6 +1032,7 @@ class PreviewMultiAttachCreditSchema1(BaseModel):
 PreviewMultiAttachCreditSchemaUnionTypedDict = TypeAliasType(
     "PreviewMultiAttachCreditSchemaUnionTypedDict",
     Union[
+        PreviewMultiAttachCreditSchema3TypedDict,
         PreviewMultiAttachCreditSchema2TypedDict,
         PreviewMultiAttachCreditSchema1TypedDict,
     ],
@@ -1022,7 +1041,11 @@ PreviewMultiAttachCreditSchemaUnionTypedDict = TypeAliasType(
 
 PreviewMultiAttachCreditSchemaUnion = TypeAliasType(
     "PreviewMultiAttachCreditSchemaUnion",
-    Union[PreviewMultiAttachCreditSchema2, PreviewMultiAttachCreditSchema1],
+    Union[
+        PreviewMultiAttachCreditSchema3,
+        PreviewMultiAttachCreditSchema2,
+        PreviewMultiAttachCreditSchema1,
+    ],
 )
 
 
@@ -1123,7 +1146,7 @@ class PreviewMultiAttachFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: NotRequired[List[PreviewMultiAttachCreditSchemaUnionTypedDict]]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
     markups: NotRequired[PreviewMultiAttachMarkupsTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
@@ -1132,7 +1155,7 @@ class PreviewMultiAttachFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: Optional[List[PreviewMultiAttachCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
 
     markups: Optional[PreviewMultiAttachMarkups] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
@@ -2810,6 +2833,10 @@ class PreviewMultiAttachResponse(BaseModel):
         return m
 
 
+try:
+    PreviewMultiAttachCreditSchema3.model_rebuild()
+except NameError:
+    pass
 try:
     PreviewMultiAttachDimensions3.model_rebuild()
 except NameError:

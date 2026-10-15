@@ -424,7 +424,7 @@ export type CreateInvoiceCreditSchemaUnion =
  */
 export type CreateInvoiceFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<CreateInvoiceCreditSchema1 | CreateInvoiceCreditSchema2>
@@ -962,7 +962,7 @@ export type CreateInvoiceLicenseQuantityCreditSchemaUnion =
  */
 export type CreateInvoiceLicenseQuantityFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<

@@ -85,6 +85,11 @@ export const listPlansItemDisplaySchema = z.object({
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const listPlansCreditSchemaItemFeatureOverride3Schema = z.object({
+	meteredFeatureId: z.string(),
+	excluded: z.literal(true),
+});
+
 export const listPlansDimensionsItem4Schema = z.object({
 	match: z.record(z.string(), z.string()),
 	priority: z.union([z.number(), z.undefined()]).optional(),
@@ -223,6 +228,11 @@ export const listPlansVariantDetailsPriceTierSchema = z.object({
 		.optional(),
 });
 
+export const listPlansCreditSchemaVariantDetails3Schema = z.object({
+	meteredFeatureId: z.string(),
+	excluded: z.literal(true),
+});
+
 export const listPlansDimensionsVariantDetails4Schema = z.object({
 	match: z.record(z.string(), z.string()),
 	priority: z.union([z.number(), z.undefined()]).optional(),
@@ -276,10 +286,6 @@ export const listPlansVariantDetailsMarkupsSchema = z.object({
 });
 
 export const listPlansVariantDetailsUsageLimitFilterSchema = z.object({
-	properties: z.record(z.string(), z.string()),
-});
-
-export const listPlansVariantDetailsUsageAlertFilterSchema = z.object({
 	properties: z.record(z.string(), z.string()),
 });
 
@@ -488,6 +494,7 @@ export const listPlansCreditSchemaItemFeatureOverride1Schema = z.object({
 export const listPlansItemCreditSchemaUnionSchema = z.union([
 	listPlansCreditSchemaItemFeatureOverride1Schema,
 	listPlansCreditSchemaItemFeatureOverride2Schema,
+	listPlansCreditSchemaItemFeatureOverride3Schema,
 ]);
 
 export const listPlansItemFeatureOverrideSchema = z.object({
@@ -497,6 +504,7 @@ export const listPlansItemFeatureOverrideSchema = z.object({
 				z.union([
 					listPlansCreditSchemaItemFeatureOverride1Schema,
 					listPlansCreditSchemaItemFeatureOverride2Schema,
+					listPlansCreditSchemaItemFeatureOverride3Schema,
 				]),
 			),
 			z.undefined(),
@@ -812,6 +820,7 @@ export const listPlansCreditSchemaVariantDetails1Schema = z.object({
 export const listPlansVariantDetailsCreditSchemaUnionSchema = z.union([
 	listPlansCreditSchemaVariantDetails1Schema,
 	listPlansCreditSchemaVariantDetails2Schema,
+	listPlansCreditSchemaVariantDetails3Schema,
 ]);
 
 export const listPlansVariantDetailsFeatureOverrideSchema = z.object({
@@ -821,6 +830,7 @@ export const listPlansVariantDetailsFeatureOverrideSchema = z.object({
 				z.union([
 					listPlansCreditSchemaVariantDetails1Schema,
 					listPlansCreditSchemaVariantDetails2Schema,
+					listPlansCreditSchemaVariantDetails3Schema,
 				]),
 			),
 			z.undefined(),
@@ -956,15 +966,3 @@ export const listPlansVariantDetailsUsageLimitSchema = z.object({
 export const listPlansVariantDetailsThresholdTypeSchema = openEnumSchema;
 
 export const listPlansVariantDetailsBasisSchema = openEnumSchema;
-
-export const listPlansVariantDetailsUsageAlertSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.boolean(),
-	threshold: z.number(),
-	thresholdType: listPlansVariantDetailsThresholdTypeSchema,
-	basis: listPlansVariantDetailsBasisSchema,
-	filter: z
-		.union([listPlansVariantDetailsUsageAlertFilterSchema, z.undefined()])
-		.optional(),
-	name: z.union([z.string(), z.undefined()]).optional(),
-});

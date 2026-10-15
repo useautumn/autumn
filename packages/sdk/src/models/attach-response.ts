@@ -47,14 +47,47 @@ import {
   AttachUpsertLicenseReset,
   AttachUpsertLicenseReset$Outbound,
   AttachUpsertLicenseReset$outboundSchema,
-  AttachUpsertLicenseRollover,
-  AttachUpsertLicenseRollover$Outbound,
-  AttachUpsertLicenseRollover$outboundSchema,
   AttachUpsertLicenseThresholdBilling,
   AttachUpsertLicenseThresholdBilling$Outbound,
   AttachUpsertLicenseThresholdBilling$outboundSchema,
-} from "./attach-upsert-license-rollover.js";
+} from "./attach-upsert-license-proration.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const AttachUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type AttachUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof AttachUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type AttachUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: AttachUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
 
 export const AttachUpsertLicenseDuration = {
   Day: "day",
@@ -72,6 +105,17 @@ export type AttachUpsertLicenseDuration = ClosedEnum<
 export type AttachUpsertLicenseExpiry = {
   duration: AttachUpsertLicenseDuration;
   length: number;
+};
+
+export type AttachCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type AttachDimensionsUpsertLicenseMatch4 = string | number | boolean;
@@ -309,7 +353,8 @@ export type AttachCreditSchemaUpsertLicense1 = {
 
 export type AttachUpsertLicenseCreditSchemaUnion =
   | AttachCreditSchemaUpsertLicense1
-  | AttachCreditSchemaUpsertLicense2;
+  | AttachCreditSchemaUpsertLicense2
+  | AttachCreditSchemaUpsertLicense3;
 
 export type AttachUpsertLicenseProviderMarkups = {
   markup: number;
@@ -350,10 +395,14 @@ export type AttachUpsertLicenseMarkups = {
  */
 export type AttachUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<AttachCreditSchemaUpsertLicense1 | AttachCreditSchemaUpsertLicense2>
+    | Array<
+      | AttachCreditSchemaUpsertLicense1
+      | AttachCreditSchemaUpsertLicense2
+      | AttachCreditSchemaUpsertLicense3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -1273,6 +1322,50 @@ export type AttachResponse = {
 };
 
 /** @internal */
+export const AttachUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof AttachUpsertLicenseExpiryDurationType> = z.enum(
+    AttachUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export type AttachUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const AttachUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
+  AttachUpsertLicenseRollover$Outbound,
+  AttachUpsertLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: AttachUpsertLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function attachUpsertLicenseRolloverToJSON(
+  attachUpsertLicenseRollover: AttachUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    AttachUpsertLicenseRollover$outboundSchema.parse(
+      attachUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
 export const AttachUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
   typeof AttachUpsertLicenseDuration
 > = z.enum(AttachUpsertLicenseDuration);
@@ -1297,6 +1390,38 @@ export function attachUpsertLicenseExpiryToJSON(
 ): string {
   return JSON.stringify(
     AttachUpsertLicenseExpiry$outboundSchema.parse(attachUpsertLicenseExpiry),
+  );
+}
+
+/** @internal */
+export type AttachCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const AttachCreditSchemaUpsertLicense3$outboundSchema: z.ZodMiniType<
+  AttachCreditSchemaUpsertLicense3$Outbound,
+  AttachCreditSchemaUpsertLicense3
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    excluded: z.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+    });
+  }),
+);
+
+export function attachCreditSchemaUpsertLicense3ToJSON(
+  attachCreditSchemaUpsertLicense3: AttachCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    AttachCreditSchemaUpsertLicense3$outboundSchema.parse(
+      attachCreditSchemaUpsertLicense3,
+    ),
   );
 }
 
@@ -2001,7 +2126,8 @@ export function attachCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type AttachUpsertLicenseCreditSchemaUnion$Outbound =
   | AttachCreditSchemaUpsertLicense1$Outbound
-  | AttachCreditSchemaUpsertLicense2$Outbound;
+  | AttachCreditSchemaUpsertLicense2$Outbound
+  | AttachCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const AttachUpsertLicenseCreditSchemaUnion$outboundSchema: z.ZodMiniType<
@@ -2010,6 +2136,7 @@ export const AttachUpsertLicenseCreditSchemaUnion$outboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => AttachCreditSchemaUpsertLicense1$outboundSchema),
   z.lazy(() => AttachCreditSchemaUpsertLicense2$outboundSchema),
+  z.lazy(() => AttachCreditSchemaUpsertLicense3$outboundSchema),
 ]);
 
 export function attachUpsertLicenseCreditSchemaUnionToJSON(
@@ -2132,6 +2259,7 @@ export type AttachUpsertLicenseFeatureOverride$Outbound = {
     | Array<
       | AttachCreditSchemaUpsertLicense1$Outbound
       | AttachCreditSchemaUpsertLicense2$Outbound
+      | AttachCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: AttachUpsertLicenseMarkups$Outbound | undefined;
@@ -2148,6 +2276,7 @@ export const AttachUpsertLicenseFeatureOverride$outboundSchema: z.ZodMiniType<
       z.lazy(() =>
         AttachCreditSchemaUpsertLicense2$outboundSchema
       ),
+      z.lazy(() => AttachCreditSchemaUpsertLicense3$outboundSchema),
     ]))),
     markups: z.optional(z.lazy(() =>
       AttachUpsertLicenseMarkups$outboundSchema
@@ -2204,7 +2333,9 @@ export const AttachUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     reset: z.optional(AttachUpsertLicenseReset$outboundSchema),
     price: z.optional(AttachUpsertLicensePrice$outboundSchema),
     proration: z.optional(AttachUpsertLicenseProration$outboundSchema),
-    rollover: z.optional(AttachUpsertLicenseRollover$outboundSchema),
+    rollover: z.optional(
+      z.lazy(() => AttachUpsertLicenseRollover$outboundSchema),
+    ),
     expiry: z.optional(z.lazy(() => AttachUpsertLicenseExpiry$outboundSchema)),
     featureOverride: z.optional(
       z.lazy(() => AttachUpsertLicenseFeatureOverride$outboundSchema),

@@ -47,13 +47,46 @@ import {
   SetupPaymentUpsertLicenseReset,
   SetupPaymentUpsertLicenseReset$Outbound,
   SetupPaymentUpsertLicenseReset$outboundSchema,
-  SetupPaymentUpsertLicenseRollover,
-  SetupPaymentUpsertLicenseRollover$Outbound,
-  SetupPaymentUpsertLicenseRollover$outboundSchema,
   SetupPaymentUpsertLicenseThresholdBilling,
   SetupPaymentUpsertLicenseThresholdBilling$Outbound,
   SetupPaymentUpsertLicenseThresholdBilling$outboundSchema,
-} from "./setup-payment-upsert-license-rollover.js";
+} from "./setup-payment-upsert-license-proration.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const SetupPaymentUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type SetupPaymentUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof SetupPaymentUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type SetupPaymentUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: SetupPaymentUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
 
 export const SetupPaymentUpsertLicenseDuration = {
   Day: "day",
@@ -71,6 +104,17 @@ export type SetupPaymentUpsertLicenseDuration = ClosedEnum<
 export type SetupPaymentUpsertLicenseExpiry = {
   duration: SetupPaymentUpsertLicenseDuration;
   length: number;
+};
+
+export type SetupPaymentCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type SetupPaymentDimensionsUpsertLicenseMatch4 =
@@ -330,7 +374,8 @@ export type SetupPaymentCreditSchemaUpsertLicense1 = {
 
 export type SetupPaymentUpsertLicenseCreditSchemaUnion =
   | SetupPaymentCreditSchemaUpsertLicense1
-  | SetupPaymentCreditSchemaUpsertLicense2;
+  | SetupPaymentCreditSchemaUpsertLicense2
+  | SetupPaymentCreditSchemaUpsertLicense3;
 
 export type SetupPaymentUpsertLicenseProviderMarkups = {
   markup: number;
@@ -371,12 +416,13 @@ export type SetupPaymentUpsertLicenseMarkups = {
  */
 export type SetupPaymentUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | SetupPaymentCreditSchemaUpsertLicense1
       | SetupPaymentCreditSchemaUpsertLicense2
+      | SetupPaymentCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -1137,6 +1183,51 @@ export type SetupPaymentResponse = {
 };
 
 /** @internal */
+export const SetupPaymentUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentUpsertLicenseExpiryDurationType> = z.enum(
+    SetupPaymentUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export type SetupPaymentUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
+  SetupPaymentUpsertLicenseRollover$Outbound,
+  SetupPaymentUpsertLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType:
+      SetupPaymentUpsertLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function setupPaymentUpsertLicenseRolloverToJSON(
+  setupPaymentUpsertLicenseRollover: SetupPaymentUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseRollover$outboundSchema.parse(
+      setupPaymentUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
 export const SetupPaymentUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
   typeof SetupPaymentUpsertLicenseDuration
 > = z.enum(SetupPaymentUpsertLicenseDuration);
@@ -1162,6 +1253,40 @@ export function setupPaymentUpsertLicenseExpiryToJSON(
   return JSON.stringify(
     SetupPaymentUpsertLicenseExpiry$outboundSchema.parse(
       setupPaymentUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentCreditSchemaUpsertLicense3$Outbound,
+    SetupPaymentCreditSchemaUpsertLicense3
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      excluded: z.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+      });
+    }),
+  );
+
+export function setupPaymentCreditSchemaUpsertLicense3ToJSON(
+  setupPaymentCreditSchemaUpsertLicense3:
+    SetupPaymentCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaUpsertLicense3$outboundSchema.parse(
+      setupPaymentCreditSchemaUpsertLicense3,
     ),
   );
 }
@@ -1904,7 +2029,8 @@ export function setupPaymentCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type SetupPaymentUpsertLicenseCreditSchemaUnion$Outbound =
   | SetupPaymentCreditSchemaUpsertLicense1$Outbound
-  | SetupPaymentCreditSchemaUpsertLicense2$Outbound;
+  | SetupPaymentCreditSchemaUpsertLicense2$Outbound
+  | SetupPaymentCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema:
@@ -1914,6 +2040,7 @@ export const SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema:
   > = smartUnion([
     z.lazy(() => SetupPaymentCreditSchemaUpsertLicense1$outboundSchema),
     z.lazy(() => SetupPaymentCreditSchemaUpsertLicense2$outboundSchema),
+    z.lazy(() => SetupPaymentCreditSchemaUpsertLicense3$outboundSchema),
   ]);
 
 export function setupPaymentUpsertLicenseCreditSchemaUnionToJSON(
@@ -2042,6 +2169,7 @@ export type SetupPaymentUpsertLicenseFeatureOverride$Outbound = {
     | Array<
       | SetupPaymentCreditSchemaUpsertLicense1$Outbound
       | SetupPaymentCreditSchemaUpsertLicense2$Outbound
+      | SetupPaymentCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: SetupPaymentUpsertLicenseMarkups$Outbound | undefined;
@@ -2059,6 +2187,7 @@ export const SetupPaymentUpsertLicenseFeatureOverride$outboundSchema:
         z.lazy(() =>
           SetupPaymentCreditSchemaUpsertLicense2$outboundSchema
         ),
+        z.lazy(() => SetupPaymentCreditSchemaUpsertLicense3$outboundSchema),
       ]))),
       markups: z.optional(z.lazy(() =>
         SetupPaymentUpsertLicenseMarkups$outboundSchema
@@ -2118,7 +2247,9 @@ export const SetupPaymentUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     reset: z.optional(SetupPaymentUpsertLicenseReset$outboundSchema),
     price: z.optional(SetupPaymentUpsertLicensePrice$outboundSchema),
     proration: z.optional(SetupPaymentUpsertLicenseProration$outboundSchema),
-    rollover: z.optional(SetupPaymentUpsertLicenseRollover$outboundSchema),
+    rollover: z.optional(
+      z.lazy(() => SetupPaymentUpsertLicenseRollover$outboundSchema),
+    ),
     expiry: z.optional(
       z.lazy(() => SetupPaymentUpsertLicenseExpiry$outboundSchema),
     ),
