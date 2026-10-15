@@ -45,7 +45,9 @@ const queryThroughDroppedConnection = async () => {
 		user: decodeURIComponent(target.username),
 		password: decodeURIComponent(target.password),
 		database: target.pathname.slice(1),
-		ssl: { servername: target.hostname },
+		ssl: target.searchParams.has("sslmode")
+			? { servername: target.hostname }
+			: false,
 	});
 	client.on("error", () => {});
 	try {
