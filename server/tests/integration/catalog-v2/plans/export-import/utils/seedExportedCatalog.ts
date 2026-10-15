@@ -104,7 +104,7 @@ export const seedExportedCatalog = async ({
 	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 };
 
-/** The Export modal's plans section for these ids, `annual` stated before `monthly`. */
+/** The Export modal's plans section for these ids: `annual` before `monthly`, newest version first. */
 export const exportCatalogPlans = async ({
 	autumn,
 	ids,
@@ -123,7 +123,7 @@ export const exportCatalogPlans = async ({
 		.sort(
 			(left, right) =>
 				order.indexOf(left.plan_id) - order.indexOf(right.plan_id) ||
-				(left.version ?? 0) - (right.version ?? 0),
+				(right.version ?? 0) - (left.version ?? 0),
 		);
 };
 
