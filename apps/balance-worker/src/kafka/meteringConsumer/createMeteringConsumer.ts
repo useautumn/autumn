@@ -41,9 +41,12 @@ export function createMeteringConsumer({
 			consumer: ctx.consumer,
 			handler,
 			progress: ctx.positionTracker,
-			...(ctx.commands && {
-				secondaryHandlers: { [ctx.commands.topic]: ctx.commands.handler },
-			}),
+			secondaryHandlers: {
+				...(ctx.commands && { [ctx.commands.topic]: ctx.commands.handler }),
+				...(ctx.migrations && {
+					[ctx.migrations.topic]: ctx.migrations.handler,
+				}),
+			},
 		},
 		config,
 	});

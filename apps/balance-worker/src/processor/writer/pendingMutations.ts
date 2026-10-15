@@ -68,6 +68,7 @@ export function createPartitionWriterState({
 		heldGroup: null,
 		heldGroupBytes: 0,
 		lastHeldGroup: 0,
+		migrationFences: new Map(),
 	};
 }
 

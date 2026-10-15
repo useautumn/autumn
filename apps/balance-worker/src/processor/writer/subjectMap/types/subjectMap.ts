@@ -38,6 +38,8 @@ export type SubjectMap = {
 	hideCustomer(params: { customerKey: string }): void;
 	/** A subject of the customer is hidden and not yet dropped: Postgres may lack a write its rows carried. */
 	isEvicting(params: { customerKey: string }): boolean;
+	/** Any entry of the customer: resident, hidden, or a pin-only placeholder on its own subject. */
+	holdsCustomer(params: { customerKey: string; subjectKey: string }): boolean;
 	/** Drops each resident subject `drops` picks and no write pins; nothing reaches `onEvicted`, since Postgres holds them true. */
 	dropResident(params: {
 		drops: (subject: { customerKey: string; idleMs: number }) => boolean;

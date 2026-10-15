@@ -39,6 +39,10 @@ import type {
 import type { AutumnLogger } from "@autumn/logging";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
+import type {
+	MigrationBatchOutcome,
+	MigrationLaneItem,
+} from "../commands/applyMigrationBatch/types/migrationLaneItem.js";
 import type { InlineCheckDecision } from "../commands/checkInline.js";
 import type { InlineTrackBatchOutcome } from "../commands/trackBatchInline.js";
 import type { InlineTrackDecision } from "../commands/trackInline.js";
@@ -87,6 +91,10 @@ export type PartitionProcessor = {
 	applyBillingPlan(params: {
 		request: ApplyBillingPlanRequest;
 	}): Promise<ApplyBillingPlanReply>;
+	/** A migration topic batch: resident customers in memory, cold ones fenced and written to Postgres directly. */
+	applyMigrationBatch?(params: {
+		items: readonly MigrationLaneItem[];
+	}): Promise<MigrationBatchOutcome>;
 	/** Answers once the rows are gone from memory and, unless told otherwise, once the customer's snapshot DELETE has landed. */
 	evict(params: {
 		command: EvictCommand;
@@ -131,6 +139,7 @@ export type PartitionProcessorDependencies = {
 			| "readNextOffset"
 			| "readCommandNextOffset"
 			| "advanceCommandNextOffset"
+			| "readClaimToken"
 		>;
 	catalogCache: CatalogCache;
 	db: WorkerDb;

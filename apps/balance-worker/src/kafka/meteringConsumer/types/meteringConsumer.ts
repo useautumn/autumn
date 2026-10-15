@@ -40,5 +40,7 @@ export type MeteringConsumerContext = {
 	replayWindow: ReplayWindow;
 	/** Consumed on the same group membership, so partition n's commands reach partition n's owner. */
 	commands?: { topic: string; handler: TopicRecordHandler };
+	/** Migration batches, co-partitioned with the log like commands. */
+	migrations?: { topic: string; handler: TopicRecordHandler };
 	logger?: Pick<AutumnLogger, "warn">;
 };

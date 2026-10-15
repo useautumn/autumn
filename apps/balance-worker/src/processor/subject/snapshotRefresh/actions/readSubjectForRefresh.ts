@@ -23,18 +23,23 @@ export const readSubjectForRefresh = async ({
 }): Promise<SnapshotRefreshRead | null> => {
 	const { inFlightLoads } = scope.state;
 	const subjectKey = meteringIdentityToSubjectKey({ identity });
+	const customerKey = meteringIdentityToPartitionKey({ identity });
 	// Taken before the read: a flush landing while it runs has a later offset, so its row outranks this one.
 	const logOffset = bookmarkOf({ scope }) - 1n;
-	for (
-		let running = inFlightLoads.inFlight({ subjectKey });
-		running;
-		running = inFlightLoads.inFlight({ subjectKey })
-	)
+	for (;;) {
+		const fence = scope.ctx.writer.waitForFence?.({ customerKey });
+		if (fence) {
+			await fence;
+			continue;
+		}
+		const running = inFlightLoads.inFlight({ subjectKey });
+		if (!running) break;
 		await running.catch(ignoreOthersFailure);
+	}
 	try {
 		const { read, load } = await inFlightLoads.join({
 			subjectKey,
-			customerKey: meteringIdentityToPartitionKey({ identity }),
+			customerKey,
 			start: () => readSubjectRows({ scope, identity, rowsOnly: true }),
 		});
 		// A read an evict overtook may predate the write behind it: the evict's own refresh follows.

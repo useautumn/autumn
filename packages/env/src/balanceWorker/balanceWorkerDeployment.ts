@@ -24,6 +24,7 @@ export function balanceWorkerDeploymentToKafkaNames({
 	meteringTopic: string;
 	ownershipTopic: string;
 	commandTopic: string;
+	migrationTopic: string;
 	catalogInvalidationTopic: string;
 	/** The base group name; a worker on ECS suffixes it with its fleet id so the two Flightcontrol fleets never share a group. */
 	consumerGroup: string;
@@ -32,6 +33,7 @@ export function balanceWorkerDeploymentToKafkaNames({
 		meteringTopic: `${deployment}-events`,
 		ownershipTopic: `${deployment}-ownership`,
 		commandTopic: `${deployment}-commands`,
+		migrationTopic: `${deployment}-migrations`,
 		catalogInvalidationTopic: `${deployment}-catalog-invalidations`,
 		consumerGroup: `${deployment}-workers`,
 	};

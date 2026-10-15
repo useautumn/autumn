@@ -31,6 +31,8 @@ export type SubjectHydrator = {
 		catalog: Catalog;
 		identity: MeteringIdentity;
 	}): WorkerFullSubject;
+	/** Whether a read of the customer or one of its entities is running against Postgres. */
+	isLoadingCustomer(params: { customerKey: string }): boolean;
 	/** An evict arrived: any load of this customer still in flight started before it, so its rows cannot be trusted. */
 	overtakeInFlightLoads(params: { customerKey: string }): void;
 	/** Synchronous: the customer's subjects named are rebuilt as snapshot rows in the background; nothing becomes resident. */

@@ -52,6 +52,7 @@ export type WorkerPartitionsConfig = {
 	topic: string;
 	/** Consumed on the same membership when set; a bare partition group in a test has none. */
 	commandTopic?: string;
+	migrationTopic?: string;
 	partitionsConsumedConcurrently: number;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;

@@ -36,7 +36,8 @@ export type SubjectHydratorContext = {
 	writer: Pick<
 		PartitionWriter,
 		"decide" | "readFreshestState" | "adopt" | "waitForEvicted"
-	>;
+	> &
+		Partial<Pick<PartitionWriter, "waitForFence">>;
 	receiptPolicy: ReceiptPolicy;
 	/** Read at each cold load: `serve` and `verify` probe the subject's snapshot before its rows; absent or any other mode, every load is the rows. */
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;

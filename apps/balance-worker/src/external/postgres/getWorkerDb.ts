@@ -5,6 +5,7 @@ import type {
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { BALANCE_WORKER_SUBJECT_SNAPSHOT_VERSION } from "@autumn/env/balanceWorkerConstants";
 import {
+	applyColdMigrationBatch,
 	claimCustomerByEmail,
 	claimPartitionProgress,
 	commitFlush,
@@ -15,6 +16,7 @@ import {
 	getSubjectRows,
 	insertPartitionProgress,
 	listPooledBalancesWithoutOtherContributions,
+	markMigrationItemRunsSucceeded,
 	type PostgresClient,
 	type PostgresClientConfig,
 	type PostgresLogger,
@@ -87,6 +89,10 @@ export const createWorkerDb = ({
 }: {
 	ctx: WorkerDbContext;
 }): WorkerDb => ({
+	applyColdMigrationBatch: ({ batch }) =>
+		applyColdMigrationBatch({ ctx: { db: ctx.postgres.db }, batch }),
+	markMigrationItemRunsSucceeded: ({ runs }) =>
+		markMigrationItemRunsSucceeded({ ctx: { db: ctx.postgres.db }, runs }),
 	getSubjectRows: ({ identity, asOfTimestampMs }) =>
 		ctx.subjectLoads.run(() =>
 			timeQuery({

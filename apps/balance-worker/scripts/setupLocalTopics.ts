@@ -42,6 +42,11 @@ async function setup(): Promise<void> {
 				replicationFactor: 1,
 			},
 			{
+				topic: env.BALANCE_WORKER_MIGRATION_TOPIC,
+				numPartitions: env.BALANCE_WORKER_PARTITION_COUNT,
+				replicationFactor: 1,
+			},
+			{
 				topic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
 				numPartitions: CATALOG_INVALIDATION_PARTITIONS,
 				replicationFactor: 1,

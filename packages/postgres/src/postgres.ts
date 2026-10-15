@@ -46,6 +46,17 @@ export {
 	readNextOffset,
 	readPartitionProgress,
 } from "./meteringLog/repos/partitionProgress.js";
+export {
+	applyColdMigrationBatch,
+	ColdMigrationBatchRolledBackError,
+	markMigrationItemRunsSucceeded,
+} from "./migrations/repos/applyColdMigrationBatch.js";
+export type {
+	ColdMigrationBatch,
+	ColdMigrationBatchResult,
+	ColdMigrationCustomer,
+	ColdMigrationOp,
+} from "./migrations/types/coldMigrationBatch.js";
 export { getOrgWithFeatures } from "./organizations/repos/getOrgWithFeatures.js";
 export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";
 export { sumPooledContributionGrants } from "./pooledBalances/repos/sumPooledContributionGrants.js";

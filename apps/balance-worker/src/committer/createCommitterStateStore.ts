@@ -141,6 +141,7 @@ export const createCommitterStateStore = ({
 		baseline: "map",
 		...(snapshotQueues && { snapshotQueues }),
 		claimPartition,
+		readClaimToken: claimTokenOf,
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
 		initializePartition: initialize,

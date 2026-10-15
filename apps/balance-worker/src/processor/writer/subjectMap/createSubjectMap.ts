@@ -324,6 +324,14 @@ export const createSubjectMap = ({
 			(subjectKey) => entries.get(subjectKey)?.bytes === 0,
 		);
 
+	const holdsCustomer = ({
+		customerKey,
+		subjectKey,
+	}: {
+		customerKey: string;
+		subjectKey: string;
+	}) => subjectKeysByCustomer.has(customerKey) || entries.has(subjectKey);
+
 	/** As a restart would: each resident subject `drops` picks goes unless a pin holds an unapplied write; hidden ones stay with their writes. */
 	const dropResident: SubjectMap["dropResident"] = ({ drops }) => {
 		const result: ResidentDrop = { evicted: 0, kept: 0, resident: 0 };
@@ -369,6 +377,7 @@ export const createSubjectMap = ({
 		evictCustomer,
 		hideCustomer,
 		isEvicting,
+		holdsCustomer,
 		dropResident,
 		clear,
 		sizeBytes: () => totalBytes,

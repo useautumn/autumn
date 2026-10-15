@@ -13,6 +13,7 @@ import {
 import type { OwnedPartitionHealth } from "../../health/ownedPartitionHealth.js";
 import { createCommandRecordHandler } from "../../kafka/commandConsumer/createCommandRecordHandler.js";
 import { createMeteringConsumer } from "../../kafka/meteringConsumer/createMeteringConsumer.js";
+import { createMigrationRecordHandler } from "../../kafka/migrationConsumer/createMigrationRecordHandler.js";
 import { createOwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import { createPartitions } from "../../partitions/createPartitions.js";
 import type {
@@ -98,6 +99,14 @@ export function createWorkerPartitions({
 			},
 			...(config.commandTopic && {
 				commands: { topic: config.commandTopic, handler: commandHandler },
+			}),
+			...(config.migrationTopic && {
+				migrations: {
+					topic: config.migrationTopic,
+					handler: createMigrationRecordHandler({
+						ctx: { findOwnedRuntime, logger: ctx.logger },
+					}),
+				},
 			}),
 			logger: ctx.logger,
 		},

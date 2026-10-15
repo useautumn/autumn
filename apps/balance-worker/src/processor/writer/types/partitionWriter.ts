@@ -94,8 +94,14 @@ export type PartitionWriter = {
 	/** Once Postgres holds every write before it, drops the cold start's resident subjects; counts what went, was spared and stays pinned. */
 	evictResident(params: { coldStart: ColdStartScope }): Promise<ResidentDrop>;
 	readSubjectMapUsage(): SubjectMapUsage;
-	/** Null unless an evict hid rows whose writes Postgres may still lack; then resolves once it holds them, so a load can read. */
+	/** Null unless an evict hid rows whose writes Postgres may still lack, or a cold migration write is in flight; then resolves once a load can read. */
 	waitForEvicted(params: { customerKey: string }): Promise<void> | null;
+	/** Null unless a cold migration write for the customer is in flight. */
+	waitForFence(params: { customerKey: string }): Promise<void> | null;
+	/** Whether anything of the customer is in memory: resident or hidden rows, a pending write, or a fence. */
+	holdsCustomer(params: { customerKey: string; subjectKey: string }): boolean;
+	/** Fences the customers synchronously; the returned release lets their loads through. */
+	fenceCustomers(params: { customerKeys: readonly string[] }): () => void;
 	/** Synchronous: makes fetched rows the subject's resident state unless something fresher is already there.
 	 *  `baselineAt` is when the rows were read whole; every snapshot of them carries it. */
 	adopt(params: { state: SubjectState; baselineAt?: number }): SubjectState;
@@ -276,6 +282,8 @@ export type PartitionWriterState = {
 	lastHeldGroup: number;
 	/** Encoded bytes of the group being decided. */
 	heldGroupBytes: number;
+	/** Cold customers whose migration is being written straight to Postgres: their loads wait for the write to settle. */
+	migrationFences: Map<string, Promise<void>>;
 };
 
 export type StoreWaiter = {

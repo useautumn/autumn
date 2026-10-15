@@ -64,6 +64,11 @@ export type StateStore = {
 		commandNextOffset: bigint;
 	}): void | Promise<void>;
 	claimPartition?(params: { topic: string; partition: number }): Promise<void>;
+	/** The claim this process stamped on the partition, so a direct write can prove it still owns it. */
+	readClaimToken?(params: {
+		topic: string;
+		partition: number;
+	}): string | undefined;
 	/** Null for a store that keeps no fence, or a partition whose log has carried none. */
 	readOwnerFence?(params: {
 		topic: string;

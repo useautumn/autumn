@@ -16,6 +16,8 @@ import type {
 } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
+import { applyMigrationBatch as applyMigrationBatchPartition } from "./commands/applyMigrationBatch/applyMigrationBatch.js";
+import type { MigrationLaneItem } from "./commands/applyMigrationBatch/types/migrationLaneItem.js";
 import { check as checkPartition } from "./commands/check.js";
 import { checkInline as checkInlineCommand } from "./commands/checkInline.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
@@ -157,6 +159,17 @@ function createProcessor({
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: applyBillingPlanPartition({ scope, request }),
+		});
+	}
+
+	function applyMigrationBatch({
+		items,
+	}: {
+		items: readonly MigrationLaneItem[];
+	}) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: applyMigrationBatchPartition({ scope, items }),
 		});
 	}
 
@@ -335,6 +348,7 @@ function createProcessor({
 		decideTrack,
 		check,
 		applyBillingPlan,
+		applyMigrationBatch,
 		readSubjectState,
 		initialize,
 		evict,

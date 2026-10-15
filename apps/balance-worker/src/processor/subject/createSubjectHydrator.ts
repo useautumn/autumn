@@ -53,6 +53,8 @@ export const createSubjectHydrator = ({
 						}),
 					}),
 			}),
+		isLoadingCustomer: ({ customerKey }) =>
+			scope.state.inFlightLoads.loadingCustomer({ customerKey }),
 		overtakeInFlightLoads: ({ customerKey }) =>
 			scope.state.inFlightLoads.overtakeCustomer({ customerKey }),
 		refreshSnapshots: ({ customer, subjects }) =>

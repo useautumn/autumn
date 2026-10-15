@@ -182,9 +182,43 @@ export function createPartitionWriter({
 	function waitForEvicted({
 		customerKey,
 	}: Parameters<PartitionWriter["waitForEvicted"]>[0]) {
+		const fence = scope.state.migrationFences.get(customerKey);
+		if (fence) return fence;
 		return scope.state.subjects.isEvicting({ customerKey })
 			? allStored({ state: scope.state })
 			: null;
+	}
+
+	function waitForFence({
+		customerKey,
+	}: Parameters<PartitionWriter["waitForFence"]>[0]) {
+		return scope.state.migrationFences.get(customerKey) ?? null;
+	}
+
+	function holdsCustomer({
+		customerKey,
+		subjectKey,
+	}: Parameters<PartitionWriter["holdsCustomer"]>[0]) {
+		const { state } = scope;
+		return (
+			state.migrationFences.has(customerKey) ||
+			state.pendingByCustomerKey.has(customerKey) ||
+			state.subjects.holdsCustomer({ customerKey, subjectKey })
+		);
+	}
+
+	function fenceCustomers({
+		customerKeys,
+	}: Parameters<PartitionWriter["fenceCustomers"]>[0]) {
+		const fences = scope.state.migrationFences;
+		const { promise, resolve } = Promise.withResolvers<void>();
+		for (const customerKey of customerKeys) fences.set(customerKey, promise);
+		function release(): void {
+			for (const customerKey of customerKeys)
+				if (fences.get(customerKey) === promise) fences.delete(customerKey);
+			resolve();
+		}
+		return release;
 	}
 
 	function adopt(params: Parameters<PartitionWriter["adopt"]>[0]) {
@@ -214,6 +248,9 @@ export function createPartitionWriter({
 		snapshotStore,
 		waitForApplies,
 		waitForEvicted,
+		waitForFence,
+		holdsCustomer,
+		fenceCustomers,
 		decide,
 		decideHeld,
 		decideHeldGroup,

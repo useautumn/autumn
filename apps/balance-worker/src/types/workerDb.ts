@@ -2,6 +2,8 @@ import type { MeteringIdentity } from "@autumn/balance-engine";
 import type {
 	CatalogRowIds,
 	CatalogRowsEnvelope,
+	ColdMigrationBatch,
+	ColdMigrationBatchResult,
 	SubjectRowsEnvelope,
 } from "@autumn/postgres";
 
@@ -45,6 +47,17 @@ export type WorkerDb = {
 		pooledBalanceIds: string[];
 		dueBy: number;
 	}): Promise<Record<string, number>>;
+	/** Cold customers' migration in one guarded transaction under the partition's claim. */
+	applyColdMigrationBatch?(params: {
+		batch: ColdMigrationBatch;
+	}): Promise<ColdMigrationBatchResult>;
+	markMigrationItemRunsSucceeded?(params: {
+		runs: readonly {
+			migrationInternalId: string;
+			migrationRunId: string;
+			internalCustomerId: string;
+		}[];
+	}): Promise<number>;
 	/** The pools among `pooledBalanceIds` left with no share once `removedContributionIds` go; license pools never. */
 	listPooledBalancesWithoutOtherContributions(params: {
 		pooledBalanceIds: string[];
