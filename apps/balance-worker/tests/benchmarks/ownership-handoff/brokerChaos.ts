@@ -115,21 +115,34 @@ function mark(label: string): number {
 	return t;
 }
 
-function cluster(...args: string[]): string {
-	const result = Bun.spawnSync(["bash", clusterScript, ...args], {
+/** Async so the hammer keeps its pace while a broker restarts: a broker takes ~20s to listen again. */
+async function cluster(...args: string[]): Promise<string> {
+	const child = Bun.spawn(["bash", clusterScript, ...args], {
+		stdout: "pipe",
 		stderr: "pipe",
 	});
-	if (result.exitCode !== 0)
-		throw new Error(
-			`chaosCluster.sh ${args.join(" ")}: ${result.stderr.toString()}`,
-		);
-	return result.stdout.toString().trim();
+	const [exitCode, stdout, stderr] = await Promise.all([
+		child.exited,
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+	]);
+	if (exitCode !== 0)
+		throw new Error(`chaosCluster.sh ${args.join(" ")}: ${stderr}`);
+	return stdout.trim();
+}
+function isAlive(pid: number): boolean {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 const children: Bun.Subprocess[] = [];
 process.on("exit", () => {
 	for (const child of children) child.kill("SIGKILL");
-	if (FAULT === "cut") cluster("heal");
+	if (FAULT === "cut") Bun.spawnSync(["bash", clusterScript, "heal"]);
 });
 
 // The stall proxies: transparent until told to hold a broker.
@@ -592,19 +605,14 @@ const faultStart = mark(`fault.start ${FAULT} broker ${target}`);
 let faultCleared = faultStart;
 let brokerListeningAt: number | undefined;
 if (FAULT === "kill") {
-	const pid = cluster("kill", String(target), SIGNAL);
+	const pid = await cluster("kill", String(target), SIGNAL);
 	mark(`sent SIG${SIGNAL} to broker ${target} (pid ${pid})`);
-	await waitFor(
-		() =>
-			Bun.spawnSync(["kill", "-0", pid], { stderr: "ignore" }).exitCode !== 0,
-		60_000,
-		"broker exit",
-	);
+	await waitFor(() => !isAlive(Number(pid)), 60_000, "broker exit");
 	mark(`broker ${target} exited`);
 	await Bun.sleep(Math.max(0, faultStart + DOWN_MS - Date.now()));
-	cluster("start-node", String(target));
+	await cluster("start-node", String(target));
 	faultCleared = mark(`broker ${target} restarting`);
-	cluster("wait-node", String(target));
+	await cluster("wait-node", String(target));
 	brokerListeningAt = mark(`broker ${target} listening`);
 } else if (FAULT === "stall") {
 	for (let i = 0; i < STALL_COUNT; i++) {
@@ -618,10 +626,10 @@ if (FAULT === "kill") {
 	await Bun.sleep(Math.max(0, faultCleared - Date.now()));
 	mark("stall.last_hold_ended");
 } else if (FAULT === "cut") {
-	cluster("cut", String(target), CUT_MODE);
+	await cluster("cut", String(target), CUT_MODE);
 	mark(`cut ${CUT_MODE} on broker ${target}`);
 	await Bun.sleep(DOWN_MS);
-	cluster("heal");
+	await cluster("heal");
 	faultCleared = mark(`healed broker ${target}`);
 } else if (FAULT !== "none") {
 	throw new Error(`unknown CHAOS_FAULT ${FAULT}`);
