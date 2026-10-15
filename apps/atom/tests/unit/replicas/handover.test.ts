@@ -12,6 +12,7 @@ import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContrac
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	ATOM_TOKEN,
+	bodyFor,
 	cleanUpReplicas,
 	connect,
 	createReplica,
@@ -125,6 +126,28 @@ const deductOn = async ({
 };
 const deductOnA = ({ a, times }: { a: Replica; times: number }) =>
 	deductOn({ replica: a, times });
+
+/** The subject as Autumn pushes it once its worker applied a lock's track: the writer's seq seen, the lock open. */
+const appliedLockBodyFor = ({
+	customerId,
+	readAt,
+	balance,
+	writerSeqs,
+	openLock,
+}: {
+	customerId: string;
+	readAt: number;
+	balance: number;
+	writerSeqs: Record<string, number>;
+	openLock: { id: string; lock_id: string };
+}) => {
+	const body = JSON.parse(bodyFor({ customerId, readAt, balance })) as {
+		state: { customer: Record<string, unknown>; openLocks?: unknown[] };
+	};
+	body.state.customer.atom_seqs = { atom_1: writerSeqs };
+	body.state.openLocks = [openLock];
+	return JSON.stringify(body);
+};
 
 const journalOwing = (replica: Replica, customerId = CUSTOMER) =>
 	replica.slots
@@ -734,6 +757,248 @@ describe("ownership changes hands by grant: the old owner stops first, the new o
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
 		expect((await reply.json()).balance.remaining).toBe(8);
 		expect(owedSeqs(a)).toEqual([1, 2]);
+	});
+});
+
+describe("a lock taken on the leaving owner", () => {
+	const lockCall = (body: Record<string, unknown>) => ({
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			authorization: "Bearer am_sk_test_1",
+			"x-atom-token": ATOM_TOKEN,
+			"x-api-version": LATEST_VERSION,
+		},
+		body: JSON.stringify(body),
+	});
+	const lockOn = (replica: Replica) =>
+		replica.app.request(
+			"/v1/balances.check",
+			lockCall({
+				customer_id: CUSTOMER,
+				feature_id: "messages",
+				required_balance: 3,
+				lock: { enabled: true, lock_id: "lock_1" },
+			}),
+		);
+	const finalizeOn = (replica: Replica) =>
+		replica.app.request(
+			"/v1/balances.finalize",
+			lockCall({ customer_id: CUSTOMER, lock_id: "lock_1", action: "release" }),
+		);
+
+	test("still unsent at the move is handed with its lock row, settled on the new owner, and handed in once before its finalize", async () => {
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({ bForwarder: journals.forwarder });
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		expect(await remainingAt(a)).toBe(7);
+		const aWriter = journalOwing(a)?.writerId;
+
+		await a.leave();
+
+		expect(await remainingAt(b)).toBe(7);
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await reply.json()).toEqual({ success: true });
+		expect(await remainingAt(b)).toBe(10);
+		// B hands the lock's track in under A's writer, then its own finalize after it, so Autumn applies them in order.
+		await until(() => journals.handedIn.length === 2);
+		expect(
+			journals.handedIn.map(({ type, writer }) => ({
+				type,
+				writer: writer === aWriter ? "a" : "b",
+			})),
+		).toEqual([
+			{ type: "track", writer: "a" },
+			{ type: "finalize", writer: "b" },
+		]);
+	});
+
+	test("already sent to Autumn by the leaver is still settled on the new owner, which hands in the finalize alone", async () => {
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({
+			aForwarder: journals.forwarder,
+			bForwarder: journals.forwarder,
+		});
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		await until(() => journals.appended.length === 1);
+		const aWriter = journalOwing(a)?.writerId;
+
+		await a.leave();
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await remainingAt(b)).toBe(10);
+		await until(() => journals.handedIn.length === 2);
+		await Bun.sleep(60);
+		expect(
+			journals.handedIn.map(({ type, writer }) => ({
+				type,
+				writer: writer === aWriter ? "a" : "b",
+			})),
+		).toEqual([
+			{ type: "track", writer: "a" },
+			{ type: "finalize", writer: "b" },
+		]);
+	});
+
+	test("whose track Autumn already applied (nothing owed) is still settled on the new owner, from the row the leaver hands with its entries", async () => {
+		const calls: string[] = [];
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({
+			aForwarder: journals.forwarder,
+			bForwarder: journals.forwarder,
+		});
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		expect((await lockOn(a)).status).toBe(200);
+		await until(() => journals.handedIn.length === 1);
+		const aWriter = journalOwing(a)?.writerId ?? "";
+		// The row's id is the track's lock id, as the worker inserts it.
+		const rowId = journals.commands[0]?.lock?.id ?? "";
+		expect(rowId).not.toBe("");
+		// Autumn's worker applied the lock's track: its push names A's seq and shows the lock open, so nothing stays owed.
+		for (const replica of [a, b])
+			await replica.slots.processorFor({ customerId: CUSTOMER }).setSubject({
+				customerId: CUSTOMER,
+				body: appliedLockBodyFor({
+					customerId: CUSTOMER,
+					readAt: 1800,
+					balance: 7,
+					writerSeqs: { [aWriter]: 1 },
+					openLock: { id: rowId, lock_id: "lock_1" },
+				}),
+			});
+		expect(journalOwing(a)).toBeUndefined();
+
+		await a.leave();
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(await reply.json()).toEqual({ success: true });
+		expect(calls).toEqual([]);
+		expect(await remainingAt(b)).toBe(10);
+		await until(() => journals.handedIn.length === 2);
+		expect(journals.handedIn[1]).toEqual({
+			type: "finalize",
+			writer: journalOwing(b)?.writerId ?? "",
+		});
+	});
+
+	test("finalized on the new owner while its handoff is still on the way waits at the barrier like a check, then settles here", async () => {
+		const calls: string[] = [];
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		// The handoff takes 20 ms to land; the finalize reaches B the moment B hears A is leaving.
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname === PEER_HANDOFF_PATH)
+					await Bun.sleep(20);
+			},
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const reply = await finalizeOn(b);
+		await leaving;
+
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(calls).toEqual([]);
+		expect(await remainingAt(b)).toBe(10);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+
+	test("taken on the stand-in after the flip is taken on the new owner instead, so its finalize settles there", async () => {
+		const calls: string[] = [];
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		// B owns everything while A is away; the handoff to A takes 20 ms to land.
+		let handoffs = 0;
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname !== PEER_HANDOFF_PATH) return;
+				handoffs++;
+				await Bun.sleep(20);
+			},
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		await deductOn({ replica: b, times: 1 });
+
+		const probing = b.probeOnce();
+		await until(() => handoffs === 1);
+		// B has flipped A: the lock request on B's public port goes to A, which waits for B's handoff and takes it.
+		const lock = await lockOn(b);
+		await probing;
+
+		expect(lock.status).toBe(200);
+		expect(lock.headers.get("x-atom-proxied")).toBe("owner");
+		expect(await remainingAt(a)).toBe(6);
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(calls).toEqual([]);
+		expect(await remainingAt(a)).toBe(9);
+	});
+
+	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
+		const calls: string[] = [];
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		expect((await lockOn(a)).status).toBe(200);
+		// B unreachable for A's leave: nothing is handed.
+		connect({ replicas: [a] });
+		await a.leave();
+		connect({
+			replicas: [a, b],
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		b.membership.markLeaving(A);
+
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBe("lock_not_held");
+		expect(calls).toEqual(["/v1/balances.finalize"]);
 	});
 });
 
