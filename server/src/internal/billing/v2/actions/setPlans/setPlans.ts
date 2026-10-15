@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { logBillingApprovalDecision } from "@/internal/approvals/enforce/logBillingApprovalDecision";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
@@ -35,11 +36,14 @@ export const setPlans = async ({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	approvalAction = "billing.set_plans",
 }: {
 	ctx: AutumnContext;
 	params: SetPlansParamsV0;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	/** create_schedule runs through set plans but is its own approval action. */
+	approvalAction?: "billing.set_plans" | "billing.schedule";
 }): Promise<SetPlansResult> => {
 	// Explicit, so a checkout that resumes these params keeps the same policy.
 	const resolvedParams: SetPlansParamsV0 = {
@@ -148,6 +152,19 @@ export const setPlans = async ({
 		});
 		return result;
 	}
+
+	// Approvals: log the decision (shadow mode, never blocks)
+	await logBillingApprovalDecision({
+		ctx,
+		billingContext,
+		billingPlan,
+		action: approvalAction,
+		// Matches each route's preview: set plans scopes next_cycle to its subscription, schedule doesn't.
+		nextCycleStripeSubscriptionId:
+			approvalAction === "billing.set_plans"
+				? billingContext.stripeSubscription?.id
+				: undefined,
+	});
 
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
