@@ -9,6 +9,7 @@ import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../lib/forward/cannotAnswerError.js";
+import { CustomerMovedError } from "../../processor/ownership/customerMovedError.js";
 import type { CheckRequest } from "../../processor/types/check.js";
 import type { FinalizeRequest } from "../../processor/types/finalize.js";
 import type { TrackRequest } from "../../processor/types/track.js";
@@ -108,6 +109,7 @@ export const errorToReply = ({
 	id,
 	ok: false,
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
+	movedTo: error instanceof CustomerMovedError ? error.owner : null,
 	invalid: error instanceof InvalidPushError,
 	unavailable: error instanceof OwnerUnavailableError,
 	apiError: apiErrorOf(error),
@@ -117,6 +119,7 @@ export const errorToReply = ({
 /** The owner's failure, thrown again on the caller's thread: a check it cannot answer is still forwarded, a bad push still refused. */
 export const replyToError = ({
 	cannotAnswer,
+	movedTo,
 	invalid,
 	unavailable,
 	apiError,
@@ -124,6 +127,7 @@ export const replyToError = ({
 	thread,
 }: {
 	cannotAnswer: ForwardReason | null;
+	movedTo: string | null;
 	invalid: boolean;
 	unavailable: boolean;
 	apiError: AtomError | null;
@@ -131,6 +135,7 @@ export const replyToError = ({
 	thread: number;
 }): Error => {
 	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
+	if (movedTo) return new CustomerMovedError({ owner: movedTo });
 	if (invalid) return new InvalidPushError(message);
 	if (unavailable) return new OwnerUnavailableError({ thread });
 	if (apiError) return new AtomApiError({ answer: apiError });
