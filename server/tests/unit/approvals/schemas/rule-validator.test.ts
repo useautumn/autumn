@@ -116,6 +116,39 @@ const REJECTED: { name: string; rule: unknown; path: string }[] = [
 		}),
 		path: "when.incoming.$every.feature_quantities.$every.$or.0.feature_id",
 	},
+	// An empty group can never match, so it's always a mistake.
+	{
+		name: "empty $or inside an incoming element",
+		rule: invalid({ when: { incoming: { $every: { $or: [] } } } }),
+		path: "when.incoming.$every.$or",
+	},
+	{
+		name: "empty $or inside a customer plan filter",
+		rule: invalid({ when: { customer: { plan: { $some: { $or: [] } } } } }),
+		path: "when.customer.plan.$some.$or",
+	},
+	// `custom` describes an existing customer plan; incoming plans use `customized`.
+	{
+		name: "custom on an incoming plan",
+		rule: invalid({ when: { incoming: { $every: { custom: true } } } }),
+		path: "when.incoming.$every.custom",
+	},
+	{
+		name: "custom on an incoming plan under a top-level $or",
+		rule: invalid({
+			when: {
+				$or: [{ paid: false }, { incoming: { $every: { custom: true } } }],
+			},
+		}),
+		path: "when.$or.1.incoming.$every.custom",
+	},
+	{
+		name: "custom on an incoming plan inside $or",
+		rule: invalid({
+			when: { incoming: { $every: { $or: [{ custom: false }] } } },
+		}),
+		path: "when.incoming.$every.$or.0.custom",
+	},
 	// Balances rules are always about one feature.
 	{
 		name: "grant credits with no when",
