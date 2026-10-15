@@ -6,6 +6,7 @@
  * - A live feature rename moves `feature_id` references the same way.
  * - Renames in sandbox leave rules alone: rules are live-only, and the ids are per env.
  * - Rules of other orgs and other ids are untouched; versions don't change (it's a reference fix, not an edit).
+ * - Concurrent renames touching one rule serialize, so neither undoes the other.
  */
 
 import { expect, test } from "bun:test";
@@ -86,5 +87,36 @@ test(`${chalk.yellowBright("renames: live plan and feature renames rewrite rules
 	} finally {
 		await approvalRuleRepo.delete({ ...live, ruleId: planRuleId });
 		await approvalRuleRepo.delete({ ...live, ruleId: featureRuleId });
+	}
+});
+
+test(`${chalk.yellowBright("renames: parallel renames of two ids in one rule both land")}`, async () => {
+	const suffix = crypto.randomUUID().slice(0, 8);
+	const [first, second] = [`first_${suffix}`, `second_${suffix}`];
+	const ruleId = await saveRule({
+		when: { $or: [{ feature_id: first }, { feature_id: second }] },
+	});
+	const liveCtx = { ...ctx, env: AppEnv.Live };
+
+	try {
+		await Promise.all([
+			rewriteApprovalRuleIds({
+				ctx: liveCtx,
+				key: "feature_id",
+				fromId: first,
+				toId: `${first}_v2`,
+			}),
+			rewriteApprovalRuleIds({
+				ctx: liveCtx,
+				key: "feature_id",
+				fromId: second,
+				toId: `${second}_v2`,
+			}),
+		]);
+		expect((await storedRule(ruleId))?.when).toEqual({
+			$or: [{ feature_id: `${first}_v2` }, { feature_id: `${second}_v2` }],
+		});
+	} finally {
+		await approvalRuleRepo.delete({ ...live, ruleId });
 	}
 });
