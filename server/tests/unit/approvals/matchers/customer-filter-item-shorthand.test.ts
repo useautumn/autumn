@@ -12,44 +12,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
-import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
 import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
-import { plans, planToCustomerProduct } from "./matcherFixtures";
+import { type CustomerName, matchingCustomers } from "./matcherFixtures";
 import { compileCustomerFilter } from "./planFilterCases";
-
-const customers = {
-	paying: {
-		id: "paying",
-		customer_products: [planToCustomerProduct({ product: plans.pro })],
-	},
-	downgraded: {
-		id: "downgraded",
-		customer_products: [
-			planToCustomerProduct({ product: plans.free }),
-			planToCustomerProduct({
-				product: plans.pro,
-				status: CusProductStatus.Expired,
-			}),
-		],
-	},
-	unlimited: {
-		id: "unlimited",
-		customer_products: [planToCustomerProduct({ product: plans.unlimited })],
-	},
-	noPlan: { id: "noPlan", customer_products: [] },
-};
-
-type CustomerName = keyof typeof customers;
-const CUSTOMER_NAMES = Object.keys(customers) as CustomerName[];
-
-const matchingCustomers = ({ filter }: { filter: CustomerFilter }) =>
-	CUSTOMER_NAMES.filter((customerName) =>
-		customerFilterMatchesFullCustomer({
-			filter,
-			fullCustomer: customers[customerName],
-		}),
-	);
 
 const ITEM_CASES: {
 	name: string;
