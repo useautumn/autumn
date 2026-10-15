@@ -74,6 +74,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			orgId,
 			env,
 			skipL1: true,
+			allowNotFound: true,
 			requestId: ctx.id,
 		});
 
@@ -81,10 +82,6 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		const candidate = await loadOrg({
 			orgId: sandboxOrgId,
 			env: AppEnv.Sandbox,
-		}).catch((error) => {
-			if (error instanceof RecaseError && error.code === ErrCode.OrgNotFound)
-				return null;
-			throw error;
 		});
 		assertSandboxAccess({
 			sessionOrgId: orgId,
