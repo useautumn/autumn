@@ -16,6 +16,10 @@ export const RoleAccessMapSchema = z
 	.refine((access) => access.analytics !== "write", {
 		message: "Analytics access is read-only.",
 		path: ["analytics"],
+	})
+	// A role with no scopes would hit the scope check's legacy fail-open and allow everything.
+	.refine((access) => Object.values(access).some((level) => level !== "none"), {
+		message: "A role needs access to at least one resource.",
 	});
 export type RoleAccessMap = z.infer<typeof RoleAccessMapSchema>;
 
