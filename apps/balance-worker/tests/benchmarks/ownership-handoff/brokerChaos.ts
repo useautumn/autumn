@@ -3,7 +3,7 @@
  * subprocesses, the server's routing client) and reports what clients saw and whether the money adds
  * up afterwards. One fault per run, chosen by CHAOS_FAULT:
  *
- *   kill   CHAOS_SIGNAL=TERM|KILL, broker down for CHAOS_DOWN_MS (20s), then restarted
+ *   kill   CHAOS_SIGNAL=TERM|KILL, broker down for CHAOS_DOWN_MS (20s), then restarted; CHAOS_KILL_CYCLES repeats it
  *   stall  CHAOS_STALL_MS held CHAOS_STALL_COUNT times, CHAOS_STALL_GAP_MS apart, through stallProxy.ts
  *   cut    CHAOS_CUT_MODE=clients|brokers|full: iptables drops the broker's traffic for CHAOS_DOWN_MS (60s)
  *   none   the control
@@ -67,6 +67,9 @@ const DOWN_MS = Number(
 	process.env.CHAOS_DOWN_MS ?? (FAULT === "cut" ? 60_000 : 20_000),
 );
 const CUT_MODE = process.env.CHAOS_CUT_MODE ?? "clients";
+/** Kill and restart the broker this many times, CHAOS_KILL_CYCLE_GAP_MS after each comes back. */
+const KILL_CYCLES = Number(process.env.CHAOS_KILL_CYCLES ?? 1);
+const KILL_CYCLE_GAP_MS = Number(process.env.CHAOS_KILL_CYCLE_GAP_MS ?? 15_000);
 const STALL_MS = Number(process.env.CHAOS_STALL_MS ?? 1_500);
 const STALL_COUNT = Number(process.env.CHAOS_STALL_COUNT ?? 10);
 const STALL_GAP_MS = Number(process.env.CHAOS_STALL_GAP_MS ?? 6_000);
@@ -605,15 +608,19 @@ const faultStart = mark(`fault.start ${FAULT} broker ${target}`);
 let faultCleared = faultStart;
 let brokerListeningAt: number | undefined;
 if (FAULT === "kill") {
-	const pid = await cluster("kill", String(target), SIGNAL);
-	mark(`sent SIG${SIGNAL} to broker ${target} (pid ${pid})`);
-	await waitFor(() => !isAlive(Number(pid)), 60_000, "broker exit");
-	mark(`broker ${target} exited`);
-	await Bun.sleep(Math.max(0, faultStart + DOWN_MS - Date.now()));
-	await cluster("start-node", String(target));
-	faultCleared = mark(`broker ${target} restarting`);
-	await cluster("wait-node", String(target));
-	brokerListeningAt = mark(`broker ${target} listening`);
+	for (let cycle = 0; cycle < KILL_CYCLES; cycle++) {
+		const cycleStart = Date.now();
+		const pid = await cluster("kill", String(target), SIGNAL);
+		mark(`sent SIG${SIGNAL} to broker ${target} (pid ${pid})`);
+		await waitFor(() => !isAlive(Number(pid)), 60_000, "broker exit");
+		mark(`broker ${target} exited`);
+		await Bun.sleep(Math.max(0, cycleStart + DOWN_MS - Date.now()));
+		await cluster("start-node", String(target));
+		faultCleared = mark(`broker ${target} restarting`);
+		await cluster("wait-node", String(target));
+		brokerListeningAt = mark(`broker ${target} listening`);
+		if (cycle < KILL_CYCLES - 1) await Bun.sleep(KILL_CYCLE_GAP_MS);
+	}
 } else if (FAULT === "stall") {
 	for (let i = 0; i < STALL_COUNT; i++) {
 		const at = Date.now();
