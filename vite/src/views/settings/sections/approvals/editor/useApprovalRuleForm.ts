@@ -3,7 +3,6 @@ import type {
 	ApprovalRule,
 	ApprovalRuleIssue,
 } from "@autumn/shared";
-import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import {
@@ -18,16 +17,6 @@ import {
 	whenValuesFor,
 } from "./ruleEditorValues";
 
-const matchesPath = ({
-	issue,
-	path,
-}: {
-	issue: ApprovalRuleIssue;
-	path: string;
-}) => issue.path === path || issue.path.startsWith(`${path}.`);
-
-const PINNED_PATH = "when.feature_id";
-
 export const useApprovalRuleForm = ({
 	rule,
 	onSaved,
@@ -36,51 +25,33 @@ export const useApprovalRuleForm = ({
 	onSaved: () => void;
 }) => {
 	const save = useSaveApprovalRule();
-	const [opened] = useState(() =>
-		rule
-			? ruleToEditorValues({ rule })
-			: { editable: true, values: emptyEditorValues() },
-	);
-	const [issues, setIssues] = useState<{
-		server: ApprovalRuleIssue[];
-		rows: EditorRowIssue[];
-	}>({ server: [], rows: [] });
+	const [serverIssues, setServerIssues] = useState<ApprovalRuleIssue[]>([]);
 
 	const form = useAppForm({
-		defaultValues: opened.values,
+		defaultValues: rule
+			? ruleToEditorValues({ rule }).values
+			: emptyEditorValues(),
 		onSubmit: async ({ value }) => {
 			const result = editorValuesToParams({ values: value });
-			if (!result.ok) return setIssues({ server: [], rows: result.issues });
-			setIssues({ server: [], rows: [] });
+			if (!result.ok) return;
+			setServerIssues([]);
 			try {
 				await save.mutateAsync({ id: rule?.id ?? null, params: result.params });
 				onSaved();
 			} catch (error) {
-				setIssues({ server: invalidRuleIssues({ error }) ?? [], rows: [] });
+				setServerIssues(invalidRuleIssues({ error }) ?? []);
 			}
 		},
 	});
 
-	const serverIssue = (path: string) =>
-		issues.server.find((issue) => matchesPath({ issue, path }))?.message;
-	const serverPinned = serverIssue(PINNED_PATH);
-
 	return {
 		form,
-		readOnly: !opened.editable,
 		isSaving: save.isPending,
-		serverIssue,
-		whenError: issues.server.find(
-			(issue) =>
-				matchesPath({ issue, path: "when" }) && issue.path !== PINNED_PATH,
-		)?.message,
-		rowIssues: serverPinned
-			? [
-					...issues.rows,
-					{ group: "pinned" as const, row: 0, message: serverPinned },
-				]
-			: issues.rows,
-		clearRowIssues: () => setIssues((prev) => ({ ...prev, rows: [] })),
+		/** The first server issue under `path` ("name", "when"…), for inline display. */
+		serverIssue: (path: string) =>
+			serverIssues.find(
+				(issue) => issue.path === path || issue.path.startsWith(`${path}.`),
+			)?.message,
 		/** A different set of `when` fields starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,

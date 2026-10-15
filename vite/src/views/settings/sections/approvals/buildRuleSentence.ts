@@ -57,7 +57,7 @@ const OPERATORS: Record<string, string> = {
 	$gte: "≥",
 };
 
-export const TIMINGS: Record<string, string> = {
+const TIMINGS: Record<string, string> = {
 	cancel_end_of_cycle: "End of cycle",
 	cancel_immediately: "Immediately",
 	end_of_cycle: "End of cycle",
