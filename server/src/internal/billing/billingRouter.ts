@@ -1,5 +1,7 @@
 import { Hono } from "hono";
 import { createRouterRateLimiter } from "@/honoMiddlewares/routerRateLimiter/index.js";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
+import { updateRequestToApprovalAction } from "@/internal/approvals/enforce/access/updateRequestToApprovalAction.js";
 import { handleGenerateBillingRequest } from "@/internal/billing/v2/handlers/handleGenerateBillingRequest.js";
 import { handlePreviewAttach } from "@/internal/billing/v2/handlers/handlePreviewAttach.js";
 import { handleResolveBillingRequest } from "@/internal/billing/v2/handlers/handleResolveBillingRequest.js";
@@ -52,18 +54,34 @@ billingRpcRouter.post(
 	"/billing.advance_test_clock",
 	...handleLegacyAdvanceTestClock,
 );
-billingRpcRouter.post("/billing.update", ...handleUpdateSubscription);
+billingRpcRouter.post(
+	"/billing.update",
+	declareApprovalAction({ resolve: updateRequestToApprovalAction }),
+	...handleUpdateSubscription,
+);
 billingRpcRouter.post(
 	"/billing.preview_update",
 	...handlePreviewUpdateSubscription,
 );
-billingRpcRouter.post("/billing.attach", ...handleAttachV2);
-billingRpcRouter.post("/billing.create_schedule", ...handleCreateSchedule);
+billingRpcRouter.post(
+	"/billing.attach",
+	declareApprovalAction({ resolve: () => "billing.attach" }),
+	...handleAttachV2,
+);
+billingRpcRouter.post(
+	"/billing.create_schedule",
+	declareApprovalAction({ resolve: () => "billing.schedule" }),
+	...handleCreateSchedule,
+);
 billingRpcRouter.post(
 	"/billing.preview_create_schedule",
 	...handlePreviewCreateSchedule,
 );
-billingRpcRouter.post("/billing.set_plans", ...handleSetPlans);
+billingRpcRouter.post(
+	"/billing.set_plans",
+	declareApprovalAction({ resolve: () => "billing.set_plans" }),
+	...handleSetPlans,
+);
 billingRpcRouter.post("/billing.preview_set_plans", ...handlePreviewSetPlans);
 billingRpcRouter.post("/billing.multi_attach", ...handleMultiAttach);
 billingRpcRouter.post(

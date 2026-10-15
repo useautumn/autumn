@@ -1,13 +1,17 @@
 import {
+	ACTIONS,
 	type ApprovalAction,
 	type BillingContext,
 	type BillingPlan,
+	ErrCode,
 	PermissionDeniedError,
+	RecaseError,
 	tryCatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateBillingApproval } from "@/internal/approvals/evaluate/evaluateBillingApproval";
 import { billingFactsToJson } from "@/internal/approvals/facts/billing/billingFactsToJson";
+import { scopesWereGrantedByRules } from "./access/routeApprovalAction";
 import { logApprovalDecision } from "./logApprovalDecision";
 
 type CheckBillingApprovalParams = {
@@ -34,10 +38,20 @@ const decideBillingApproval = async ({
 		action,
 		nextCycleStripeSubscriptionId,
 	});
+	const rulesDecide =
+		approval !== null && approval.verdict.verdict !== "fallback";
+	// Rules let this member past the route's scopes, so a request they don't decide is out of scope.
+	if (!rulesDecide && scopesWereGrantedByRules({ ctx })) {
+		throw new RecaseError({
+			message: `Insufficient scopes. Missing: ${ACTIONS[action].scope}`,
+			code: ErrCode.InsufficientScopes,
+			statusCode: 403,
+		});
+	}
 	if (!approval) return;
 
 	const { principal, rules, verdict, facts } = approval;
-	// Exempt members and members no rule names keep today's checks, so there's nothing to decide.
+	// Exempt members and members no rule names keep today's checks, so there's nothing to log.
 	if (verdict.verdict === "fallback" || !facts) return;
 
 	await logApprovalDecision({
