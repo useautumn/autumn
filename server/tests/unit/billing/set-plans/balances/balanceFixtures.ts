@@ -255,6 +255,7 @@ export const previewBalanceChanges = ({
 	return setPlansPhaseBalanceChanges({
 		ctx: balanceCtx,
 		originalFullCustomer: fullCustomer,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		phaseCustomers: buildSetPlansPhaseCustomers({
 			ctx: balanceCtx,
 			fullCustomer,

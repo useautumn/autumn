@@ -158,3 +158,74 @@ test.concurrent(
 		expect(preview.warnings).toEqual([]);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("preview-set-plans: removing a middle phase keeps the subscription's items and projects later resets")}`,
+	async () => {
+		const customerId = "preview-set-plans-remove-middle";
+		const pro = products.base({
+			id: "preview-set-plans-remove-middle-pro",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		});
+		const premium = products.base({
+			id: "preview-set-plans-remove-middle-premium",
+			items: [
+				items.monthlyMessages({ includedUsage: 500 }),
+				items.monthlyPrice({ price: 50 }),
+			],
+		});
+
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
+		const proAgainAt = Date.now() + ms.days(100);
+		await autumnV2_2.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] },
+				{
+					starts_at: Date.now() + ms.days(45),
+					plans: [{ plan_id: premium.id }],
+				},
+				{ starts_at: proAgainAt, plans: [{ plan_id: pro.id }] },
+			],
+		});
+
+		const preview = await autumnV2_2.billing.previewSetPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now" as const, plans: [{ plan_id: pro.id }] },
+				{ starts_at: proAgainAt, plans: [{ plan_id: pro.id }] },
+			],
+		});
+
+		expect(
+			preview.processor_changes.map((change) => [change.type, change.action]),
+		).toEqual([["subscription_schedule", "released"]]);
+		const laterPhase = preview.phases[1];
+		expect(
+			laterPhase.processor_items.map((item) => [
+				item.plan_id,
+				item.managed_by_autumn,
+			]),
+		).toEqual([[pro.id, true]]);
+
+		const messages = laterPhase.balance_changes.find(
+			(change) => change.feature_id === TestFeature.Messages,
+		);
+		expect(messages?.balance.next_reset_at).toBeGreaterThan(
+			laterPhase.starts_at,
+		);
+		expect(messages?.balance.next_reset_at).toBeLessThanOrEqual(
+			laterPhase.starts_at + ms.days(31),
+		);
+	},
+);
