@@ -69,6 +69,16 @@ describe("evaluateApprovalRules: trials and paid", () => {
 		).toBe("deny");
 	});
 
+	test("free trial < 2 months caps fractional year trials at 60 / 365", () => {
+		const yearTrial = (length: number) =>
+			verdictFor(
+				enterpriseWith({ freeTrial: facts.trial({ length, type: "year" }) }),
+			);
+		expect(yearTrial(0.1)).toBe("allow");
+		expect(yearTrial(60 / 365)).toBe("deny");
+		expect(yearTrial(0.2)).toBe("deny");
+	});
+
 	test("no trial passes the trial cap, but only on the named plan", () => {
 		expect(verdictFor(enterpriseWith({ freeTrial: null }))).toBe("allow");
 		expect(

@@ -40,6 +40,19 @@ const asTrialFilter = ({ filter }: { filter: unknown }) =>
 		? (filter as FreeTrialFilter)
 		: undefined;
 
+const hasWholeLength = ({ filter }: { filter: unknown }) => {
+	const length = asTrialFilter({ filter })?.duration_length;
+	const bounds =
+		typeof length === "number"
+			? [length]
+			: isPlainObject(length)
+				? Object.values(length).flat()
+				: [];
+	return bounds.every(
+		(bound) => typeof bound !== "number" || Number.isInteger(bound),
+	);
+};
+
 /** "< 2 months", "≤ 31 days, card required". */
 const describeTrialLimit = ({ filter }: { filter: unknown }) => {
 	const trialFilter = asTrialFilter({ filter });
@@ -92,7 +105,12 @@ export const freeTrialField = <Parent>({
 			}),
 		describeLimit: describeTrialLimit,
 		describeLimits: ({ filters }) => {
-			const largestUnitFilter = filters.reduce((largest, filter) => {
+			// A year branch like `< 60 / 365` exists for exactness, not display.
+			const wholeFilters = filters.filter((filter) =>
+				hasWholeLength({ filter }),
+			);
+			const candidates = wholeFilters.length > 0 ? wholeFilters : filters;
+			const largestUnitFilter = candidates.reduce((largest, filter) => {
 				const unit = asTrialFilter({ filter })?.duration_type;
 				const largestUnit = asTrialFilter({ filter: largest })?.duration_type;
 				const isLarger =
@@ -100,7 +118,7 @@ export const freeTrialField = <Parent>({
 					(typeof largestUnit !== "string" ||
 						UNITS_BY_SIZE.indexOf(unit) > UNITS_BY_SIZE.indexOf(largestUnit));
 				return isLarger ? filter : largest;
-			}, filters[0]);
+			}, candidates[0]);
 			return describeTrialLimit({ filter: largestUnitFilter });
 		},
 		// Shows the trial's length, plus only the other parts the rule tests.
