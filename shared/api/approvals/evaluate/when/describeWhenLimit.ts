@@ -7,8 +7,17 @@ export const describeWhenLimit = <Parent>({
 }: {
 	when: WhenFilter;
 	fields: WhenFields<Parent>;
-}) =>
+}): string =>
 	Object.entries(when)
-		.filter(([key]) => fields[key] !== undefined)
-		.map(([key, filter]) => String(fields[key].describeLimit({ filter })))
+		.flatMap(([key, filter]) => {
+			if (key === "$or" || key === "$and") {
+				const branches = (filter as WhenFilter[]).map((branch) =>
+					describeWhenLimit({ when: branch, fields }),
+				);
+				const joined = branches.join(key === "$or" ? " or " : ", ");
+				return branches.length > 1 ? [`(${joined})`] : [joined];
+			}
+			const field = fields[key];
+			return field ? [String(field.describeLimit({ filter }))] : [];
+		})
 		.join(", ");

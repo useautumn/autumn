@@ -19,14 +19,19 @@ import type { WhenFields } from "../whenFieldTypes";
 type FeatureQuantity = IncomingPlanFacts["feature_quantities"][number];
 type Discount = BillingChangeFacts["discounts"][number];
 
-const incomingPlanFields: WhenFields<IncomingPlanFacts> = {
-	...planFields<IncomingPlanFacts>({
+// `custom` describes an existing customer plan, so incoming plans leave it out
+// (an unknown key fails closed); the request-level flag is `customized`.
+const { custom: _custom, ...incomingPlanBaseFields } =
+	planFields<IncomingPlanFacts>({
 		planLabel: "Incoming plan",
 		matchesPlan: ({ filter, item }) =>
 			planFilterMatchesProduct({ filter, product: item.product }),
 		readPlanId: (item) => item.product.id,
 		readVersion: (item) => item.product.version ?? null,
-	}),
+	});
+
+const incomingPlanFields: WhenFields<IncomingPlanFacts> = {
+	...incomingPlanBaseFields,
 	free_trial: freeTrialField<IncomingPlanFacts>({
 		read: (item) => item.free_trial,
 	}),

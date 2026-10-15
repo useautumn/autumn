@@ -24,6 +24,16 @@ export const findOrGroupFailure = <Parent>({
 	path: string;
 	context: WhenMatchContext;
 }): ApprovalViolation | null => {
+	// Saved rules can't hold an empty group; if one slips through, fail closed.
+	if (branches.length === 0) {
+		return {
+			field: path || "$or",
+			label: "Conditions",
+			limit: "no conditions",
+			actual: "no match",
+		};
+	}
+
 	const branchFailures = branches.map((branch) =>
 		findWhenFailures({ when: branch, value, fields, path, context }),
 	);
@@ -45,11 +55,13 @@ export const findOrGroupFailure = <Parent>({
 	const filters = branches
 		.map((branch) => branch[keys[0]])
 		.filter((filter) => filter !== null);
-	const limit =
-		onlyField.describeLimits?.({ filters }) ??
-		filters
-			.map((filter) => String(onlyField.describeLimit({ filter })))
-			.join(" or ");
+	const allowsOnlyNone = filters.length === 0;
+	const limit = allowsOnlyNone
+		? "none"
+		: (onlyField.describeLimits?.({ filters }) ??
+			filters
+				.map((filter) => String(onlyField.describeLimit({ filter })))
+				.join(" or "));
 
 	return {
 		field: joinFieldPath({ path, key: keys[0] }),
