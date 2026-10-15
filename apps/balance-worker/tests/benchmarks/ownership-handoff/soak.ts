@@ -59,6 +59,8 @@ const DURATION_MS = Number(process.env.SOAK_DURATION_MS ?? 600_000);
 const SAMPLE_MS = Number(process.env.SOAK_SAMPLE_MS ?? 60_000);
 const GROUP_SAMPLE_MS = Number(process.env.SOAK_GROUP_SAMPLE_MS ?? 600_000);
 const CHURN_INTERVAL_MS = Number(process.env.SOAK_CHURN_INTERVAL_MS ?? 0);
+/** `main` runs src/main.ts (HTTP worker threads, the producer thread, the real SIGTERM path) instead of benchWorker.ts. */
+const WORKER_ENTRY = process.env.SOAK_WORKER_ENTRY ?? "bench";
 const HERALD_MEMBERS = Number(process.env.SOAK_HERALD_MEMBERS ?? 2);
 const SEED_BALANCE = 1_000_000_000;
 const outDir = process.env.SOAK_OUT_DIR ?? join(tmpdir(), "soak");
@@ -421,20 +423,38 @@ async function spawnWorker(name: string): Promise<Worker> {
 		LIBRDKAFKA_DEBUG: __,
 		...inherited
 	} = process.env;
-	const child = Bun.spawn(
-		["bun", new URL("./benchWorker.ts", import.meta.url).pathname],
-		{
-			env: {
-				...inherited,
-				NODE_ENV: "test",
-				BENCH_STATS_INTERVAL_MS: String(SAMPLE_MS),
-				AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride,
-				BENCH_WORKER_ENV: JSON.stringify(env),
-			},
-			stdout: "pipe",
-			stderr: "pipe",
-		},
+	const inheritedEnv = Object.fromEntries(
+		Object.entries(inherited).filter(([key]) => !key.startsWith("INFISICAL_")),
 	);
+	const child =
+		WORKER_ENTRY === "main"
+			? Bun.spawn(["bun", "--config=./bunfig.toml", "src/main.ts"], {
+					cwd: new URL("../../../", import.meta.url).pathname,
+					env: {
+						...inheritedEnv,
+						...Object.fromEntries(
+							Object.entries(env).map(([key, value]) => [key, String(value)]),
+						),
+						NODE_ENV: "test",
+						AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride,
+					},
+					stdout: "pipe",
+					stderr: "pipe",
+				})
+			: Bun.spawn(
+					["bun", new URL("./benchWorker.ts", import.meta.url).pathname],
+					{
+						env: {
+							...inheritedEnv,
+							NODE_ENV: "test",
+							BENCH_STATS_INTERVAL_MS: String(SAMPLE_MS),
+							AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride,
+							BENCH_WORKER_ENV: JSON.stringify(env),
+						},
+						stdout: "pipe",
+						stderr: "pipe",
+					},
+				);
 	const worker: Worker = {
 		name,
 		endpoint: env.BALANCE_WORKER_ENDPOINT,
@@ -478,6 +498,24 @@ async function spawnWorker(name: string): Promise<Worker> {
 						event: "worker.stdout",
 						line: line.slice(0, 300),
 					});
+					continue;
+				}
+				if (WORKER_ENTRY === "main" && typeof parsed.msg === "string") {
+					if (
+						!worker.startedAt &&
+						parsed.msg.startsWith("Balance worker listening")
+					)
+						worker.startedAt = Date.now();
+					const level = String(parsed.level ?? "").toLowerCase();
+					if (level === "error" || level === "warn" || level === "fatal") {
+						record({
+							t: Date.now(),
+							source: name,
+							event: `main.${level}`,
+							message: parsed.msg.slice(0, 300),
+						});
+						if (level !== "warn") log(`[${name}] ${line.slice(0, 1000)}`);
+					}
 					continue;
 				}
 				if (typeof parsed.message === "string") {
