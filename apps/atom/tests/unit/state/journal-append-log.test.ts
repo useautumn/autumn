@@ -62,12 +62,15 @@ describe("a journal that cannot write", () => {
 			now: () => at,
 		});
 		journals.push(journal);
-		const lines = errorLines();
 		const append = (i: number) =>
 			journal.append({
 				customerId: "cus_1",
 				command: owedCommand({ commandId: `cmd_${i}`, value: 1 }),
 			});
+		// An earlier test's failed commits still count toward the next line: one line here clears them.
+		await expect(append(0)).rejects.toThrow();
+		at += 60_000;
+		const lines = errorLines();
 
 		await expect(append(1)).rejects.toThrow(
 			"NOT NULL constraint failed: journal_entries.writer_id",
