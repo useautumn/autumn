@@ -21,10 +21,22 @@ const FreeTrialFilterSchema = nullableObjectFilter(
 	}),
 );
 
-const FeatureQuantityFilterSchema = z.object({
-	feature_id: IdMatcherSchema.optional(),
-	quantity: NumberMatcherSchema.optional(),
-});
+type FeatureQuantityFilter = {
+	feature_id?: z.infer<typeof IdMatcherSchema>;
+	quantity?: z.infer<typeof NumberMatcherSchema>;
+	$and?: FeatureQuantityFilter[];
+	$or?: FeatureQuantityFilter[];
+};
+
+const FeatureQuantityFilterSchema: z.ZodType<FeatureQuantityFilter> = z.lazy(
+	() =>
+		z.object({
+			feature_id: IdMatcherSchema.optional(),
+			quantity: NumberMatcherSchema.optional(),
+			$and: z.array(FeatureQuantityFilterSchema).min(1).optional(),
+			$or: z.array(FeatureQuantityFilterSchema).min(1).optional(),
+		}),
+);
 
 type PlanChangeFields = {
 	/** `null` = no trial. A shape = there is a trial and it matches. */
@@ -34,6 +46,7 @@ type PlanChangeFields = {
 	>;
 	/** The request passes `customize` for this plan. */
 	customized?: boolean;
+	$and?: PlanChangeFilter[];
 	$or?: PlanChangeFilter[];
 };
 
@@ -45,6 +58,7 @@ const PlanChangeFieldsSchema: z.ZodType<PlanChangeFields> = z.lazy(() =>
 		free_trial: FreeTrialFilterSchema.optional(),
 		feature_quantities: arrayFilter(FeatureQuantityFilterSchema).optional(),
 		customized: BooleanMatcherSchema.optional(),
+		$and: z.array(PlanChangeFilterSchema).min(1).optional(),
 		$or: z.array(PlanChangeFilterSchema).optional(),
 	}),
 );

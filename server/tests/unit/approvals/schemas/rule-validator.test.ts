@@ -90,6 +90,32 @@ const REJECTED: { name: string; rule: unknown; path: string }[] = [
 		}),
 		path: "when.incoming.$every.feature_quantities",
 	},
+	{
+		name: "$startsWith on a plan id inside an incoming $and",
+		rule: invalid({
+			when: {
+				incoming: {
+					$every: { $and: [{ $or: [{ plan_id: { $startsWith: "p" } }] }] },
+				},
+			},
+		}),
+		path: "when.incoming.$every.$and.0.$or.0.plan_id",
+	},
+	{
+		name: "$regex on a feature id inside a feature_quantities $or",
+		rule: invalid({
+			when: {
+				incoming: {
+					$every: {
+						feature_quantities: {
+							$every: { $or: [{ feature_id: { $regex: "s" } }] },
+						},
+					},
+				},
+			},
+		}),
+		path: "when.incoming.$every.feature_quantities.$every.$or.0.feature_id",
+	},
 	// Balances rules are always about one feature.
 	{
 		name: "grant credits with no when",

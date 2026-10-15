@@ -72,6 +72,51 @@ const VALID: { name: string; rule: ApprovalRuleParams }[] = [
 		}),
 	},
 	{
+		name: "incoming element: $and of two $or groups (pinned version + free trial)",
+		rule: rules.rule({
+			when: {
+				incoming: {
+					$every: {
+						$and: [
+							{ $or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }] },
+							{
+								$or: [
+									{ free_trial: null },
+									{
+										free_trial: {
+											duration_type: "day",
+											duration_length: { $lt: 31 },
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			},
+		}),
+	},
+	{
+		name: "feature_quantities element: $and / $or rows",
+		rule: rules.rule({
+			when: {
+				incoming: {
+					$every: {
+						feature_quantities: {
+							$every: {
+								$or: [
+									{ feature_id: "seats", quantity: { $lte: 10 } },
+									{ feature_id: "projects", quantity: { $lte: 3 } },
+								],
+								$and: [{ quantity: { $gte: 1 } }],
+							},
+						},
+					},
+				},
+			},
+		}),
+	},
+	{
 		name: "billing cancel: timing, plan, refund",
 		rule: rules.rule({
 			actions: ["billing.cancel", "billing.uncancel"],
@@ -238,6 +283,19 @@ const INVALID: { name: string; rule: unknown; path: string }[] = [
 		name: "unknown field named like an Object.prototype key",
 		rule: invalid({ when: { valueOf: true } }),
 		path: "when.valueOf",
+	},
+	{
+		name: "unknown field inside a feature_quantities $or",
+		rule: invalid({
+			when: {
+				incoming: {
+					$every: {
+						feature_quantities: { $every: { $or: [{ seat: "x" }] } },
+					},
+				},
+			},
+		}),
+		path: "when.incoming.$every.feature_quantities.$every.$or.0.seat",
 	},
 	{
 		name: "bad enum value",
