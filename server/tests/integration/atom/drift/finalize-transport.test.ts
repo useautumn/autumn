@@ -1,10 +1,11 @@
 /**
- * A finalize the Atom cannot run for a transport reason, before its lock's hand-in has landed at Autumn.
+ * A finalize at the replica that took the customer over from a stopping owner, before the lock's hand-in has landed.
  *
  * Contract:
- *  1. a finalize handed on by a replica whose owner is stopping (its peer port shedding) is answered 503 with
- *     x-atom-forwarded: the caller retries the Atom rather than ask the API, which holds no row for the lock yet. Once
- *     the hand-in lands, the retried finalize settles the lock.
+ *  1. a stopping owner leaves the ring first and hands its customers over, open locks and unlanded entries included, so
+ *     the finalize is settled at the new owner on the handed row: 200, never forwarded, never the API's lock_not_found.
+ *     Once the hand-ins land in the order they were sent, Autumn holds the owner's lock and then the finalize, one seq
+ *     from each journal: the lock closes exactly once, at the usage the finalize confirmed.
  */
 
 import { expect, test } from "bun:test";
@@ -30,7 +31,7 @@ const replicaSet = useReplicaSet({ size: 2 });
 const LOCKED = 30;
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("finalize-transport1: a finalize handed on to a stopping owner before its lock's hand-in lands is a 503 the caller retries at the Atom, never the API's lock_not_found")}`,
+	`${chalk.yellowBright("finalize-transport1: a finalize at the replica that took over from a stopping owner settles on the handed row before the lock's hand-in lands; Autumn then closes the lock exactly once")}`,
 	async () => {
 		const customerId = "finalize-transport1";
 		const lockId = `${customerId}-lock`;
@@ -71,7 +72,7 @@ test.skipIf(!replicaSetRunsHere)(
 			featureId: TestFeature.Messages,
 		});
 		expect(viaOther.proxied).toBe("owner");
-		// Its hand-in held, the owner drains: its public port closes and its peer port sheds what is handed on.
+		// Its hand-in held, the owner leaves the ring and hands the customer over, then drains until its public port closes.
 		const stopped = replicaSet().stop(owner);
 		await pollUntilAsserted({
 			fetch: () => replicaSet().health(owner),
@@ -85,26 +86,32 @@ test.skipIf(!replicaSetRunsHere)(
 			action: "confirm",
 		});
 		expect(finalized).toMatchObject({
-			status: 503,
-			forwarded: "owner_unavailable",
-			body: { code: "atom_unavailable" },
+			status: 200,
+			forwarded: null,
+			body: { success: true },
+		});
+		// Settled on the handed row: the new owner's own view already shows the lock confirmed.
+		await expectAtomBalance({
+			atom: replicaSet().replica(other),
+			customerId,
+			remaining: 100 - LOCKED,
 		});
 
 		await replicaSet().releaseHandIns();
 		await stopped;
-		await pollUntilAsserted({
-			fetch: () =>
-				finalizeOnAtom({
-					atom: replicaSet().replica(other),
-					customerId,
-					lockId,
-					action: "confirm",
-				}),
-			assert: (retried) => expect(retried.status).toBe(200),
+		// The owner's lock landed first, then the finalize: one seq from each journal, the lock closed once.
+		await expectAutumnLockState({
+			customerId,
+			openLockIds: [],
+			atomSeqs: [1, 1],
 		});
-		await expectAutumnLockState({ customerId, openLockIds: [] });
 		const customer = await autumnV2_6.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.balances[TestFeature.Messages]?.usage).toBe(LOCKED);
+		await expectAtomBalance({
+			atom: replicaSet().replica(other),
+			customerId,
+			remaining: 100 - LOCKED,
+		});
 	},
 	120_000,
 );
