@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { parentPort } from "node:worker_threads";
 import { shareSqliteOpenLock } from "../newSqliteConnection.js";
+import { createWriteAmpLog } from "./benchWriteAmp.js";
 import { SQLITE_FILE_OPENERS, SQLITE_WRITES } from "./sqliteWrites.js";
 import type {
 	WriterInit,
@@ -26,6 +27,7 @@ const serve = ({ port, answered, sqliteOpenLock }: WriterInit): void => {
 	shareSqliteOpenLock({ lock: sqliteOpenLock });
 	const files = new Map<number, Database>();
 	const answeredCount = new Int32Array(answered);
+	const writeAmp = createWriteAmpLog();
 
 	function answer(request: WriterRequest): WriterReply {
 		const id = request[1];
@@ -39,13 +41,27 @@ const serve = ({ port, answered, sqliteOpenLock }: WriterInit): void => {
 			if (request[0] === "open") {
 				const [, , path, kind] = request;
 				files.set(id, SQLITE_FILE_OPENERS[kind]({ databasePath: path }));
+				writeAmp.opened({ fileId: id, path, kind });
 				return [id, true, ""];
 			}
 			const [, , fileId, op, payload] = request;
 			const sqliteDb = files.get(fileId);
 			if (!sqliteDb)
 				throw new Error(`No file ${fileId} is open on the SQLite writer`);
-			return [id, true, SQLITE_WRITES[op]({ ctx: { sqliteDb }, payload })];
+			const changesBefore =
+				sqliteDb.query<{ n: number }, []>("SELECT total_changes() AS n").get()
+					?.n ?? 0;
+			const result = SQLITE_WRITES[op]({ ctx: { sqliteDb }, payload });
+			const changesAfter =
+				sqliteDb.query<{ n: number }, []>("SELECT total_changes() AS n").get()
+					?.n ?? 0;
+			writeAmp.committed({
+				fileId,
+				op,
+				payload,
+				rowChanges: Number(changesAfter) - Number(changesBefore),
+			});
+			return [id, true, result];
 		} catch (error) {
 			return replyOf({ id, error });
 		}
