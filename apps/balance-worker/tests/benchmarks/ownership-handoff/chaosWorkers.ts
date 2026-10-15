@@ -777,6 +777,9 @@ async function restoreFleet(): Promise<void> {
 	await waitFor(
 		() =>
 			recovered(t0, liveWorkers()) &&
+			liveWorkers().every((w) =>
+				[...currentOwners().values()].includes(w.endpoint),
+			) &&
 			workerEvents
 				.filter((e) => e.event === "consumer.group_join")
 				.every((e) => Date.now() - e.t > 6_000) &&
@@ -1371,8 +1374,17 @@ function claimAudit() {
 			} else if (released) counts.afterRelease++;
 			else {
 				const previous = workerByEndpoint.get(owner);
+				const withdrew = workerEvents.some(
+					(w) =>
+						w.worker === previous?.name &&
+						w.event === "withdraw" &&
+						w.partition === partition &&
+						w.t <= e.at &&
+						w.t >= lastClaimAt - 2_000,
+				);
 				if (previous?.endedAt && previous.endedAt <= e.at)
 					counts.takeoverFromDead++;
+				else if (withdrew) counts.afterWithdrawWithoutHandoff++;
 				else
 					violations.push({
 						kind: "claim-over-live-owner",
