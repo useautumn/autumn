@@ -28,6 +28,7 @@ minimumReleaseAgeExcludes = [
 	"@vercel/sandbox",
 	"drizzle-orm",
 	"scraps-ui",
+	"cuelume",
 	"@alienplatform/bindings",
 	"@alienplatform/bindings-darwin-arm64",
 	"@alienplatform/bindings-darwin-x64",
