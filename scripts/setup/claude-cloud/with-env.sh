@@ -30,7 +30,7 @@ export PATH="$ROOT/node_modules/.bin:$PATH"
 if [ ! -f "$ROOT/server/.env" ]; then
 	cat >"$ROOT/server/.env" <<'EOF'
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
-CRITICAL_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
+DATABASE_CRITICAL_URL=postgresql://postgres:postgres@localhost:5432/autumn
 REDIS_URL=redis://localhost:6379
 EOF
 fi
@@ -54,11 +54,15 @@ if [ -s "$HOME/.cache/autumn-stripe-sandbox-secret-key" ]; then
 	export STRIPE_SANDBOX_SECRET_KEY="$(cat "$HOME/.cache/autumn-stripe-sandbox-secret-key")"
 fi
 export AUTUMN_EDGE_CONFIG_OVERRIDE_B64="${AUTUMN_EDGE_CONFIG_OVERRIDE_B64:-e30=}"
-case "$DATABASE_URL" in
-*localhost* | *127.0.0.1*) ;;
-*)
-	echo "with-env.sh: refusing to run, DATABASE_URL is not local" >&2
-	exit 1
-	;;
-esac
+# DATABASE_URL is required; an unset DATABASE_CRITICAL_URL falls back to it.
+for db_var in DATABASE_URL DATABASE_CRITICAL_URL; do
+	[ "$db_var" = DATABASE_CRITICAL_URL ] && [ -z "${DATABASE_CRITICAL_URL:-}" ] && continue
+	case "${!db_var:-}" in
+	*localhost* | *127.0.0.1*) ;;
+	*)
+		echo "with-env.sh: refusing to run, $db_var is not local" >&2
+		exit 1
+		;;
+	esac
+done
 exec "$@"' "$ROOT" "$@"

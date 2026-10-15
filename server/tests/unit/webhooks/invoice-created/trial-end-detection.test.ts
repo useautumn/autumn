@@ -48,14 +48,36 @@ const addLinesCalls: Array<{
 	lines: Array<{ metadata?: { autumn_line_item_id?: string } }>;
 }> = [];
 
+/** A paid consumable entitlement due at the invoice's period end, so the real consumable filter accepts it. */
+const dueCustomerEntitlement = ({ periodEnd }: { periodEnd: number }) => ({
+	id: usageLineItem.context.customerEntitlement.id,
+	customer_product_id: usageLineItem.context.customerProduct.id,
+	next_reset_at: periodEnd * 1000,
+	entitlement: { id: "entitlement_traces", feature: { config: {} } },
+	customer_product: {
+		customer_prices: [
+			{
+				id: usageLineItem.context.customerPrice.id,
+				customer_product_id: usageLineItem.context.customerProduct.id,
+				price: { entitlement_id: "entitlement_traces", config: {} },
+			},
+		],
+	},
+});
+
+let invoicePeriodEndForFilter = 0;
+
 await mockModuleWithRestore("@/external/stripe/webhookHandlers/common", () => ({
-	// Mirrors the real helper: a skip-all filter and includeLineItems=false
-	// both mean no usage lines come back.
+	// Mirrors the real helper: consumable usage lines come from the entitlements
+	// cusEntFilter accepts, so a skip-all filter means no usage lines.
 	eventContextToArrearLineItems: async (args: {
-		invoiceCredits?: { includeLineItems?: boolean };
+		cusEntFilter: (customerEntitlement: unknown) => boolean;
 	}) => ({
-		lineItems:
-			args.invoiceCredits?.includeLineItems === false ? [] : [usageLineItem],
+		lineItems: args.cusEntFilter(
+			dueCustomerEntitlement({ periodEnd: invoicePeriodEndForFilter }),
+		)
+			? [usageLineItem]
+			: [],
 		invoiceCreditLineItems: [],
 		updateCustomerEntitlements: [],
 	}),
@@ -131,8 +153,9 @@ const makeEventContext = ({
 	subscriptionPeriodStart: number;
 	subscriptionPeriodEnd: number;
 	trialEnd: number | null;
-}) =>
-	({
+}) => {
+	invoicePeriodEndForFilter = invoicePeriodEnd;
+	return {
 		stripeInvoice: {
 			id: "invoice_trial",
 			status: "draft",
@@ -157,7 +180,8 @@ const makeEventContext = ({
 		stripeCustomer: { id: "stripe_customer" },
 		stripeSubscriptionId: "sub_test",
 		fullCustomer: { id: "customer_test", internal_id: "customer_internal" },
-	}) as never;
+	} as never;
+};
 
 const billedUsageLineIds = async (eventContext: never) => {
 	await processConsumablePricesForInvoiceCreated({
