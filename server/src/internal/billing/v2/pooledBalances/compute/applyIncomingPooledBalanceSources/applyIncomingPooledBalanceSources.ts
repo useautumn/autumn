@@ -96,8 +96,6 @@ export const applyIncomingPooledBalanceSources = ({
 				poolId: pooledCustomerEntitlement.pooled_balance.id,
 				customerProductId: customerProduct.id,
 			});
-			// A plan that leaves and comes straight back (an update, an anchor reset) still holds its pool open.
-			computeContext.outgoingCustomerProductIds.delete(customerProduct.id);
 		}
 
 		const contribution = initPooledBalanceContribution({

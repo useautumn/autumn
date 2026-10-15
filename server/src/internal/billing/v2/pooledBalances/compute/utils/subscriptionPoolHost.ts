@@ -11,6 +11,7 @@ import {
 	isUnlimitedEntitlement,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
+import { customerEntitlementCompetes } from "../competing/customerEntitlementCompetes";
 import type {
 	MutablePooledCustomerEntitlement,
 	PooledBalanceComputeContext,
@@ -47,17 +48,8 @@ const poolHasPaidHost = ({
 }: {
 	computeContext: PooledBalanceComputeContext;
 	poolId: string;
-}) => {
-	const customerProductIds =
-		computeContext.paidCustomerProductIdsByPoolId.get(poolId);
-	if (!customerProductIds) return false;
-	for (const customerProductId of customerProductIds) {
-		if (!computeContext.outgoingCustomerProductIds.has(customerProductId)) {
-			return true;
-		}
-	}
-	return false;
-};
+}) =>
+	(computeContext.paidCustomerProductIdsByPoolId.get(poolId)?.size ?? 0) > 0;
 
 /**
  * A free source joins the customer's subscription pool for the same feature and
@@ -131,6 +123,11 @@ export const misplacedFreeCustomerProducts = ({
 				const contribution = customerEntitlement.pooled_balance_contribution;
 				if (!contribution || contribution.competes) return false;
 				if (!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }))
+					return false;
+				// Grants that should compete are the stale-competing repair's to move, not this one's.
+				if (
+					customerEntitlementCompetes({ customerEntitlement, customerProduct })
+				)
 					return false;
 
 				const currentPool =

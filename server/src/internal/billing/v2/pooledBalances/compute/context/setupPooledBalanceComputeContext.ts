@@ -116,6 +116,5 @@ export const setupPooledBalanceComputeContext = ({
 		paidCustomerProductIdsByPoolId: paidCustomerProductIdsByPoolIdOf({
 			customerProducts,
 		}),
-		outgoingCustomerProductIds: new Set(),
 	};
 };

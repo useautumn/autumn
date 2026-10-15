@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
+	EntInterval,
 	type FullCusProduct,
 	type FullCustomer,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
 import { entities } from "@tests/utils/fixtures/db/entities";
+import { entitlements } from "@tests/utils/fixtures/db/entitlements";
 import { products } from "@tests/utils/fixtures/db/products";
 import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { applyPooledBalancePlanToFullCustomer } from "@/internal/billing/v2/utils/billingPlan/applyPooledBalancePlanToFullCustomer";
@@ -63,10 +65,11 @@ const transition = ({
 	incoming?: FullCusProduct[];
 	outgoing?: FullCusProduct[];
 }) => {
-	const incomingIds = new Set(incoming.map(({ id }) => id));
+	// An in-place update is computed against the customer as it stands: the old row stays until the plan lands.
+	const heldIds = new Set(fullCustomer.customer_products.map(({ id }) => id));
 	fullCustomer.customer_products = [
-		...fullCustomer.customer_products.filter(({ id }) => !incomingIds.has(id)),
-		...incoming,
+		...fullCustomer.customer_products,
+		...incoming.filter(({ id }) => !heldIds.has(id)),
 	];
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
@@ -279,6 +282,64 @@ describe("paid plan attach pulls existing granted plans into its pool", () => {
 		expect(poolById({ fullCustomer, poolId })?.pooled_balance?.granted).toBe(
 			300,
 		);
+	});
+
+	test("a paid plan dropping the feature in place no longer holds its old pool", () => {
+		const pooledMessages = {
+			...entitlements.create({
+				id: "ent_messages_pooled",
+				featureId: "messages",
+				featureName: "Messages",
+				interval: EntInterval.Month,
+				allowance: 50,
+			}),
+			pooled: true,
+		};
+		const paidWithMessages = products.createFull({
+			id: "pro",
+			prices: paidPlan.product.prices,
+			entitlements: [...paidPlan.product.entitlements, pooledMessages],
+		});
+		const paid: FullCusProduct = {
+			...entityRow({
+				product: paidWithMessages,
+				entity: entityA,
+				rowId: "cp_paid",
+			}),
+			subscription_ids: ["sub_live"],
+		};
+		const fullCustomer = customerWithPools([paid, grantedRow()]);
+		const oldPoolId = poolIdOf({ fullCustomer, rowId: "cp_paid" });
+		transition({
+			fullCustomer,
+			incoming: [
+				paidRow({
+					rowId: "cp_paid_other",
+					entity: entityC,
+					subscriptionId: "sub_other",
+				}),
+			],
+		});
+		expect(poolIdOf({ fullCustomer, rowId: "cp_granted" })).toBe(oldPoolId);
+
+		const messagesOnly = products.createFull({
+			id: "pro",
+			prices: paidPlan.product.prices,
+			entitlements: [pooledMessages],
+		});
+		const updated: FullCusProduct = {
+			...entityRow({
+				product: messagesOnly,
+				entity: entityA,
+				rowId: "cp_paid",
+			}),
+			subscription_ids: ["sub_live"],
+		};
+		transition({ fullCustomer, incoming: [updated], outgoing: [paid] });
+
+		const otherPoolId = poolIdOf({ fullCustomer, rowId: "cp_paid_other" });
+		expect(otherPoolId).not.toBe(oldPoolId);
+		expect(poolIdOf({ fullCustomer, rowId: "cp_granted" })).toBe(otherPoolId);
 	});
 
 	test("a new subscription pulls granted plans off an ended subscription's pool", () => {

@@ -25,10 +25,8 @@ export type PooledBalanceComputeContext = {
 	pooledBalanceIdsWithReplacedContributions: Set<string>;
 	/** Competing shares as the customer held them before this transition, by source customer entitlement. */
 	competingContributionsBySourceId: Map<string, DbPooledBalanceContribution>;
-	/** Live, paid recurring customer products feeding each subscription pool; lets a free source join one. */
+	/** Paid recurring customer products feeding each pool, kept current as plans leave and join; free sources prefer these pools. */
 	paidCustomerProductIdsByPoolId: Map<string, Set<string>>;
-	/** Customer products leaving in this transition and not coming back; they no longer hold a pool open for free sources. */
-	outgoingCustomerProductIds: Set<string>;
 };
 
 export type PooledBalanceLifecycle = Pick<

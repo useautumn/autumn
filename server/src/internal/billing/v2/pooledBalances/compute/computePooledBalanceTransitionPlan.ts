@@ -56,7 +56,6 @@ export const computePooledBalanceTransitionPlan = ({
 	for (const customerProduct of outgoingCustomerProducts) {
 		if (outgoingCustomerProductIds.has(customerProduct.id)) continue;
 		outgoingCustomerProductIds.add(customerProduct.id);
-		computeContext.outgoingCustomerProductIds.add(customerProduct.id);
 		applyOutgoingPooledBalanceSources({
 			computeContext,
 			customerProduct,
@@ -126,7 +125,6 @@ export const computePooledBalanceTransitionPlan = ({
 		excludedCustomerProductIds: new Set([
 			...incomingCustomerProductIds,
 			...outgoingCustomerProductIds,
-			...mergedFreeCustomerProducts.map(({ id }) => id),
 		]),
 	})) {
 		// An additive share from before the switch leaves first, then rejoins as a competing one.
