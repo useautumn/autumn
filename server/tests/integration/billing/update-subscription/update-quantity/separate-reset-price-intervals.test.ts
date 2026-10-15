@@ -446,7 +446,7 @@ test.concurrent(
 
 		const nextResetAt =
 			rawStateAfterQuarterlyInvoice.customerEntitlement.next_reset_at ?? 0;
-		expect(nextResetAt).toBeGreaterThan(frozenTimeMs);
+		expect(nextResetAt).toBeGreaterThan(firstNextResetAt ?? 0);
 		expect(nextResetAt).toBeLessThan(addMonths(advancedTo, 5).getTime());
 		expect(rawStateAfterQuarterlyInvoice.priceConfig.interval).toBe(
 			BillingInterval.Quarter,
