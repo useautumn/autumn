@@ -5,6 +5,7 @@ import { fundingRowOf } from "../../deduction/utils/fundingRowOf.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
 import { trackLockToRowChange } from "./trackLockToRowChange.js";
+import { trackSourceToRowChange } from "./trackSourceToRowChange.js";
 import type { TrackCommand } from "./types/trackCommand.js";
 
 /** Wraps what the deduction decided into the one mutation: command, changes, result. */
@@ -32,6 +33,12 @@ export const trackOutcomeToMutation = ({
 					}),
 				]
 			: [];
+	const sourceChange =
+		command.source &&
+		trackSourceToRowChange({
+			source: command.source,
+			customer: fullSubject.customer,
+		});
 	return {
 		schemaVersion: 1,
 		type: "mutation",
@@ -40,7 +47,11 @@ export const trackOutcomeToMutation = ({
 		subject: fullSubjectToMutationSubject({ fullSubject }),
 		revision: { before: revisionBefore, after: revisionBefore + 1 },
 		command,
-		changes: [...changes, ...lockChanges],
+		changes: [
+			...changes,
+			...lockChanges,
+			...(sourceChange ? [sourceChange] : []),
+		],
 		result: {
 			type: "track",
 			status: rejected ? "rejected" : "applied",

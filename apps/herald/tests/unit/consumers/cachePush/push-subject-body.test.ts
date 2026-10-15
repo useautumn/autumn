@@ -151,6 +151,7 @@ test("2.1 + 2.5 the body is herald's old body, with the worker's log offset and 
 			org: { config: org.config, default_currency: "usd" },
 			log_offset: "180",
 			read_at: 1_000,
+			atom_seqs: null,
 		},
 	]);
 	expect(commands).toHaveLength(1);
@@ -173,6 +174,7 @@ test("2.2 a worker that names no offset: the record's offset, exactly as before"
 			org: { config: org.config, default_currency: "usd" },
 			log_offset: "120",
 			read_at: 1_000,
+			atom_seqs: null,
 		},
 	]);
 });

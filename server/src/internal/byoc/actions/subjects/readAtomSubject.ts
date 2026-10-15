@@ -1,6 +1,7 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import {
 	type AtomSubjectBody,
+	atomSubjectBodyFor,
 	isWorkerSubjectNotFound,
 	orgToAtomTargets,
 	readAtomSubjectBody,
@@ -50,7 +51,7 @@ export const readAtomSubject = async ({
 }: {
 	ctx: Pick<AutumnContext, "logger" | "id">;
 	org: Organization;
-	atom: { env: AppEnv; encryptedToken: string };
+	atom: { id: string; env: AppEnv; encryptedToken: string };
 	customerId: string;
 	entityId: string | null;
 	client?: Pick<BalanceWorkerClient, "readSubjectState">;
@@ -63,7 +64,11 @@ export const readAtomSubject = async ({
 			org,
 			requestId: ctx.id,
 		});
-		return body ? { kind: "body", body } : { kind: "worker_unavailable" };
+		if (!body) return { kind: "worker_unavailable" };
+		return {
+			kind: "body",
+			body: atomSubjectBodyFor({ body, atomId: atom.id }),
+		};
 	} catch (error) {
 		if (isWorkerSubjectNotFound({ error })) return { kind: "not_found" };
 		ctx.logger.warn("An Atom's pull could not read the subject's worker", {

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { handleAppendAtomTracks } from "./handlers/handleAppendAtomTracks.js";
 import { handleCheckAtomKeys } from "./handlers/handleCheckAtomKeys.js";
 import { handleReadAtomSubject } from "./handlers/handleReadAtomSubject.js";
 import { atomTokenHashMiddleware } from "./middlewares/atomTokenHashMiddleware.js";
@@ -9,3 +10,4 @@ export const atomRouter = new Hono<AtomHonoEnv>();
 atomRouter.use("*", atomTokenHashMiddleware);
 atomRouter.post("/keys.check", handleCheckAtomKeys);
 atomRouter.post("/subjects.read", handleReadAtomSubject);
+atomRouter.post("/tracks.append", handleAppendAtomTracks);

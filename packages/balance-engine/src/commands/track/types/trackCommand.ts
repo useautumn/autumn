@@ -60,6 +60,17 @@ export const trackUsageEventSchema = z
 
 export type TrackUsageEvent = z.infer<typeof trackUsageEventSchema>;
 
+/** The Atom that granted this deduction, its journal (writer) and seq there: stamped by the server on `tracks.append`. */
+export const trackSourceSchema = z
+	.object({
+		atomId: nonEmptyStringSchema,
+		writerId: nonEmptyStringSchema,
+		seq: z.number().int().positive(),
+	})
+	.loose();
+
+export type TrackSource = z.infer<typeof trackSourceSchema>;
+
 export const trackCommandSchema = mutatingCommandSchema
 	.extend({
 		type: z.literal("track"),
@@ -76,6 +87,7 @@ export const trackCommandSchema = mutatingCommandSchema
 		idempotency: trackIdempotencySchema.optional(),
 		/** Null when this command records none: the caller skipped it, or a fan-out already records it on its first feature. */
 		usageEvent: trackUsageEventSchema.nullable(),
+		source: trackSourceSchema.optional(),
 		/** Loose for a newer server's fields, but the writer's receipt never rides in a command. */
 		receipt: z.never().optional(),
 	})

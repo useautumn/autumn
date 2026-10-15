@@ -179,6 +179,7 @@ test(`${chalk.yellowBright("atom-rows4: a token hash names its Atom's org and en
 			tokenHash: atom.token_hash ?? "",
 		}),
 	).toEqual({
+		id: atom.id,
 		orgId,
 		env: AppEnv.Sandbox,
 		encryptedToken: atom.encrypted_token,
