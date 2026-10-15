@@ -143,6 +143,22 @@ const buildNotFoundMessage = ({
 	return `No active subscription found for customer '${customerId}'`;
 };
 
+/** Explains why an explicitly targeted customer product can't be updated, e.g. it already ended after a cancel in Stripe. */
+const buildNotTargetableMessage = ({
+	customerProduct,
+	customerId,
+}: {
+	customerProduct: FullCusProduct;
+	customerId: string;
+}): string => {
+	const planName = customerProduct.product.name || customerProduct.product.id;
+	const state =
+		customerProduct.status === CusProductStatus.Expired
+			? "has already ended"
+			: `has status '${customerProduct.status}'`;
+	return `Plan '${planName}' (customer_product_id '${customerProduct.id}') on customer '${customerId}' ${state}, so it can't be updated or canceled`;
+};
+
 /** Finds the target customer product for an updateSubscription call, or throws. */
 export const findTargetCustomerProduct = async ({
 	ctx,
@@ -168,16 +184,27 @@ export const findTargetCustomerProduct = async ({
 	if (target) return target;
 
 	// Explicit id provided but filtered out (e.g. entity-scoped cusProduct
-	// looked up without entity context). Resolve directly from the DB.
+	// looked up without entity context, or one that already ended). Resolve
+	// directly from the DB.
 	if (params.customer_product_id) {
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,
 			id: params.customer_product_id,
-			inStatuses: statuses,
 		});
 		const belongsToCustomer =
 			fallback?.internal_customer_id === fullCustomer.internal_id;
 		if (fallback && belongsToCustomer) {
+			if (!statuses.includes(fallback.status)) {
+				throw new RecaseError({
+					message: buildNotTargetableMessage({
+						customerProduct: fallback,
+						customerId: fullCustomer.id ?? "",
+					}),
+					code: ErrCode.CusProductNotFound,
+					statusCode: 404,
+				});
+			}
+
 			const isLicenseAssignment =
 				fallback.customer_license_link_id != null &&
 				fallback.internal_entity_id != null;
