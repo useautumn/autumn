@@ -50,6 +50,7 @@ import {
 	type SeededCustomer,
 	seedCustomer,
 } from "../../integration/postgres/postgresCustomerFixture.js";
+import { reconcileSoak } from "./reconcileSoak.js";
 
 const PARTITION_COUNT = Number(process.env.SOAK_PARTITIONS ?? 16);
 const REPLICATION = Number(process.env.SOAK_RF ?? 2);
@@ -501,11 +502,6 @@ async function spawnWorker(name: string): Promise<Worker> {
 					continue;
 				}
 				if (WORKER_ENTRY === "main" && typeof parsed.msg === "string") {
-					if (
-						!worker.startedAt &&
-						parsed.msg.startsWith("Balance worker listening")
-					)
-						worker.startedAt = Date.now();
 					const level = String(parsed.level ?? "").toLowerCase();
 					if (level === "error" || level === "warn" || level === "fatal") {
 						record({
@@ -710,6 +706,10 @@ type Cycle = {
 	lastClaimAt?: number;
 	recoveredFromStopMs?: number;
 	recoveredFromReplacementMs?: number;
+	groupsAfter?: number;
+	ownershipGroupsAfter?: number;
+	client?: ProcSample | null;
+	replacementProc?: ProcSample | null;
 };
 const cycles: Cycle[] = [];
 async function churnOnce(index: number): Promise<void> {
@@ -752,8 +752,23 @@ async function churnOnce(index: number): Promise<void> {
 	const replacement = await spawnWorker(replacementName);
 	workers[workers.indexOf(victim)] = replacement;
 	const replacementReady = (async () => {
-		while (!replacement.startedAt && replacement.child.exitCode === null)
-			await Bun.sleep(50);
+		const deadline = Date.now() + 180_000;
+		while (
+			!replacement.startedAt &&
+			replacement.child.exitCode === null &&
+			Date.now() < deadline
+		) {
+			if (WORKER_ENTRY === "main") {
+				const healthy = await fetch(`${replacement.endpoint}/health`, {
+					signal: AbortSignal.timeout(1_000),
+				}).then(
+					(response) => response.ok,
+					() => false,
+				);
+				if (healthy) replacement.startedAt = Date.now();
+			}
+			await Bun.sleep(200);
+		}
 		cycle.replacementStartedAt = replacement.startedAt;
 	})();
 	// The server side of the same churn: a fresh ownership consumer, caught up, then routing swaps onto it.
@@ -776,6 +791,16 @@ async function churnOnce(index: number): Promise<void> {
 		await fresh.stop().catch(() => {});
 	}
 	await replacementReady;
+	const groups = await listGroups();
+	cycle.groupsAfter = groups.total;
+	cycle.ownershipGroupsAfter = groups.groups.filter((g) =>
+		/^autumn-ownership-[0-9a-f]{8}-/.test(g),
+	).length;
+	cycle.client = readProc(process.pid);
+	cycle.replacementProc = readProc(replacement.child.pid);
+	log(
+		`churn ${index}: ${victim.name}->${replacementName} exit=${cycle.exitCode} stop=${(cycle.exitedAt ?? 0) - cycle.stopBeganAt}ms owners=${cycle.ownersCatchUpMs}ms groups=${groups.total} ownershipGroups=${cycle.ownershipGroupsAfter} client=${JSON.stringify(cycle.client)}`,
+	);
 }
 let churnIndex = 0;
 const runEndsAt = hammerStartedAt + DURATION_MS;
@@ -912,123 +937,14 @@ await watcher.disconnect();
 log(
 	"reconciling: reading the metering log from the beginning (read_committed)",
 );
-const deductedByCustomerEntitlement = new Map<string, number>();
-const appliedByCommand = new Map<string, number>();
-let logRecords = 0;
-let rejectedRecords = 0;
-let nonMutationRecords = 0;
-const reader = kafka.consumer({
-	groupId: `${deployment}-reconcile`,
-	readUncommitted: false,
-	maxWaitTimeInMs: 250,
+await outcomesFile.end();
+const reconciliation = await reconcileSoak({
+	kafka,
+	postgres,
+	outDir,
+	topic: topics.metering,
+	seedBalance: SEED_BALANCE,
 });
-await reader.connect();
-await reader.subscribe({ topics: [topics.metering], fromBeginning: true });
-const readEnds = await admin.fetchTopicOffsets(topics.metering);
-const remaining = new Map(
-	readEnds
-		.filter((e) => BigInt(e.high) > 0n)
-		.map((e) => [e.partition, BigInt(e.high)]),
-);
-const caughtUp = Promise.withResolvers<void>();
-if (remaining.size === 0) caughtUp.resolve();
-await reader.run({
-	eachBatch: async ({ batch, resolveOffset }) => {
-		for (const message of batch.messages) {
-			let parsed: {
-				command: { type: string; commandId?: string };
-				result: {
-					type: string;
-					status?: string;
-					deltas?: { id: string; balanceDelta: number }[];
-				};
-			};
-			try {
-				parsed = parseTrustedMeteringRecord({
-					key: message.key,
-					value: message.value,
-				}) as unknown as typeof parsed;
-			} catch {
-				nonMutationRecords++;
-				continue;
-			}
-			logRecords++;
-			if (parsed.command.type !== "track" || !parsed.command.commandId)
-				continue;
-			if (parsed.result.status !== "applied") {
-				rejectedRecords++;
-				continue;
-			}
-			appliedByCommand.set(
-				parsed.command.commandId,
-				(appliedByCommand.get(parsed.command.commandId) ?? 0) + 1,
-			);
-			for (const delta of parsed.result.deltas ?? [])
-				deductedByCustomerEntitlement.set(
-					delta.id,
-					(deductedByCustomerEntitlement.get(delta.id) ?? 0) -
-						delta.balanceDelta,
-				);
-		}
-		const last = batch.lastOffset();
-		resolveOffset(last);
-		const target = remaining.get(batch.partition);
-		if (target !== undefined && BigInt(last) + 1n >= target) {
-			remaining.delete(batch.partition);
-			if (remaining.size === 0) caughtUp.resolve();
-		}
-	},
-});
-await Promise.race([
-	caughtUp.promise,
-	Bun.sleep(300_000).then(() => {
-		throw new Error(
-			`metering log read stalled; partitions left ${[...remaining.keys()]}`,
-		);
-	}),
-]);
-await reader.disconnect();
-
-let acknowledged = 0;
-let acknowledgedMissing = 0;
-const failedButApplied: Record<string, number> = {};
-const acknowledgedIds = new Set<string>();
-for (const line of (await Bun.file(join(outDir, "outcomes.log")).text()).split(
-	"\n",
-)) {
-	if (!line) continue;
-	const [id, outcome] = line.split(" ");
-	if (outcome === "200") {
-		acknowledged++;
-		acknowledgedIds.add(id);
-		if (!appliedByCommand.has(id)) acknowledgedMissing++;
-	} else if (appliedByCommand.has(id)) {
-		failedButApplied[outcome] = (failedButApplied[outcome] ?? 0) + 1;
-	}
-}
-let duplicated = 0;
-let appliedUnknown = 0;
-for (const [id, count] of appliedByCommand) {
-	if (count > 1) duplicated++;
-	if (!acknowledgedIds.has(id)) appliedUnknown++;
-}
-const balances: {
-	partition: number;
-	postgres: number;
-	expected: number;
-	deductedInLog: number;
-}[] = [];
-for (const [partition, customer] of customers) {
-	const deducted =
-		deductedByCustomerEntitlement.get(customer.customerEntitlementId) ?? 0;
-	balances.push({
-		partition,
-		postgres: await customer.readBalance(),
-		expected: SEED_BALANCE - deducted,
-		deductedInLog: deducted,
-	});
-}
-const balanceMismatches = balances.filter((b) => b.postgres !== b.expected);
 
 await admin.deleteTopics({ topics: Object.values(topics) });
 await admin.disconnect();
@@ -1120,22 +1036,9 @@ const summary = {
 		samples: groupSamples,
 	},
 	reconciliation: {
-		logRecords,
-		rejectedRecords,
-		nonMutationRecords,
-		acknowledged,
-		acknowledgedMissingFromLog: acknowledgedMissing,
-		duplicatedCommands: duplicated,
-		appliedWithoutAcknowledgement: appliedUnknown,
-		failedButApplied,
+		...reconciliation,
 		postgresFlushLag: progressLag,
-		balanceMismatches,
-		balances,
-		ok:
-			acknowledgedMissing === 0 &&
-			duplicated === 0 &&
-			balanceMismatches.length === 0 &&
-			Object.keys(progressLag).length === 0,
+		ok: reconciliation.ok && Object.keys(progressLag).length === 0,
 	},
 	shutdowns,
 	finalWorkerProcs: finalSamples,

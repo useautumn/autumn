@@ -16,7 +16,8 @@
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"test:kafka": "bun ../../scripts/devServices/runKafkaTests.ts tests/integration",
-		"ts": "tsc --noEmit"
+		"ts": "tsc --noEmit",
+		"chaos:lost-delivery-report": "bun tests/chaos/lostDeliveryReport.ts"
 	},
 	"dependencies": {
 		"@autumn/balance-engine": "workspace:*",
