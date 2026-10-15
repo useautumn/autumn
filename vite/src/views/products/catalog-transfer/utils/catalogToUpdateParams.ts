@@ -31,14 +31,16 @@ const projectRows = ({
 		projectOntoSchema({ schema, value: row, omitKeys: SOURCE_ORG_KEYS }),
 	);
 
-/** `version` is the deprecated twin of `version_slug`; stating both is rejected. */
+/** Pinned by number so another org mints the same history (slug rides as `new_version_slug`).
+ * GET's `base_variant_id` is the legacy monthly/annual grouping hint, not the variant link. */
 const planRowToParamsRow = ({
 	id,
-	version,
+	version_slug,
+	base_variant_id: _legacyGroupingHint,
 	...plan
 }: GetCatalogResponse["plans"][number]) => ({
 	plan_id: id,
-	...(plan.version_slug ? {} : { version }),
+	...(version_slug ? { new_version_slug: version_slug } : {}),
 	...plan,
 });
 

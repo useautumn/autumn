@@ -153,11 +153,39 @@ describe("catalogToUpdateParams", () => {
 		expect(params.features?.[0]).toMatchObject({ feature_id: "messages" });
 		expect(params.plans?.[0]).toMatchObject({
 			plan_id: "pro",
-			version_slug: "v2",
+			version: 2,
+			new_version_slug: "v2",
 			variants: [{ variant_plan_id: "pro_annual", name: "Pro (annual)" }],
 			licenses: [{ license_plan_id: "seat", version_slug: "v1", included: 3 }],
 		});
-		expect(params.plans?.[0]).not.toHaveProperty("version");
+		expect(params.plans?.[0]).not.toHaveProperty("version_slug");
+	});
+
+	test("drops the legacy base_variant_id grouping hint from top-level plans", () => {
+		const legacy = {
+			...catalog,
+			plans: [{ ...catalog.plans[0], id: "annual", base_variant_id: "pro" }],
+		} as GetCatalogResponse;
+		const params = catalogToUpdateParams({
+			catalog: legacy,
+			sections: { features: false, plans: true, rewards: false },
+		});
+		expect(params.plans?.[0]).not.toHaveProperty("base_variant_id");
+	});
+
+	test("pins a row without a version_slug by version alone", () => {
+		const unslugged = {
+			...catalog,
+			plans: [{ ...catalog.plans[0], version: 1, version_slug: null }],
+		} as GetCatalogResponse;
+		const [plan] =
+			catalogToUpdateParams({
+				catalog: unslugged,
+				sections: { features: false, plans: true, rewards: false },
+			}).plans ?? [];
+		expect(plan).toMatchObject({ plan_id: "pro", version: 1 });
+		expect(plan).not.toHaveProperty("version_slug");
+		expect(plan).not.toHaveProperty("new_version_slug");
 	});
 
 	test("leaves rewards and referral programs out unless the section is on", () => {

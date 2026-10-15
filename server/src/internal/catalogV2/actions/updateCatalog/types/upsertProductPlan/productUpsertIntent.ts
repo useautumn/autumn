@@ -23,6 +23,8 @@ export type ProductUpsertIntent = {
 	baseInternalProductId?: string | null;
 	/** Direct unlink rides onto version siblings — compute nulls the pointer. */
 	unlink?: boolean;
+	/** Mint with no slug: its default `v{n}` is a slug another row of this request states. */
+	unslugged?: boolean;
 };
 
 export const claimProductKeys = ({

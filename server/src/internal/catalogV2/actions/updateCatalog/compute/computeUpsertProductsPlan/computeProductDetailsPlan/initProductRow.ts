@@ -20,16 +20,21 @@ export const initProductRow = ({
 	base,
 	baseInternalProductId,
 	baseProcessor,
+	unslugged = false,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
 	version: number;
+	/** Skip the default `v{n}` slug (another row states it). */
+	unslugged?: boolean;
 	base?: Product;
 	/** Variant create: the latest base row. Omit to keep a clone's pointer. */
 	baseInternalProductId?: string | null;
 	/** Variant create: share the base's Stripe Product. */
 	baseProcessor?: Product["processor"];
 }): Product => {
+	const versionSlug =
+		planParams.new_version_slug ?? (unslugged ? null : `v${version}`);
 	if (base) {
 		const patch = planParamsToProductRowPatch({
 			planParams,
@@ -42,7 +47,7 @@ export const initProductRow = ({
 			version,
 			// Fresh slug/active — cloning the base's would collide on
 			// unique_product_version_slug / unique_active_product.
-			version_slug: planParams.new_version_slug ?? `v${version}`,
+			version_slug: versionSlug,
 			active: willBeActive,
 			is_default: willBeActive ? (patch.is_default ?? base.is_default) : false,
 			internal_id: generateId("prod"),
@@ -68,7 +73,7 @@ export const initProductRow = ({
 		is_add_on: patch.is_add_on ?? false,
 		is_default: patch.is_default ?? false,
 		version,
-		version_slug: planParams.new_version_slug ?? `v${version}`,
+		version_slug: versionSlug,
 		active: planParams.active !== false,
 		group: patch.group || "",
 
