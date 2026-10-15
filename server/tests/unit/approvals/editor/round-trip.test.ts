@@ -368,6 +368,12 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "outgoing_plan", operator: "is", value: null },
 			{ field: "free_trial", operator: "lt", value: null },
 			{ field: "feature_quantity", operator: "lte", value: null },
+			{
+				field: "feature_quantity",
+				operator: "lte",
+				value: { feature_id: "seats" },
+			},
+			{ field: "feature_quantity", operator: "lte", value: { quantity: 3 } },
 		].map((row) => ({
 			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
 			area: "billing_change" as const,

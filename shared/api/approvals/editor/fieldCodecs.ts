@@ -156,8 +156,10 @@ const freeTrial: FieldCodec = {
 // Stored as "no quantity breaks the limit", so plans without the feature pass.
 const featureQuantity: FieldCodec = {
 	toFilter: (row) => {
-		if (!isPlainObject(row.value)) return null;
-		const { feature_id, quantity } = row.value as FeatureQuantity;
+		const { feature_id, quantity } = (row.value ??
+			{}) as Partial<FeatureQuantity>;
+		if (typeof feature_id !== "string" || typeof quantity !== "number")
+			return null;
 		const operator = NEGATED_NUMBER_OPERATORS[row.operator];
 		return at(QUANTITY_LIMIT, {
 			feature_id,
