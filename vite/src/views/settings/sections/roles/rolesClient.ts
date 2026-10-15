@@ -1,15 +1,22 @@
 import { ROLE_SCOPES, type ScopeString } from "@autumn/shared";
 import { AxiosError, AxiosHeaders, type AxiosInstance } from "axios";
-import { type Role, type RoleBody, scopesToAccess } from "./roleAccess";
+import { type ApiRole, type RoleBody, scopesToAccess } from "./roleAccess";
 
 export type RolesClient = {
-	list: () => Promise<Role[]>;
-	create: (params: { body: RoleBody }) => Promise<Role>;
-	update: (params: { name: string; body: Partial<RoleBody> }) => Promise<Role>;
+	list: () => Promise<ApiRole[]>;
+	create: (params: { body: RoleBody }) => Promise<ApiRole>;
+	update: (params: {
+		name: string;
+		body: Partial<RoleBody>;
+	}) => Promise<ApiRole>;
 	remove: (params: { name: string }) => Promise<void>;
 };
 
-type RoleErrorBody = { code: string; message: string; member_count?: number };
+type RoleErrorBody = {
+	code: string;
+	message: string;
+	details?: { member_count?: number };
+};
 
 // D4's routes aren't merged yet: flip to false once they are.
 export const ROLES_MOCKED = true;
@@ -19,10 +26,10 @@ export const createHttpRolesClient = ({
 }: {
 	axios: AxiosInstance;
 }): RolesClient => ({
-	list: async () => (await axios.get<{ list: Role[] }>("/roles")).data.list,
-	create: async ({ body }) => (await axios.post<Role>("/roles", body)).data,
+	list: async () => (await axios.get<{ list: ApiRole[] }>("/roles")).data.list,
+	create: async ({ body }) => (await axios.post<ApiRole>("/roles", body)).data,
 	update: async ({ name, body }) =>
-		(await axios.patch<Role>(`/roles/${name}`, body)).data,
+		(await axios.patch<ApiRole>(`/roles/${name}`, body)).data,
 	remove: async ({ name }) => {
 		await axios.delete(`/roles/${name}`);
 	},
@@ -32,7 +39,7 @@ export const getRoleInUseCount = ({ error }: { error: unknown }) => {
 	if (!(error instanceof AxiosError)) return null;
 	const data = error.response?.data as RoleErrorBody | undefined;
 	if (data?.code !== "role_in_use") return null;
-	return data.member_count ?? null;
+	return data.details?.member_count ?? null;
 };
 
 const rejectWith = ({
@@ -62,6 +69,7 @@ const MOCK_ROLES: [
 	["Admin", ROLE_SCOPES.admin, 3, 0],
 	["Developer", ROLE_SCOPES.developer, 6, 0],
 	["Sales", ROLE_SCOPES.sales, 8, 2],
+	["Member", ROLE_SCOPES.member, 5, 0],
 	["Support", [...ROLE_SCOPES.member, "balances:write"], 4, 1],
 	[
 		"Finance",
@@ -71,9 +79,9 @@ const MOCK_ROLES: [
 	],
 ];
 
-const BUILT_IN_COUNT = 4;
+const BUILT_IN_COUNT = 5;
 
-const seedRoles = (): Role[] =>
+const seedRoles = (): ApiRole[] =>
 	MOCK_ROLES.map(([label, scopes, members, rules], index) => {
 		const built_in = index < BUILT_IN_COUNT;
 		return {
@@ -88,14 +96,14 @@ const seedRoles = (): Role[] =>
 		};
 	});
 
-const sortRoles = ({ roles }: { roles: Role[] }) => [
+const sortRoles = ({ roles }: { roles: ApiRole[] }) => [
 	...roles.filter((role) => role.built_in),
 	...roles
 		.filter((role) => !role.built_in)
 		.sort((a, b) => a.label.localeCompare(b.label)),
 ];
 
-const findMockRole = ({ roles, name }: { roles: Role[]; name: string }) => {
+const findMockRole = ({ roles, name }: { roles: ApiRole[]; name: string }) => {
 	const role = roles.find((candidate) => candidate.name === name);
 	if (!role)
 		return rejectWith({
@@ -118,9 +126,9 @@ const assertNameFree = ({
 	name,
 	except,
 }: {
-	roles: Role[];
+	roles: ApiRole[];
 	name: string;
-	except?: Role;
+	except?: ApiRole;
 }) => {
 	if (roles.some((role) => role.name === name && role !== except))
 		rejectWith({
@@ -129,7 +137,7 @@ const assertNameFree = ({
 		});
 };
 
-const mockStores = new Map<string, Role[]>();
+const mockStores = new Map<string, ApiRole[]>();
 
 /** One in-memory store per org and env, so switching orgs doesn't carry edits across. */
 export const getMockRolesClient = ({
@@ -144,7 +152,7 @@ export const getMockRolesClient = ({
 		list: async () => sortRoles({ roles }),
 		create: async ({ body }) => {
 			assertNameFree({ roles, name: body.name });
-			const role: Role = {
+			const role: ApiRole = {
 				...body,
 				built_in: false,
 				member_count: 0,
@@ -169,7 +177,7 @@ export const getMockRolesClient = ({
 					body: {
 						code: "role_in_use",
 						message: "Role is in use",
-						member_count: role.member_count,
+						details: { member_count: role.member_count },
 					},
 				});
 			roles.splice(roles.indexOf(role), 1);

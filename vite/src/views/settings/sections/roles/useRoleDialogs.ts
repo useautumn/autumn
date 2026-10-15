@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Role } from "./roleAccess";
+import type { ApiRole } from "./roleAccess";
 
 type RoleDialog = "editor" | "delete" | null;
 
@@ -7,12 +7,17 @@ type RoleDialog = "editor" | "delete" | null;
 export const useRoleDialogs = () => {
 	const [state, setState] = useState<{
 		dialog: RoleDialog;
-		role: Role | null;
+		role: ApiRole | null;
 		nonce: number;
 	}>({ dialog: null, role: null, nonce: 0 });
 
-	const open = ({ dialog, role }: { dialog: RoleDialog; role: Role | null }) =>
-		setState((prev) => ({ dialog, role, nonce: prev.nonce + 1 }));
+	const open = ({
+		dialog,
+		role,
+	}: {
+		dialog: RoleDialog;
+		role: ApiRole | null;
+	}) => setState((prev) => ({ dialog, role, nonce: prev.nonce + 1 }));
 
 	const setOpen = (isOpen: boolean) => {
 		if (isOpen) return;
@@ -21,9 +26,10 @@ export const useRoleDialogs = () => {
 
 	return {
 		...state,
-		openEditor: ({ role }: { role: Role | null }) =>
+		openEditor: ({ role }: { role: ApiRole | null }) =>
 			open({ dialog: "editor", role }),
-		openDelete: ({ role }: { role: Role }) => open({ dialog: "delete", role }),
+		openDelete: ({ role }: { role: ApiRole }) =>
+			open({ dialog: "delete", role }),
 		setOpen,
 	};
 };

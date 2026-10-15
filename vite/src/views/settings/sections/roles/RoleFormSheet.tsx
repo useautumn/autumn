@@ -10,11 +10,11 @@ import { z } from "zod/v4";
 import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useAppForm } from "@/hooks/form/form";
 import {
+	type ApiRole,
 	accessToScopes,
 	canEditRole,
 	formValuesToRoleBody,
 	labelToName,
-	type Role,
 	type RoleBody,
 	roleToFormValues,
 	scopesToAccess,
@@ -33,7 +33,7 @@ const sheetTitle = ({
 	role,
 	editable,
 }: {
-	role: Role | null;
+	role: ApiRole | null;
 	editable: boolean;
 }) => {
 	if (!role) return "New role";
@@ -49,7 +49,7 @@ export const RoleFormSheet = ({
 	isSaving,
 	readOnly,
 }: {
-	role: Role | null;
+	role: ApiRole | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (params: { body: RoleBody }) => void;

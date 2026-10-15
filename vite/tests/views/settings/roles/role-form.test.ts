@@ -1,24 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import { RESOURCES, type ScopeString } from "@autumn/shared";
 import {
+	type ApiRole,
 	accessToScopes,
 	canEditRole,
 	emptyAccess,
 	formValuesToRoleBody,
-	type Role,
 	type RoleAccessRecord,
 	roleToFormValues,
 	scopesToAccess,
 	summarizeAccess,
 	summarizeRules,
 } from "@/views/settings/sections/roles/roleAccess";
+import {
+	getMockRolesClient,
+	getRoleInUseCount,
+} from "@/views/settings/sections/roles/rolesClient";
 
 const access = (overrides: Partial<RoleAccessRecord>): RoleAccessRecord => ({
 	...emptyAccess(),
 	...overrides,
 });
 
-const role = (overrides: Partial<Role>): Role => ({
+const role = (overrides: Partial<ApiRole>): ApiRole => ({
 	name: "support",
 	label: "Support",
 	built_in: false,
@@ -162,5 +166,26 @@ describe("approval rules column", () => {
 		{ name: "sales", rule_count: 2, summary: "2 rules" },
 	])("$name with $rule_count → $summary", ({ name, rule_count, summary }) => {
 		expect(summarizeRules({ role: role({ name, rule_count }) })).toBe(summary);
+	});
+});
+
+describe("mock roles client matches §R", () => {
+	test("lists built-in roles first, in §R order", async () => {
+		const roles = await getMockRolesClient({ storeKey: "order" }).list();
+		expect(roles.filter((r) => r.built_in).map((r) => r.name)).toEqual([
+			"owner",
+			"admin",
+			"developer",
+			"sales",
+			"member",
+		]);
+		expect(roles.findIndex((r) => !r.built_in)).toBe(5);
+	});
+
+	test("an in-use delete carries details.member_count", async () => {
+		const error = await getMockRolesClient({ storeKey: "in-use" })
+			.remove({ name: "support" })
+			.catch((caught: unknown) => caught);
+		expect(getRoleInUseCount({ error })).toBe(4);
 	});
 });

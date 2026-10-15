@@ -13,8 +13,8 @@ import {
 	TableRow,
 } from "@/views/settings/SettingsTable";
 import {
+	type ApiRole,
 	canEditRole,
-	type Role,
 	summarizeAccess,
 	summarizeRules,
 } from "./roleAccess";
@@ -25,7 +25,7 @@ export const RoleRow = ({
 	onDelete,
 	readOnly,
 }: {
-	role: Role;
+	role: ApiRole;
 	onEdit: () => void;
 	onDelete: () => void;
 	readOnly: boolean;

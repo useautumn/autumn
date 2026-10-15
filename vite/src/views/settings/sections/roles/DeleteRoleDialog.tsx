@@ -7,7 +7,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@autumn/ui";
-import type { Role } from "./roleAccess";
+import type { ApiRole } from "./roleAccess";
 
 const memberCopy = ({ count }: { count: number }) =>
 	count === 1 ? "1 member" : `${count} members`;
@@ -20,7 +20,7 @@ export const DeleteRoleDialog = ({
 	isDeleting,
 	inUseCount,
 }: {
-	role: Role | null;
+	role: ApiRole | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onConfirm: () => void;

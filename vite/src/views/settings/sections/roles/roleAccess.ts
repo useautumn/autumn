@@ -9,7 +9,7 @@ import {
 export type RoleAccess = "none" | "read" | "write";
 export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
 
-export type Role = {
+export type ApiRole = {
 	name: string;
 	label: string;
 	built_in: boolean;
@@ -20,8 +20,8 @@ export type Role = {
 	updated_at: number | null;
 };
 
-export type RoleBody = Pick<Role, "name" | "label" | "access">;
-export type RoleFormValues = Pick<Role, "label" | "access">;
+export type RoleBody = Pick<ApiRole, "name" | "label" | "access">;
+export type RoleFormValues = Pick<ApiRole, "label" | "access">;
 
 const READ_ONLY_RESOURCES: readonly ResourceType[] = ["analytics"];
 
@@ -69,12 +69,12 @@ export const scopesToAccess = ({
 	});
 };
 
-export const canEditRole = ({ role }: { role: Role }) => !role.built_in;
+export const canEditRole = ({ role }: { role: ApiRole }) => !role.built_in;
 
 export const roleToFormValues = ({
 	role,
 }: {
-	role: Role | null;
+	role: ApiRole | null;
 }): RoleFormValues => ({
 	label: role?.label ?? "",
 	access: role?.access ?? emptyAccess(),
@@ -137,7 +137,7 @@ export const summarizeAccess = ({
 
 const RULE_EXEMPT_ROLES = ["owner", "admin"];
 
-export const summarizeRules = ({ role }: { role: Role }) => {
+export const summarizeRules = ({ role }: { role: ApiRole }) => {
 	if (RULE_EXEMPT_ROLES.includes(role.name)) return "Skips rules";
 	if (role.rule_count === 0) return "No rules";
 	return role.rule_count === 1 ? "1 rule" : `${role.rule_count} rules`;
