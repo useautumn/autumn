@@ -30,26 +30,8 @@ type FieldCodec = {
 	fromFilter: (group: Filter) => RowRead[];
 };
 
-/** The incoming plan element; rows that collide in it are combined with `$and`. */
-export const INCOMING_PLAN = ["incoming", "$every"];
+const INCOMING_PLAN = ["incoming", "$every"];
 const QUANTITY_LIMIT = [...INCOMING_PLAN, "feature_quantities", "$none"];
-
-/** The incoming plan element, then each of its `$and` entries, as groups to read from. */
-const incomingPlanViews = (group: Filter): Filter[] => {
-	const element = get(group, INCOMING_PLAN);
-	if (!isPlainObject(element) || !Array.isArray(element.$and)) return [group];
-	const { $and: entries, ...rest } = element;
-	const incoming = group.incoming as Filter;
-	return [
-		{ ...group, incoming: { ...incoming, $every: rest } },
-		...entries.map((entry: Filter) => ({ incoming: { $every: entry } })),
-	];
-};
-
-const inIncomingPlan = (codec: FieldCodec): FieldCodec => ({
-	toFilter: codec.toFilter,
-	fromFilter: (group) => incomingPlanViews(group).flatMap(codec.fromFilter),
-});
 
 const stringAt = (path: string[]): FieldCodec => ({
 	toFilter: (row) => at(path, toMatcher(row)),
@@ -223,22 +205,20 @@ export const FIELD_CODECS: Record<EditorField, FieldCodec> = {
 	checkout: booleanAt(["checkout"]),
 	total: numberAt(["total"]),
 	next_cycle_total: amountAt({ key: "next_cycle", amount: "total" }),
-	incoming_plan: inIncomingPlan(plansAt(["incoming"])),
+	incoming_plan: plansAt(["incoming"]),
 	outgoing_plan: plansAt(["outgoing"]),
-	incoming_paid: inIncomingPlan(booleanAt([...INCOMING_PLAN, "paid"])),
-	incoming_recurring: inIncomingPlan(
-		booleanAt([...INCOMING_PLAN, "recurring"]),
-	),
-	incoming_addon: inIncomingPlan(booleanAt([...INCOMING_PLAN, "addon"])),
-	free_trial: inIncomingPlan(freeTrial),
-	trial_card_required: inIncomingPlan(
-		booleanAt([...INCOMING_PLAN, "free_trial", "card_required"]),
-	),
-	trial_on_end: inIncomingPlan(
-		stringAt([...INCOMING_PLAN, "free_trial", "on_end"]),
-	),
-	feature_quantity: inIncomingPlan(featureQuantity),
-	customized: inIncomingPlan(booleanAt([...INCOMING_PLAN, "customized"])),
+	incoming_paid: booleanAt([...INCOMING_PLAN, "paid"]),
+	incoming_recurring: booleanAt([...INCOMING_PLAN, "recurring"]),
+	incoming_addon: booleanAt([...INCOMING_PLAN, "addon"]),
+	free_trial: freeTrial,
+	trial_card_required: booleanAt([
+		...INCOMING_PLAN,
+		"free_trial",
+		"card_required",
+	]),
+	trial_on_end: stringAt([...INCOMING_PLAN, "free_trial", "on_end"]),
+	feature_quantity: featureQuantity,
+	customized: booleanAt([...INCOMING_PLAN, "customized"]),
 	discount: stringAt(["discounts", "$every", "reward_id"]),
 	discount_percent_off: numberAt(["discounts", "$every", "percent_off"]),
 	discount_amount_off: numberAt(["discounts", "$every", "amount_off"]),

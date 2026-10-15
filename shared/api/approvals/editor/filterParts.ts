@@ -129,13 +129,6 @@ export const get = (value: unknown, path: string[]) =>
 		value,
 	);
 
-const setAt = (value: Filter, path: string[], leaf: unknown): Filter => {
-	const [key, ...rest] = path;
-	const inner =
-		rest.length > 0 ? setAt(value[key] as Filter, rest, leaf) : leaf;
-	return { ...value, [key]: inner };
-};
-
 const deepMerge = ({
 	base,
 	addition,
@@ -160,25 +153,26 @@ const deepMerge = ({
 };
 
 /**
- * Merges one row's filter into its group's; null when both set the same leaf.
- * A row that collides inside the element at `andPath` is kept whole as an `$and` entry.
+ * Merges one row's filter into its group's. A row that sets something already
+ * set is kept whole as an `$and` entry, so no condition is ever overwritten.
  */
 export const mergeFilters = ({
 	base,
 	addition,
-	andPath,
 }: {
 	base: Filter;
 	addition: Filter;
-	andPath: string[];
-}): Filter | null => {
+}): Filter => {
 	const merged = deepMerge({ base, addition });
 	if (merged) return merged;
-	const element = get(addition, andPath);
-	if (!isSameFilter(at(andPath, element), addition)) return null;
-	const current = get(base, andPath) as Filter;
-	const entries = Array.isArray(current.$and) ? current.$and : [];
-	return setAt(base, andPath, { ...current, $and: [...entries, element] });
+	const entries = Array.isArray(base.$and) ? base.$and : [];
+	return { ...base, $and: [...entries, addition] };
+};
+
+/** A group's own conditions, then each `$and` entry, as filters to read rows from. */
+export const andViewsOf = (group: Filter): Filter[] => {
+	const { $and: entries, ...rest } = group;
+	return [rest, ...(Array.isArray(entries) ? entries : [])];
 };
 
 export const isSameFilter = (a: unknown, b: unknown): boolean => {

@@ -10,7 +10,7 @@ import {
 	type EditorRow,
 	PINNED_FIELDS,
 } from "./editorFields";
-import { FIELD_CODECS, INCOMING_PLAN } from "./fieldCodecs";
+import { FIELD_CODECS } from "./fieldCodecs";
 import { type Filter, isEmptyObject, mergeFilters } from "./filterParts";
 
 /** `group: "pinned"` is the row above the groups. */
@@ -75,21 +75,12 @@ const groupToFilter = ({
 	for (const { row, index } of inBoardOrder) {
 		const fieldIssue = rowIssue({ area, row, pinned: false });
 		const addition = fieldIssue ? null : encodeRow({ area, row });
-		const message =
-			fieldIssue ?? (addition ? null : "Choose a value for this condition.");
-		const merged =
-			addition &&
-			mergeFilters({ base: filter, addition, andPath: INCOMING_PLAN });
-		if (merged) filter = merged;
-		else {
-			issues.push({
-				group,
-				row: index,
-				message:
-					message ??
-					"This condition can't be combined with another one in its group.",
-			});
+		if (addition) {
+			filter = mergeFilters({ base: filter, addition });
+			continue;
 		}
+		const message = fieldIssue ?? "Choose a value for this condition.";
+		issues.push({ group, row: index, message });
 	}
 	return { filter, issues };
 };

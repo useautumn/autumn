@@ -9,7 +9,12 @@ import {
 	PINNED_FIELDS,
 } from "./editorFields";
 import { FIELD_CODECS } from "./fieldCodecs";
-import { type Filter, isEmptyObject, isSameFilter } from "./filterParts";
+import {
+	andViewsOf,
+	type Filter,
+	isEmptyObject,
+	isSameFilter,
+} from "./filterParts";
 import { rowsToWhen } from "./rowsToWhen";
 
 export type WhenToRowsResult =
@@ -25,7 +30,9 @@ const readRows = ({ field, filter }: { field: EditorField; filter: Filter }) =>
 const groupRows = ({ area, group }: { area: WhenKey; group: Filter }) =>
 	(Object.keys(EDITOR_FIELDS[area]) as EditorField[])
 		.filter((field) => field !== PINNED_FIELDS[area])
-		.flatMap((field) => readRows({ field, filter: group }));
+		.flatMap((field) =>
+			andViewsOf(group).flatMap((view) => readRows({ field, filter: view })),
+		);
 
 /** A top-level `$or` is the OR groups, unless it's one row's cap (Refund ≤ $50). */
 const splitGroups = ({ area, when }: { area: WhenKey; when: Filter }) => {
