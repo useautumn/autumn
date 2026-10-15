@@ -11,6 +11,7 @@ export const isBillingChangePaid = ({
 	incoming,
 	hasPaymentMethod,
 	raisesNextCycle,
+	raisesRecurringPrice,
 	addsPayPerUsePrice,
 }: {
 	checkout: boolean;
@@ -18,6 +19,7 @@ export const isBillingChangePaid = ({
 	incoming: IncomingPlanFacts[];
 	hasPaymentMethod: boolean;
 	raisesNextCycle: boolean;
+	raisesRecurringPrice: boolean;
 	addsPayPerUsePrice: boolean;
 }): boolean => {
 	if (checkout) return true;
@@ -30,5 +32,5 @@ export const isBillingChangePaid = ({
 		);
 	if (startsCardlessTrial) return false;
 
-	return raisesNextCycle || addsPayPerUsePrice;
+	return raisesNextCycle || raisesRecurringPrice || addsPayPerUsePrice;
 };
