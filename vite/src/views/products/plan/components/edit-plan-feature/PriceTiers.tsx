@@ -1,7 +1,7 @@
 import { type PriceTier, TierBehavior } from "@autumn/shared";
 import { IconButton, Input } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useFormattedNumberInput } from "@/hooks/common/useFormattedNumberInput";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
@@ -29,25 +29,18 @@ const TierToInput = ({ index }: { index: number }) => {
 
 	const isInfinite = index === tiers.length - 1;
 
-	const commitDisplayTo = (value: string) => {
-		setItem(applyTierToDisplayValue({ item, index, displayValue: value }));
-	};
-
-	const [tierVal, setTierVal] = useState<string>(
-		tierToDisplay({ tier: tiers[index], includedUsage }),
-	);
+	const numberInputProps = useFormattedNumberInput({
+		value: tierToDisplay({ tier: tiers[index], includedUsage }),
+		onValueChange: (displayValue) => {
+			if (item) setItem(applyTierToDisplayValue({ item, index, displayValue }));
+		},
+	});
 
 	return (
 		<Input
-			value={tierVal}
-			onBlur={() => commitDisplayTo(tierVal)}
-			onChange={(e) => {
-				setTierVal(e.target.value);
-				commitDisplayTo(e.target.value);
-			}}
+			{...numberInputProps}
 			className="w-full"
 			placeholder={isInfinite ? "∞" : "100"}
-			inputMode="decimal"
 			disabled={isInfinite || (tiers.length === 2 && index === 1)} // Disable infinity or 2nd tier in 2-tier setup
 		/>
 	);
