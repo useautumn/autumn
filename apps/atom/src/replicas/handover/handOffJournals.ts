@@ -1,10 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { peerRequestHeaders } from "../../replication/transport/peerSignature.js";
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
-import type {
-	HandedEntry,
-	Journal,
-} from "../../state/journal/types/journal.js";
+import type { HandedEntry } from "../../state/journal/types/journal.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import {
 	type HandoffBatch,
@@ -25,7 +22,6 @@ export type HandOffContext = {
 };
 
 type Pending = {
-	journal: Journal;
 	atomId: string | null;
 	customerId: string;
 	entries: HandedEntry[];
@@ -108,8 +104,9 @@ const batchesOf = async ({
 };
 
 /**
- * Every customer this thread's journals owe anything for, handed to the replica that owns it now, in its journal under
- * the original writer and seq; what the new owner acknowledges leaves this journal, the rest drains to Autumn as before.
+ * Every customer this thread's journals owe anything for, copied to the replica that owns it now, into its journal under
+ * the original writer and seq. Nothing leaves this journal: both sides send what they hold, each writer's seqs in order,
+ * and Autumn's per-writer watermark takes each once, so no seq can land ahead of an earlier one that is unsent somewhere.
  */
 export const handOffJournals = async ({
 	ctx,
@@ -126,7 +123,6 @@ export const handOffJournals = async ({
 					(
 						await journal.handoffs()
 					).map((handoff) => ({
-						journal,
 						atomId,
 						...handoff,
 					})),
@@ -141,14 +137,8 @@ export const handOffJournals = async ({
 	const lane = async () => {
 		while (next < batches.length) {
 			const batch = batches[next++] as Batch;
-			if (await sendBatch({ ctx, batch })) {
-				await Promise.all(
-					batch.items.map((item) =>
-						item.journal.dropHandedOff({ entries: item.entries }),
-					),
-				);
-				handed += batch.entries;
-			} else kept += batch.entries;
+			if (await sendBatch({ ctx, batch })) handed += batch.entries;
+			else kept += batch.entries;
 		}
 	};
 	await Promise.all(Array.from({ length: BATCHES_IN_FLIGHT }, lane));
@@ -162,7 +152,7 @@ export const handOffJournals = async ({
 				kept,
 			},
 		},
-		`Handed ${handed} owed entries to the new owners in ${batches.length} batches; ${kept} stay to drain to Autumn`,
+		`Copied ${handed} owed entries to the new owners in ${batches.length} batches; ${kept} reached no new owner and drain to Autumn only`,
 	);
 	return { handed, kept };
 };

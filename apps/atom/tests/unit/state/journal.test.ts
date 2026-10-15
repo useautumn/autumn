@@ -591,27 +591,6 @@ describe("a journal's handoff", () => {
 			{ seq: 2, sent: false },
 		]);
 	});
-
-	test("what the new owner acknowledged leaves this journal, in memory and on disk, and the rest stays owed", async () => {
-		const databasePath = journalPath();
-		const journal = open({ databasePath });
-		const first = await journal.append({
-			customerId: "cus_1",
-			command: commandOf({ commandId: "a" }),
-		});
-		await journal.append({
-			customerId: "cus_1",
-			command: commandOf({ commandId: "b" }),
-		});
-
-		await journal.dropHandedOff({ entries: [first] });
-
-		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
-			[2],
-		);
-		expect(journal.countUnsent()).toBe(1);
-		expect(rowsIn({ databasePath })).toEqual([{ customerId: "cus_1", seq: 2 }]);
-	});
 });
 
 describe("journal entries carry their writer", () => {

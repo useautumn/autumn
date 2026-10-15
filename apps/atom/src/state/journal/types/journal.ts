@@ -68,8 +68,6 @@ export type Journal = {
 	appendForeign(params: { entries: HandedEntry[] }): Promise<number>;
 	/** Every customer owing something, with each committed entry and whether Autumn already holds it: what a handoff carries. */
 	handoffs(): Promise<{ customerId: string; entries: HandedEntry[] }[]>;
-	/** Entries handed to another journal, which holds them now: gone from this one. */
-	dropHandedOff(params: { entries: JournalEntry[] }): Promise<void>;
 	close(): void;
 	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
 	holdsKey(params: { customerId: string; key: string }): boolean;
