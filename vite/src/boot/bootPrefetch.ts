@@ -3,6 +3,7 @@ import {
 	ACTIVE_SANDBOX_STORAGE_KEY,
 	bootRequestsForLocation,
 	DASHBOARD_API_VERSION,
+	dashboardRequestHeaders,
 } from "./bootRequests";
 import { type BootResponse, bootRequestKey } from "./bootResponses";
 
@@ -75,11 +76,12 @@ const startBootRequests = () => {
 				method,
 				body,
 				headers: {
-					app_env: env,
-					"x-api-version": DASHBOARD_API_VERSION,
-					"x-client-type": "dashboard",
+					...dashboardRequestHeaders({
+						env,
+						sandboxOrgId: sandbox?.id,
+						apiVersion: DASHBOARD_API_VERSION,
+					}),
 					...(body && { "content-type": "application/json" }),
-					...(sandbox && { "x-sandbox-org-id": sandbox.id }),
 				},
 			}),
 		);

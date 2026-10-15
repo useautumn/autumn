@@ -2,7 +2,10 @@ import { type ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
 import { bootAwareAxiosAdapter } from "@/boot/bootAwareFetch";
-import { DASHBOARD_API_VERSION } from "@/boot/bootRequests";
+import {
+	DASHBOARD_API_VERSION,
+	dashboardRequestHeaders,
+} from "@/boot/bootRequests";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
@@ -33,15 +36,15 @@ export function useAxiosInstance(params?: {
 
 		instance.interceptors.request.use(
 			async (config: any) => {
-				config.headers.app_env = envToUse;
-				if (sandboxOrgId && envToUse === AppEnv.Sandbox) {
-					config.headers["x-sandbox-org-id"] = sandboxOrgId;
-				}
-				// Only set x-api-version if not already set by the request
-				if (!config.headers["x-api-version"]) {
-					config.headers["x-api-version"] = version;
-				}
-				config.headers["x-client-type"] = "dashboard";
+				Object.assign(
+					config.headers,
+					dashboardRequestHeaders({
+						env: envToUse,
+						sandboxOrgId: envToUse === AppEnv.Sandbox ? sandboxOrgId : null,
+						// A request that sets its own API version keeps it.
+						apiVersion: config.headers["x-api-version"] || version,
+					}),
+				);
 
 				return config;
 			},

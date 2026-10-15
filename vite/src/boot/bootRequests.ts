@@ -5,6 +5,22 @@ import { RESERVED_SANDBOX_SLUGS } from "../../../shared/models/orgModels/sandbox
 export const ACTIVE_SANDBOX_STORAGE_KEY = "autumn_active_sandbox";
 export const DASHBOARD_API_VERSION = "1.2";
 
+/** The headers every dashboard API request carries, so the boot script's requests match the app's. */
+export const dashboardRequestHeaders = ({
+	env,
+	sandboxOrgId,
+	apiVersion,
+}: {
+	env: string;
+	sandboxOrgId?: string | null;
+	apiVersion: string;
+}) => ({
+	app_env: env,
+	"x-api-version": apiVersion,
+	"x-client-type": "dashboard",
+	...(sandboxOrgId && { "x-sandbox-org-id": sandboxOrgId }),
+});
+
 /** The lazy page modules in app/routeChunks.ts, so a direct load can fetch its page's chunks with the entry. */
 export const ROUTE_MODULES = {
 	customer: "src/views/customers2/customer/CustomerView2.tsx",
