@@ -544,7 +544,7 @@ export type ReissueInvoiceCreditSchemaUnion =
  */
 export type ReissueInvoiceFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<ReissueInvoiceCreditSchema1 | ReissueInvoiceCreditSchema2>
@@ -1082,7 +1082,7 @@ export type ReissueInvoiceLicenseQuantityCreditSchemaUnion =
  */
 export type ReissueInvoiceLicenseQuantityFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<

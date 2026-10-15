@@ -345,6 +345,17 @@ export type PreviewMultiAttachExpiry = {
   length: number;
 };
 
+export type PreviewMultiAttachCreditSchema3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
 export type PreviewMultiAttachDimensionsMatch4 = string | number | boolean;
 
 export type PreviewMultiAttachDimensions4 = {
@@ -576,7 +587,8 @@ export type PreviewMultiAttachCreditSchema1 = {
 
 export type PreviewMultiAttachCreditSchemaUnion =
   | PreviewMultiAttachCreditSchema1
-  | PreviewMultiAttachCreditSchema2;
+  | PreviewMultiAttachCreditSchema2
+  | PreviewMultiAttachCreditSchema3;
 
 export type PreviewMultiAttachProviderMarkups = {
   markup: number;
@@ -617,10 +629,14 @@ export type PreviewMultiAttachMarkups = {
  */
 export type PreviewMultiAttachFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<PreviewMultiAttachCreditSchema1 | PreviewMultiAttachCreditSchema2>
+    | Array<
+      | PreviewMultiAttachCreditSchema1
+      | PreviewMultiAttachCreditSchema2
+      | PreviewMultiAttachCreditSchema3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -1995,6 +2011,38 @@ export function previewMultiAttachExpiryToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachCreditSchema3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const PreviewMultiAttachCreditSchema3$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCreditSchema3$Outbound,
+  PreviewMultiAttachCreditSchema3
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    excluded: z.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+    });
+  }),
+);
+
+export function previewMultiAttachCreditSchema3ToJSON(
+  previewMultiAttachCreditSchema3: PreviewMultiAttachCreditSchema3,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachCreditSchema3$outboundSchema.parse(
+      previewMultiAttachCreditSchema3,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachDimensionsMatch4$Outbound =
   | string
   | number
@@ -2690,7 +2738,8 @@ export function previewMultiAttachCreditSchema1ToJSON(
 /** @internal */
 export type PreviewMultiAttachCreditSchemaUnion$Outbound =
   | PreviewMultiAttachCreditSchema1$Outbound
-  | PreviewMultiAttachCreditSchema2$Outbound;
+  | PreviewMultiAttachCreditSchema2$Outbound
+  | PreviewMultiAttachCreditSchema3$Outbound;
 
 /** @internal */
 export const PreviewMultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
@@ -2699,6 +2748,7 @@ export const PreviewMultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => PreviewMultiAttachCreditSchema1$outboundSchema),
   z.lazy(() => PreviewMultiAttachCreditSchema2$outboundSchema),
+  z.lazy(() => PreviewMultiAttachCreditSchema3$outboundSchema),
 ]);
 
 export function previewMultiAttachCreditSchemaUnionToJSON(
@@ -2821,6 +2871,7 @@ export type PreviewMultiAttachFeatureOverride$Outbound = {
     | Array<
       | PreviewMultiAttachCreditSchema1$Outbound
       | PreviewMultiAttachCreditSchema2$Outbound
+      | PreviewMultiAttachCreditSchema3$Outbound
     >
     | undefined;
   markups?: PreviewMultiAttachMarkups$Outbound | undefined;
@@ -2837,6 +2888,7 @@ export const PreviewMultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
       z.lazy(() =>
         PreviewMultiAttachCreditSchema2$outboundSchema
       ),
+      z.lazy(() => PreviewMultiAttachCreditSchema3$outboundSchema),
     ]))),
     markups: z.optional(z.lazy(() =>
       PreviewMultiAttachMarkups$outboundSchema

@@ -37,6 +37,19 @@ export const GetFeatureType = {
  */
 export type GetFeatureType = OpenEnum<typeof GetFeatureType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const GetFeatureCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type GetFeatureCombine = OpenEnum<typeof GetFeatureCombine>;
+
 export type GetFeatureDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -406,6 +419,10 @@ export type GetFeatureResponse = {
    */
   consumable: boolean;
   /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: GetFeatureCombine | undefined;
+  /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
   eventNames?: Array<string> | undefined;
@@ -481,6 +498,12 @@ export const GetFeatureType$inboundSchema: z.ZodMiniType<
   GetFeatureType,
   unknown
 > = openEnums.inboundSchema(GetFeatureType);
+
+/** @internal */
+export const GetFeatureCombine$inboundSchema: z.ZodMiniType<
+  GetFeatureCombine,
+  unknown
+> = openEnums.inboundSchema(GetFeatureCombine);
 
 /** @internal */
 export const GetFeatureDimensions6$inboundSchema: z.ZodMiniType<
@@ -1213,6 +1236,7 @@ export const GetFeatureResponse$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: GetFeatureType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(GetFeatureCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => GetFeatureCreditSchema1$inboundSchema),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from .plan import Plan, PlanTypedDict
-from .previewattach_upsert_license_rollover import (
+from .previewattach_upsert_license_proration import (
     PreviewAttachAddItemPlanItem,
     PreviewAttachAddItemPlanItemTypedDict,
     PreviewAttachBasePrice,
@@ -27,8 +27,6 @@ from .previewattach_upsert_license_rollover import (
     PreviewAttachUpsertLicenseProrationTypedDict,
     PreviewAttachUpsertLicenseReset,
     PreviewAttachUpsertLicenseResetTypedDict,
-    PreviewAttachUpsertLicenseRollover,
-    PreviewAttachUpsertLicenseRolloverTypedDict,
     PreviewAttachUpsertLicenseThresholdBilling,
     PreviewAttachUpsertLicenseThresholdBillingTypedDict,
 )
@@ -46,6 +44,58 @@ from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
+
+
+PreviewAttachUpsertLicenseExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class PreviewAttachUpsertLicenseRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: PreviewAttachUpsertLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class PreviewAttachUpsertLicenseRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: PreviewAttachUpsertLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 PreviewAttachUpsertLicenseDuration = Literal[
@@ -69,6 +119,24 @@ class PreviewAttachUpsertLicenseExpiry(BaseModel):
     duration: PreviewAttachUpsertLicenseDuration
 
     length: float
+
+
+class PreviewAttachCreditSchemaUpsertLicense3TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+    excluded: Literal[True]
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class PreviewAttachCreditSchemaUpsertLicense3(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+
+    excluded: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="excluded"),
+    ] = True
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
 
 
 PreviewAttachDimensionsUpsertLicenseMatch4TypedDict = TypeAliasType(
@@ -584,6 +652,7 @@ class PreviewAttachCreditSchemaUpsertLicense1(BaseModel):
 PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
     "PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict",
     Union[
+        PreviewAttachCreditSchemaUpsertLicense3TypedDict,
         PreviewAttachCreditSchemaUpsertLicense2TypedDict,
         PreviewAttachCreditSchemaUpsertLicense1TypedDict,
     ],
@@ -593,7 +662,9 @@ PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
 PreviewAttachUpsertLicenseCreditSchemaUnion = TypeAliasType(
     "PreviewAttachUpsertLicenseCreditSchemaUnion",
     Union[
-        PreviewAttachCreditSchemaUpsertLicense2, PreviewAttachCreditSchemaUpsertLicense1
+        PreviewAttachCreditSchemaUpsertLicense3,
+        PreviewAttachCreditSchemaUpsertLicense2,
+        PreviewAttachCreditSchemaUpsertLicense1,
     ],
 )
 
@@ -699,7 +770,7 @@ class PreviewAttachUpsertLicenseFeatureOverrideTypedDict(TypedDict):
     credit_schema: NotRequired[
         List[PreviewAttachUpsertLicenseCreditSchemaUnionTypedDict]
     ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
     markups: NotRequired[PreviewAttachUpsertLicenseMarkupsTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
@@ -708,7 +779,7 @@ class PreviewAttachUpsertLicenseFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: Optional[List[PreviewAttachUpsertLicenseCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
 
     markups: Optional[PreviewAttachUpsertLicenseMarkups] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
@@ -2903,6 +2974,10 @@ class PreviewAttachResponse(BaseModel):
         return m
 
 
+try:
+    PreviewAttachCreditSchemaUpsertLicense3.model_rebuild()
+except NameError:
+    pass
 try:
     PreviewAttachDimensionsUpsertLicense3.model_rebuild()
 except NameError:

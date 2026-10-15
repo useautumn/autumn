@@ -12,6 +12,9 @@ export const LINT_RULES: LintRules = {
 			type: {
 				enum: ["boolean", "metered", "credit_system", "ai_credit_system"],
 			},
+			combine: {
+				enum: ["sum", "max", "min"],
+			},
 			defaultMarkup: {
 				minimum: -100,
 			},
@@ -426,37 +429,28 @@ export const LINT_RULES: LintRules = {
 	},
 	"plans.items.featureOverride.creditSchema": {
 		variants: {
-			on: "tierBehavior",
+			on: "excluded",
 			byValue: {
-				graduated: {
-					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+				true: {
+					required: ["excluded", "meteredFeatureId"],
 					fields: {
 						meteredFeatureId: {
 							minLength: 1,
 						},
-						billingUnits: {
-							exclusiveMinimum: 0,
-						},
-						tierBehavior: {
-							enum: ["graduated"],
-						},
-						tiers: {
-							minItems: 1,
+						excluded: {
+							enum: [true],
 						},
 					},
 				},
 			},
 			fallback: {
-				required: ["creditCost", "meteredFeatureId"],
+				required: ["meteredFeatureId"],
 				fields: {
 					meteredFeatureId: {
 						minLength: 1,
 					},
 					billingUnits: {
 						exclusiveMinimum: 0,
-					},
-					creditCost: {
-						minimum: 0,
 					},
 				},
 			},
@@ -699,37 +693,28 @@ export const LINT_RULES: LintRules = {
 	},
 	"plans.licenses.customize.addItems.featureOverride.creditSchema": {
 		variants: {
-			on: "tierBehavior",
+			on: "excluded",
 			byValue: {
-				graduated: {
-					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+				true: {
+					required: ["excluded", "meteredFeatureId"],
 					fields: {
 						meteredFeatureId: {
 							minLength: 1,
 						},
-						billingUnits: {
-							exclusiveMinimum: 0,
-						},
-						tierBehavior: {
-							enum: ["graduated"],
-						},
-						tiers: {
-							minItems: 1,
+						excluded: {
+							enum: [true],
 						},
 					},
 				},
 			},
 			fallback: {
-				required: ["creditCost", "meteredFeatureId"],
+				required: ["meteredFeatureId"],
 				fields: {
 					meteredFeatureId: {
 						minLength: 1,
 					},
 					billingUnits: {
 						exclusiveMinimum: 0,
-					},
-					creditCost: {
-						minimum: 0,
 					},
 				},
 			},
@@ -1049,37 +1034,28 @@ export const LINT_RULES: LintRules = {
 	},
 	"plans.variants.customize.addItems.featureOverride.creditSchema": {
 		variants: {
-			on: "tierBehavior",
+			on: "excluded",
 			byValue: {
-				graduated: {
-					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+				true: {
+					required: ["excluded", "meteredFeatureId"],
 					fields: {
 						meteredFeatureId: {
 							minLength: 1,
 						},
-						billingUnits: {
-							exclusiveMinimum: 0,
-						},
-						tierBehavior: {
-							enum: ["graduated"],
-						},
-						tiers: {
-							minItems: 1,
+						excluded: {
+							enum: [true],
 						},
 					},
 				},
 			},
 			fallback: {
-				required: ["creditCost", "meteredFeatureId"],
+				required: ["meteredFeatureId"],
 				fields: {
 					meteredFeatureId: {
 						minLength: 1,
 					},
 					billingUnits: {
 						exclusiveMinimum: 0,
-					},
-					creditCost: {
-						minimum: 0,
 					},
 				},
 			},
@@ -1407,37 +1383,28 @@ export const LINT_RULES: LintRules = {
 	},
 	"plans.variants.customize.items.featureOverride.creditSchema": {
 		variants: {
-			on: "tierBehavior",
+			on: "excluded",
 			byValue: {
-				graduated: {
-					required: ["meteredFeatureId", "tierBehavior", "tiers"],
+				true: {
+					required: ["excluded", "meteredFeatureId"],
 					fields: {
 						meteredFeatureId: {
 							minLength: 1,
 						},
-						billingUnits: {
-							exclusiveMinimum: 0,
-						},
-						tierBehavior: {
-							enum: ["graduated"],
-						},
-						tiers: {
-							minItems: 1,
+						excluded: {
+							enum: [true],
 						},
 					},
 				},
 			},
 			fallback: {
-				required: ["creditCost", "meteredFeatureId"],
+				required: ["meteredFeatureId"],
 				fields: {
 					meteredFeatureId: {
 						minLength: 1,
 					},
 					billingUnits: {
 						exclusiveMinimum: 0,
-					},
-					creditCost: {
-						minimum: 0,
 					},
 				},
 			},
@@ -1705,37 +1672,28 @@ export const LINT_RULES: LintRules = {
 	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema":
 		{
 			variants: {
-				on: "tierBehavior",
+				on: "excluded",
 				byValue: {
-					graduated: {
-						required: ["meteredFeatureId", "tierBehavior", "tiers"],
+					true: {
+						required: ["excluded", "meteredFeatureId"],
 						fields: {
 							meteredFeatureId: {
 								minLength: 1,
 							},
-							billingUnits: {
-								exclusiveMinimum: 0,
-							},
-							tierBehavior: {
-								enum: ["graduated"],
-							},
-							tiers: {
-								minItems: 1,
+							excluded: {
+								enum: [true],
 							},
 						},
 					},
 				},
 				fallback: {
-					required: ["creditCost", "meteredFeatureId"],
+					required: ["meteredFeatureId"],
 					fields: {
 						meteredFeatureId: {
 							minLength: 1,
 						},
 						billingUnits: {
 							exclusiveMinimum: 0,
-						},
-						creditCost: {
-							minimum: 0,
 						},
 					},
 				},

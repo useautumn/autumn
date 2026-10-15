@@ -26,6 +26,19 @@ export const BalanceType = {
  */
 export type BalanceType = OpenEnum<typeof BalanceType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const BalanceCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type BalanceCombine = OpenEnum<typeof BalanceCombine>;
+
 export type BalanceDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -389,6 +402,10 @@ export type BalanceFeature = {
    */
   consumable: boolean;
   /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: BalanceCombine | undefined;
+  /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
   eventNames?: Array<string> | undefined;
@@ -659,6 +676,12 @@ export type Balance = {
 /** @internal */
 export const BalanceType$inboundSchema: z.ZodMiniType<BalanceType, unknown> =
   openEnums.inboundSchema(BalanceType);
+
+/** @internal */
+export const BalanceCombine$inboundSchema: z.ZodMiniType<
+  BalanceCombine,
+  unknown
+> = openEnums.inboundSchema(BalanceCombine);
 
 /** @internal */
 export const BalanceDimensions6$inboundSchema: z.ZodMiniType<
@@ -1390,6 +1413,7 @@ export const BalanceFeature$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: BalanceType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(BalanceCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => BalanceCreditSchema1$inboundSchema),

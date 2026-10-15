@@ -1122,14 +1122,14 @@ class ReissueInvoiceFeatureOverrideTypedDict(TypedDict):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: NotRequired[List[ReissueInvoiceCreditSchemaUnionTypedDict]]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
 
 class ReissueInvoiceFeatureOverride(BaseModel):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: Optional[List[ReissueInvoiceCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2207,14 +2207,14 @@ class ReissueInvoiceLicenseQuantityFeatureOverrideTypedDict(TypedDict):
     credit_schema: NotRequired[
         List[ReissueInvoiceLicenseQuantityCreditSchemaUnionTypedDict]
     ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
 
 class ReissueInvoiceLicenseQuantityFeatureOverride(BaseModel):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: Optional[List[ReissueInvoiceLicenseQuantityCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

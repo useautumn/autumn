@@ -137,7 +137,7 @@ export type License = {
 			};
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
-				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
+				/** For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate. */
 				creditSchema?: Array<
 					| {
 							/** ID of the metered feature that draws from this credit system. */
@@ -233,6 +233,12 @@ export type License = {
 							>;
 							/** Credits consumed per billing-unit group. */
 							creditCost: number;
+					  }
+					| {
+							/** ID of the metered feature to remove from the credit system. */
+							meteredFeatureId: string;
+							/** Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate. */
+							excluded: true;
 					  }
 				>;
 				/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */

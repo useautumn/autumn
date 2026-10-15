@@ -16,6 +16,7 @@ class Features(BaseSDK):
         type_: models.CreateFeatureTypeRequestBody,
         feature_id: str,
         consumable: Optional[bool] = None,
+        combine: Optional[models.CreateFeatureCombineRequest] = None,
         display: Optional[
             Union[
                 models.CreateFeatureDisplayRequestBody,
@@ -55,6 +56,7 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+        :param combine: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
         :param display: Singular and plural display names for the feature in your user interface.
         :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
@@ -80,6 +82,7 @@ class Features(BaseSDK):
             name=name,
             type=type_,
             consumable=consumable,
+            combine=combine,
             display=utils.get_pydantic_model(
                 display, Optional[models.CreateFeatureDisplayRequestBody]
             ),
@@ -170,6 +173,7 @@ class Features(BaseSDK):
         type_: models.CreateFeatureTypeRequestBody,
         feature_id: str,
         consumable: Optional[bool] = None,
+        combine: Optional[models.CreateFeatureCombineRequest] = None,
         display: Optional[
             Union[
                 models.CreateFeatureDisplayRequestBody,
@@ -209,6 +213,7 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+        :param combine: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
         :param display: Singular and plural display names for the feature in your user interface.
         :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
@@ -234,6 +239,7 @@ class Features(BaseSDK):
             name=name,
             type=type_,
             consumable=consumable,
+            combine=combine,
             display=utils.get_pydantic_model(
                 display, Optional[models.CreateFeatureDisplayRequestBody]
             ),
@@ -690,6 +696,7 @@ class Features(BaseSDK):
         name: Optional[str] = None,
         type_: Optional[models.UpdateFeatureTypeRequestBody] = None,
         consumable: Optional[bool] = None,
+        combine: Optional[models.UpdateFeatureCombineRequest] = None,
         display: Optional[
             Union[
                 models.UpdateFeatureDisplayRequestBody,
@@ -731,6 +738,7 @@ class Features(BaseSDK):
         :param name: The name of the feature.
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+        :param combine: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
         :param display: Singular and plural display names for the feature in your user interface.
         :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
@@ -758,6 +766,7 @@ class Features(BaseSDK):
             name=name,
             type=type_,
             consumable=consumable,
+            combine=combine,
             display=utils.get_pydantic_model(
                 display, Optional[models.UpdateFeatureDisplayRequestBody]
             ),
@@ -850,6 +859,7 @@ class Features(BaseSDK):
         name: Optional[str] = None,
         type_: Optional[models.UpdateFeatureTypeRequestBody] = None,
         consumable: Optional[bool] = None,
+        combine: Optional[models.UpdateFeatureCombineRequest] = None,
         display: Optional[
             Union[
                 models.UpdateFeatureDisplayRequestBody,
@@ -891,6 +901,7 @@ class Features(BaseSDK):
         :param name: The name of the feature.
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
+        :param combine: How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
         :param display: Singular and plural display names for the feature in your user interface.
         :param credit_schema: A schema that maps metered feature IDs to flat or graduated credit costs. For classic credit systems only — AI credit systems use model_markups instead.
         :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
@@ -918,6 +929,7 @@ class Features(BaseSDK):
             name=name,
             type=type_,
             consumable=consumable,
+            combine=combine,
             display=utils.get_pydantic_model(
                 display, Optional[models.UpdateFeatureDisplayRequestBody]
             ),

@@ -48,14 +48,47 @@ import {
   PreviewAttachUpsertLicenseReset,
   PreviewAttachUpsertLicenseReset$Outbound,
   PreviewAttachUpsertLicenseReset$outboundSchema,
-  PreviewAttachUpsertLicenseRollover,
-  PreviewAttachUpsertLicenseRollover$Outbound,
-  PreviewAttachUpsertLicenseRollover$outboundSchema,
   PreviewAttachUpsertLicenseThresholdBilling,
   PreviewAttachUpsertLicenseThresholdBilling$Outbound,
   PreviewAttachUpsertLicenseThresholdBilling$outboundSchema,
-} from "./preview-attach-upsert-license-rollover.js";
+} from "./preview-attach-upsert-license-proration.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const PreviewAttachUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type PreviewAttachUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof PreviewAttachUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type PreviewAttachUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: PreviewAttachUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
 
 export const PreviewAttachUpsertLicenseDuration = {
   Day: "day",
@@ -73,6 +106,17 @@ export type PreviewAttachUpsertLicenseDuration = ClosedEnum<
 export type PreviewAttachUpsertLicenseExpiry = {
   duration: PreviewAttachUpsertLicenseDuration;
   length: number;
+};
+
+export type PreviewAttachCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type PreviewAttachDimensionsUpsertLicenseMatch4 =
@@ -332,7 +376,8 @@ export type PreviewAttachCreditSchemaUpsertLicense1 = {
 
 export type PreviewAttachUpsertLicenseCreditSchemaUnion =
   | PreviewAttachCreditSchemaUpsertLicense1
-  | PreviewAttachCreditSchemaUpsertLicense2;
+  | PreviewAttachCreditSchemaUpsertLicense2
+  | PreviewAttachCreditSchemaUpsertLicense3;
 
 export type PreviewAttachUpsertLicenseProviderMarkups = {
   markup: number;
@@ -373,12 +418,13 @@ export type PreviewAttachUpsertLicenseMarkups = {
  */
 export type PreviewAttachUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | PreviewAttachCreditSchemaUpsertLicense1
       | PreviewAttachCreditSchemaUpsertLicense2
+      | PreviewAttachCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -1607,6 +1653,51 @@ export type PreviewAttachResponse = {
 };
 
 /** @internal */
+export const PreviewAttachUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof PreviewAttachUpsertLicenseExpiryDurationType> = z.enum(
+    PreviewAttachUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export type PreviewAttachUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
+  PreviewAttachUpsertLicenseRollover$Outbound,
+  PreviewAttachUpsertLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType:
+      PreviewAttachUpsertLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function previewAttachUpsertLicenseRolloverToJSON(
+  previewAttachUpsertLicenseRollover: PreviewAttachUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    PreviewAttachUpsertLicenseRollover$outboundSchema.parse(
+      previewAttachUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewAttachUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
   typeof PreviewAttachUpsertLicenseDuration
 > = z.enum(PreviewAttachUpsertLicenseDuration);
@@ -1632,6 +1723,40 @@ export function previewAttachUpsertLicenseExpiryToJSON(
   return JSON.stringify(
     PreviewAttachUpsertLicenseExpiry$outboundSchema.parse(
       previewAttachUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewAttachCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const PreviewAttachCreditSchemaUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachCreditSchemaUpsertLicense3$Outbound,
+    PreviewAttachCreditSchemaUpsertLicense3
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      excluded: z.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+      });
+    }),
+  );
+
+export function previewAttachCreditSchemaUpsertLicense3ToJSON(
+  previewAttachCreditSchemaUpsertLicense3:
+    PreviewAttachCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    PreviewAttachCreditSchemaUpsertLicense3$outboundSchema.parse(
+      previewAttachCreditSchemaUpsertLicense3,
     ),
   );
 }
@@ -2380,7 +2505,8 @@ export function previewAttachCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type PreviewAttachUpsertLicenseCreditSchemaUnion$Outbound =
   | PreviewAttachCreditSchemaUpsertLicense1$Outbound
-  | PreviewAttachCreditSchemaUpsertLicense2$Outbound;
+  | PreviewAttachCreditSchemaUpsertLicense2$Outbound
+  | PreviewAttachCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const PreviewAttachUpsertLicenseCreditSchemaUnion$outboundSchema:
@@ -2390,6 +2516,7 @@ export const PreviewAttachUpsertLicenseCreditSchemaUnion$outboundSchema:
   > = smartUnion([
     z.lazy(() => PreviewAttachCreditSchemaUpsertLicense1$outboundSchema),
     z.lazy(() => PreviewAttachCreditSchemaUpsertLicense2$outboundSchema),
+    z.lazy(() => PreviewAttachCreditSchemaUpsertLicense3$outboundSchema),
   ]);
 
 export function previewAttachUpsertLicenseCreditSchemaUnionToJSON(
@@ -2519,6 +2646,7 @@ export type PreviewAttachUpsertLicenseFeatureOverride$Outbound = {
     | Array<
       | PreviewAttachCreditSchemaUpsertLicense1$Outbound
       | PreviewAttachCreditSchemaUpsertLicense2$Outbound
+      | PreviewAttachCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: PreviewAttachUpsertLicenseMarkups$Outbound | undefined;
@@ -2536,6 +2664,7 @@ export const PreviewAttachUpsertLicenseFeatureOverride$outboundSchema:
         z.lazy(() =>
           PreviewAttachCreditSchemaUpsertLicense2$outboundSchema
         ),
+        z.lazy(() => PreviewAttachCreditSchemaUpsertLicense3$outboundSchema),
       ]))),
       markups: z.optional(z.lazy(() =>
         PreviewAttachUpsertLicenseMarkups$outboundSchema
@@ -2595,7 +2724,9 @@ export const PreviewAttachUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     reset: z.optional(PreviewAttachUpsertLicenseReset$outboundSchema),
     price: z.optional(PreviewAttachUpsertLicensePrice$outboundSchema),
     proration: z.optional(PreviewAttachUpsertLicenseProration$outboundSchema),
-    rollover: z.optional(PreviewAttachUpsertLicenseRollover$outboundSchema),
+    rollover: z.optional(
+      z.lazy(() => PreviewAttachUpsertLicenseRollover$outboundSchema),
+    ),
     expiry: z.optional(
       z.lazy(() => PreviewAttachUpsertLicenseExpiry$outboundSchema),
     ),

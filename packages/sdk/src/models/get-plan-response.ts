@@ -33,19 +33,59 @@ import {
   GetPlanVariantDetailsAutoTopup$inboundSchema,
   GetPlanVariantDetailsBasePrice,
   GetPlanVariantDetailsBasePrice$inboundSchema,
+  GetPlanVariantDetailsBasis,
+  GetPlanVariantDetailsBasis$inboundSchema,
   GetPlanVariantDetailsPlanItem,
   GetPlanVariantDetailsPlanItem$inboundSchema,
   GetPlanVariantDetailsPlanItemFilter,
   GetPlanVariantDetailsPlanItemFilter$inboundSchema,
   GetPlanVariantDetailsSpendLimit,
   GetPlanVariantDetailsSpendLimit$inboundSchema,
-  GetPlanVariantDetailsUsageAlert,
-  GetPlanVariantDetailsUsageAlert$inboundSchema,
+  GetPlanVariantDetailsThresholdType,
+  GetPlanVariantDetailsThresholdType$inboundSchema,
   GetPlanVariantDetailsUsageLimit,
   GetPlanVariantDetailsUsageLimit$inboundSchema,
-} from "./get-plan-variant-details-usage-alert.js";
+} from "./get-plan-variant-details-basis.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+ */
+export type GetPlanVariantDetailsUsageAlertFilter = {
+  properties: { [k: string]: string };
+};
+
+export type GetPlanVariantDetailsUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: GetPlanVariantDetailsThresholdType;
+  /**
+   * What 100% means. balance: every grant on the feature. included: the plan allowance only. recurring: grants that reset. usage_limit: the cap of the usage limit with the same feature and filter.
+   */
+  basis: GetPlanVariantDetailsBasis;
+  /**
+   * Only valid with basis usage_limit. Points the alert at the usage limit carrying the same filter.
+   */
+  filter?: GetPlanVariantDetailsUsageAlertFilter | undefined;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
 
 export type GetPlanVariantDetailsOverageAllowed = {
   /**
@@ -404,6 +444,17 @@ export type GetPlanUpsertLicenseExpiry = {
   length: number;
 };
 
+export type GetPlanCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
 export type GetPlanDimensionsUpsertLicense4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -627,7 +678,8 @@ export type GetPlanCreditSchemaUpsertLicense1 = {
 
 export type GetPlanUpsertLicenseCreditSchemaUnion =
   | GetPlanCreditSchemaUpsertLicense1
-  | GetPlanCreditSchemaUpsertLicense2;
+  | GetPlanCreditSchemaUpsertLicense2
+  | GetPlanCreditSchemaUpsertLicense3;
 
 export type GetPlanUpsertLicenseProviderMarkups = {
   markup: number;
@@ -668,11 +720,13 @@ export type GetPlanUpsertLicenseMarkups = {
  */
 export type GetPlanUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
-      GetPlanCreditSchemaUpsertLicense1 | GetPlanCreditSchemaUpsertLicense2
+      | GetPlanCreditSchemaUpsertLicense1
+      | GetPlanCreditSchemaUpsertLicense2
+      | GetPlanCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -1191,6 +1245,17 @@ export type GetPlanLicenseExpiry = {
   length: number;
 };
 
+export type GetPlanCreditSchemaLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
 export type GetPlanDimensionsLicense4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -1408,7 +1473,8 @@ export type GetPlanCreditSchemaLicense1 = {
 
 export type GetPlanLicenseCreditSchemaUnion =
   | GetPlanCreditSchemaLicense1
-  | GetPlanCreditSchemaLicense2;
+  | GetPlanCreditSchemaLicense2
+  | GetPlanCreditSchemaLicense3;
 
 export type GetPlanLicenseProviderMarkups = {
   markup: number;
@@ -1446,10 +1512,14 @@ export type GetPlanLicenseMarkups = {
  */
 export type GetPlanLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<GetPlanCreditSchemaLicense1 | GetPlanCreditSchemaLicense2>
+    | Array<
+      | GetPlanCreditSchemaLicense1
+      | GetPlanCreditSchemaLicense2
+      | GetPlanCreditSchemaLicense3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -1721,6 +1791,59 @@ export type GetPlanResponse = {
 };
 
 /** @internal */
+export const GetPlanVariantDetailsUsageAlertFilter$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsUsageAlertFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), types.string()),
+});
+
+export function getPlanVariantDetailsUsageAlertFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanVariantDetailsUsageAlertFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      GetPlanVariantDetailsUsageAlertFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsUsageAlertFilter' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanVariantDetailsUsageAlert$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: GetPlanVariantDetailsThresholdType$inboundSchema,
+    basis: z._default(GetPlanVariantDetailsBasis$inboundSchema, "balance"),
+    filter: types.optional(
+      z.lazy(() => GetPlanVariantDetailsUsageAlertFilter$inboundSchema),
+    ),
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function getPlanVariantDetailsUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanVariantDetailsUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanVariantDetailsUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanVariantDetailsUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetPlanVariantDetailsOverageAllowed$inboundSchema: z.ZodMiniType<
   GetPlanVariantDetailsOverageAllowed,
   unknown
@@ -1763,7 +1886,7 @@ export const GetPlanVariantDetailsBillingControls$inboundSchema: z.ZodMiniType<
       z.array(GetPlanVariantDetailsUsageLimit$inboundSchema),
     ),
     usage_alerts: types.optional(
-      z.array(GetPlanVariantDetailsUsageAlert$inboundSchema),
+      z.array(z.lazy(() => GetPlanVariantDetailsUsageAlert$inboundSchema)),
     ),
     overage_allowed: types.optional(
       z.array(z.lazy(() => GetPlanVariantDetailsOverageAllowed$inboundSchema)),
@@ -2157,6 +2280,32 @@ export function getPlanUpsertLicenseExpiryFromJSON(
     jsonString,
     (x) => GetPlanUpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetPlanUpsertLicenseExpiry' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanCreditSchemaUpsertLicense3$inboundSchema: z.ZodMiniType<
+  GetPlanCreditSchemaUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    excluded: types.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+    });
+  }),
+);
+
+export function getPlanCreditSchemaUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanCreditSchemaUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanCreditSchemaUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanCreditSchemaUpsertLicense3' from JSON`,
   );
 }
 
@@ -2609,6 +2758,7 @@ export const GetPlanUpsertLicenseCreditSchemaUnion$inboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => GetPlanCreditSchemaUpsertLicense1$inboundSchema),
   z.lazy(() => GetPlanCreditSchemaUpsertLicense2$inboundSchema),
+  z.lazy(() => GetPlanCreditSchemaUpsertLicense3$inboundSchema),
 ]);
 
 export function getPlanUpsertLicenseCreditSchemaUnionFromJSON(
@@ -2715,6 +2865,7 @@ export const GetPlanUpsertLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
       z.lazy(() =>
         GetPlanCreditSchemaUpsertLicense2$inboundSchema
       ),
+      z.lazy(() => GetPlanCreditSchemaUpsertLicense3$inboundSchema),
     ]))),
     markups: types.optional(z.lazy(() =>
       GetPlanUpsertLicenseMarkups$inboundSchema
@@ -3394,6 +3545,32 @@ export function getPlanLicenseExpiryFromJSON(
 }
 
 /** @internal */
+export const GetPlanCreditSchemaLicense3$inboundSchema: z.ZodMiniType<
+  GetPlanCreditSchemaLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    excluded: types.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+    });
+  }),
+);
+
+export function getPlanCreditSchemaLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanCreditSchemaLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanCreditSchemaLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanCreditSchemaLicense3' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetPlanDimensionsLicense4$inboundSchema: z.ZodMiniType<
   GetPlanDimensionsLicense4,
   unknown
@@ -3819,6 +3996,7 @@ export const GetPlanLicenseCreditSchemaUnion$inboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => GetPlanCreditSchemaLicense1$inboundSchema),
   z.lazy(() => GetPlanCreditSchemaLicense2$inboundSchema),
+  z.lazy(() => GetPlanCreditSchemaLicense3$inboundSchema),
 ]);
 
 export function getPlanLicenseCreditSchemaUnionFromJSON(
@@ -3923,6 +4101,7 @@ export const GetPlanLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
       z.lazy(() =>
         GetPlanCreditSchemaLicense2$inboundSchema
       ),
+      z.lazy(() => GetPlanCreditSchemaLicense3$inboundSchema),
     ]))),
     markups: types.optional(z.lazy(() =>
       GetPlanLicenseMarkups$inboundSchema

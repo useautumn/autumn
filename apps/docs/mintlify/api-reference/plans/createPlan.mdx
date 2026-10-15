@@ -368,8 +368,8 @@ await autumn.plans.create({
     <DynamicParamField body="feature_override" type="object">
       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
       <Expandable title="properties">
-        <DynamicParamField body="credit_schema" type="object | object[]">
-          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+        <DynamicParamField body="credit_schema" type="object | object | object[]">
+          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
           <Expandable title="properties">
             <DynamicParamField body="metered_feature_id" type="string">
               ID of the metered feature that draws from this credit system.
@@ -443,6 +443,10 @@ await autumn.plans.create({
 
             <DynamicParamField body="credit_cost" type="number">
               Credits consumed per billing-unit group.
+            </DynamicParamField>
+
+            <DynamicParamField body="excluded" type="true">
+              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
             </DynamicParamField>
 
           </Expandable>
@@ -696,8 +700,8 @@ await autumn.plans.create({
             <DynamicParamField body="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicParamField body="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicParamField body="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicParamField body="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -771,6 +775,10 @@ await autumn.plans.create({
 
                     <DynamicParamField body="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicParamField>
 
                   </Expandable>
@@ -1385,8 +1393,8 @@ await autumn.plans.create({
     <DynamicResponseField name="feature_override" type="object">
       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
       <Expandable title="properties">
-        <DynamicResponseField name="credit_schema" type="object | object[]">
-          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+        <DynamicResponseField name="credit_schema" type="object | object | object[]">
+          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
           <Expandable title="properties">
             <DynamicResponseField name="metered_feature_id" type="string">
               ID of the metered feature that draws from this credit system.
@@ -1460,6 +1468,10 @@ await autumn.plans.create({
 
             <DynamicResponseField name="credit_cost" type="number">
               Credits consumed per billing-unit group.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="excluded" type="true">
+              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
             </DynamicResponseField>
 
           </Expandable>
@@ -1997,8 +2009,8 @@ await autumn.plans.create({
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicResponseField name="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicResponseField name="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -2072,6 +2084,10 @@ await autumn.plans.create({
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicResponseField>
 
                   </Expandable>
@@ -2538,8 +2554,8 @@ await autumn.plans.create({
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
-                        <DynamicResponseField name="credit_schema" type="object | object[]">
-                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                        <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                           <Expandable title="properties">
                             <DynamicResponseField name="metered_feature_id" type="string">
                               ID of the metered feature that draws from this credit system.
@@ -2613,6 +2629,10 @@ await autumn.plans.create({
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="excluded" type="true">
+                              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                             </DynamicResponseField>
 
                           </Expandable>
@@ -2925,8 +2945,8 @@ await autumn.plans.create({
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicResponseField name="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicResponseField name="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -3000,6 +3020,10 @@ await autumn.plans.create({
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicResponseField>
 
                   </Expandable>
@@ -3405,8 +3429,8 @@ await autumn.plans.create({
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicResponseField name="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicResponseField name="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -3480,6 +3504,10 @@ await autumn.plans.create({
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicResponseField>
 
                   </Expandable>
@@ -4017,8 +4045,8 @@ await autumn.plans.create({
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
-                        <DynamicResponseField name="credit_schema" type="object | object[]">
-                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                        <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                           <Expandable title="properties">
                             <DynamicResponseField name="metered_feature_id" type="string">
                               ID of the metered feature that draws from this credit system.
@@ -4092,6 +4120,10 @@ await autumn.plans.create({
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="excluded" type="true">
+                              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                             </DynamicResponseField>
 
                           </Expandable>
@@ -4558,8 +4590,8 @@ await autumn.plans.create({
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
-                                <DynamicResponseField name="credit_schema" type="object | object[]">
-                                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                                   <Expandable title="properties">
                                     <DynamicResponseField name="metered_feature_id" type="string">
                                       ID of the metered feature that draws from this credit system.
@@ -4633,6 +4665,10 @@ await autumn.plans.create({
 
                                     <DynamicResponseField name="credit_cost" type="number">
                                       Credits consumed per billing-unit group.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="excluded" type="true">
+                                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                                     </DynamicResponseField>
 
                                   </Expandable>

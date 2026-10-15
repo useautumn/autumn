@@ -35,10 +35,53 @@ import {
   PlanPrice$inboundSchema,
   PlanProcessors,
   PlanProcessors$inboundSchema,
-  PlanVariantDetailsBillingControls1,
-  PlanVariantDetailsBillingControls1$inboundSchema,
-} from "./plan-variant-details-billing-controls-1.js";
+  PlanVariantDetailsAutoTopup,
+  PlanVariantDetailsAutoTopup$inboundSchema,
+  PlanVariantDetailsSpendLimit,
+  PlanVariantDetailsSpendLimit$inboundSchema,
+  PlanVariantDetailsUsageAlert,
+  PlanVariantDetailsUsageAlert$inboundSchema,
+  PlanVariantDetailsUsageLimit,
+  PlanVariantDetailsUsageLimit$inboundSchema,
+} from "./plan-variant-details-usage-alert.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+export type PlanVariantDetailsOverageAllowed1 = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type PlanVariantDetailsBillingControls1 = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<PlanVariantDetailsAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<PlanVariantDetailsSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<PlanVariantDetailsUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PlanVariantDetailsUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<PlanVariantDetailsOverageAllowed1> | undefined;
+};
 
 /**
  * Billing interval (e.g. 'month', 'year').
@@ -350,6 +393,17 @@ export type UpsertLicenseExpiry = {
   length: number;
 };
 
+export type PlanCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
 export type PlanDimensionsUpsertLicense4 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -569,7 +623,8 @@ export type PlanCreditSchemaUpsertLicense1 = {
 
 export type PlanUpsertLicenseCreditSchemaUnion =
   | PlanCreditSchemaUpsertLicense1
-  | PlanCreditSchemaUpsertLicense2;
+  | PlanCreditSchemaUpsertLicense2
+  | PlanCreditSchemaUpsertLicense3;
 
 export type PlanUpsertLicenseProviderMarkups = {
   markup: number;
@@ -610,10 +665,14 @@ export type UpsertLicenseMarkups = {
  */
 export type UpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<PlanCreditSchemaUpsertLicense1 | PlanCreditSchemaUpsertLicense2>
+    | Array<
+      | PlanCreditSchemaUpsertLicense1
+      | PlanCreditSchemaUpsertLicense2
+      | PlanCreditSchemaUpsertLicense3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -902,6 +961,76 @@ export type Plan = {
    */
   variantDetails?: VariantDetails | undefined;
 };
+
+/** @internal */
+export const PlanVariantDetailsOverageAllowed1$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsOverageAllowed1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function planVariantDetailsOverageAllowed1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsOverageAllowed1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanVariantDetailsOverageAllowed1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsOverageAllowed1' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanVariantDetailsBillingControls1$inboundSchema: z.ZodMiniType<
+  PlanVariantDetailsBillingControls1,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(PlanVariantDetailsAutoTopup$inboundSchema),
+    ),
+    spend_limits: types.optional(
+      z.array(PlanVariantDetailsSpendLimit$inboundSchema),
+    ),
+    usage_limits: types.optional(
+      z.array(PlanVariantDetailsUsageLimit$inboundSchema),
+    ),
+    usage_alerts: types.optional(
+      z.array(PlanVariantDetailsUsageAlert$inboundSchema),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => PlanVariantDetailsOverageAllowed1$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function planVariantDetailsBillingControls1FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanVariantDetailsBillingControls1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      PlanVariantDetailsBillingControls1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanVariantDetailsBillingControls1' from JSON`,
+  );
+}
 
 /** @internal */
 export const PlanPriceUpsertLicenseInterval$inboundSchema: z.ZodMiniType<
@@ -1261,6 +1390,32 @@ export function upsertLicenseExpiryFromJSON(
     jsonString,
     (x) => UpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpsertLicenseExpiry' from JSON`,
+  );
+}
+
+/** @internal */
+export const PlanCreditSchemaUpsertLicense3$inboundSchema: z.ZodMiniType<
+  PlanCreditSchemaUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    excluded: types.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+    });
+  }),
+);
+
+export function planCreditSchemaUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<PlanCreditSchemaUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanCreditSchemaUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanCreditSchemaUpsertLicense3' from JSON`,
   );
 }
 
@@ -1709,6 +1864,7 @@ export const PlanUpsertLicenseCreditSchemaUnion$inboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => PlanCreditSchemaUpsertLicense1$inboundSchema),
   z.lazy(() => PlanCreditSchemaUpsertLicense2$inboundSchema),
+  z.lazy(() => PlanCreditSchemaUpsertLicense3$inboundSchema),
 ]);
 
 export function planUpsertLicenseCreditSchemaUnionFromJSON(
@@ -1814,6 +1970,7 @@ export const UpsertLicenseFeatureOverride$inboundSchema: z.ZodMiniType<
       z.lazy(() =>
         PlanCreditSchemaUpsertLicense2$inboundSchema
       ),
+      z.lazy(() => PlanCreditSchemaUpsertLicense3$inboundSchema),
     ]))),
     markups: types.optional(z.lazy(() =>
       UpsertLicenseMarkups$inboundSchema
@@ -2055,7 +2212,7 @@ export const Customize1$inboundSchema: z.ZodMiniType<Customize1, unknown> = z
       remove_items: types.optional(z.array(PlanItemFilter$inboundSchema)),
       free_trial: z.optional(z.nullable(FreeTrialParams$inboundSchema)),
       billing_controls: types.optional(
-        PlanVariantDetailsBillingControls1$inboundSchema,
+        z.lazy(() => PlanVariantDetailsBillingControls1$inboundSchema),
       ),
       upsert_licenses: types.optional(
         z.array(z.lazy(() => UpsertLicense$inboundSchema)),
