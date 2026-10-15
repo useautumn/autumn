@@ -53,7 +53,10 @@ const createProcessor = ({
 			sqliteStore,
 			catalogStore,
 			logger: getAtomLogger(),
-			subjectPulls: { request: (subject) => pulled.push(subject) },
+			subjectPulls: {
+				request: (subject) => pulled.push(subject),
+				settle: async () => {},
+			},
 			journal,
 		},
 	});
