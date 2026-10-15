@@ -11820,7 +11820,7 @@ index 76fdca6b1ae1a9edb556129703436d50431c48d1..028d4bf36c8132ebdd2e803076fc1d14
  }  // namespace Workers
  }  // namespace NodeKafka
 diff --git a/src/workers.h b/src/workers.h
-index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e61db139c9 100644
+index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..23bb2b002e6d496e1227f14a8e49cd6d2b35fc2e 100644
 --- a/src/workers.h
 +++ b/src/workers.h
 @@ -12,41 +12,57 @@
@@ -12523,7 +12523,17 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -556,13 +601,13 @@ class AdminClientListGroups : public ErrorAwareWorker {
+@@ -548,7 +593,8 @@ class AdminClientListGroups : public ErrorAwareWorker {
+   const bool m_is_match_types_set;
+   std::vector<rd_kafka_consumer_group_type_t> m_match_types;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -556,20 +602,21 @@ class AdminClientListGroups : public ErrorAwareWorker {
   */
  class AdminClientDescribeGroups : public ErrorAwareWorker {
   public:
@@ -12542,7 +12552,16 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -577,13 +622,13 @@ class AdminClientDescribeGroups : public ErrorAwareWorker {
+   std::vector<std::string> m_groups;
+   const bool m_include_authorized_operations;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -577,20 +624,21 @@ class AdminClientDescribeGroups : public ErrorAwareWorker {
   */
  class AdminClientDeleteGroups : public ErrorAwareWorker {
   public:
@@ -12561,7 +12580,16 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -598,14 +643,15 @@ class AdminClientDeleteGroups : public ErrorAwareWorker {
+   rd_kafka_DeleteGroup_t **m_group_list;
+   size_t m_group_cnt;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -598,14 +646,15 @@ class AdminClientDeleteGroups : public ErrorAwareWorker {
   */
  class AdminClientListConsumerGroupOffsets : public ErrorAwareWorker {
   public:
@@ -12583,7 +12611,17 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -621,14 +667,14 @@ class AdminClientListConsumerGroupOffsets : public ErrorAwareWorker {
+@@ -613,7 +662,8 @@ class AdminClientListConsumerGroupOffsets : public ErrorAwareWorker {
+   size_t m_req_cnt;
+   const bool m_require_stable_offsets;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -621,14 +671,14 @@ class AdminClientListConsumerGroupOffsets : public ErrorAwareWorker {
   */
  class AdminClientDeleteRecords : public ErrorAwareWorker {
   public:
@@ -12604,7 +12642,17 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -644,14 +690,14 @@ class AdminClientDeleteRecords : public ErrorAwareWorker {
+@@ -636,7 +686,8 @@ class AdminClientDeleteRecords : public ErrorAwareWorker {
+   size_t m_del_records_cnt;
+   const int m_operation_timeout_ms;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -644,21 +695,22 @@ class AdminClientDeleteRecords : public ErrorAwareWorker {
   */
  class AdminClientDescribeTopics : public ErrorAwareWorker {
   public:
@@ -12625,7 +12673,16 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
-@@ -666,14 +712,14 @@ class AdminClientDescribeTopics : public ErrorAwareWorker {
+   rd_kafka_TopicCollection_t *m_topics;
+   const bool m_include_authorized_operations;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -666,21 +718,22 @@ class AdminClientDescribeTopics : public ErrorAwareWorker {
   */
  class AdminClientListOffsets : public ErrorAwareWorker {
   public:
@@ -12646,3 +12703,12 @@ index 4f8a00ad0dc918913f2c4e41521a491fb516ee2c..9157d603e07a1d6e898d17403ba919e6
  
   private:
    NodeKafka::AdminClient *m_client;
+   rd_kafka_topic_partition_list_t *m_partitions;
+   const int m_timeout_ms;
+   const rd_kafka_IsolationLevel_t m_isolation_level;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ }  // namespace Workers
