@@ -5,6 +5,9 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { logBillingApprovalDecision } from "@/internal/approvals/enforce/logBillingApprovalDecision";
+import { billingContextToUpdateAction } from "@/internal/approvals/facts/billing/billingContextToUpdateAction";
+
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionComputeErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionComputeErrors";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
@@ -98,6 +101,14 @@ export async function updateSubscription({
 		};
 	}
 
+	// 5. Approvals: log the decision (shadow mode, never blocks)
+	await logBillingApprovalDecision({
+		ctx,
+		billingContext,
+		billingPlan,
+		action: billingContextToUpdateAction({ billingContext }),
+	});
+
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!options.skipAutumnCheckout
@@ -114,7 +125,7 @@ export async function updateSubscription({
 		return autumnCheckoutResult;
 	}
 
-	// 5. Execute billing plan, replacing the pending change it supersedes
+	// 6. Execute billing plan, replacing the pending change it supersedes
 	if (contextOverride?.supersededPendingCustomerProduct) {
 		await discardPendingCustomerProduct({
 			ctx,
