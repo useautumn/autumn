@@ -31,6 +31,7 @@ const rowIssue = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
 
 /** The row's filter, or null when its value is missing or doesn't fit the field. */
 const encodeRow = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
+	if (row.value === null && row.operator !== "has_none") return null;
 	const filter = FIELD_CODECS[row.field].toFilter(row);
 	const schema = buildWhenSchema({ shape: WHEN_SHAPES[area] });
 	return filter && schema.safeParse(filter).success ? filter : null;

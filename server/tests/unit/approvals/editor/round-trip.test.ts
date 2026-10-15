@@ -213,6 +213,7 @@ describe("rows that can't be stored report an issue", () => {
 		},
 		...[
 			{ field: "customer_plan", operator: "has", value: null },
+			{ field: "customer", operator: "is", value: null },
 			{ field: "total", operator: "lte", value: "lots" },
 			{ field: "starts_at", operator: "is", value: "7" },
 			{ field: "paid", operator: "is", value: null },
