@@ -5,6 +5,7 @@ import {
 	HandoffBatchSchema,
 } from "../../replicas/handover/handoffContract.js";
 import type { HandedEntry } from "../../state/journal/types/journal.js";
+import type { OpenLock } from "../../state/openLocks/createOpenLocks.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 /** Customers' owed entries from the replica that owned them: each slot's owner thread holds its customers' in one transaction. */
@@ -38,9 +39,10 @@ export const receiveJournalHandoff = ({
 		const held = await Promise.all(
 			[...bySlot].map(([processor, handoffs]) =>
 				processor.receiveHandoff({
-					handoffs: handoffs.map(({ customerId, entries }) => ({
+					handoffs: handoffs.map(({ customerId, entries, locks }) => ({
 						customerId,
 						entries: entries as HandedEntry[],
+						locks: locks as OpenLock[],
 					})),
 				}),
 			),

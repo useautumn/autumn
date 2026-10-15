@@ -58,13 +58,7 @@ const proberOf = ({
 				all: () => [
 					{
 						atomId: null,
-						slots: {
-							ownedJournals: () => [
-								{
-									handoffs: async () => [],
-								},
-							],
-						},
+						slots: { ownedHandoffs: async () => [] },
 					},
 				],
 			} as never,

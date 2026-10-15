@@ -2,7 +2,7 @@ import type { TrackCommand, WorkerLock } from "@autumn/balance-engine";
 import type { JournalEntry } from "../journal/types/journal.js";
 
 /** A lock this slot took: the track that took it, compared with a retry, and the row it inserted, which its finalize carries. */
-type OpenLock = { track: TrackCommand; row: WorkerLock };
+export type OpenLock = { track: TrackCommand; row: WorkerLock };
 
 /** The lock an owed entry takes or settles; null for a plain track. */
 const lockIdOf = ({ command }: JournalEntry): string | null =>
@@ -70,7 +70,15 @@ export const createOpenLocks = () => {
 		if (locks.size === 0) locksByCustomer.delete(customerId);
 	}
 
-	return { hold, lockOf, trackOf, settle };
+	/** Every open lock, by customer: handed to a customer's new owner beside the owed entries, so it can settle them. */
+	function all(): { customerId: string; locks: OpenLock[] }[] {
+		return [...locksByCustomer].map(([customerId, locks]) => ({
+			customerId,
+			locks: [...locks.values()],
+		}));
+	}
+
+	return { hold, lockOf, trackOf, settle, all };
 };
 
 export type OpenLocks = ReturnType<typeof createOpenLocks>;

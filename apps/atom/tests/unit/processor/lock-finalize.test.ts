@@ -86,6 +86,7 @@ const finalizeRequestFor = (
 		...params,
 	},
 	apiVersion: latestApiVersion,
+	movedFrom: null,
 });
 
 const remainingOf = async ({

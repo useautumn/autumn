@@ -9,11 +9,13 @@ export const finalizeCallToRequest = ({
 	apiVersionHeader,
 	requestId,
 	occurredAt,
+	movedFrom = null,
 }: {
 	body: unknown;
 	apiVersionHeader: string | undefined;
 	requestId: string;
 	occurredAt: number;
+	movedFrom?: string | null;
 }): FinalizeRequest => {
 	const apiVersion = headerToApiVersion({ header: apiVersionHeader });
 	if (apiVersion === undefined)
@@ -27,5 +29,5 @@ export const finalizeCallToRequest = ({
 	const params = FinalizeLockParamsV1Schema.safeParse(body);
 	if (!params.success)
 		throw new CannotAnswerError({ reason: "unreadable_request" });
-	return { requestId, occurredAt, params: params.data, apiVersion };
+	return { requestId, occurredAt, params: params.data, apiVersion, movedFrom };
 };

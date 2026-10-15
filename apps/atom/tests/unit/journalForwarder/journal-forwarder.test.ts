@@ -469,6 +469,7 @@ describe("a finalize the Atom settled", () => {
 					properties: { model: "small" },
 				},
 				apiVersion: latestApiVersion,
+				movedFrom: null,
 			},
 		});
 

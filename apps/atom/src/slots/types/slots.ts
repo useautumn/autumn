@@ -1,5 +1,6 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
+import type { CustomerHandoff } from "../../replicas/handover/types/customerHandoff.js";
 import type { Journal } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
@@ -79,8 +80,10 @@ export type Slots = {
 	maxAppliedAt(): number;
 	/** The slot files this thread owns in the folder: what it alone may drop rows from. */
 	ownedStores(): SqliteStore[];
-	/** The journals of the slots this thread owns: what it hands over when it leaves. */
+	/** The journals of the slots this thread owns. */
 	ownedJournals(): Journal[];
+	/** What the slots this thread owns hold for each customer that another replica may own now: owed entries and open locks. */
+	ownedHandoffs(): Promise<CustomerHandoff[]>;
 	/**
 	 * Copies into the slots this thread owns what `source` holds newer than they do, the catalog included: every row
 	 * with `window` null (a fresh volume); else the digests of what the source wrote in its last `window` ms, and only
