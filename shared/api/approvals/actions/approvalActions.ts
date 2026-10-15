@@ -26,45 +26,39 @@ type ActionDefinition = {
 	when: WhenKey | null;
 };
 
-const billingAction = ({
-	label,
-	when,
-}: {
-	label: string;
-	when: WhenKey;
-}): ActionDefinition => ({
-	area: "billing",
-	label,
-	scope: Scopes.Billing.Write,
-	when,
-});
+const billingChangeAction = ({ label }: { label: string }) =>
+	({
+		area: "billing",
+		label,
+		scope: Scopes.Billing.Write,
+		when: "billing_change",
+	}) as const satisfies ActionDefinition;
 
-const invoiceAction = ({ label }: { label: string }): ActionDefinition => ({
-	area: "invoices",
-	label,
-	scope: Scopes.Billing.Write,
-	when: "invoice",
-});
+const billingCancelAction = ({ label }: { label: string }) =>
+	({
+		area: "billing",
+		label,
+		scope: Scopes.Billing.Write,
+		when: "billing_cancel",
+	}) as const satisfies ActionDefinition;
+
+const invoiceAction = ({ label }: { label: string }) =>
+	({
+		area: "invoices",
+		label,
+		scope: Scopes.Billing.Write,
+		when: "invoice",
+	}) as const satisfies ActionDefinition;
 
 export const ACTIONS = {
-	"billing.attach": billingAction({ label: "Attach", when: "billing_change" }),
-	"billing.update_subscription": billingAction({
+	"billing.attach": billingChangeAction({ label: "Attach" }),
+	"billing.update_subscription": billingChangeAction({
 		label: "Update subscription",
-		when: "billing_change",
 	}),
-	"billing.set_plans": billingAction({
-		label: "Set plans",
-		when: "billing_change",
-	}),
-	"billing.schedule": billingAction({
-		label: "Schedule",
-		when: "billing_change",
-	}),
-	"billing.cancel": billingAction({ label: "Cancel", when: "billing_cancel" }),
-	"billing.uncancel": billingAction({
-		label: "Uncancel",
-		when: "billing_cancel",
-	}),
+	"billing.set_plans": billingChangeAction({ label: "Set plans" }),
+	"billing.schedule": billingChangeAction({ label: "Schedule" }),
+	"billing.cancel": billingCancelAction({ label: "Cancel" }),
+	"billing.uncancel": billingCancelAction({ label: "Uncancel" }),
 
 	"invoices.create": invoiceAction({ label: "Create" }),
 	"invoices.finalize": invoiceAction({ label: "Finalize" }),
