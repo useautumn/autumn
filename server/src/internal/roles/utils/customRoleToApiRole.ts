@@ -1,4 +1,5 @@
-import type { ApiRole, organizationRole } from "@autumn/shared";
+import type { organizationRole } from "@autumn/shared";
+import type { ApiRole } from "@autumn/shared/api/roles/apiRole";
 import type { RoleUsage } from "../repos/getRoleUsage.js";
 
 export const customRoleToApiRole = ({

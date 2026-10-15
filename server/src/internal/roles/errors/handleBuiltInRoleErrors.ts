@@ -1,4 +1,5 @@
-import { ErrCode, isBuiltInRole, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
+import { isBuiltInRole } from "@autumn/shared/utils/roleUtils/builtInRoles";
 
 /** Built-in roles are defined in code, so they can't be edited or deleted. */
 export const handleBuiltInRoleErrors = ({ name }: { name: string }) => {

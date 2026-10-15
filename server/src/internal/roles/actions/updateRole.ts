@@ -1,4 +1,7 @@
-import type { ApiRole, UpdateRoleParams } from "@autumn/shared";
+import type {
+	ApiRole,
+	UpdateRoleParams,
+} from "@autumn/shared/api/roles/apiRole";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleBuiltInRoleErrors } from "../errors/handleBuiltInRoleErrors.js";
 import { handleRoleNameTakenErrors } from "../errors/handleRoleNameTakenErrors.js";

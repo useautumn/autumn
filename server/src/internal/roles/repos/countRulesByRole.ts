@@ -1,4 +1,8 @@
-import { AppEnv, approvalRuleSubjects, approvalRules } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
+import {
+	approvalRuleSubjects,
+	approvalRules,
+} from "@autumn/shared/models/approvalModels/index";
 import { and, countDistinct, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 

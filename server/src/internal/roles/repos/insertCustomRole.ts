@@ -1,8 +1,5 @@
-import {
-	type CreateRoleParams,
-	CUSTOM_ROLE_AC_PERMISSION,
-	organizationRole,
-} from "@autumn/shared";
+import { CUSTOM_ROLE_AC_PERMISSION, organizationRole } from "@autumn/shared";
+import type { CreateRoleParams } from "@autumn/shared/api/roles/apiRole";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
