@@ -15,9 +15,8 @@ import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/
  * Mirrors the `cp.status IN RELEVANT_STATUSES` ambient predicate baked into
  * the SQL plan scope — expired/paused cusProducts are ignored.
  *
- * Supports `customer_id` and `plan` (`$some` / `$every` / `$none` and the
- * implicit-`$some` bare form). `item` sugar throws to make the gap explicit,
- * matching the convention in `planFilterMatchesCustomerProduct`.
+ * Supports `customer_id`, `plan` (`$some` / `$every` / `$none` and the
+ * implicit-`$some` bare form) and the `item` sugar.
  */
 export const customerFilterMatchesFullCustomer = ({
 	filter,
@@ -36,29 +35,34 @@ export const customerFilterMatchesFullCustomer = ({
 		return false;
 	}
 
-	if (filter.plan !== undefined) {
-		const relevantProducts = fullCustomer.customer_products.filter(
-			customerProductHasRelevantStatus,
-		);
-		if (
-			!arrayFilterMatches({
-				filter: filter.plan,
-				items: relevantProducts,
-				matchesElement: ({ filter: planFilter, item: customerProduct }) =>
-					planFilterMatchesCustomerProduct({
-						filter: planFilter,
-						cusProduct: customerProduct,
-					}),
-			})
-		) {
-			return false;
-		}
+	const relevantProducts = fullCustomer.customer_products.filter(
+		customerProductHasRelevantStatus,
+	);
+	const plansMatch = ({
+		planFilter,
+	}: {
+		planFilter: NonNullable<CustomerFilter["plan"]>;
+	}) =>
+		arrayFilterMatches({
+			filter: planFilter,
+			items: relevantProducts,
+			matchesElement: ({ filter: elementFilter, item: customerProduct }) =>
+				planFilterMatchesCustomerProduct({
+					filter: elementFilter,
+					cusProduct: customerProduct,
+				}),
+		});
+
+	if (filter.plan !== undefined && !plansMatch({ planFilter: filter.plan })) {
+		return false;
 	}
 
-	if (filter.item !== undefined) {
-		throw new Error(
-			"customerFilterMatchesFullCustomer: filter.item not supported in JS matcher yet",
-		);
+	// `item` is sugar for `plan: { item }`, as in `parseCustomerFilter`.
+	if (
+		filter.item !== undefined &&
+		!plansMatch({ planFilter: { item: filter.item } })
+	) {
+		return false;
 	}
 
 	return true;
