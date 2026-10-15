@@ -316,6 +316,7 @@ export const recordJournals = () => {
 			autumnClient: {
 				appendTracks: async ({ tracks }) => {
 					for (const track of tracks) {
+						if (!("command" in track)) continue;
 						const command = parseTrackCommand({ input: track.command });
 						commands.push(command);
 						appended.push({
