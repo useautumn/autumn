@@ -16,7 +16,7 @@ import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/
  * the SQL plan scope — expired/paused cusProducts are ignored.
  *
  * Supports `customer_id`, `plan` (`$some` / `$every` / `$none` and the
- * implicit-`$some` bare form) and the `item` sugar.
+ * implicit-`$some` bare form), the `item` sugar, and `$and` / `$or` branches.
  */
 export const customerFilterMatchesFullCustomer = ({
 	filter,
@@ -62,6 +62,17 @@ export const customerFilterMatchesFullCustomer = ({
 		filter.item !== undefined &&
 		!plansMatch({ planFilter: { item: filter.item } })
 	) {
+		return false;
+	}
+
+	const branchMatches = (branch: CustomerFilter) =>
+		customerFilterMatchesFullCustomer({ filter: branch, fullCustomer });
+
+	if (filter.$and !== undefined && !filter.$and.every(branchMatches)) {
+		return false;
+	}
+
+	if (filter.$or !== undefined && !filter.$or.some(branchMatches)) {
 		return false;
 	}
 
