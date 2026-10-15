@@ -79,6 +79,7 @@ export const createReplica = ({
 	stopping = () => false,
 	bootedAt = BOOTED_AT,
 	loop = loopOnTime,
+	logger = quiet,
 }: {
 	address: string;
 	peers: string[];
@@ -97,6 +98,8 @@ export const createReplica = ({
 	bootedAt?: string;
 	/** The thread's event loop as admission reads it: how far behind it runs. */
 	loop?: { lagMs: () => number };
+	/** The HTTP layer's logger: quiet unless a test reads the request lines. */
+	logger?: typeof quiet;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -148,7 +151,7 @@ export const createReplica = ({
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {
 		auth,
-		logger: quiet,
+		logger,
 		autumnApiUrl: AUTUMN_API_URL,
 		health: {
 			bootedAt,
