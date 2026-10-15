@@ -1,5 +1,5 @@
-// Contract: a customer skipped after a connection drop must not keep its `running` claim
-// when the skip write itself hits a transient DB error.
+// Contract: a customer failed after a connection drop must not keep its `running` claim
+// when the failed write itself hits a transient DB error.
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/withMigrationItemTracking.js";
@@ -10,22 +10,20 @@ import {
 
 const poolTimeout = () => new Error("timeout exceeded when trying to connect");
 
-describe("withMigrationItemTracking connection-drop skip", () => {
+describe("withMigrationItemTracking connection-drop failure", () => {
 	const spies: { mockRestore: () => void }[] = [];
 	afterEach(() => {
 		for (const spy of spies.splice(0)) spy.mockRestore();
 	});
 
-	test("retries the skip write so the claim never stays running", async () => {
-		let skipWrites = 0;
+	test("retries the failed write so the claim never stays running", async () => {
+		let failedWrites = 0;
 		spies.push(
-			spyOn(migrationItemRunRepo, "markSkipped").mockImplementation(
-				async () => {
-					skipWrites++;
-					if (skipWrites === 1) throw poolTimeout();
-					return undefined as never;
-				},
-			),
+			spyOn(migrationItemRunRepo, "markFailed").mockImplementation(async () => {
+				failedWrites++;
+				if (failedWrites === 1) throw poolTimeout();
+				return undefined as never;
+			}),
 			spyOn(migrationItemEventRepo, "insert").mockImplementation(
 				async () => undefined as never,
 			),
@@ -43,6 +41,6 @@ describe("withMigrationItemTracking connection-drop skip", () => {
 		});
 
 		expect(result).toBeUndefined();
-		expect(skipWrites).toBe(2);
+		expect(failedWrites).toBe(2);
 	});
 });

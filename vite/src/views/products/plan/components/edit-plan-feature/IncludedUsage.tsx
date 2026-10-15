@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { IconCheckbox, Input } from "@autumn/ui";
 import { InfinityIcon } from "@phosphor-icons/react";
+import { useFormattedNumberInput } from "@/hooks/common/useFormattedNumberInput";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
@@ -18,23 +19,29 @@ export function IncludedUsage() {
 	const { features } = useFeaturesQuery();
 	const { item, setItem } = useProductItemContext();
 
-	if (!item) return null;
+	const includedUsage = item?.included_usage;
+	const includedUsageText =
+		typeof includedUsage === "number" ? includedUsage.toString() : "";
 
-	const includedUsage = item.included_usage;
+	const includedUsageInputProps = useFormattedNumberInput({
+		value: includedUsageText,
+		onValueChange: (raw) => {
+			if (!item) return;
+			if (raw === "") {
+				setItem({ ...item, included_usage: null });
+				return;
+			}
+			const numValue = Number(raw);
+			if (!Number.isNaN(numValue)) {
+				setItem({ ...item, included_usage: numValue });
+			}
+		},
+	});
+
+	if (!item) return null;
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const feature = features.find((f) => f.id === item.feature_id);
-
-	// Helper function to get the display value for the input
-	const getInputValue = () => {
-		if (includedUsage === Infinite) {
-			return "";
-		}
-		if (includedUsage === null || includedUsage === undefined) {
-			return "";
-		}
-		return includedUsage.toString();
-	};
 
 	return (
 		<div className="space-y-4">
@@ -50,22 +57,9 @@ export function IncludedUsage() {
 					<div className="flex items-center gap-2">
 						<Input
 							key={`included-usage-${item.feature_id || item.price_id || "default"}`}
+							{...includedUsageInputProps}
 							placeholder="eg, 100"
-							value={getInputValue()}
-							onChange={(e) => {
-								const value = e.target.value.trim();
-
-								if (value === "") {
-									setItem({ ...item, included_usage: null });
-								} else {
-									const numValue = Number(value);
-									if (!Number.isNaN(numValue)) {
-										setItem({ ...item, included_usage: numValue });
-									}
-								}
-							}}
 							disabled={includedUsage === Infinite}
-							type="number"
 						/>
 						<IconCheckbox
 							hide={isFeaturePrice}

@@ -1,6 +1,8 @@
 DESCRIPTION >
-    Row count of one events_history_export chunk (same params and WHERE as the sink), or the
-    per-key counts of a sort-key column inside it (group_by) for splitting an oversized chunk.
+    Row count and id XOR-hash of one events_history_export* chunk (same params and WHERE as the
+    sinks), or per-key counts of a sort-key column inside it (group_by) for splitting a chunk.
+    source=mv counts events_by_timestamp_mv, which the props sink reads by default.
+    with_xor=1 adds the id hash; it reads the id column, so leave it off for whole-month counts.
 
 TOKEN events_history_export_runner READ
 
@@ -13,8 +15,10 @@ SQL >
         {% elif defined(group_by) and group_by == 'customer_id' %} customer_id AS k,
         {% else %} '' AS k,
         {% end %}
-        count() AS c
-    FROM events
+        count() AS c,
+        {% if defined(with_xor) and Int8(with_xor, 0) == 1 %} toString(groupBitXor(cityHash64(id))) {% else %} '' {% end %} AS x
+    FROM
+        {% if defined(source) and source == 'mv' %} events_by_timestamp_mv {% else %} events {% end %}
     WHERE timestamp >= toDateTime64({{ String(start_ts, '1970-01-01 00:00:00') }}, 6)
       AND timestamp < toDateTime64({{ String(end_ts, '1970-01-01 00:00:00') }}, 6)
       {% if defined(org_from) and String(org_from, '') != '' %} AND org_id >= {{ String(org_from) }} {% end %}

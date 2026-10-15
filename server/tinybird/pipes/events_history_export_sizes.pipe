@@ -1,6 +1,7 @@
 DESCRIPTION >
     Row-count estimates for planning events_history_export chunks, read from the customer rollups
-    (level org_env | customer | day) or the events partition counts (level months).
+    (level org_env | customer | day | hour) or the events partition counts (level months).
+    level=hour sums events_customer_hourly_mv over org/env ranges, for time-window chunks.
     level=customer returns contiguous customer_id ranges keyed by their first customer_id, each at
     most ~2 x bucket_rows; a customer above bucket_rows is always its own row.
 
@@ -23,6 +24,17 @@ SQL >
       AND org_id = {{ String(org_id) }}
       AND env = {{ String(env) }}
       AND customer_id = {{ String(customer_id) }}
+    GROUP BY k
+    ORDER BY k
+    {% elif String(level) == 'hour' %}
+    SELECT toString(hour) AS k, '' AS k2, toUInt64(sum(event_count)) AS c
+    FROM events_customer_hourly_mv
+    WHERE hour >= toDateTime({{ String(start_ts) }})
+      AND hour < toDateTime({{ String(end_ts) }})
+      {% if defined(org_from) and String(org_from, '') != '' %} AND org_id >= {{ String(org_from) }} {% end %}
+      {% if defined(org_to) and String(org_to, '') != '' %} AND org_id < {{ String(org_to) }} {% end %}
+      {% if defined(env_from) and String(env_from, '') != '' %} AND env >= {{ String(env_from) }} {% end %}
+      {% if defined(env_to) and String(env_to, '') != '' %} AND env < {{ String(env_to) }} {% end %}
     GROUP BY k
     ORDER BY k
     {% elif String(level) == 'customer' %}

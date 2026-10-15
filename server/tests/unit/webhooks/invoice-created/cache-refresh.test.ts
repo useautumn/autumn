@@ -80,6 +80,10 @@ await mockModuleWithRestore(
 	() => ({ planScheduledPooledAnchorReset: planPoolAnchorReset }),
 );
 await mockModuleWithRestore(
+	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/renewSharedSubscriptionCustomers",
+	() => ({ renewSharedSubscriptionCustomers: async () => [] }),
+);
+await mockModuleWithRestore(
 	"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan",
 	() => ({ executeAutumnBillingPlan: executePlan }),
 );

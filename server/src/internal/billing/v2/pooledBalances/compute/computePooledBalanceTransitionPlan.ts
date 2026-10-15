@@ -15,6 +15,10 @@ import {
 } from "./competing/staleCompetingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
+import {
+	isPaidSubscriptionPoolHost,
+	misplacedFreeCustomerProducts,
+} from "./utils/subscriptionPoolHost";
 
 export const computePooledBalanceTransitionPlan = ({
 	ctx,
@@ -65,7 +69,16 @@ export const computePooledBalanceTransitionPlan = ({
 		.map((customerProduct) => customerProduct.id)
 		.sort()[0];
 
-	for (const customerProduct of incomingCustomerProducts) {
+	// Paid plans go first so a free plan arriving alongside them finds their pool.
+	const paidFirstIncomingCustomerProducts = [
+		...incomingCustomerProducts.filter((customerProduct) =>
+			isPaidSubscriptionPoolHost({ customerProduct }),
+		),
+		...incomingCustomerProducts.filter(
+			(customerProduct) => !isPaidSubscriptionPoolHost({ customerProduct }),
+		),
+	];
+	for (const customerProduct of paidFirstIncomingCustomerProducts) {
 		applyIncomingPooledBalanceSources({
 			ctx,
 			computeContext,
@@ -74,6 +87,30 @@ export const computePooledBalanceTransitionPlan = ({
 				stripeSubscriptionId ??
 				customerProduct.subscription_ids?.[0] ??
 				pendingSubscriptionId,
+			customerCreatedAt: fullCustomer.created_at,
+			now,
+		});
+	}
+
+	// A paid plan arriving pulls the free plans the customer already holds into its pool.
+	const mergedFreeCustomerProducts = paidFirstIncomingCustomerProducts.some(
+		(customerProduct) => isPaidSubscriptionPoolHost({ customerProduct }),
+	)
+		? misplacedFreeCustomerProducts({
+				computeContext,
+				fullCustomer,
+				excludedCustomerProductIds: new Set([
+					...incomingCustomerProductIds,
+					...outgoingCustomerProductIds,
+				]),
+			})
+		: [];
+	for (const customerProduct of mergedFreeCustomerProducts) {
+		applyOutgoingPooledBalanceSources({ computeContext, customerProduct });
+		applyIncomingPooledBalanceSources({
+			ctx,
+			computeContext,
+			customerProduct,
 			customerCreatedAt: fullCustomer.created_at,
 			now,
 		});
