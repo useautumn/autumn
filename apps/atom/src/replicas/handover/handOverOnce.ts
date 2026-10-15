@@ -7,9 +7,8 @@ import type { HandoverContext } from "./types/handoverContext.js";
 const IN_FLIGHT_WAIT_MS = 2_000;
 
 /**
- * One thread's side of an ownership change, once the ring no longer names this replica for the moving customers: the
- * requests in flight finish (or are refused and re-hopped), everything owed is handed to the owners in one pass, then
- * each peer is told this thread handed everything, so it stops waiting for handoffs.
+ * One thread's side of an ownership change, after the ring stopped naming this replica for the moving customers:
+ * in-flight requests finish, everything owed goes to the owners in one pass, then each peer hears handedOff.
  */
 export const handOverOnce = async ({
 	ctx,

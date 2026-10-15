@@ -4,9 +4,8 @@ import { handOverOnce } from "./handOverOnce.js";
 import type { HandoverContext } from "./types/handoverContext.js";
 
 /**
- * The first step of a planned stop: this replica owns nothing from now on, every ready peer the service name lists is
- * told, so they take its customers at once, and what this thread's journals owe goes to the new owners. A peer the
- * announcement misses learns from DNS, as today.
+ * The first step of a planned stop: this replica owns nothing from now on, every ready listed peer is told and handed
+ * what this thread owes its customers. A peer the announcement misses learns from DNS, as today.
  */
 export const leaveRing = async ({
 	ctx,

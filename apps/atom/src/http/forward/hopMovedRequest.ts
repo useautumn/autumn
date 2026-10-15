@@ -5,10 +5,8 @@ import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 import { hopToPeer, PeerTimeout, peerTimeoutReply } from "./hopToPeer.js";
 
 /**
- * A request whose customer moved to another replica since the sender looked (a straggler across a join or leave)
- * is not decided here: it is hopped once more, to the owner the processor named, marked as coming from here so the
- * owner waits for this replica's handoff. One that arrived hopped that way already goes to the API instead: the two
- * replicas disagree, and neither answers from its copy.
+ * A straggler whose customer moved on is hopped once more, to the owner the processor named, marked as from here so the
+ * owner waits for this replica's handoff; one that arrived that way already goes to the API: the replicas disagree.
  */
 export const hopMovedRequest = async ({
 	ctx,

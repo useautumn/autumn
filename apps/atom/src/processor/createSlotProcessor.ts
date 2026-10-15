@@ -64,10 +64,7 @@ export const createSlotProcessor = ({
 			throw new CustomerMovedError({ owner });
 	};
 
-	/**
-	 * Every decision runs inside this: parked for its handoff when the customer just moved here, refused when it
-	 * moved away, and counted in flight while decided, so a hand-over that waits for the count reads what it appends.
-	 */
+	/** Parked for its handoff when the customer just moved here, refused when it moved away, counted in flight meanwhile. */
 	const decide = async <T>({
 		customerId,
 		movedFrom,

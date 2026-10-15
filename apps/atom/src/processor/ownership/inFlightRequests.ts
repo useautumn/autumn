@@ -15,10 +15,7 @@ export const beginRequest = (): { done(): void } => {
 	};
 };
 
-/**
- * True once no request is in flight on this thread, so a hand-over reads every entry they append; false when some
- * were still going at the deadline, in which case their entries reach Autumn from here, as any unsent entry does.
- */
+/** True once no request is in flight on this thread; false at the deadline, when a late one's entries stay here for Autumn. */
 export const waitForInFlight = ({
 	withinMs,
 }: {

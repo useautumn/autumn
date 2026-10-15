@@ -18,10 +18,8 @@ const customerIdOf = (body: unknown): string | null => {
 };
 
 /**
- * A request is answered by the replica that owns its customer, so one replica deducts for it at a time: one that
- * does not own it hands it to the owner, one not ready yet hands even its own customers' to a ready peer, and one
- * nobody has granted yet hands its own customers' back to the peer they came from. Either way it crosses once, to
- * the peer's signed route.
+ * One replica deducts for a customer at a time: a non-owner hands the request to the owner, one not ready or not yet
+ * granted hands even its own customers' to a peer. Either way it crosses once, to the peer's signed route.
  */
 export function checkHopMiddleware({
 	ctx,

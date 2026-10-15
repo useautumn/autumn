@@ -15,10 +15,8 @@ export type ReadinessProberContext = HandoverContext & {
 };
 
 /**
- * A peer the service name lists is counted as an owner the moment it answers ready, for every thread at once; then
- * this thread grants it (it answers the customers that moved to it from here on), hands it what it owes them once,
- * and says so. A peer back from a new boot goes through the same. One the service name dropped is forgotten once it
- * answers no more, so a listing that flaps for a moment never unseats a live member.
+ * A listed peer counts as an owner the moment it answers ready, for every thread at once; then this thread grants it,
+ * hands it what it owes its customers once, and says so. A new boot goes through the same; a dropped peer is forgotten.
  */
 export const startReadinessProber = ({
 	ctx,
