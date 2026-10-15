@@ -81,7 +81,7 @@ await mockModuleWithRestore(
 );
 await mockModuleWithRestore(
 	"@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/renewSharedSubscriptionCustomers",
-	() => ({ renewSharedSubscriptionCustomers: async () => {} }),
+	() => ({ renewSharedSubscriptionCustomers: async () => [] }),
 );
 await mockModuleWithRestore(
 	"@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan",

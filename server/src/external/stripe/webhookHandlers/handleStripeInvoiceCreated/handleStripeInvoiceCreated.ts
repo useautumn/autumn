@@ -31,7 +31,7 @@ export const handleStripeInvoiceCreated = async ({
 	const arrearLineItems = await renewCustomerOnInvoice({ ctx, eventContext });
 
 	// Other customers with plans on this subscription renew on the same invoice
-	await renewSharedSubscriptionCustomers({
+	const sharedArrearLineItems = await renewSharedSubscriptionCustomers({
 		ctx,
 		event,
 		eventContext,
@@ -64,7 +64,7 @@ export const handleStripeInvoiceCreated = async ({
 			ctx,
 			autumnInvoice,
 			stripeInvoiceId: eventContext.stripeInvoice.id,
-			arrearLineItems,
+			arrearLineItems: [...arrearLineItems, ...sharedArrearLineItems],
 			eventContext,
 			periodEndMs,
 		});

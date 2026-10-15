@@ -3,7 +3,12 @@
  * customers' plans sit on the same subscription, both are billed for usage and both reset. */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, customerProducts, invoices } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	customerProducts,
+	invoiceLineItems,
+	invoices,
+} from "@autumn/shared";
 import { expectProductNotPresent } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -13,7 +18,7 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -112,6 +117,34 @@ const moveLinkedPlanOntoSubscription = async ({
 	return customerProduct;
 };
 
+/** Line items are stored by an async workflow; waits for the invoice's usage lines to land. */
+const waitForUsageLineCustomerProductIds = async ({
+	ctx,
+	stripeInvoiceId,
+	expectedCount,
+}: {
+	ctx: TestContext;
+	stripeInvoiceId: string;
+	expectedCount: number;
+}) => {
+	let customerProductIds: string[] = [];
+	for (let attempt = 0; attempt < 15; attempt++) {
+		const usageLines = await ctx.db
+			.select({ customerProductIds: invoiceLineItems.customer_product_ids })
+			.from(invoiceLineItems)
+			.where(
+				and(
+					eq(invoiceLineItems.stripe_invoice_id, stripeInvoiceId),
+					eq(invoiceLineItems.feature_id, TestFeature.Messages),
+				),
+			);
+		customerProductIds = usageLines.flatMap((line) => line.customerProductIds);
+		if (customerProductIds.length >= expectedCount) break;
+		await timeout(2000);
+	}
+	return customerProductIds;
+};
+
 test.concurrent(
 	`${chalk.yellowBright("shared-stripe-customer1: two customers with their own subscriptions on one Stripe customer both renew")}`,
 	async () => {
@@ -206,7 +239,7 @@ test.concurrent(
 			stripeCustomerId,
 		});
 		await autumnV1.attach({ customer_id: linkedId, product_id: pro.id });
-		await moveLinkedPlanOntoSubscription({
+		const linkedCustomerProduct = await moveLinkedPlanOntoSubscription({
 			ctx,
 			customerId: linkedId,
 			productId: pro.id,
@@ -249,6 +282,20 @@ test.concurrent(
 			.from(invoices)
 			.where(eq(invoices.stripe_id, cycleInvoices[0].invoiceId));
 		expect(autumnInvoice?.internalCustomerId).toBe(payer.internal_id);
+
+		// Both customers' usage lines are stored with their own plan's links
+		const payerCustomerProductId = payer.customer_products.find(
+			(customerProduct) => customerProduct.product.id === pro.id,
+		)!.id;
+		const usageLineCustomerProductIds =
+			await waitForUsageLineCustomerProductIds({
+				ctx,
+				stripeInvoiceId: cycleInvoices[0].invoiceId,
+				expectedCount: 2,
+			});
+		expect(usageLineCustomerProductIds.sort()).toEqual(
+			[payerCustomerProductId, linkedCustomerProduct.id].sort(),
+		);
 	},
 );
 
