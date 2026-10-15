@@ -18,7 +18,7 @@ export const handlePlanHasCustomersV2 = createRoute({
 		const ctx = c.get("ctx");
 		const { db, features, org, env, apiVersion } = ctx;
 
-		const body = await c.req.json();
+		const body = await c.req.json().catch(() => ({}));
 
 		// REST route passes the plan via `/:product_id`; the RPC route
 		// (plans.has_customers) passes `plan_id` in the body. Strip the
