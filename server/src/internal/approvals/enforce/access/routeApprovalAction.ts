@@ -19,7 +19,7 @@ export const getRouteApprovalAction = ({
 }: {
 	ctx: AutumnContext;
 }): ApprovalAction | undefined =>
-	ctx.state[ROUTE_APPROVAL_ACTION_KEY] as ApprovalAction | undefined;
+	ctx.state?.[ROUTE_APPROVAL_ACTION_KEY] as ApprovalAction | undefined;
 
 const SCOPES_GRANTED_BY_RULES_KEY = "scopesGrantedByRules";
 
@@ -32,4 +32,4 @@ export const scopesWereGrantedByRules = ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): boolean => ctx.state[SCOPES_GRANTED_BY_RULES_KEY] === true;
+}): boolean => ctx.state?.[SCOPES_GRANTED_BY_RULES_KEY] === true;
