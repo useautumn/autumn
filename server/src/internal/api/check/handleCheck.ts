@@ -12,11 +12,15 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
+import {
+	isUnsubmittedFailOpen,
+	withBalanceWorkerFailOpen,
+} from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 import { queueAtomShadowCheck } from "@/internal/balances/check/atomShadow/queueAtomShadowCheck.js";
 import { runBalanceWorkerCheck } from "@/internal/balances/check/balanceWorker/runBalanceWorkerCheck.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
+import { markIdempotencyKeyUnused } from "@/internal/misc/idempotency/idempotencyKeyUnused.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import {
 	type CheckFailOpenReason,
@@ -118,8 +122,17 @@ export const handleCheck = createRoute({
 					ctx,
 					source: "check",
 					run: runOnWorker,
-					fallback: async ({ error, reason }) =>
-						checkFailOpenResponse({ ctx, params: rawBody, error, reason }),
+					fallback: async ({ error, reason }) => {
+						// An Atom may hold the same deduction under this key; its hand-in must find the key free.
+						if (isUnsubmittedFailOpen({ reason }))
+							markIdempotencyKeyUnused({ ctx });
+						return checkFailOpenResponse({
+							ctx,
+							params: rawBody,
+							error,
+							reason,
+						});
+					},
 				});
 			if (!failedOpen)
 				queueAtomShadowCheck({
