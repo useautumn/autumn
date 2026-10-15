@@ -360,7 +360,9 @@ export async function createBalanceWorker({
 				endpoint: address.endpoint,
 			},
 		});
-		const reportsHealth = process.env.NODE_ENV === "production";
+		const reportsHealth =
+			process.env.NODE_ENV === "production" ||
+			process.env.BENCH_WORKER_TELEMETRY === "1";
 		const coldStart = resources.edgeConfigs?.coldStart
 			? createColdStart({
 					ctx: {

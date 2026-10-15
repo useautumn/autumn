@@ -35,7 +35,9 @@ export const BATCH_MIGRATION_FEATURE_OP_CONCURRENCY = Number(
 );
 
 /** Customer plans in flight per page. */
-export const BATCH_MIGRATION_WORKER_SEND_CONCURRENCY = 64;
+export const BATCH_MIGRATION_WORKER_SEND_CONCURRENCY = Number(
+	process.env.BENCH_WORKER_SEND_CONCURRENCY ?? 64,
+);
 
 /** Customers in a row the worker can't be reached for before the run stops as interrupted. */
 export const BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT = 25;
