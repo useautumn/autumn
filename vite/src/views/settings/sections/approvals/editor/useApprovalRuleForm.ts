@@ -5,26 +5,16 @@ import type {
 } from "@autumn/shared";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
-import { useSaveApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
-import { invalidRuleIssues } from "./invalidRuleIssues";
+import {
+	invalidRuleIssues,
+	useSaveApprovalRule,
+} from "@/hooks/queries/useApprovalRulesMutations";
 import { ruleWhenArea } from "./ruleActions";
 import {
 	editorValuesToParams,
 	emptyEditorValues,
 	ruleToEditorValues,
 } from "./ruleEditorValues";
-
-/** The first server issue under `path` ("name", "actions", "when"…), for inline display. */
-const issueAt = ({
-	issues,
-	path,
-}: {
-	issues: ApprovalRuleIssue[];
-	path: string;
-}) =>
-	issues.find(
-		(issue) => issue.path === path || issue.path.startsWith(`${path}.`),
-	)?.message;
 
 export const useApprovalRuleForm = ({
 	rule,
@@ -53,7 +43,11 @@ export const useApprovalRuleForm = ({
 	return {
 		form,
 		isSaving: save.isPending,
-		serverIssue: (path: string) => issueAt({ issues: serverIssues, path }),
+		/** The first server issue under `path` ("name", "when"…), for inline display. */
+		serverIssue: (path: string) =>
+			serverIssues.find(
+				(issue) => issue.path === path || issue.path.startsWith(`${path}.`),
+			)?.message,
 		/** A different set of `when` fields drops the old conditions; they wouldn't fit. */
 		changeActions: ({
 			current,
@@ -69,5 +63,3 @@ export const useApprovalRuleForm = ({
 		},
 	};
 };
-
-export type ApprovalRuleForm = ReturnType<typeof useApprovalRuleForm>["form"];

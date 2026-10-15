@@ -35,14 +35,7 @@ export const ruleToEditorValues = ({
 	rule,
 }: {
 	rule: ApprovalRule;
-}): RuleEditorValues => ({
-	name: rule.name,
-	subjects: rule.subjects,
-	actions: rule.actions,
-	when: rule.when,
-	note: rule.note ?? "",
-	enabled: rule.enabled,
-});
+}): RuleEditorValues => ({ ...rule, note: rule.note ?? "" });
 
 export const editorValuesToParams = ({
 	values,
