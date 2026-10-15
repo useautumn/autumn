@@ -50,10 +50,19 @@ FAIL_OPEN_BODIES: dict = {
 }
 
 
+# Why the request failed behind a synthetic 503, for a caller that needs to know whether it was ever sent.
+NETWORK_ERROR_EXTENSION = "autumn_network_error"
+
+
+def network_error_of(response: httpx.Response) -> Optional[Exception]:
+    return response.extensions.get(NETWORK_ERROR_EXTENSION)
+
+
 def _make_synthetic_response(
     status_code: int,
     body: Optional[dict] = None,
     request: Optional[httpx.Request] = None,
+    network_error: Optional[Exception] = None,
 ) -> httpx.Response:
     content = json.dumps(body).encode() if body else b""
     headers = {"content-type": "application/json"} if body else {}
@@ -64,6 +73,7 @@ def _make_synthetic_response(
         headers=headers,
         content=content,
         request=request,
+        extensions={NETWORK_ERROR_EXTENSION: network_error} if network_error else None,
     )
 
 
@@ -76,8 +86,8 @@ class _SafeSyncClient:
     def send(self, request: httpx.Request, **kwargs) -> httpx.Response:
         try:
             return self._inner.send(request, **kwargs)
-        except (httpx.ConnectError, httpx.TimeoutException):
-            return _make_synthetic_response(503, request=request)
+        except (httpx.ConnectError, httpx.TimeoutException) as error:
+            return _make_synthetic_response(503, request=request, network_error=error)
 
     def build_request(self, *args, **kwargs) -> httpx.Request:
         return self._inner.build_request(*args, **kwargs)
@@ -98,8 +108,8 @@ class _SafeAsyncClient:
     async def send(self, request: httpx.Request, **kwargs) -> httpx.Response:
         try:
             return await self._inner.send(request, **kwargs)
-        except (httpx.ConnectError, httpx.TimeoutException):
-            return _make_synthetic_response(503, request=request)
+        except (httpx.ConnectError, httpx.TimeoutException) as error:
+            return _make_synthetic_response(503, request=request, network_error=error)
 
     def build_request(self, *args, **kwargs) -> httpx.Request:
         return self._inner.build_request(*args, **kwargs)

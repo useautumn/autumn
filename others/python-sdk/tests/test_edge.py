@@ -29,7 +29,7 @@ def finalized() -> httpx.Response:
     return httpx.Response(200, json={"success": True})
 
 
-def edge_down(request: httpx.Request) -> httpx.Response:
+def edge_down(_request: httpx.Request) -> httpx.Response:
     return httpx.Response(503, json={"message": "Atom thread 1 is unavailable", "code": "atom_unavailable"})
 
 
