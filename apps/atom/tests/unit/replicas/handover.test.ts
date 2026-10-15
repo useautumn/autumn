@@ -13,6 +13,7 @@ import { KEYS_RELAY } from "../../../src/replication/keys/createKeyRelay.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	ATOM_TOKEN,
+	BOOTED_AT,
 	bodyFor,
 	cleanUpReplicas,
 	connect,
@@ -630,7 +631,7 @@ describe("ownership changes hands by grant: the old owner stops first, the new o
 			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
 		connect({ replicas: [a, b] });
 		// A counts B, so CUSTOMER is A's by its own ring; B has not said so yet.
-		a.membership.markJoined({ address: B, boot: "fixture" });
+		a.membership.markJoined({ address: B, boot: BOOTED_AT });
 
 		const before = await a.app.request(
 			"/v1/balances.check",
@@ -733,7 +734,7 @@ describe("ownership changes hands by grant: the old owner stops first, the new o
 		connect({ replicas: [a, b] });
 		await deductOn({ replica: b, times: 2 });
 		// A has probed B; B's announcements never reach A and its handoff is slow on the way.
-		a.membership.markJoined({ address: B, boot: "fixture" });
+		a.membership.markJoined({ address: B, boot: BOOTED_AT });
 		disconnect();
 		connect({
 			replicas: [a, b],
@@ -1073,6 +1074,45 @@ describe("an idempotency key taken on the leaving owner just before it hands ove
 		// Landed now: the handed entry carried the key, so the next retry is refused here.
 		const retried = await b.app.request("/v1/track", keyedTrack("evt_1"));
 		expect(retried.status).toBe(409);
+	});
+});
+
+describe("a peer that restarts in place (killed, back on the same address before the service name drops it)", () => {
+	/** Owned by B among {A, B}. */
+	const customerOfB = async (b: Replica) => {
+		for (let i = 0; i < 1_000; i++) {
+			const customerId = `cus_b_${i}`;
+			if ((await b.ring.ownerOf({ customerId })) === B) return customerId;
+		}
+		throw new Error("no customer id owned by B");
+	};
+
+	test("its handoff, announced before the survivor saw its new boot, still counts, so the survivor's own customers stop waiting at the barrier", async () => {
+		// B counts A from A's previous boot: joined, granted, A's handoff long complete.
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		// A was killed and is back on the same volume with a new boot; it counts nobody yet.
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			joined: [],
+			bootedAt: "2026-10-12T00:05:00.000Z",
+		});
+		const customerId = await customerOfB(b);
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId, readAt: 1700 });
+		connect({ replicas: [a, b] });
+
+		// A's prober ticks first: it counts B, grants it and says it handed everything (it owed B nothing).
+		await a.probeOnce();
+		// Then B's prober sees A answer ready from the new boot.
+		await b.probeOnce();
+		expect(b.membership.isMember(A)).toBe(true);
+
+		await b.app.request("/v1/balances.check", checkFor({ customerId }));
+
+		expect(b.membership.isHanding(A)).toBe(false);
+		expect(b.stats().handoffLate).toBe(0);
 	});
 });
 

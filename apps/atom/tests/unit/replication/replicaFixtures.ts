@@ -47,6 +47,8 @@ export const PUBLIC_PORT = 8001;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
 export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
+/** Every fixture replica's boot unless a test gives it its own. */
+export const BOOTED_AT = "2026-10-12T00:00:00.000Z";
 
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
@@ -70,6 +72,7 @@ export const createReplica = ({
 	joined = ringPeers,
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
+	bootedAt = BOOTED_AT,
 }: {
 	address: string;
 	peers: string[];
@@ -84,13 +87,15 @@ export const createReplica = ({
 	journalForwarder?: typeof forwardingNowhere;
 	/** True from the moment the thread starts stopping, as its server's stop sets it. */
 	stopping?: () => boolean;
+	/** The boot this replica answers /health from; a restart is a new one. */
+	bootedAt?: string;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const membership = createMembership({ self: address });
 	// Settled members: counted, this replica granted by them, nothing left to hand over.
 	for (const peer of joined) {
-		membership.markJoined({ address: peer, boot: "fixture" });
+		membership.markJoined({ address: peer, boot: BOOTED_AT });
 		membership.grantedBy(peer);
 		membership.handoffCompleted({ address: peer, thread: 0, threads: 1 });
 	}
@@ -133,7 +138,7 @@ export const createReplica = ({
 		logger: quiet,
 		autumnApiUrl: AUTUMN_API_URL,
 		health: {
-			bootedAt: "2026-10-12T00:00:00.000Z",
+			bootedAt,
 			restarts: new Int32Array(1),
 			ready: readyFlag,
 			threadsReady: new Int32Array([1]),
