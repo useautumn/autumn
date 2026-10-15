@@ -39,18 +39,19 @@ export const ApprovalRuleSheet = ({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
-	const { form, isSaving, serverIssue } = useApprovalRuleForm({
+	const { form, isSaving, serverIssue, changeActions } = useApprovalRuleForm({
 		rule,
 		onSaved: () => onOpenChange(false),
 	});
 	const subjectGroups = useRuleSubjectGroups();
 
 	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent
-				side="right"
-				className="!w-[30rem] !max-w-[30rem] sm:!w-[30rem] sm:!max-w-[30rem]"
-			>
+		<Sheet
+			open={open}
+			// A save in flight closes this sheet when it lands, so it can't close another one.
+			onOpenChange={(next) => !isSaving && onOpenChange(next)}
+		>
+			<SheetContent side="right" className="!w-full !max-w-[30rem]">
 				<SheetHeader>
 					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
 					<SheetDescription>Billing → Approvals</SheetDescription>
@@ -115,11 +116,17 @@ export const ApprovalRuleSheet = ({
 								<RuleField
 									label="Can"
 									hint={area ? APPROVAL_AREAS[area] : undefined}
-									error={field.state.meta.errors[0] ?? serverIssue("actions")}
+									error={
+										field.state.meta.errors[0] ??
+										serverIssue("actions") ??
+										serverIssue("when")
+									}
 								>
 									<RuleActionsPicker
 										actions={field.state.value}
-										onChange={field.handleChange}
+										onChange={(actions) =>
+											changeActions({ current: field.state.value, actions })
+										}
 									/>
 									{ruleWhenArea({ actions: field.state.value }) && (
 										<p className="text-subtle text-xs">{SCOPE_CAPTION}</p>

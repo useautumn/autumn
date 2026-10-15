@@ -1,8 +1,13 @@
-import type { ApprovalRule, ApprovalRuleIssue } from "@autumn/shared";
+import type {
+	ApprovalAction,
+	ApprovalRule,
+	ApprovalRuleIssue,
+} from "@autumn/shared";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import { useSaveApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
 import { invalidRuleIssues } from "./invalidRuleIssues";
+import { ruleWhenArea } from "./ruleActions";
 import {
 	editorValuesToParams,
 	emptyEditorValues,
@@ -49,6 +54,19 @@ export const useApprovalRuleForm = ({
 		form,
 		isSaving: save.isPending,
 		serverIssue: (path: string) => issueAt({ issues: serverIssues, path }),
+		/** A different set of `when` fields drops the old conditions; they wouldn't fit. */
+		changeActions: ({
+			current,
+			actions,
+		}: {
+			current: ApprovalAction[];
+			actions: ApprovalAction[];
+		}) => {
+			if (ruleWhenArea({ actions }) !== ruleWhenArea({ actions: current })) {
+				form.setFieldValue("when", null);
+			}
+			form.setFieldValue("actions", actions);
+		},
 	};
 };
 
