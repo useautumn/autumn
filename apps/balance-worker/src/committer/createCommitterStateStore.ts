@@ -142,6 +142,8 @@ export const createCommitterStateStore = ({
 		...(snapshotQueues && { snapshotQueues }),
 		claimPartition,
 		readClaimToken: claimTokenOf,
+		runInPartitionLane: ({ topic, partition, run }) =>
+			runInLane({ position: { topic, partition }, run }),
 		advanceCommandNextOffset,
 		loadProgress: loadPartitionProgress,
 		initializePartition: initialize,

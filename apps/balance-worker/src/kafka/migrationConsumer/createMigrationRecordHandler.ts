@@ -108,9 +108,11 @@ export function createMigrationRecordHandler({
 	async function settleBatch({
 		topic,
 		partition,
+		heartbeat,
 	}: {
 		topic: string;
 		partition: number;
+		heartbeat?: () => Promise<void>;
 	}): Promise<void> {
 		const messages = buffered.get(partition)?.messages ?? [];
 		buffered.delete(partition);
@@ -120,6 +122,7 @@ export function createMigrationRecordHandler({
 				partition,
 				messages: messages.slice(start, start + MAX_ITEMS_PER_APPLY),
 			});
+			await heartbeat?.();
 			const runtime = await ownedRuntimeOf({ partition });
 			const outcome = await runtime
 				.process((processor) => {
@@ -134,10 +137,6 @@ export function createMigrationRecordHandler({
 						partition,
 						size: chunk.length,
 						reason: cause instanceof Error ? cause.message : String(cause),
-						cause:
-							cause instanceof Error && cause.cause instanceof Error
-								? cause.cause.message
-								: null,
 					});
 					throw cause;
 				});
@@ -148,6 +147,7 @@ export function createMigrationRecordHandler({
 				appliedAt: Date.now(),
 				...outcome,
 			});
+			await heartbeat?.();
 		}
 	}
 

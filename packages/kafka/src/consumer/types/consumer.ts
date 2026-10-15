@@ -43,7 +43,11 @@ export type TopicRecordHandler = {
 	applyRecord(
 		record: TopicRecord,
 	): TopicRecordResult | Promise<TopicRecordResult>;
-	settleBatch?(position: { topic: string; partition: number }): Promise<void>;
+	settleBatch?(position: {
+		topic: string;
+		partition: number;
+		heartbeat?: () => Promise<void>;
+	}): Promise<void>;
 	/** The topic's records are applied in settleBatch, so none is resolved before it returns. */
 	resolvesOnSettle?(position: { topic: string }): boolean;
 };

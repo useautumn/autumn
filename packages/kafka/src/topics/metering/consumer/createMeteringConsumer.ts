@@ -230,6 +230,7 @@ export function createMeteringConsumer({
 	async function settleBatch(position: {
 		topic: string;
 		partition: number;
+		heartbeat?: () => Promise<void>;
 	}): Promise<void> {
 		await secondaryHandlerOf(position)?.settleBatch?.(position);
 	}

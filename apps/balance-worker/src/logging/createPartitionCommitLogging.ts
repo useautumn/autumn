@@ -176,6 +176,13 @@ export function createPartitionCommitLogging({
 			...(ctx.stateStore.readClaimToken
 				? { readClaimToken: ctx.stateStore.readClaimToken.bind(ctx.stateStore) }
 				: {}),
+			...(ctx.stateStore.runInPartitionLane
+				? {
+						runInPartitionLane: ctx.stateStore.runInPartitionLane.bind(
+							ctx.stateStore,
+						),
+					}
+				: {}),
 			...(ctx.stateStore.snapshotQueues
 				? { snapshotQueues: ctx.stateStore.snapshotQueues }
 				: {}),

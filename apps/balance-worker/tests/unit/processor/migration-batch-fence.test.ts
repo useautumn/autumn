@@ -393,11 +393,15 @@ describe("migration batch fence", () => {
 			},
 		});
 
-		await expect(
+		const failure = await (
 			processor.applyMigrationBatch?.({
 				items: [deleteGrantItem({ customerId: "cus_cold" })],
-			}) ?? Promise.resolve(),
-		).rejects.toThrow("redelivered");
+			}) ?? Promise.resolve()
+		).catch((cause: unknown) => cause);
+		expect(failure).toBeInstanceOf(Error);
+		expect((failure as Error).message).toContain("redelivered");
+		expect((failure as { retriable?: boolean }).retriable).toBe(true);
+		expect((failure as Error).cause).toBeUndefined();
 		const redelivered = await processor.applyMigrationBatch?.({
 			items: [deleteGrantItem({ customerId: "cus_cold" })],
 		});

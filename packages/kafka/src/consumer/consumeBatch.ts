@@ -121,7 +121,11 @@ async function applyBatch({
 		await payload.heartbeat();
 	}
 
-	await ctx.handler.settleBatch?.({ topic, partition });
+	await ctx.handler.settleBatch?.({
+		topic,
+		partition,
+		heartbeat: payload.heartbeat,
+	});
 	const last = messages.at(-1);
 	if (resolvesOnSettle && last) {
 		if (

@@ -90,10 +90,14 @@ export const classifyAndFenceMigrationBatch = ({
 	const release = scope.ctx.writer.fenceCustomers({
 		customerKeys: cold.map(({ customerKey }) => customerKey),
 	});
-	for (const { identity } of cold)
+	const { snapshotQueues } = scope.ctx.stateStore;
+	const { topic, partition } = scope.ctx.config;
+	for (const { identity, customerKey } of cold) {
 		scope.ctx.subjectHydrator.refreshSnapshots({
 			customer: { ...identity, entityId: null },
 			subjects: [],
 		});
+		snapshotQueues?.enqueueDelete({ topic, partition, customerKey });
+	}
 	return { cold, resident, release };
 };

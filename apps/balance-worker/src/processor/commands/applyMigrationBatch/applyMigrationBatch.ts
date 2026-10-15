@@ -1,5 +1,4 @@
 import type { EvictCommand, MeteringIdentity } from "@autumn/balance-engine";
-import { writesSubjectSnapshots } from "@autumn/edge-config";
 import {
 	ColdMigrationBatchRolledBackError,
 	itemRunKeyOf,
@@ -41,10 +40,15 @@ type ColdOutcome = {
 	laneDeleteMs: number;
 };
 
-export class ColdMigrationRetryableError extends Error {
+export class MigrationBatchRetryableError extends Error {
+	readonly retriable = true;
+	readonly detail: string;
+
 	constructor({ cause }: { cause: unknown }) {
-		super("Cold migration batch failed; the batch is redelivered", { cause });
-		this.name = "ColdMigrationRetryableError";
+		const detail = cause instanceof Error ? cause.message : String(cause);
+		super(`Migration batch failed (${detail}); the batch is redelivered`);
+		this.name = "MigrationBatchRetryableError";
+		this.detail = detail;
 	}
 }
 
@@ -72,26 +76,6 @@ const isForcedRollback = (cause: unknown): boolean =>
 	cause instanceof ColdMigrationBatchRolledBackError &&
 	cause.reason === "forced";
 
-const deleteSnapshotsOnLane = async ({
-	scope,
-	applied,
-}: {
-	scope: PartitionProcessorScope;
-	applied: ColdMigrationItem[];
-}): Promise<void> => {
-	const { snapshotQueues } = scope.ctx.stateStore;
-	const settings = scope.ctx.subjectSnapshotsConfig?.get();
-	if (!snapshotQueues || !settings || !writesSubjectSnapshots(settings)) return;
-	const { topic, partition } = scope.ctx.config;
-	for (const { customerKey } of applied)
-		snapshotQueues.enqueueDelete({ topic, partition, customerKey });
-	await Promise.all(
-		applied.map(({ customerKey }) =>
-			snapshotQueues.deleteLanded({ topic, partition, customerKey }),
-		),
-	);
-};
-
 const applyColdItems = async ({
 	scope,
 	cold,
@@ -112,8 +96,8 @@ const applyColdItems = async ({
 		scope.ctx.catalogCache.put({ rows: request.catalogRows });
 	const startedAt = performance.now();
 	let result: Awaited<ReturnType<typeof applyCold>>;
-	try {
-		result = await applyCold({
+	const runCold = () =>
+		applyCold({
 			batch: {
 				topic,
 				partition,
@@ -130,9 +114,15 @@ const applyColdItems = async ({
 				})),
 			},
 		});
+	try {
+		result = await (scope.ctx.stateStore.runInPartitionLane?.({
+			topic,
+			partition,
+			run: runCold,
+		}) ?? runCold());
 	} catch (cause) {
 		if (!isForcedRollback(cause))
-			throw new ColdMigrationRetryableError({ cause });
+			throw new MigrationBatchRetryableError({ cause });
 		return {
 			...emptyColdOutcome(),
 			failed: cold.length,
@@ -145,8 +135,6 @@ const applyColdItems = async ({
 	const applied = cold.filter(({ item }) =>
 		appliedIds.has(item.internalCustomerId),
 	);
-	const laneStartedAt = performance.now();
-	await deleteSnapshotsOnLane({ scope, applied });
 	return {
 		applied,
 		stale: result.stale.length,
@@ -158,7 +146,7 @@ const applyColdItems = async ({
 		snapshotsDeleted: result.snapshotsDeleted,
 		runsMarked: result.runsMarked,
 		sqlMs,
-		laneDeleteMs: performance.now() - laneStartedAt,
+		laneDeleteMs: 0,
 	};
 };
 
@@ -203,7 +191,9 @@ const logChangedCustomers = async ({
 			identity: { ...identity, entityId: null },
 			occurredAt,
 		};
-		logged.push(logEvict({ scope, command: evict, droppedState: null }));
+		const appended = logEvict({ scope, command: evict, droppedState: null });
+		appended.catch(() => undefined);
+		logged.push(appended);
 	}
 	await Promise.all(logged);
 };
@@ -277,6 +267,10 @@ export async function applyMigrationBatch({
 	});
 	const residentRunsMs = performance.now() - runsStartedAt;
 	if (coldSettled.status === "rejected") throw coldSettled.reason;
+	if (residentOutcome.verdicts.includes("failed"))
+		throw new MigrationBatchRetryableError({
+			cause: new Error("a resident plan failed on the in-memory path"),
+		});
 	const coldOutcome = coldSettled.value;
 
 	const evictStartedAt = performance.now();

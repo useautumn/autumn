@@ -64,6 +64,12 @@ export type StateStore = {
 		commandNextOffset: bigint;
 	}): void | Promise<void>;
 	claimPartition?(params: { topic: string; partition: number }): Promise<void>;
+	/** Runs `run` in the partition's Postgres lane, after every write the lane already took. */
+	runInPartitionLane?<Result>(params: {
+		topic: string;
+		partition: number;
+		run(): Promise<Result>;
+	}): Promise<Result>;
 	/** The claim this process stamped on the partition, so a direct write can prove it still owns it. */
 	readClaimToken?(params: {
 		topic: string;

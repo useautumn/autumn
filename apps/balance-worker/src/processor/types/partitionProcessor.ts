@@ -140,6 +140,7 @@ export type PartitionProcessorDependencies = {
 			| "readCommandNextOffset"
 			| "advanceCommandNextOffset"
 			| "readClaimToken"
+			| "runInPartitionLane"
 		>;
 	catalogCache: CatalogCache;
 	db: WorkerDb;

@@ -79,6 +79,7 @@ export type PartitionRuntimeDependencies = {
 			| "advanceCommandNextOffset"
 			| "claimPartition"
 			| "readClaimToken"
+			| "runInPartitionLane"
 		>;
 	producer: OwnedPartitionProducer;
 	appender: CommittedOutcomeAppender;
