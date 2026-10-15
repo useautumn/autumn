@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createLibrdkafkaConsumer } from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
+import {
+	createLibrdkafkaConsumer,
+	STOP_LOOP_TIMEOUT_MS,
+} from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
 import type {
 	NativeConsumer,
 	NativeKafkaError,
@@ -1029,4 +1032,54 @@ describe("librdkafka consumer runner", () => {
 		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 3 });
 		await consumer.disconnect();
 	});
+	// A stopping worker sat out the loop's waits; a SIGTERM must not wait for a restart's backoff to run out.
+	test("stop wakes the loop from a restart backoff instead of waiting it out", async () => {
+		const { fake, consumer, events } = createRunner({
+			config: { retry: { initialRetryTime: 60_000 } },
+		});
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 9 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async () => {
+				throw new Error("handler failed");
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		const startedAt = performance.now();
+		await consumer.disconnect();
+		expect(performance.now() - startedAt).toBeLessThan(1_000);
+		expect(fake.calls).toContain("disconnect");
+	});
+
+	// Seen in soak: SIGTERM'd workers whose consume loop never noticed the stop held the process and the group for minutes.
+	test(
+		"stop leaves the group and closes the client even when the loop never answers",
+		async () => {
+			const { fake, consumer, logs } = createRunner();
+			fake.chunks.push([
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			]);
+			await consumer.connect();
+			await consumer.subscribe({ topics: [topic], fromBeginning: true });
+			await consumer.run({ eachBatch: async () => {} });
+			await until(() => fake.assignments.length > 0);
+			fake.gate.held = new Promise<void>(() => {});
+			await until(() => fake.gate.held === undefined);
+			const startedAt = performance.now();
+			await consumer.disconnect();
+			const tookMs = performance.now() - startedAt;
+			expect(tookMs).toBeGreaterThanOrEqual(STOP_LOOP_TIMEOUT_MS - 50);
+			expect(tookMs).toBeLessThan(STOP_LOOP_TIMEOUT_MS + 6_000);
+			expect(fake.calls).toContain("unsubscribe");
+			expect(fake.calls.at(-1)).toBe("disconnect");
+			expect(logs.some((line) => line.includes("loop did not stop"))).toBe(
+				true,
+			);
+		},
+		{ timeout: STOP_LOOP_TIMEOUT_MS + 10_000 },
+	);
 });

@@ -28,6 +28,29 @@ const COMMITTED_TIMEOUT_MS = 10_000;
 const SEEK_SETTLE_TIMEOUT_MS = 5_000;
 const MAX_COMMITTED_BACKOFF_MS = 5_000;
 
+/** A wait inside the loop that `stop` cuts short, so a stopping consumer never sits out a backoff or an idle pause. */
+export function sleepUnlessStopped({
+	scope,
+	ms,
+}: {
+	scope: ConsumerRunnerScope;
+	ms: number;
+}): Promise<void> {
+	const signal = scope.state.wake.signal;
+	if (signal.aborted) return Promise.resolve();
+	const slept = Promise.withResolvers<void>();
+	function wake(): void {
+		clearTimeout(timer);
+		slept.resolve();
+	}
+	const timer = setTimeout(() => {
+		signal.removeEventListener("abort", wake);
+		slept.resolve();
+	}, ms);
+	signal.addEventListener("abort", wake, { once: true });
+	return slept.promise;
+}
+
 type PartitionItem =
 	| { kind: "message"; message: NativeMessage }
 	| { kind: "eof"; offset: number };
@@ -529,7 +552,7 @@ async function readCommitted({
 					retryInMs: backoffMs,
 				},
 			);
-			await Bun.sleep(backoffMs);
+			await sleepUnlessStopped({ scope, ms: backoffMs });
 			backoffMs = Math.min(backoffMs * 2, MAX_COMMITTED_BACKOFF_MS);
 		}
 	}
@@ -565,7 +588,10 @@ async function restartFromCommits({
 		payload: { groupId: scope.config.groupId, error: cause, restart },
 	});
 	if (!restart) return false;
-	await Bun.sleep(scope.config.retry?.initialRetryTime ?? 300);
+	await sleepUnlessStopped({
+		scope,
+		ms: scope.config.retry?.initialRetryTime ?? 300,
+	});
 	const partitions = [...scope.state.assigned.values()];
 	if (partitions.length > 0) {
 		const committed = await readCommitted({ scope, native, partitions });
@@ -651,12 +677,13 @@ export async function runConsumeLoop({
 						error: error.message,
 					},
 				);
-				await Bun.sleep(100);
+				await sleepUnlessStopped({ scope, ms: 100 });
 			}
 		}
 		const answered =
 			!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT;
-		if (answered && partitions.length === 0) await Bun.sleep(IDLE_POLL_MS);
+		if (answered && partitions.length === 0)
+			await sleepUnlessStopped({ scope, ms: IDLE_POLL_MS });
 		for (const { topic, partition } of partitions)
 			state.fetched.add(partitionKeyOf({ topic, partition }));
 		// An empty or failed poll says nothing of the brokers; reporting it would hide a stalled fetch.

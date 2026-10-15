@@ -44,6 +44,8 @@ import {
 const LEAVE_TIMEOUT_MS = 5_000;
 /** How long a restart waits for a given-up client to close before abandoning it. */
 const RETIRE_TIMEOUT_MS = 10_000;
+/** How long `stop` waits for the consume loop to notice it; past this it leaves the group and closes without it. */
+export const STOP_LOOP_TIMEOUT_MS = 10_000;
 /** A poll never waits natively: a blocking one holds a native pool thread, and idle consumers starve every commit. */
 const CONSUME_POLL_MS = 0;
 
@@ -99,6 +101,7 @@ export function createLibrdkafkaConsumer({
 		running: false,
 		leaving: false,
 		loop: null,
+		wake: new AbortController(),
 		assigned: new Map(),
 		generation: new Map(),
 		seekEpoch: new Map(),
@@ -271,6 +274,7 @@ export function createLibrdkafkaConsumer({
 		if (state.running) throw new Error("Kafka consumer is already running");
 		state.run = runConfig;
 		state.running = true;
+		state.wake = new AbortController();
 		state.loop = runLoop(native);
 	}
 
@@ -407,9 +411,31 @@ export function createLibrdkafkaConsumer({
 		}
 	}
 
+	/** A loop parked on something that never answers must not hold the process: the group is left and the client closed regardless. */
+	async function awaitLoop(): Promise<void> {
+		const loop = state.loop;
+		if (!loop) return;
+		const ended = await Promise.race([
+			loop.then(() => true),
+			Bun.sleep(STOP_LOOP_TIMEOUT_MS).then(() => false),
+		]);
+		if (ended) return;
+		log(
+			"error",
+			"Kafka consumer loop did not stop; leaving the group without it",
+			{
+				timeoutMs: STOP_LOOP_TIMEOUT_MS,
+				pollAgoMs: Math.round(performance.now() - state.lastPollAt),
+				inflightSeeks: state.inflightSeeks.size,
+				restartPending: state.restartPending !== null,
+			},
+		);
+	}
+
 	async function stop(): Promise<void> {
 		state.running = false;
-		await state.loop;
+		state.wake.abort();
+		await awaitLoop();
 		state.loop = null;
 		const native = state.native;
 		if (native && !state.leaving && !state.gaveUp) await leaveGroup(native);
