@@ -214,11 +214,17 @@ export const windowBarsOf = ({
 			(sum, s) => sum + s.a.forwarded + s.b.forwarded,
 			0,
 		);
+		// A replay answered 409 is the key working, not a failure; a replay allowed twice stays in.
+		const failedOf = (counts: RollCounts) =>
+			Object.entries(counts.failedStatus)
+				.filter(
+					([status]) =>
+						!status.startsWith("replay ") ||
+						status.startsWith("replay allowed"),
+				)
+				.reduce((x, [, n]) => x + n, 0);
 		const failed = inside.reduce(
-			(sum, s) =>
-				sum +
-				Object.values(s.a.failedStatus).reduce((x, n) => x + n, 0) +
-				Object.values(s.b.failedStatus).reduce((x, n) => x + n, 0),
+			(sum, s) => sum + failedOf(s.a) + failedOf(s.b),
 			0,
 		);
 		// Polls are 2 s apart: a poll up to 2 s after the window closes still counts what happened inside it.
