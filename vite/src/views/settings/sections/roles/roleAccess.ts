@@ -79,7 +79,7 @@ export const roleToFormValues = ({
 	access: role?.access ?? emptyAccess(),
 });
 
-const labelToName = ({ label }: { label: string }) =>
+export const labelToName = ({ label }: { label: string }) =>
 	label
 		.trim()
 		.toLowerCase()

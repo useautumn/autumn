@@ -18,12 +18,14 @@ export const RoleRow = ({
 	role,
 	onEdit,
 	onDelete,
+	readOnly,
 }: {
 	role: Role;
 	onEdit: () => void;
 	onDelete: () => void;
+	readOnly: boolean;
 }) => {
-	const editable = canEditRole({ role });
+	const editable = !readOnly && canEditRole({ role });
 
 	return (
 		<TableRow className={SETTINGS_ROW_CLASS}>

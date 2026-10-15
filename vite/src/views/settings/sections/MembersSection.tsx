@@ -59,7 +59,7 @@ export const MembersSection = () => {
 					<OrgInvitesList />
 				</TabsContent>
 				<TabsContent value="roles" className="mt-8">
-					<RolesTab dialogs={roleDialogs} />
+					<RolesTab dialogs={roleDialogs} readOnly={inNamedSandbox} />
 				</TabsContent>
 			</Tabs>
 		</SettingsSection>

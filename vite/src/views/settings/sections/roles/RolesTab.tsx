@@ -4,6 +4,7 @@ import { SettingsTable } from "@/views/settings/SettingsTable";
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
 import { RoleFormSheet } from "./RoleFormSheet";
 import { RoleRow } from "./RoleRow";
+import { RolesLoadError } from "./RolesLoadError";
 import type { RoleBody } from "./roleAccess";
 import { getRoleInUseCount } from "./rolesClient";
 import type { RoleDialogs } from "./useRoleDialogs";
@@ -14,8 +15,14 @@ const COLUMNS = [
 	{ label: "Members", width: "15%" },
 ] as const;
 
-export const RolesTab = ({ dialogs }: { dialogs: RoleDialogs }) => {
-	const { roles, isLoading } = useRolesQuery();
+export const RolesTab = ({
+	dialogs,
+	readOnly,
+}: {
+	dialogs: RoleDialogs;
+	readOnly: boolean;
+}) => {
+	const { roles, isLoading, error, refetch } = useRolesQuery();
 	const { save, remove } = useRoleMutations();
 	const close = () => dialogs.setOpen(false);
 
@@ -31,6 +38,7 @@ export const RolesTab = ({ dialogs }: { dialogs: RoleDialogs }) => {
 	};
 
 	if (isLoading) return null;
+	if (error) return <RolesLoadError onRetry={() => refetch()} />;
 
 	return (
 		<>
@@ -39,6 +47,7 @@ export const RolesTab = ({ dialogs }: { dialogs: RoleDialogs }) => {
 					<RoleRow
 						key={role.name}
 						role={role}
+						readOnly={readOnly}
 						onEdit={() => dialogs.openEditor({ role })}
 						onDelete={() => {
 							remove.reset();
@@ -59,6 +68,7 @@ export const RolesTab = ({ dialogs }: { dialogs: RoleDialogs }) => {
 				onOpenChange={dialogs.setOpen}
 				onSubmit={handleSave}
 				isSaving={save.isPending}
+				readOnly={readOnly}
 			/>
 			<DeleteRoleDialog
 				role={dialogs.role}

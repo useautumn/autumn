@@ -63,18 +63,19 @@ const MOCK_ROLES: [label: string, scopes: ScopeString[], members: number][] = [
 
 const BUILT_IN_COUNT = 4;
 
-const mockRoles: Role[] = MOCK_ROLES.map(([label, scopes, members], index) => {
-	const built_in = index < BUILT_IN_COUNT;
-	return {
-		name: label.toLowerCase(),
-		label,
-		built_in,
-		access: scopesToAccess({ scopes }),
-		member_count: members,
-		created_at: built_in ? null : Date.now(),
-		updated_at: built_in ? null : Date.now(),
-	};
-});
+const seedRoles = (): Role[] =>
+	MOCK_ROLES.map(([label, scopes, members], index) => {
+		const built_in = index < BUILT_IN_COUNT;
+		return {
+			name: label.toLowerCase(),
+			label,
+			built_in,
+			access: scopesToAccess({ scopes }),
+			member_count: members,
+			created_at: built_in ? null : Date.now(),
+			updated_at: built_in ? null : Date.now(),
+		};
+	});
 
 const sortRoles = ({ roles }: { roles: Role[] }) => [
 	...roles.filter((role) => role.built_in),
@@ -83,8 +84,8 @@ const sortRoles = ({ roles }: { roles: Role[] }) => [
 		.sort((a, b) => a.label.localeCompare(b.label)),
 ];
 
-const findMockRole = ({ name }: { name: string }) => {
-	const role = mockRoles.find((candidate) => candidate.name === name);
+const findMockRole = ({ roles, name }: { roles: Role[]; name: string }) => {
+	const role = roles.find((candidate) => candidate.name === name);
 	if (!role)
 		return rejectWith({
 			status: 404,
@@ -101,35 +102,65 @@ const findMockRole = ({ name }: { name: string }) => {
 	return role;
 };
 
-export const mockRolesClient: RolesClient = {
-	list: async () => sortRoles({ roles: mockRoles }),
-	create: async ({ body }) => {
-		const role: Role = {
-			...body,
-			built_in: false,
-			member_count: 0,
-			created_at: Date.now(),
-			updated_at: Date.now(),
-		};
-		mockRoles.push(role);
-		return role;
-	},
-	update: async ({ name, body }) => {
-		const role = findMockRole({ name });
-		Object.assign(role, body, { updated_at: Date.now() });
-		return role;
-	},
-	remove: async ({ name }) => {
-		const role = findMockRole({ name });
-		if (role.member_count > 0)
-			rejectWith({
-				status: 409,
-				body: {
-					code: "role_in_use",
-					message: "Role is in use",
-					member_count: role.member_count,
-				},
-			});
-		mockRoles.splice(mockRoles.indexOf(role), 1);
-	},
+const assertNameFree = ({
+	roles,
+	name,
+	except,
+}: {
+	roles: Role[];
+	name: string;
+	except?: Role;
+}) => {
+	if (roles.some((role) => role.name === name && role !== except))
+		rejectWith({
+			status: 409,
+			body: { code: "role_exists", message: "A role with this name exists" },
+		});
+};
+
+const mockStores = new Map<string, Role[]>();
+
+/** One in-memory store per org and env, so switching orgs doesn't carry edits across. */
+export const getMockRolesClient = ({
+	storeKey,
+}: {
+	storeKey: string;
+}): RolesClient => {
+	const roles = mockStores.get(storeKey) ?? seedRoles();
+	mockStores.set(storeKey, roles);
+
+	return {
+		list: async () => sortRoles({ roles }),
+		create: async ({ body }) => {
+			assertNameFree({ roles, name: body.name });
+			const role: Role = {
+				...body,
+				built_in: false,
+				member_count: 0,
+				created_at: Date.now(),
+				updated_at: Date.now(),
+			};
+			roles.push(role);
+			return role;
+		},
+		update: async ({ name, body }) => {
+			const role = findMockRole({ roles, name });
+			if (body.name) assertNameFree({ roles, name: body.name, except: role });
+			Object.assign(role, body, { updated_at: Date.now() });
+			return role;
+		},
+		remove: async ({ name }) => {
+			const role = findMockRole({ roles, name });
+			if (role.member_count > 0)
+				rejectWith({
+					status: 409,
+					body: {
+						code: "role_in_use",
+						message: "Role is in use",
+						member_count: role.member_count,
+					},
+				});
+			roles.splice(roles.indexOf(role), 1);
+		},
+	};
 };

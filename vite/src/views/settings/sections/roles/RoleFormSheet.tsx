@@ -13,17 +13,31 @@ import {
 	accessToScopes,
 	canEditRole,
 	formValuesToRoleBody,
+	labelToName,
 	type Role,
 	type RoleBody,
 	roleToFormValues,
 	scopesToAccess,
 } from "./roleAccess";
 
-const LabelSchema = z.string().trim().min(1, "Name is required");
+const LabelSchema = z
+	.string()
+	.trim()
+	.min(1, "Name is required")
+	.refine(
+		(label) => labelToName({ label }).length > 0,
+		"Use at least one letter or number",
+	);
 
-const sheetTitle = ({ role }: { role: Role | null }) => {
+const sheetTitle = ({
+	role,
+	editable,
+}: {
+	role: Role | null;
+	editable: boolean;
+}) => {
 	if (!role) return "New role";
-	if (canEditRole({ role })) return "Edit role";
+	if (editable) return "Edit role";
 	return role.label;
 };
 
@@ -33,14 +47,16 @@ export const RoleFormSheet = ({
 	onOpenChange,
 	onSubmit,
 	isSaving,
+	readOnly,
 }: {
 	role: Role | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onSubmit: (params: { body: RoleBody }) => void;
 	isSaving: boolean;
+	readOnly: boolean;
 }) => {
-	const editable = !role || canEditRole({ role });
+	const editable = !readOnly && (!role || canEditRole({ role }));
 	const form = useAppForm({
 		defaultValues: roleToFormValues({ role }),
 		onSubmit: ({ value }) =>
@@ -54,11 +70,11 @@ export const RoleFormSheet = ({
 				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
 			>
 				<SheetHeader>
-					<SheetTitle>{sheetTitle({ role })}</SheetTitle>
+					<SheetTitle>{sheetTitle({ role, editable })}</SheetTitle>
 					<SheetDescription>
 						{editable
 							? "Choose what members with this role can see and edit."
-							: "Built-in roles can't be changed."}
+							: "This role can't be changed here."}
 					</SheetDescription>
 				</SheetHeader>
 
