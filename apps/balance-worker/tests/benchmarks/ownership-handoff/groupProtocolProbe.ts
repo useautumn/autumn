@@ -151,6 +151,7 @@ const env = {
 		DATABASE_URL: databaseUrl,
 		KAFKA_BROKERS: brokers.join(","),
 		KAFKA_AUTH_MODE: "none",
+		KAFKA_GROUP_PROTOCOL: process.env.KAFKA_GROUP_PROTOCOL,
 		BALANCE_WORKER_HOST: "127.0.0.1",
 		BALANCE_WORKER_PORT: String(port),
 		BALANCE_WORKER_SQLITE_PATH: join(dir, "state.sqlite"),
@@ -205,8 +206,13 @@ note("probe", "done", {
 		.then((r) => r.status)
 		.catch((cause) => String(cause)),
 });
+const stoppingAt = Date.now();
 worker.kill("SIGTERM");
-await Promise.race([worker.exited, Bun.sleep(15_000)]);
+await Promise.race([worker.exited, Bun.sleep(90_000)]);
+note("worker", "stop", {
+	stopMs: Date.now() - stoppingAt,
+	exitCode: worker.exitCode,
+});
 worker.kill("SIGKILL");
 rmSync(dir, { recursive: true, force: true });
 await Promise.allSettled([
