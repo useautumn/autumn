@@ -92,10 +92,11 @@ test("queued track redelivers after SUBJECT_VIEW_CHANGED and deducts exactly onc
 		run: async () => {
 			await withCacheRebuildBeforeEveryDeduction({
 				customerId,
-				run: () =>
-					expect(deliver()).rejects.toMatchObject({
+				run: async () => {
+					await expect(deliver()).rejects.toMatchObject({
 						code: RedisDeductionErrorCode.SubjectViewChanged,
-					}),
+					});
+				},
 			});
 
 			await deliver();
