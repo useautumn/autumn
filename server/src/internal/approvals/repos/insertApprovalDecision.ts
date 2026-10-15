@@ -1,4 +1,7 @@
-import { approvalDecisions, type InsertApprovalDecision } from "@autumn/shared";
+import {
+	approvalDecisions,
+	type InsertApprovalDecision,
+} from "@autumn/shared/models/approvalModels/index";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const insertApprovalDecision = async ({

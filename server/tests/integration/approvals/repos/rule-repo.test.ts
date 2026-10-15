@@ -10,11 +10,11 @@
  */
 
 import { expect, test } from "bun:test";
+import { AppEnv } from "@autumn/shared";
 import {
-	AppEnv,
 	EVERYONE_SUBJECT_ID,
 	type UpsertApprovalRule,
-} from "@autumn/shared";
+} from "@autumn/shared/models/approvalModels/index";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
