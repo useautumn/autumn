@@ -7,15 +7,16 @@ import type { JournalEntry } from "../state/journal/types/journal.js";
  */
 export const journalEntryToHandIn = ({
 	writerId,
-	entry: { seq, command },
+	entry: { seq, command, appendedAt },
 }: {
 	writerId: string;
 	entry: JournalEntry;
 }): AtomTracksAppendRequest["tracks"][number] => {
-	if (command.type === "track") return { writerId, seq, command };
+	if (command.type === "track") return { writerId, seq, appendedAt, command };
 	return {
 		writerId,
 		seq,
+		appendedAt,
 		finalize: {
 			requestId: command.requestId,
 			occurredAt: command.occurredAt,
