@@ -53,6 +53,8 @@ export type CursorPaginatedFullCusQueryArgs = {
 	customerId?: string;
 	/** Emit products_page / products_total_count. Dashboard only. */
 	withProductsPage?: boolean;
+	/** Emit customer entitlements and their rollovers/replaceables. */
+	withBalances?: boolean;
 	/** Products holding cusEnts for these features bypass the cusProductLimit
 	 * preview cap, so displayed balances sum every live row. */
 	balanceFeatureInternalIds?: string[];
@@ -108,6 +110,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	cusProductLimit,
 	customerId,
 	withProductsPage = false,
+	withBalances = true,
 	balanceFeatureInternalIds,
 	sortOrder = "desc",
 	aggregateEntityData = true,
@@ -240,6 +243,127 @@ export const getCursorPaginatedFullCusQuery = ({
 		? sql`, (SELECT COALESCE(json_agg(row_json), '[]'::json) FROM invoices_all) AS invoices`
 		: sql``;
 
+	const balanceCtes = withBalances
+		? sql`,
+			ces_bound AS MATERIALIZED (
+				SELECT
+					ce.id,
+					ce.entitlement_id,
+					(
+						row_to_json(ce)::jsonb
+						|| CASE
+							WHEN pbc.id IS NULL THEN '{}'::jsonb
+							ELSE jsonb_build_object(
+								'pooled_balance_contribution',
+								to_jsonb(pbc)
+							)
+						END
+					)::json AS row_json
+				FROM cps_ranked
+				JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
+				LEFT JOIN pooled_balance_contributions pbc
+					ON pbc.id = ce.pooled_contribution_id
+					AND pbc.source_customer_entitlement_id = ce.id
+					AND pbc.source_customer_product_id = cps_ranked.id
+			),
+			ces_loose AS MATERIALIZED (
+				SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
+				FROM cr
+				JOIN LATERAL (
+					SELECT ce.*
+					FROM customer_entitlements ce
+					WHERE ce.internal_customer_id = cr.internal_id
+						AND ce.customer_product_id IS NULL
+						AND ce.pooled_balance_id IS NULL
+						AND ce.pooled_contribution_id IS NULL
+						AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+						AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
+						${customerLevelOnly("ce")}
+					ORDER BY ce.id DESC
+					LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+				) ce ON true
+			),
+			ces_pooled AS MATERIALIZED (
+				SELECT
+					ce.id,
+					ce.entitlement_id,
+					(
+						row_to_json(ce)::jsonb
+						|| jsonb_build_object('pooled_balance', to_jsonb(pb))
+					)::json AS row_json
+				FROM cr
+				JOIN LATERAL (
+					SELECT ce.*
+					FROM customer_entitlements ce
+					JOIN pooled_balances live_pb ON live_pb.id = ce.pooled_balance_id
+						AND ${licensePooledBalanceIsLiveSql({ pooledBalanceAlias: "live_pb" })}
+					WHERE ce.internal_customer_id = cr.internal_id
+						AND ce.customer_product_id IS NULL
+						AND ce.pooled_balance_id IS NOT NULL
+						AND ce.pooled_contribution_id IS NULL
+						AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					ORDER BY ce.id DESC
+					LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
+				) ce ON true
+				JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
+			),
+			ces_all AS MATERIALIZED (
+				SELECT id, entitlement_id FROM ces_bound
+				UNION ALL
+				SELECT id, entitlement_id FROM ces_loose
+				UNION ALL
+				SELECT id, entitlement_id FROM ces_pooled
+			)`
+		: sql``;
+
+	const balanceSelects = withBalances
+		? sql`
+				(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
+				(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
+				(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_pooled) AS pooled_customer_entitlements,
+				(SELECT COALESCE(json_agg(row_to_json(e)::jsonb || jsonb_build_object('feature', row_to_json(f))), '[]'::json)
+					FROM (SELECT DISTINCT entitlement_id FROM ces_all) ce
+					JOIN entitlements e ON e.id = ce.entitlement_id
+					JOIN features f ON f.internal_id = e.internal_feature_id
+				) AS entitlements,
+				-- Rollovers and replaceables are gathered per cus_ent via a correlated
+				-- subquery, then flattened, rather than joined against ces_all directly.
+				-- A direct join lets the planner pick a merge join: pg_stats badly
+				-- underestimates n_distinct on customer_entitlements.customer_product_id,
+				-- so ces_all is estimated ~100x too large and one ordered scan of
+				-- rollovers looks cheaper than per-row probes. That scanned all 7.38M
+				-- rollover rows on every call (7.7s of an 8.3s query) to return zero.
+				-- Keeping the table access inside a scalar subquery removes the choice.
+				-- A plain CROSS JOIN LATERAL over the table is NOT sufficient — the
+				-- planner pulls it back up into the same join.
+				(SELECT COALESCE(json_agg(ro_row.value), '[]'::json)
+					FROM ces_all
+					CROSS JOIN LATERAL json_array_elements(
+						COALESCE((
+							SELECT json_agg(row_to_json(ro))
+							FROM rollovers ro
+							WHERE ro.cus_ent_id = ces_all.id
+								AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+						), '[]'::json)
+					) AS ro_row(value)
+				) AS rollovers,
+				(SELECT COALESCE(json_agg(rep_row.value), '[]'::json)
+					FROM ces_all
+					CROSS JOIN LATERAL json_array_elements(
+						COALESCE((
+							SELECT json_agg(row_to_json(r))
+							FROM replaceables r
+							WHERE r.cus_ent_id = ces_all.id
+						), '[]'::json)
+					) AS rep_row(value)
+				) AS replaceables`
+		: sql`'[]'::json AS customer_entitlements,
+			'[]'::json AS extra_customer_entitlements,
+			'[]'::json AS pooled_customer_entitlements,
+			'[]'::json AS entitlements,
+			'[]'::json AS rollovers,
+			'[]'::json AS replaceables`;
+
 	return sql`
 		WITH cr AS MATERIALIZED (
 			SELECT
@@ -297,76 +421,8 @@ export const getCursorPaginatedFullCusQuery = ({
 				sql`, `,
 			)}])
 			GROUP BY internal_customer_id
-		),
-		ces_bound AS MATERIALIZED (
-			SELECT
-				ce.id,
-				ce.entitlement_id,
-				(
-					row_to_json(ce)::jsonb
-					|| CASE
-						WHEN pbc.id IS NULL THEN '{}'::jsonb
-						ELSE jsonb_build_object(
-							'pooled_balance_contribution',
-							to_jsonb(pbc)
-						)
-					END
-				)::json AS row_json
-			FROM cps_ranked
-			JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
-			LEFT JOIN pooled_balance_contributions pbc
-				ON pbc.id = ce.pooled_contribution_id
-				AND pbc.source_customer_entitlement_id = ce.id
-				AND pbc.source_customer_product_id = cps_ranked.id
-		),
-		ces_loose AS MATERIALIZED (
-			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
-			FROM cr
-			JOIN LATERAL (
-				SELECT ce.*
-				FROM customer_entitlements ce
-				WHERE ce.internal_customer_id = cr.internal_id
-					AND ce.customer_product_id IS NULL
-					AND ce.pooled_balance_id IS NULL
-					AND ce.pooled_contribution_id IS NULL
-					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-					AND (${looseEntitlementIsLiveSql()} OR ce.next_reset_at IS NOT NULL)
-					${customerLevelOnly("ce")}
-				ORDER BY ce.id DESC
-				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
-			) ce ON true
-		),
-		ces_pooled AS MATERIALIZED (
-			SELECT
-				ce.id,
-				ce.entitlement_id,
-				(
-					row_to_json(ce)::jsonb
-					|| jsonb_build_object('pooled_balance', to_jsonb(pb))
-				)::json AS row_json
-			FROM cr
-			JOIN LATERAL (
-				SELECT ce.*
-				FROM customer_entitlements ce
-				JOIN pooled_balances live_pb ON live_pb.id = ce.pooled_balance_id
-					AND ${licensePooledBalanceIsLiveSql({ pooledBalanceAlias: "live_pb" })}
-				WHERE ce.internal_customer_id = cr.internal_id
-					AND ce.customer_product_id IS NULL
-					AND ce.pooled_balance_id IS NOT NULL
-					AND ce.pooled_contribution_id IS NULL
-					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-				ORDER BY ce.id DESC
-				LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
-			) ce ON true
-			JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
-		),
-		ces_all AS MATERIALIZED (
-			SELECT id, entitlement_id FROM ces_bound
-			UNION ALL
-			SELECT id, entitlement_id FROM ces_loose
-			UNION ALL
-			SELECT id, entitlement_id FROM ces_pooled
 		)
+		${balanceCtes}
 		${productsSeedCte}
 		${entitiesCte}
 		${invoicesCte}
@@ -376,50 +432,12 @@ export const getCursorPaginatedFullCusQuery = ({
 			${productsSeedSelect}
 			${basePriceTotalsSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
-			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
-			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
-			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_pooled) AS pooled_customer_entitlements,
 			(SELECT COALESCE(json_agg(row_to_json(cpr)::jsonb || jsonb_build_object('price', row_to_json(p))), '[]'::json)
 				FROM cps_ranked
 				JOIN customer_prices cpr ON cpr.customer_product_id = cps_ranked.id
 				LEFT JOIN prices p ON p.id = cpr.price_id
 			) AS customer_prices,
-			(SELECT COALESCE(json_agg(row_to_json(e)::jsonb || jsonb_build_object('feature', row_to_json(f))), '[]'::json)
-				FROM (SELECT DISTINCT entitlement_id FROM ces_all) ce
-				JOIN entitlements e ON e.id = ce.entitlement_id
-				JOIN features f ON f.internal_id = e.internal_feature_id
-			) AS entitlements,
-			-- Rollovers and replaceables are gathered per cus_ent via a correlated
-			-- subquery, then flattened, rather than joined against ces_all directly.
-			-- A direct join lets the planner pick a merge join: pg_stats badly
-			-- underestimates n_distinct on customer_entitlements.customer_product_id,
-			-- so ces_all is estimated ~100x too large and one ordered scan of
-			-- rollovers looks cheaper than per-row probes. That scanned all 7.38M
-			-- rollover rows on every call (7.7s of an 8.3s query) to return zero.
-			-- Keeping the table access inside a scalar subquery removes the choice.
-			-- A plain CROSS JOIN LATERAL over the table is NOT sufficient — the
-			-- planner pulls it back up into the same join.
-			(SELECT COALESCE(json_agg(ro_row.value), '[]'::json)
-				FROM ces_all
-				CROSS JOIN LATERAL json_array_elements(
-					COALESCE((
-						SELECT json_agg(row_to_json(ro))
-						FROM rollovers ro
-						WHERE ro.cus_ent_id = ces_all.id
-							AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-					), '[]'::json)
-				) AS ro_row(value)
-			) AS rollovers,
-			(SELECT COALESCE(json_agg(rep_row.value), '[]'::json)
-				FROM ces_all
-				CROSS JOIN LATERAL json_array_elements(
-					COALESCE((
-						SELECT json_agg(row_to_json(r))
-						FROM replaceables r
-						WHERE r.cus_ent_id = ces_all.id
-					), '[]'::json)
-				) AS rep_row(value)
-			) AS replaceables,
+			${balanceSelects},
 			(SELECT COALESCE(json_agg(row_to_json(ft)), '[]'::json)
 				FROM (SELECT DISTINCT free_trial_id FROM cps_ranked WHERE free_trial_id IS NOT NULL) cps
 				JOIN free_trials ft ON ft.id = cps.free_trial_id
