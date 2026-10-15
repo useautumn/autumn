@@ -32,6 +32,7 @@ type ColdOutcome = {
 	settled: number;
 	failed: number;
 	failure: string | null;
+	window: { queuedAt: number; startedAt: number; endedAt: number } | null;
 	rowsDeleted: number;
 	rowsUpdated: number;
 	snapshotsDeleted: number;
@@ -64,6 +65,7 @@ const emptyColdOutcome = (): ColdOutcome => ({
 	settled: 0,
 	failed: 0,
 	failure: null,
+	window: null,
 	rowsDeleted: 0,
 	rowsUpdated: 0,
 	snapshotsDeleted: 0,
@@ -95,9 +97,11 @@ const applyColdItems = async ({
 	for (const { request } of cold)
 		scope.ctx.catalogCache.put({ rows: request.catalogRows });
 	const startedAt = performance.now();
+	const txnWindow = { queuedAt: Date.now(), startedAt: 0, endedAt: 0 };
 	let result: Awaited<ReturnType<typeof applyCold>>;
-	const runCold = () =>
-		applyCold({
+	const runCold = () => {
+		txnWindow.startedAt = Date.now();
+		return applyCold({
 			batch: {
 				topic,
 				partition,
@@ -114,19 +118,23 @@ const applyColdItems = async ({
 				})),
 			},
 		});
+	};
 	try {
 		result = await (scope.ctx.stateStore.runInPartitionLane?.({
 			topic,
 			partition,
 			run: runCold,
 		}) ?? runCold());
+		txnWindow.endedAt = Date.now();
 	} catch (cause) {
+		txnWindow.endedAt = Date.now();
 		if (!isForcedRollback(cause))
 			throw new MigrationBatchRetryableError({ cause });
 		return {
 			...emptyColdOutcome(),
 			failed: cold.length,
 			failure: cause instanceof Error ? cause.message : String(cause),
+			window: txnWindow,
 			sqlMs: performance.now() - startedAt,
 		};
 	}
@@ -141,6 +149,7 @@ const applyColdItems = async ({
 		settled: result.settled.length,
 		failed: 0,
 		failure: null,
+		window: txnWindow,
 		rowsDeleted: result.deleted,
 		rowsUpdated: result.updated,
 		snapshotsDeleted: result.snapshotsDeleted,
@@ -299,6 +308,7 @@ export async function applyMigrationBatch({
 		coldSettled: coldOutcome.settled,
 		coldFailed: coldOutcome.failed,
 		coldFailure: coldOutcome.failure,
+		coldWindow: coldOutcome.window,
 		residentApplied: residentApplied.length,
 		residentStale: residentOutcome.verdicts.filter(
 			(verdict) => verdict === "stale",

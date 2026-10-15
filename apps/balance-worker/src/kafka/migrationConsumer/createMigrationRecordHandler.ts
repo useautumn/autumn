@@ -10,6 +10,7 @@ import type { MigrationLaneItem } from "../../processor/commands/applyMigrationB
 
 const MAX_ITEMS_PER_APPLY = 500;
 const RECORDS_PER_TURN = 50;
+const HEARTBEAT_EVERY_MS = 3_000;
 
 const yieldToEventLoop = (): Promise<void> =>
 	new Promise((resolve) => setImmediate(resolve));
@@ -116,13 +117,33 @@ export function createMigrationRecordHandler({
 	}): Promise<void> {
 		const messages = buffered.get(partition)?.messages ?? [];
 		buffered.delete(partition);
+		const beating = heartbeat
+			? setInterval(() => {
+					heartbeat().catch(() => undefined);
+				}, HEARTBEAT_EVERY_MS)
+			: null;
+		try {
+			await applyMessages({ topic, partition, messages });
+		} finally {
+			if (beating) clearInterval(beating);
+		}
+	}
+
+	async function applyMessages({
+		topic,
+		partition,
+		messages,
+	}: {
+		topic: string;
+		partition: number;
+		messages: TopicRecord["message"][];
+	}): Promise<void> {
 		for (let start = 0; start < messages.length; start += MAX_ITEMS_PER_APPLY) {
 			const chunk = await parseChunk({
 				topic,
 				partition,
 				messages: messages.slice(start, start + MAX_ITEMS_PER_APPLY),
 			});
-			await heartbeat?.();
 			const runtime = await ownedRuntimeOf({ partition });
 			const outcome = await runtime
 				.process((processor) => {
@@ -147,7 +168,6 @@ export function createMigrationRecordHandler({
 				appliedAt: Date.now(),
 				...outcome,
 			});
-			await heartbeat?.();
 		}
 	}
 

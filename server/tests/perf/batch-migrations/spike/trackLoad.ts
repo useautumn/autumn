@@ -13,6 +13,12 @@ export type TrackTally = {
 	failed: number;
 	latenciesMs: number[];
 	firstLatenciesMs: number[];
+	events: {
+		customerId: string;
+		sentAt: number;
+		latencyMs: number;
+		status: string;
+	}[];
 };
 
 export const createTrackTally = (): TrackTally => ({
@@ -21,6 +27,7 @@ export const createTrackTally = (): TrackTally => ({
 	failed: 0,
 	latenciesMs: [],
 	firstLatenciesMs: [],
+	events: [],
 });
 
 const commandCtxOf = ({ ctx }: { ctx: AutumnContext }) => ({
@@ -60,6 +67,7 @@ export const sendTrack = async ({
 	first?: boolean;
 }): Promise<"applied" | "rejected" | "failed"> => {
 	const startedAt = performance.now();
+	const sentAt = Date.now();
 	let status: "applied" | "rejected";
 	try {
 		const reply = await client.track({
@@ -76,11 +84,18 @@ export const sendTrack = async ({
 		status = reply.result.status === "applied" ? "applied" : "rejected";
 	} catch {
 		tally.failed += 1;
+		tally.events.push({
+			customerId,
+			sentAt,
+			latencyMs: performance.now() - startedAt,
+			status: "failed",
+		});
 		return "failed";
 	}
 	tally[status] += 1;
 	const latencyMs = performance.now() - startedAt;
 	tally.latenciesMs.push(latencyMs);
+	tally.events.push({ customerId, sentAt, latencyMs, status });
 	if (first) tally.firstLatenciesMs.push(latencyMs);
 	return status;
 };
@@ -109,7 +124,7 @@ export const mapWithLimit = async <Item>({
 };
 
 export type SteadyTracks = {
-	add(params: { customerIds: string[] }): void;
+	add(params: { customerIds: string[]; maxStartDelayMs?: number }): void;
 	stop(): Promise<void>;
 	tally: TrackTally;
 	perCustomerApplied: Map<string, number>;
@@ -131,7 +146,14 @@ export const startSteadyTracks = ({
 	const loops: Promise<void>[] = [];
 	let stopped = false;
 
-	const loopFor = async ({ customerId }: { customerId: string }) => {
+	const loopFor = async ({
+		customerId,
+		startDelayMs,
+	}: {
+		customerId: string;
+		startDelayMs: number;
+	}) => {
+		if (startDelayMs > 0) await Bun.sleep(startDelayMs);
 		let first = true;
 		while (!stopped) {
 			const status = await sendTrack({ ctx, client, customerId, tally, first });
@@ -151,13 +173,18 @@ export const startSteadyTracks = ({
 	};
 
 	return {
-		add: ({ customerIds }) => {
+		add: ({ customerIds, maxStartDelayMs = 0 }) => {
 			for (const customerId of customerIds) {
 				perCustomerApplied.set(
 					customerId,
 					perCustomerApplied.get(customerId) ?? 0,
 				);
-				loops.push(loopFor({ customerId }));
+				loops.push(
+					loopFor({
+						customerId,
+						startDelayMs: Math.floor(Math.random() * maxStartDelayMs),
+					}),
+				);
 			}
 		},
 		stop: async () => {

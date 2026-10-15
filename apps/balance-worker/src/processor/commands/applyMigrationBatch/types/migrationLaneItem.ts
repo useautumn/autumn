@@ -32,6 +32,7 @@ export type MigrationBatchOutcome = {
 	coldSettled: number;
 	coldFailed: number;
 	coldFailure: string | null;
+	coldWindow: { queuedAt: number; startedAt: number; endedAt: number } | null;
 	residentApplied: number;
 	residentStale: number;
 	residentFailed: number;

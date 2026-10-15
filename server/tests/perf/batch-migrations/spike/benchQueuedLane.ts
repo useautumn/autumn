@@ -3,6 +3,7 @@ import {
 	getBalanceWorkerClientEnv,
 	getBalanceWorkerDeployment,
 } from "@autumn/env/balanceWorkerClient";
+import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
 import { type Migration, migrations } from "@autumn/shared";
 import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
@@ -68,6 +69,7 @@ const parseArgs = () => {
 		unrelated: Number(get("--unrelated") ?? "200"),
 		unrelatedIntervalMs: Number(get("--unrelated-interval-ms") ?? "1000"),
 		samplePerPage: Number(get("--sample-per-page") ?? "10"),
+		sampleStartDelayMs: Number(get("--sample-start-delay-ms") ?? "0"),
 		sampleIntervalMs: Number(get("--sample-interval-ms") ?? "500"),
 		rollbackPartition:
 			get("--rollback-partition") === undefined
@@ -76,6 +78,7 @@ const parseArgs = () => {
 		tracks: !args.includes("--no-tracks"),
 		cleanup: args.includes("--cleanup"),
 		keepRows: args.includes("--keep-rows"),
+		tracksOut: get("--tracks-out"),
 	};
 };
 
@@ -575,6 +578,7 @@ const main = async () => {
 				if (tracksSample)
 					sampleTracks.add({
 						customerIds: samplesFrom(pageCustomers.map(({ id }) => id)),
+						maxStartDelayMs: options.sampleStartDelayMs,
 					});
 			},
 		});
@@ -716,6 +720,26 @@ const main = async () => {
 		itemRuns.succeeded === customers &&
 		true;
 	Object.assign(result, { correct });
+	if (options.tracksOut) {
+		const { BALANCE_WORKER_PARTITION_COUNT } = getBalanceWorkerClientEnv();
+		await Bun.write(
+			options.tracksOut,
+			JSON.stringify(
+				unrelatedTracks.tally.events.map((event) => ({
+					...event,
+					partition: meteringIdentityToPartition({
+						identity: {
+							orgId: org.id,
+							env: ctx.env,
+							customerId: event.customerId,
+							entityId: null,
+						},
+						partitionCount: BALANCE_WORKER_PARTITION_COUNT,
+					}),
+				})),
+			),
+		);
+	}
 	console.log(`LANE_RESULT ${JSON.stringify(result)}`);
 	console.log(correct ? "lane: CORRECT" : "lane: INCORRECT");
 	if (!options.keepRows) {
