@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { type ScrapAdaptMap, useScraps } from "scraps-ui/react";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { useNoisySounds } from "@/hooks/common/useNoisySounds";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 type ThemeMode = "light" | "dark" | "system";
 export type ThemePreset = "modern" | "classic" | "cursed" | "scraps";
@@ -12,6 +14,8 @@ interface ThemeContextType {
 	preset: ThemePreset;
 	setPreset: (preset: ThemePreset) => void;
 	isDark: boolean;
+	noisy: boolean;
+	setNoisy: (noisy: boolean) => void;
 	/** @deprecated Use `mode` */
 	theme: ThemeMode;
 	/** @deprecated Use `setMode` */
@@ -76,8 +80,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 		"theme-preset",
 		"classic",
 	);
+	const [noisy, setNoisy] = useLocalStorage("autumn.noisy", false);
 	const [isDark, setIsDark] = useState(() => applyMode(mode));
+	const { isAdmin } = useAdmin();
 	useScraps(SCRAPS_COMPONENTS, { enabled: preset === "scraps" });
+	useNoisySounds({ enabled: noisy && isAdmin });
 
 	useEffect(() => setIsDark(applyMode(mode)), [mode]);
 
@@ -113,6 +120,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 				preset,
 				setPreset,
 				isDark,
+				noisy,
+				setNoisy,
 				theme: mode,
 				setTheme: setMode,
 			}}
