@@ -14,6 +14,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { routeScopesGrantedByRules } from "@/internal/approvals/enforce/access/routeScopesGrantedByRules.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { registerRouteGroup } from "./routeGroupRegistry.js";
 import { validator } from "./validatorMiddleware.js";
@@ -229,6 +230,9 @@ export function createRoute<
 		}
 
 		const { allowed, missing } = checkScopes(opts.scopes, granted);
+		if (!allowed && (await routeScopesGrantedByRules({ ctx }))) {
+			return next();
+		}
 		if (!allowed) {
 			throw new RecaseError({
 				message: `Insufficient scopes. Missing: ${missing.join(", ")}`,
