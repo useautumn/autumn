@@ -42,6 +42,8 @@ export const swapWindowsOf = ({ marks }: { marks: Mark[] }): SwapWindow[] =>
 
 type Switch = {
 	customerId: string;
+	/** The switch happened between the old owner's last decision and the new owner's first. */
+	prevAt: number;
 	at: number;
 	from: string;
 	to: string;
@@ -50,9 +52,9 @@ type Switch = {
 };
 
 /**
- * Per customer: duplicates (writer, seq) dropped, sorted by appendedAt, each change of deciding replica is a switch. In a
- * swap of X (peer Y) the legal moves are one X→Y (the leave) then one Y→X at or after X's restart (the join); every
- * other switch, and any switch outside every window, is a two-owner event.
+ * Per customer: duplicates (writer, seq) dropped, sorted by appendedAt; a change of deciding replica is a switch, placed
+ * between the two decisions. In a swap of X (peer Y) the legal moves are one X→Y then one Y→X decided after X restarted;
+ * any other switch overlapping a window, or a switch overlapping none, is a two-owner event.
  */
 export const detectTwoOwner = ({
 	handIns,
@@ -92,15 +94,15 @@ export const detectTwoOwner = ({
 		// Per window, which legal move this customer may still make: 0 = the leave, 1 = the join, 2 = none.
 		const expect = windows.map(() => 0);
 		for (let i = 1; i < sorted.length; i++) {
-			const [, fromWriter] = sorted[i - 1] as HandIn;
+			const [, fromWriter, , prevAt] = sorted[i - 1] as HandIn;
 			const [, toWriter, , at] = sorted[i] as HandIn;
 			const from = replicaOf(fromWriter);
 			const to = replicaOf(toWriter);
 			if (from === to) continue;
-			const sw = { customerId, at, from, to, fromWriter, toWriter };
+			const sw = { customerId, prevAt, at, from, to, fromWriter, toWriter };
 			const inside = windows
 				.map((window, index) => ({ window, index }))
-				.filter(({ window }) => at >= window.from && at <= window.to);
+				.filter(({ window }) => prevAt <= window.to && at >= window.from);
 			if (inside.length === 0) {
 				outside.events++;
 				outside.customers.add(customerId);
