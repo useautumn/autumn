@@ -14,6 +14,7 @@ import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handl
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
+import { customerAsOf } from "./customerAsOf";
 import { runsInProjection } from "./runsInProjection";
 
 const isEndedByPhase = ({
@@ -83,7 +84,7 @@ export const applySchedulePhaseToFullCustomer = ({
 	fullCustomer: FullCustomer;
 	phase: SchedulePhasePlan;
 }): FullCustomer => {
-	const phaseCustomer = structuredClone(fullCustomer);
+	const phaseCustomer = customerAsOf({ fullCustomer, at: phase.startsAt });
 	const startingIds = new Set(phase.customerProductIds);
 	const incomingCustomerProducts: FullCusProduct[] = [];
 	const outgoingCustomerProducts: FullCusProduct[] = [];
