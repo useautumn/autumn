@@ -28,22 +28,21 @@ const appAt = ({ readyAgoMs }: { readyAgoMs: number | null }) => {
 	const app = new Hono();
 	app.get(
 		"/health",
-		receiveHealth({ ctx: { health, now: () => now } as unknown as AtomHttpContext }),
+		receiveHealth({
+			ctx: { health, now: () => now } as unknown as AtomHttpContext,
+		}),
 	);
 	return app;
 };
 
-const probe = async ({
-	app,
-	userAgent,
-}: {
-	app: Hono;
-	userAgent?: string;
-}) => {
+const probe = async ({ app, userAgent }: { app: Hono; userAgent?: string }) => {
 	const reply = await app.request("/health", {
 		headers: userAgent ? { "user-agent": userAgent } : {},
 	});
-	return { status: reply.status, body: (await reply.json()) as { status: string; settlingUntil?: string } };
+	return {
+		status: reply.status,
+		body: (await reply.json()) as { status: string; settlingUntil?: string },
+	};
 };
 
 describe("/health while the load balancer learns a ready replica", () => {
@@ -77,7 +76,9 @@ describe("/health while the load balancer learns a ready replica", () => {
 
 	test("a replica still starting is 503 to everyone", async () => {
 		const app = appAt({ readyAgoMs: null });
-		expect((await probe({ app, userAgent: LOAD_BALANCER_USER_AGENT })).status).toBe(503);
+		expect(
+			(await probe({ app, userAgent: LOAD_BALANCER_USER_AGENT })).status,
+		).toBe(503);
 		expect((await probe({ app })).status).toBe(503);
 	});
 });
