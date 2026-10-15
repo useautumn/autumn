@@ -5,6 +5,7 @@ import type {
 	UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { rewriteApprovalRuleIds } from "@/internal/approvals/renames/rewriteApprovalRuleIds.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { FeatureService } from "../../FeatureService.js";
@@ -108,4 +109,11 @@ export const handleFeatureIdChanged = async ({
 	}
 
 	await Promise.all(entitlementUpdate);
+
+	await rewriteApprovalRuleIds({
+		ctx,
+		key: "feature_id",
+		fromId: feature.id,
+		toId: newId,
+	});
 };
