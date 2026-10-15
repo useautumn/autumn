@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { InvalidPushError } from "../../../src/lib/contracts/invalidPushError.js";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
@@ -40,9 +41,11 @@ const createProcessor = ({
 } = {}) => {
 	const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
+	const journal = openJournal({ databasePath: ":memory:" });
 	closers.push(
 		() => sqliteStore.close(),
 		() => catalogStore.close(),
+		() => journal.close(),
 	);
 	const pulled: { customerId: string; entityId: string | null }[] = [];
 	const processor = createSlotProcessor({
@@ -51,6 +54,7 @@ const createProcessor = ({
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: { request: (subject) => pulled.push(subject) },
+			journal,
 		},
 	});
 	const checkCustomer = () =>
