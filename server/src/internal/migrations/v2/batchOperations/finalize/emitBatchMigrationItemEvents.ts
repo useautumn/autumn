@@ -89,6 +89,7 @@ export const emitBatchMigrationItemEvents = async ({
 				status: "failed",
 				response: {
 					lane: "batch",
+					preview: responses.get(customer.internalId) ?? null,
 					error: {
 						message:
 							pageResult.failReasons?.[customer.internalId] ??

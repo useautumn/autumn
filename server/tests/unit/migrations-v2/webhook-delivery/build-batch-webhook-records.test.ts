@@ -1,7 +1,7 @@
 /**
  * Contract: the delivery records a finalized page produces.
  *
- *   - one record per SUCCEEDED customer that actually changed, with one
+ *   - one record per succeeded or partly failed customer that actually changed, with one
  *     `updated` plan change PER customer product that changed items;
  *   - every plan change carries the real subscription/purchase snapshot
  *     (plan_id lives there — a payload without it can't say which plan),
@@ -431,5 +431,29 @@ describe("buildBatchMigrationWebhookRecords", () => {
 		});
 
 		expect(records).toEqual([]);
+	});
+
+	test("a customer that failed partway still gets the changes that landed", () => {
+		const records = buildBatchMigrationWebhookRecords({
+			pageResult: {
+				succeeded: [],
+				skipped: [],
+				failed: [
+					customer({ internalId: "cus_1", id: "customer-1" }),
+					customer({ internalId: "cus_2", id: "customer-2" }),
+				],
+				removedItems: [],
+				insertedItems: [
+					insertedItem({
+						internalCustomerId: "cus_1",
+						customerProductId: "cp_a",
+					}),
+				],
+			},
+			plan: buildPlan(),
+			features,
+		});
+
+		expect(records.map(({ customerId }) => customerId)).toEqual(["customer-1"]);
 	});
 });
