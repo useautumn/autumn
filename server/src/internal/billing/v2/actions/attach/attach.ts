@@ -8,7 +8,7 @@ import {
 import { ms } from "@shared/utils/common/unixUtils";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { logBillingApprovalDecision } from "@/internal/approvals/enforce/logBillingApprovalDecision";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
 
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachComputeErrors";
@@ -144,8 +144,8 @@ export async function attach({
 		};
 	}
 
-	// 5. Approvals: log the decision (shadow mode, never blocks)
-	await logBillingApprovalDecision({
+	// 5. Approvals: log the decision, and block a deny when the org enforces approvals
+	await checkBillingApproval({
 		ctx,
 		billingContext,
 		billingPlan,
