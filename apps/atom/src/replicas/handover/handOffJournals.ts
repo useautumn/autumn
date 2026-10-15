@@ -9,7 +9,7 @@ import {
 } from "./handoffContract.js";
 import type { CustomerHandoff } from "./types/customerHandoff.js";
 
-/** Batches in flight at once per thread, each up to MAX_HANDOFF_ENTRIES entries and locks to one owner. */
+/** Batches in flight at once per thread, each up to MAX_HANDOFF_ENTRIES entries, locks and keys to one owner. */
 const BATCHES_IN_FLIGHT = 4;
 /** A new owner that has not taken a batch by then keeps answering from its copy; those entries drain to Autumn instead. */
 const HANDOFF_TIMEOUT_MS = 2_000;
@@ -23,8 +23,8 @@ export type HandOffContext = {
 
 type Pending = CustomerHandoff & { atomId: string | null };
 
-const sizeOf = ({ entries, locks }: Pending): number =>
-	entries.length + locks.length;
+const sizeOf = ({ entries, locks, keys }: Pending): number =>
+	entries.length + locks.length + keys.length;
 
 /** One request's worth of customers, all from one folder, all to one owner. */
 type Batch = {
@@ -42,10 +42,11 @@ const sendBatch = async ({
 	batch: Batch;
 }): Promise<boolean> => {
 	const body = JSON.stringify({
-		handoffs: batch.items.map(({ customerId, entries, locks }) => ({
+		handoffs: batch.items.map(({ customerId, entries, locks, keys }) => ({
 			customerId,
 			entries,
 			locks,
+			keys,
 		})),
 	} satisfies HandoffBatch);
 	try {

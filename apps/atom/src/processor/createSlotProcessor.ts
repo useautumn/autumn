@@ -160,6 +160,10 @@ export const createSlotProcessor = ({
 			// The old owner's locks: their finalize finds the row here, as if this slot had taken them.
 			for (const lock of handoffs.flatMap(({ locks }) => locks))
 				ctx.openLocks.hold(lock);
+			// Its last seconds of keys too: a retry here is refused even before the relay lands.
+			await ctx.journal.receiveKeys({
+				keys: handoffs.flatMap(({ keys }) => keys),
+			});
 			for (const { customerId } of handoffs)
 				ctx.barrier?.arrived({ customerId });
 			return { held };

@@ -1046,6 +1046,43 @@ describe("an idempotency key taken on the leaving owner just before it hands ove
 		expect(fresh.status).toBe(202);
 	});
 
+	test("whose entry Autumn already applied (nothing owed) still rides the handoff, so its retry is a duplicate on the new owner before the relay lands", async () => {
+		const journals = recordJournals();
+		const { a, b } = await agreeingPair({ aForwarder: journals.forwarder });
+		// The relay to B is slow; the handoff is not.
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname === KEYS_RELAY.path)
+					await Bun.sleep(400);
+			},
+		});
+		expect((await a.app.request("/v1/track", keyedTrack("evt_1"))).status).toBe(
+			202,
+		);
+		await until(() => journals.appended.length === 1);
+		const writer = journals.appended[0]?.writer ?? "";
+		// Autumn's worker applied the track: its push names A's seq, so A owes nothing for the customer.
+		for (const replica of [a, b])
+			await replica.slots.processorFor({ customerId: CUSTOMER }).setSubject({
+				customerId: CUSTOMER,
+				body: appliedLockBodyFor({
+					customerId: CUSTOMER,
+					readAt: 1800,
+					balance: 9,
+					writerSeqs: { [writer]: 1 },
+					openLock: { id: "none", lock_id: "none" },
+				}),
+			});
+		expect(owedSeqs(a)).toEqual([]);
+
+		await a.leave();
+
+		const retried = await b.app.request("/v1/track", keyedTrack("evt_1"));
+		expect(retried.status).toBe(409);
+		expect(retried.headers.get("x-atom-forwarded")).toBeNull();
+	});
+
 	test("reaching the new owner while the handoff is late and the relay has not landed is the API's, never claimed from the copy", async () => {
 		const autumn = countingAutumn();
 		const { a, b } = await agreeingPair();

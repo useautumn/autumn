@@ -153,24 +153,29 @@ export const openSlots = ({
 		};
 	});
 
-	/** Per slot, each customer's owed entries and open locks as one handoff: a lock whose track Autumn applied travels too. */
+	/** Per slot, each customer's owed entries, open locks and recent keys as one handoff: what Autumn already applied travels too. */
 	const ownedHandoffs = async (): Promise<CustomerHandoff[]> =>
 		(
 			await Promise.all(
 				journals.map(async (journal) => {
 					const byCustomer = new Map<string, CustomerHandoff>();
-					for (const { customerId, entries } of await journal.handoffs())
-						byCustomer.set(customerId, { customerId, entries, locks: [] });
-					for (const { customerId, locks } of openLocksOf.get(journal)?.all() ??
-						[]) {
+					const handoffOf = (customerId: string) => {
 						const handoff = byCustomer.get(customerId) ?? {
 							customerId,
 							entries: [],
 							locks: [],
+							keys: [],
 						};
-						handoff.locks.push(...locks);
 						byCustomer.set(customerId, handoff);
-					}
+						return handoff;
+					};
+					for (const { customerId, entries } of await journal.handoffs())
+						handoffOf(customerId).entries.push(...entries);
+					for (const { customerId, locks } of openLocksOf.get(journal)?.all() ??
+						[])
+						handoffOf(customerId).locks.push(...locks);
+					for (const [customerId, keys] of journal.keysToHand())
+						handoffOf(customerId).keys.push(...keys);
 					return [...byCustomer.values()];
 				}),
 			)

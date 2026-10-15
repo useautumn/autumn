@@ -12,16 +12,14 @@ export const KEYS_RELAY: ReplicationHandler = {
 /** Keyed tracks inside this window cross as one request, as the journal forwarder lingers for a burst. */
 const KEYS_RELAY_LINGER_MS = 20;
 
+export const JournalKeyRowSchema = z.object({
+	customerId: z.string().min(1),
+	keyHash: z.string().regex(/^[0-9a-f]{32}$/),
+	appendedAt: z.number().int().nonnegative(),
+});
+
 export const RelayedKeysSchema = z.object({
-	keys: z
-		.array(
-			z.object({
-				customerId: z.string().min(1),
-				keyHash: z.string().regex(/^[0-9a-f]{32}$/),
-				appendedAt: z.number().int().nonnegative(),
-			}),
-		)
-		.min(1),
+	keys: z.array(JournalKeyRowSchema).min(1),
 });
 
 /** One per thread: the idempotency key rows its journals commit, on their way to every other replica. */
