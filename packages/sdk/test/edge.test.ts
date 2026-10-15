@@ -453,7 +453,11 @@ test("useEdge leaves finalize with Autumn until the edge dedupes it", async () =
 	await edgeClientFor({
 		edgeURL: edge.url,
 		autumnURL: autumn.url,
-	}).balances.finalize({ lockId: "lock_1", action: "confirm" });
+	}).balances.finalize({
+		customerId: "customer_123",
+		lockId: "lock_1",
+		action: "confirm",
+	});
 
 	expect(edge.requests).toHaveLength(0);
 	expect(autumn.requests.map(({ url }) => new URL(url).pathname)).toEqual([

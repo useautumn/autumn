@@ -3,6 +3,7 @@ import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import { ExtEventsAggregateParamsSchema } from "@api/events/aggregate/eventsAggregateParams.js";
 import {
 	ApiBalanceV1Schema,
+	ApiCreditDimensionSchema,
 	ApiCustomerV5Schema,
 	ApiEventsListV2_3ParamsSchema,
 	ApiPlanV1Schema,
@@ -148,6 +149,16 @@ async function generateOpenApiDocument({
 			},
 			Balance: {
 				schema: ApiBalanceV1Schema,
+				strategy: "output",
+			},
+			// Inlined, Speakeasy's Python emitter orders the dimension union before one of its members (a NameError on
+			// import). Two names because `match` accepts any scalar in and is a string out.
+			CreditDimensionInput: {
+				schema: ApiCreditDimensionSchema,
+				strategy: "input",
+			},
+			CreditDimension: {
+				schema: ApiCreditDimensionSchema,
 				strategy: "output",
 			},
 		},
