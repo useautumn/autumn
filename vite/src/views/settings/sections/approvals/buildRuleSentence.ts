@@ -1,10 +1,9 @@
 import {
 	ACTIONS,
-	APPROVAL_AREAS,
 	type ApprovalAction,
-	type ApprovalArea,
 	type ApprovalRule,
 	type RuleSubject,
+	WHEN_FIELD_LABELS,
 } from "@autumn/shared";
 
 export type RuleLabels = {
@@ -28,11 +27,12 @@ type Filter = Record<string, unknown>;
 
 type Ctx = {
 	labels: RuleLabels;
-	isCancel: boolean;
+	/** S3's labels for the rule's `when` shape, keyed by dot path. */
+	fieldLabels: Record<string, string>;
 	/** The object the field sits in, e.g. the grant for `included_grant`'s unit. */
 	parent: Filter;
-	/** The array element being described, e.g. "Incoming plan". */
-	scope: string;
+	/** Dot path of the object being read, quantifiers left out, e.g. "incoming". */
+	path: string;
 };
 
 type Format = (params: { value: unknown; ctx: Ctx }) => string;
@@ -40,22 +40,11 @@ type Format = (params: { value: unknown; ctx: Ctx }) => string;
 type Field =
 	| {
 			kind: "match";
-			label: (ctx: Ctx) => string;
 			format: Format;
 			/** Keys the field reads from a nested object; the first holds the matcher. */
 			nested?: string[];
 	  }
-	| { kind: "each"; scope: (ctx: Ctx) => string }
-	| { kind: "phrase"; phrase: (value: unknown) => string };
-
-/** Areas whose action labels are bare verbs in S3's catalog, so the list prefixes the area. */
-const VERB_ONLY_AREAS = new Set<ApprovalArea>([
-	"invoices",
-	"customers",
-	"api_keys",
-	"migrations",
-	"members",
-]);
+	| { kind: "each" };
 
 const OPERATORS: Record<string, string> = {
 	$eq: "is",
@@ -71,6 +60,8 @@ const OPERATORS: Record<string, string> = {
 const TIMINGS: Record<string, string> = {
 	cancel_end_of_cycle: "End of cycle",
 	cancel_immediately: "Immediately",
+	end_of_cycle: "End of cycle",
+	immediate: "Immediately",
 };
 
 const CUSTOM: RuleCondition = {
@@ -85,50 +76,37 @@ const isFilter = (value: unknown): value is Filter =>
 const hasNullField = (filter: Filter) =>
 	Object.values(filter).some((value) => value === null);
 
-const fixed = (label: string) => () => label;
 const yesNo: Format = ({ value }) => (value ? "Yes" : "No");
 const money: Format = ({ value, ctx }) => ctx.labels.money(Number(value));
+const timing: Format = ({ value }) => TIMINGS[String(value)] ?? String(value);
 
-const match = (
-	label: (ctx: Ctx) => string,
-	format: Format,
-	nested?: string[],
-): Field => ({ kind: "match", label, format, nested });
+const match = (format: Format, nested?: string[]): Field => ({
+	kind: "match",
+	format,
+	nested,
+});
+const each: Field = { kind: "each" };
 
+/** How each `when` field's value reads; its label comes from S3's `WHEN_FIELD_LABELS`. */
 const FIELDS: Record<string, Field> = {
-	paid: match(fixed("Charges customer"), yesNo),
-	checkout: {
-		kind: "phrase",
-		phrase: (value) =>
-			value ? "Sends a checkout link" : "Doesn't send a checkout link",
-	},
-	incoming: { kind: "each", scope: fixed("Incoming plan") },
-	outgoing: {
-		kind: "each",
-		scope: ({ isCancel }) => (isCancel ? "Plan" : "Outgoing plan"),
-	},
-	discounts: { kind: "each", scope: fixed("Discount") },
-	plan_id: match(
-		({ scope }) => scope,
-		({ value, ctx }) => ctx.labels.plan(String(value)),
-	),
-	recurring: match(({ scope }) => `${scope} is recurring`, yesNo),
-	percent_off: match(fixed("Discount percent off"), ({ value }) => `${value}%`),
+	paid: match(yesNo),
+	checkout: match(yesNo),
+	recurring: match(yesNo),
+	incoming: each,
+	outgoing: each,
+	discounts: each,
+	plan_id: match(({ value, ctx }) => ctx.labels.plan(String(value))),
+	percent_off: match(({ value }) => `${value}%`),
 	free_trial: match(
-		fixed("Free trial"),
 		({ value, ctx }) =>
 			`${value} ${ctx.parent.duration_type}${Number(value) === 1 ? "" : "s"}`,
 		["duration_length", "duration_type"],
 	),
-	cancel_action: match(fixed("Timing"), ({ value }) =>
-		String(TIMINGS[String(value)] ?? value),
-	),
-	refund: match(fixed("Refund"), money, ["amount"]),
-	feature_id: match(
-		fixed("Feature"),
-		({ value, ctx }) => ctx.labels.feature(String(value)).name,
-	),
-	included_grant: match(fixed("Amount"), ({ value, ctx }) =>
+	cancel_action: match(timing),
+	plan_schedule: match(timing),
+	refund: match(money, ["amount"]),
+	feature_id: match(({ value, ctx }) => ctx.labels.feature(String(value)).name),
+	included_grant: match(({ value, ctx }) =>
 		[value, ctx.labels.feature(String(ctx.parent.feature_id)).unit]
 			.filter(Boolean)
 			.join(" "),
@@ -172,22 +150,20 @@ const fieldConditions = ({
 	ctx: Ctx;
 }): RuleCondition[] => {
 	const field = FIELDS[key];
+	const path = ctx.path ? `${ctx.path}.${key}` : key;
 	if (!field) return [CUSTOM];
-	if (field.kind === "phrase") {
-		return [{ field: "", operator: "", value: field.phrase(value) }];
-	}
 	if (field.kind === "each") {
 		const quantifiers = isFilter(value) ? Object.keys(value) : [];
 		const element = isFilter(value) ? (value.$every ?? value.$some) : null;
 		if (quantifiers.length !== 1 || !isFilter(element)) return [CUSTOM];
-		return filterConditions({
-			filter: element,
-			ctx: { ...ctx, scope: field.scope(ctx) },
-		});
+		return filterConditions({ filter: element, ctx: { ...ctx, path } });
 	}
-	if (!field.nested) {
+	const [matcherKey] = field.nested ?? [];
+	const label = ctx.fieldLabels[matcherKey ? `${path}.${matcherKey}` : path];
+	if (!label) return [CUSTOM];
+	if (!matcherKey) {
 		return matcherConditions({
-			label: field.label(ctx),
+			label,
 			matcher: value,
 			format: field.format,
 			ctx,
@@ -198,8 +174,8 @@ const fieldConditions = ({
 		isFilter(value) && Object.keys(value).every((key) => nestedKeys.has(key));
 	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
-		label: field.label(ctx),
-		matcher: value[field.nested[0]],
+		label,
+		matcher: value[matcherKey],
 		format: field.format,
 		ctx: { ...ctx, parent: value },
 	});
@@ -251,9 +227,9 @@ const whenGroups = ({ when, ctx }: { when: Filter; ctx: Ctx }) => {
 };
 
 const actionText = (action: ApprovalAction) => {
-	const { area, label } = ACTIONS[action];
-	if (!VERB_ONLY_AREAS.has(area)) return label;
-	return `${APPROVAL_AREAS[area]} · ${label}`;
+	const definition: { label: string; sentence_label?: string } =
+		ACTIONS[action];
+	return definition.sentence_label ?? definition.label;
 };
 
 const subjectText = ({
@@ -285,12 +261,16 @@ const whenParts = ({
 }): SentencePart[] => {
 	const when: Filter | null = rule.when;
 	if (!when || Object.keys(when).length === 0) return [];
-	const isCancel = rule.actions.every(
-		(action) => ACTIONS[action].when === "billing_cancel",
-	);
+	const area = ACTIONS[rule.actions[0]].when;
+	if (!area) return [];
 	const groups = whenGroups({
 		when,
-		ctx: { labels, isCancel, parent: when, scope: "" },
+		ctx: {
+			labels,
+			fieldLabels: WHEN_FIELD_LABELS[area],
+			parent: when,
+			path: "",
+		},
 	});
 	return [
 		word("when"),
