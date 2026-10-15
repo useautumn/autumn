@@ -282,3 +282,20 @@ export function rethrowBalanceWorkerError({
 	}
 	throw cause;
 }
+
+/** Neither the command log nor the SQS spool took the commands: always a 503, never a 500.
+ *  A raw Kafka failure leaves the append's fate unknown, so the caller must retry with its key. */
+export function rethrowUnspooledAppendError({
+	cause,
+}: {
+	cause: unknown;
+}): never {
+	if (isBalanceWorkerUnconfirmed(cause)) rethrowBalanceWorkerError({ cause });
+	throw new RecaseError({
+		code: RESULT_UNKNOWN_CODE,
+		statusCode: 503,
+		message:
+			"Balance worker did not confirm the command; it may already have been applied",
+		data: { reason: "command_log_append_failed" },
+	});
+}

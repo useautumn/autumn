@@ -19,6 +19,7 @@ import { withPaidAllocatedFallback } from "@/internal/balanceWorker/subject/with
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
 import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { fireThresholdsReached } from "../../trackWebhooks/thresholdReached/fireThresholdsReached.js";
+import type { TokenDeduction } from "../../utils/types/featureDeduction.js";
 import { getTrackFeatureDeductions } from "../utils/getFeatureDeductions.js";
 import { getQueuedTrackResponse } from "../utils/getQueuedTrackResponse.js";
 import { runPostgresTrackV3 } from "../v3/runPostgresTrackV3.js";
@@ -177,22 +178,23 @@ export async function runBalanceWorkerTrack({
 	body,
 	isAsync = false,
 	validateTrackBodyIdempotencyKey = true,
-	recordsCreditCost = false,
+	tokens,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	isAsync?: boolean;
-	/** A track_tokens request, whose event records `credit_cost`. */
-	recordsCreditCost?: boolean;
+	/** A track_tokens cost, whose event records `credit_cost`. */
+	tokens?: TokenDeduction;
 	/** False when the caller already claimed the body key (a queued replay). */
 	validateTrackBodyIdempotencyKey?: boolean;
 	client?: TrackClient;
 }): Promise<TrackResponseV3> {
 	if (isAsync) {
-		await runBalanceWorkerAsyncTrack({ ctx, body, recordsCreditCost });
+		await runBalanceWorkerAsyncTrack({ ctx, body, tokens });
 		return getQueuedTrackResponse({ ctx, body });
 	}
+	const recordsCreditCost = tokens !== undefined;
 
 	// The same 24h claim as runTrackWithRollout: a duplicate key is 409 before the worker sees it,
 	// and a 503 releases it so the retry reaches the worker's own dedup.

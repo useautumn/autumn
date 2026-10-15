@@ -1,3 +1,4 @@
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { reportError } from "@autumn/errors";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
@@ -14,12 +15,16 @@ import {
 import { stripeWebhookErrorWouldRedeliver } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
-import { balanceWorkerFailOpenReasonOf } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
+import {
+	balanceWorkerFailOpenReasonOf,
+	isBalanceWorkerStaleSubjectError,
+} from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
 import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueuedFinalizeLock.js";
 import { runBalanceReplenishment } from "@/internal/balances/runBalanceReplenishment.js";
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
@@ -99,7 +104,13 @@ export const shouldRetrySqsJobError = ({
 			return (
 				isTransientDbError({ error }) ||
 				isTransientRedisError({ error }) ||
-				(error instanceof RedisDeductionError && error.isSubjectViewChanged())
+				(error instanceof RedisDeductionError &&
+					error.isSubjectViewChanged()) ||
+				// No verdict from the worker, or nothing applied: a redelivery repeats the command ids it dedupes.
+				balanceWorkerFailOpenReasonOf(error) !== null ||
+				isBalanceWorkerStaleSubjectError(error) ||
+				error instanceof BalanceWorkerClientError ||
+				error instanceof SpooledTrackTooOldError
 			);
 		case JobName.SyncCustomerDirty:
 		case JobName.UpdateBalance:
@@ -333,6 +344,7 @@ export const processMessage = async ({
 				tokens: job.data.tokens,
 				validateTrackBodyIdempotencyKey:
 					job.data.validateTrackBodyIdempotencyKey !== false,
+				spooledAt: job.data.spooledAt,
 			});
 			return;
 		}
