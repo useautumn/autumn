@@ -40,7 +40,7 @@ export const emitBatchMigrationItemEvents = async ({
 		response,
 	}: {
 		customer: BatchMigrationPageCustomer;
-		status: "succeeded" | "skipped";
+		status: "succeeded" | "skipped" | "failed";
 		response: Record<string, unknown>;
 	}): TinybirdMigrationItemEvent => ({
 		timestamp: new Date().toISOString(),
@@ -80,6 +80,21 @@ export const emitBatchMigrationItemEvents = async ({
 					lane: "batch",
 					reason: SKIP_REASON,
 					skip_reason: pageResult.skipReasons?.[customer.internalId] ?? null,
+				},
+			}),
+		),
+		...(pageResult.failed ?? []).map((customer) =>
+			toEvent({
+				customer,
+				status: "failed",
+				response: {
+					lane: "batch",
+					preview: responses.get(customer.internalId) ?? null,
+					error: {
+						message:
+							pageResult.failReasons?.[customer.internalId] ??
+							"balance worker write failed",
+					},
 				},
 			}),
 		),
