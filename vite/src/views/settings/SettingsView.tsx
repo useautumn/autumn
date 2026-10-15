@@ -11,6 +11,7 @@ import {
 import {
 	ArrowRightLeftIcon,
 	AtomIcon,
+	BadgeCheckIcon,
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
@@ -50,6 +51,7 @@ export type SettingsTab =
 	| "invoices"
 	| "usage-alerts"
 	| "transition-rules"
+	| "approvals"
 	| "stripe"
 	| "vercel"
 	| "revenuecat"
@@ -143,6 +145,11 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				label: "Transition Rules",
 				icon: <ArrowRightLeftIcon className="size-4" />,
 			},
+			{
+				id: "approvals",
+				label: "Approvals",
+				icon: <BadgeCheckIcon className="size-4" />,
+			},
 		],
 	},
 	{
@@ -194,6 +201,8 @@ export const useIsSettingsTabEnabled = () => {
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
+		// Approvals reads mocked rules until its routes ship, so it stays local-only.
+		if (tab === "approvals") return import.meta.env.DEV;
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
 	};
