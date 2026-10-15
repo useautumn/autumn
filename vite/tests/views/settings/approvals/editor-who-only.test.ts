@@ -1,7 +1,4 @@
-/**
- * Contract: actions without `when` fields (or actions that share none) hide the
- * When section, show the board's who-only caption and save `when: null`.
- */
+/** Contract: actions with no shared `when` fields hide When, show the board's caption and save `when: null`. */
 
 import { describe, expect, test } from "bun:test";
 import type { ApprovalAction, WhenKey } from "@autumn/shared";
@@ -40,7 +37,7 @@ describe("editor who-only areas", () => {
 		expect(whoOnlyCaption({ actions })).toBe(expected);
 	});
 
-	test.each<[ApprovalAction[], WhenKey]>([
+	test.each<[ApprovalAction[], WhenKey | null]>([
 		[["billing.attach", "billing.update_subscription"], "billing_change"],
 		[["billing.cancel", "billing.uncancel"], "billing_cancel"],
 		[["invoices.void"], "invoice"],
@@ -48,34 +45,29 @@ describe("editor who-only areas", () => {
 		[["rewards.apply"], "reward_apply"],
 		[["customers.update", "customers.delete"], "customer"],
 		[["catalog.edit_plans"], "catalog_plan"],
-	])("%p shows When for %s", (actions, area) => {
+		[[], null],
+	])("%p shows When for %s, with no caption", (actions, area) => {
 		expect(ruleWhenArea({ actions })).toBe(area);
 		expect(whoOnlyCaption({ actions })).toBeNull();
 	});
 
-	test("no actions yet shows neither When nor the caption", () => {
-		expect(ruleWhenArea({ actions: [] })).toBeNull();
-		expect(whoOnlyCaption({ actions: [] })).toBeNull();
-	});
-
 	test("a who-only rule saves with no conditions", () => {
-		const result = editorValuesToParams({
-			values: {
-				...emptyEditorValues(),
-				name: " Developers create keys ",
-				subjects: [{ type: "role", role: "developer" }],
-				actions: ["api_keys.create"],
-				note: "Ask an Admin for a key.",
-			},
-		});
-		expect(result).toEqual({
+		const subjects = [{ type: "role" as const, role: "developer" }];
+		const values = {
+			...emptyEditorValues(),
+			name: " Developers create keys ",
+			subjects,
+			actions: ["api_keys.create" as const],
+			note: "Ask an Admin for a key.",
+		};
+		expect(editorValuesToParams({ values })).toEqual({
 			ok: true,
 			params: {
 				name: "Developers create keys",
-				subjects: [{ type: "role", role: "developer" }],
-				actions: ["api_keys.create"],
+				subjects,
+				actions: values.actions,
 				when: null,
-				note: "Ask an Admin for a key.",
+				note: values.note,
 				enabled: true,
 			},
 		});
