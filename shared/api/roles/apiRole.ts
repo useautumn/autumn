@@ -25,6 +25,8 @@ export const ApiRoleSchema = z.object({
 	built_in: z.boolean(),
 	access: RoleAccessMapSchema,
 	member_count: z.number(),
+	/** Enabled approval rules that name this role. */
+	rule_count: z.number(),
 	created_at: z.number().nullable(),
 	updated_at: z.number().nullable(),
 });
