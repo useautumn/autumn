@@ -1,7 +1,6 @@
 import {
 	type CusProduct,
 	customerEntitlementToNextResetAt,
-	type EntInterval,
 	type FullCustomer,
 	type FullCustomerEntitlement,
 	isLifetimeEntitlement,
@@ -18,25 +17,23 @@ const rollResetPast = ({
 	at: number;
 }) => {
 	const { entitlement } = customerEntitlement;
-	if (isLifetimeEntitlement({ entitlement })) return;
+	const { interval, interval_count } = entitlement;
+	if (!interval || isLifetimeEntitlement({ entitlement })) return;
 
-	while (
-		customerEntitlement.next_reset_at &&
-		customerEntitlement.next_reset_at <= at
-	) {
-		customerEntitlement.next_reset_at = customerEntitlementToNextResetAt({
+	const nextReset = (resetAt: number) =>
+		customerEntitlementToNextResetAt({
 			customerEntitlement: {
-				next_reset_at: customerEntitlement.next_reset_at,
-				entitlement: {
-					interval: entitlement.interval as EntInterval,
-					interval_count: entitlement.interval_count ?? 1,
-				},
+				next_reset_at: resetAt,
+				entitlement: { interval, interval_count },
 				customer_product: customerProduct,
 			},
 			billingCycleAnchor: customerProduct?.billing_cycle_anchor ?? undefined,
-			now: customerEntitlement.next_reset_at,
+			now: resetAt,
 		});
-	}
+
+	let resetAt = customerEntitlement.next_reset_at;
+	while (resetAt && resetAt <= at) resetAt = nextReset(resetAt);
+	customerEntitlement.next_reset_at = resetAt;
 };
 
 /** The customer at `at`: resets due by then have run, so each next reset is the first after it. */
