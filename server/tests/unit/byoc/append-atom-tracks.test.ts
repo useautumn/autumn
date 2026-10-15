@@ -83,10 +83,10 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 
 	const reply = await append({
 		body: {
-			writer: "w_1",
 			tracks: [
-				{ seq: 3, command: first },
+				{ writerId: "w_1", seq: 3, command: first },
 				{
+					writerId: "w_1",
 					seq: 4,
 					command: {
 						...second,
@@ -106,19 +106,42 @@ test("each journaled command is queued as the Atom journaled it, stamped with th
 	]);
 });
 
+test("a request carrying several journals stamps each command with its own track's writer id", async () => {
+	const first = journaled("atom_req_1");
+	const second = journaled("atom_req_2");
+
+	const reply = await append({
+		body: {
+			tracks: [
+				{ writerId: "w_1", seq: 3, command: first },
+				{ writerId: "w_2", seq: 1, command: second },
+			],
+		},
+	});
+
+	expect(reply.status).toBe(204);
+	expect(queued).toEqual([
+		[
+			{ ...first, source: { atomId: "atom_1", writerId: "w_1", seq: 3 } },
+			{ ...second, source: { atomId: "atom_1", writerId: "w_2", seq: 1 } },
+		],
+	]);
+});
+
 test("an unreadable body, a command that is not a track, or one off the Atom's own org and env is 400 unreadable, and nothing is queued", async () => {
 	const track = journaled("atom_req_1");
 	for (const body of [
-		{ writer: "w_1", tracks: [{ seq: 0, command: track }] },
+		{ tracks: [{ writerId: "w_1", seq: 0, command: track }] },
 		{ tracks: [{ seq: 1, command: track }] },
 		{
-			writer: "w_1",
-			tracks: [{ seq: 1, command: { ...track, type: "check" } }],
+			tracks: [
+				{ writerId: "w_1", seq: 1, command: { ...track, type: "check" } },
+			],
 		},
 		{
-			writer: "w_1",
 			tracks: [
 				{
+					writerId: "w_1",
 					seq: 1,
 					command: {
 						...track,
@@ -128,9 +151,9 @@ test("an unreadable body, a command that is not a track, or one off the Atom's o
 			],
 		},
 		{
-			writer: "w_1",
 			tracks: [
 				{
+					writerId: "w_1",
 					seq: 1,
 					command: {
 						...track,
@@ -154,8 +177,7 @@ test("no hash or an unknown one is 401 atom_unknown, and nothing is queued", asy
 		const reply = await append({
 			tokenHash,
 			body: {
-				writer: "w_1",
-				tracks: [{ seq: 1, command: journaled("atom_req_1") }],
+				tracks: [{ writerId: "w_1", seq: 1, command: journaled("atom_req_1") }],
 			},
 		});
 		expect(reply.status).toBe(401);

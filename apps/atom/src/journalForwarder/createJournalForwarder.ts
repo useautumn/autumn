@@ -28,7 +28,32 @@ type JournalForwarderContext = {
 	sleep?: (ms: number) => Promise<unknown>;
 };
 
-type Draining = ForwardedJournal & { isStopped: () => boolean };
+type FolderForwarding = {
+	journals: Set<ForwardedJournal>;
+	draining: boolean;
+	woken: boolean;
+};
+
+/** Journals sent together: one folder's, which prove themselves with one token hash. */
+type Draining = {
+	journalsOf: () => ForwardedJournal[];
+	isStopped: () => boolean;
+};
+
+/** A track to hand in, beside the journal it is owed from. */
+type Unsent = { forwarded: ForwardedJournal; entry: JournalEntry };
+
+/** Up to one request's worth of what the journals hold unsent, journal by journal. */
+const unsentOf = (journals: ForwardedJournal[]): Unsent[] => {
+	const taken: Unsent[] = [];
+	for (const forwarded of journals) {
+		const limit = MAX_TRACKS_PER_REQUEST - taken.length;
+		if (limit === 0) break;
+		for (const entry of forwarded.journal.unsent({ limit }))
+			taken.push({ forwarded, entry });
+	}
+	return taken;
+};
 
 /**
  * The journal's way to Autumn: what it holds is posted in batches, each customer's in seq order, and marked sent once
@@ -42,6 +67,8 @@ export const createJournalForwarder = ({
 	const sleep = ctx.sleep ?? Bun.sleep;
 	/** Every journal being handed to Autumn now: what a drain waits on. */
 	const handed = new Set<Journal>();
+	/** By folder: its journals share one drain, so a thread's deductions go to Autumn in one request, not one per slot. */
+	const folders = new Map<() => string, FolderForwarding>();
 
 	/** One line per run of failures, so an Autumn that is down cannot flood the logs. */
 	function logFailure({ error }: { error: unknown }): void {
@@ -52,11 +79,14 @@ export const createJournalForwarder = ({
 	}
 
 	async function pullCustomersStillOwing({
-		journal,
-		pulls,
+		forwarded: { journal, pulls },
 		sent,
 		isStopped,
-	}: Draining & { sent: JournalEntry[] }): Promise<void> {
+	}: {
+		forwarded: ForwardedJournal;
+		sent: JournalEntry[];
+		isStopped: () => boolean;
+	}): Promise<void> {
 		for (let round = 0; round < SETTLE_ROUNDS; round++) {
 			await sleep(PUSH_GRACE_MS);
 			if (isStopped()) return;
@@ -73,20 +103,25 @@ export const createJournalForwarder = ({
 	}
 
 	/** Until nothing is left to send or the forwarding stops. */
-	async function drain(draining: Draining): Promise<void> {
-		const { journal, tokenHash, isStopped } = draining;
+	async function drain({ journalsOf, isStopped }: Draining): Promise<void> {
 		let retryMs = FIRST_RETRY_MS;
 		while (!isStopped()) {
-			const waiting = journal.unsent({ limit: MAX_TRACKS_PER_REQUEST }).length;
+			const waiting = unsentOf(journalsOf()).length;
 			if (waiting === 0) return;
 			if (waiting < MAX_TRACKS_PER_REQUEST) await Bun.sleep(LINGER_MS);
 			if (isStopped()) return;
-			const batch = journal.unsent({ limit: MAX_TRACKS_PER_REQUEST });
+			const journals = journalsOf();
+			const batch = unsentOf(journals);
+			const [first] = batch;
+			if (!first) return;
 			try {
 				await ctx.autumnClient.appendTracks({
-					tokenHash: tokenHash(),
-					writer: journal.writerId,
-					tracks: batch.map(({ seq, command }) => ({ seq, command })),
+					tokenHash: first.forwarded.tokenHash(),
+					tracks: batch.map(({ forwarded, entry }) => ({
+						writerId: forwarded.journal.writerId,
+						seq: entry.seq,
+						command: entry.command,
+					})),
 				});
 			} catch (error) {
 				ctx.counters?.add("journalForwardFailed");
@@ -96,37 +131,52 @@ export const createJournalForwarder = ({
 				continue;
 			}
 			if (isStopped()) return;
-			journal.markSent({ entries: batch });
 			retryMs = FIRST_RETRY_MS;
-			void pullCustomersStillOwing({ ...draining, sent: batch });
+			const stillForwarded = new Set(journalsOf());
+			for (const forwarded of journals) {
+				if (!stillForwarded.has(forwarded)) continue;
+				const sent = batch
+					.filter((unsent) => unsent.forwarded === forwarded)
+					.map(({ entry }) => entry);
+				if (sent.length === 0) continue;
+				forwarded.journal.markSent({ entries: sent });
+				void pullCustomersStillOwing({ forwarded, sent, isStopped });
+			}
 		}
 	}
 
-	function forward(forwarded: ForwardedJournal) {
-		let stopped = false;
-		let draining = false;
-		let woken = false;
-		const isStopped = () => stopped;
-
-		/** A commit while a drain runs is picked up by that drain's next pass, never by a second drain. */
-		async function wake(): Promise<void> {
-			woken = true;
-			if (draining) return;
-			draining = true;
-			while (woken && !stopped) {
-				woken = false;
-				await drain({ ...forwarded, isStopped });
-			}
-			draining = false;
+	/** A commit while the folder's drain runs is picked up by that drain's next pass, never by a second drain. */
+	async function wake(folder: FolderForwarding): Promise<void> {
+		folder.woken = true;
+		if (folder.draining) return;
+		folder.draining = true;
+		const draining = {
+			journalsOf: () => [...folder.journals],
+			isStopped: () => folder.journals.size === 0,
+		};
+		while (folder.woken && !draining.isStopped()) {
+			folder.woken = false;
+			await drain(draining);
 		}
+		folder.draining = false;
+	}
 
-		forwarded.journal.onCommitted(() => void wake());
+	function forward(forwarded: ForwardedJournal) {
+		const folder = folders.get(forwarded.tokenHash) ?? {
+			journals: new Set<ForwardedJournal>(),
+			draining: false,
+			woken: false,
+		};
+		folders.set(forwarded.tokenHash, folder);
+		folder.journals.add(forwarded);
+		forwarded.journal.onCommitted(() => void wake(folder));
 		handed.add(forwarded.journal);
-		void wake();
+		void wake(folder);
 		return {
 			stop: () => {
-				stopped = true;
+				folder.journals.delete(forwarded);
 				handed.delete(forwarded.journal);
+				if (folder.journals.size === 0) folders.delete(forwarded.tokenHash);
 			},
 		};
 	}
@@ -145,7 +195,7 @@ export const createJournalForwarder = ({
 		if (forwarded.journal.unsent({ limit: 1 }).length === 0) retired();
 		else {
 			handed.add(forwarded.journal);
-			void drain({ ...forwarded, isStopped }).then(() => {
+			void drain({ journalsOf: () => [forwarded], isStopped }).then(() => {
 				if (stopped) return;
 				stop();
 				retired();

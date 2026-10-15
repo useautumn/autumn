@@ -314,12 +314,12 @@ export const recordJournals = () => {
 	const forwarder = createJournalForwarder({
 		ctx: {
 			autumnClient: {
-				appendTracks: async ({ writer, tracks }) => {
-					for (const { command: sent } of tracks) {
-						const command = parseTrackCommand({ input: sent });
+				appendTracks: async ({ tracks }) => {
+					for (const track of tracks) {
+						const command = parseTrackCommand({ input: track.command });
 						commands.push(command);
 						appended.push({
-							writer,
+							writer: track.writerId,
 							owner: command.requestId,
 							key: command.idempotency?.key,
 							value: command.value,
