@@ -336,6 +336,8 @@ const options = {
 		organization({
 			ac: ac as AccessControl,
 			roles,
+			// Lets better-auth's invite and member-role endpoints accept custom roles.
+			dynamicAccessControl: { enabled: true },
 			creatorRole: "owner",
 			async sendInvitationEmail(data: {
 				id: string;

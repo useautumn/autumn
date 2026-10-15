@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { member } from "../../db/auth-schema";
+import { member, organizationRole } from "../../db/auth-schema";
 import type * as schema from "../../db/schema";
+import { roleAccessToScopes } from "../roleUtils/roleAccessToScopes";
 import { ROLE_SCOPES, type Role, type ScopeString } from "../scopeDefinitions";
 
 /** Any drizzle db over the shared schema; server's instrumented db overrides `execute`. */
@@ -12,7 +13,7 @@ type ScopeResolverDb = Pick<
 
 const isCanonicalRole = (role: string): role is Role => role in ROLE_SCOPES;
 
-/** Unknown roles keep their name but grant no scopes, so callers surface the denial themselves. */
+/** Custom roles grant their stored access; unknown roles keep their name but grant no scopes. */
 export async function getScopesForUserInOrg({
 	db,
 	userId,
@@ -34,9 +35,19 @@ export async function getScopesForUserInOrg({
 	}
 
 	const { role } = membership;
-	if (!isCanonicalRole(role)) {
+	if (isCanonicalRole(role)) {
+		return { role, scopes: [...ROLE_SCOPES[role]] };
+	}
+
+	const customRole = await db.query.organizationRole.findFirst({
+		where: and(
+			eq(organizationRole.organizationId, organizationId),
+			eq(organizationRole.role, role),
+		),
+	});
+	if (!customRole) {
 		return { role, scopes: [] };
 	}
 
-	return { role, scopes: [...ROLE_SCOPES[role]] };
+	return { role, scopes: roleAccessToScopes({ access: customRole.access }) };
 }

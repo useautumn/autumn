@@ -20,6 +20,8 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	/** The session member's org role (built-in or custom); unset for API keys. */
+	role?: string;
 	apiKeyId?: string;
 	impersonatedBy?: string;
 	customerId?: string;

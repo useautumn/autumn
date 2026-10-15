@@ -225,6 +225,12 @@ export const ErrCode = {
 	HistoricalPlanVersionCannotBeDefault:
 		"historical_plan_version_cannot_be_default",
 
+	// Roles
+	RoleNotFound: "role_not_found",
+	RoleAlreadyExists: "role_already_exists",
+	RoleBuiltIn: "role_built_in",
+	RoleInUse: "role_in_use",
+
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };
