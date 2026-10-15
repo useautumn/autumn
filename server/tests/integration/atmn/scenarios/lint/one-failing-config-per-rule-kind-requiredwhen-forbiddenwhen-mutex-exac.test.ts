@@ -3,12 +3,13 @@
  *
  * One line of plans/atmn-v3/07_tests.md. [a, b] is a matrix looped INSIDE this file.
  *
- * forbiddenWhen, mutex, exactlyOne, and compare have no field wired to them in
+ * forbiddenWhen, mutex, exactlyOne, compare, and valueWhen have no field wired to them in
  * packages/atmn-generator/src/lint/rules/{features,plans}.ts today, so no real
  * config can trip them through the CLI yet (the runtime itself is covered
  * directly, with synthetic rules, by packages/atmn-generator/test/lintRuntime.test.ts).
- * Those four are left as `test.todo` below, naming that gap, rather than
- * faking a violation the registry cannot produce.
+ * Those five are left as `test.todo` below, naming that gap, rather than
+ * faking a violation the registry cannot produce. valueWhen's only rule (volume
+ * ⇒ prepaid) was replaced by the refusedWhen single-tier volume rule, covered here.
  */
 
 import { expect, test } from "bun:test";
@@ -87,7 +88,7 @@ const WIRED_CASES: Record<
 		because:
 			"featureOverride is only honoured on classic credit-system features.",
 	},
-	valueWhen: {
+	refusedWhen: {
 		body: (id) => `{
 	features: [
 		feature({ featureId: "${id}", name: "Seats", type: "metered", consumable: false }),
@@ -114,7 +115,8 @@ const WIRED_CASES: Record<
 		}),
 	],
 }`,
-		because: "Volume tiers are prepaid-only.",
+		because:
+			"Volume-based pricing on a usage-based item needs at least two tiers.",
 	},
 };
 
@@ -158,6 +160,10 @@ test.todo(
 );
 test.todo(
 	"one failing config per rule kind [compare] → no field wired to it yet, see file header",
+	() => {},
+);
+test.todo(
+	"one failing config per rule kind [valueWhen] → no field wired to it yet, see file header",
 	() => {},
 );
 
@@ -224,7 +230,7 @@ test("one failing config per rule kind: five distinct kinds failing at once are 
 			WIRED_CASES.unique?.because,
 			WIRED_CASES.exists?.because,
 			WIRED_CASES.targetHas?.because,
-			WIRED_CASES.valueWhen?.because,
+			WIRED_CASES.refusedWhen?.because,
 		]) {
 			expect(message).toContain(because);
 		}
