@@ -475,6 +475,10 @@ async function spawnWorker(name: string): Promise<Worker> {
 		});
 	});
 	const stderrLog = Bun.file(join(outDir, `worker-${name}.stderr`)).writer();
+	const stdoutLog =
+		WORKER_ENTRY === "main"
+			? Bun.file(join(outDir, `worker-${name}.stdout`)).writer()
+			: undefined;
 	void (async () => {
 		for await (const chunk of child.stderr as ReadableStream<Uint8Array>)
 			stderrLog.write(chunk);
@@ -488,6 +492,8 @@ async function spawnWorker(name: string): Promise<Worker> {
 			buffered = lines.pop() ?? "";
 			for (const line of lines) {
 				if (!line) continue;
+				stdoutLog?.write(`${line}\n`);
+				stdoutLog?.flush();
 				// biome-ignore lint/suspicious/noExplicitAny: worker lines are events or kafka log lines
 				let parsed: any;
 				try {
@@ -737,6 +743,21 @@ async function churnOnce(index: number): Promise<void> {
 		Bun.sleep(120_000).then(() => "timeout" as const),
 	]);
 	if (exitCode === "timeout") {
+		const dump = Bun.spawn(
+			[
+				"gdb",
+				"-p",
+				String(victim.child.pid),
+				"-batch",
+				"-ex",
+				"thread apply all bt 12",
+			],
+			{ stdout: "pipe", stderr: "pipe" },
+		);
+		await Bun.write(
+			join(outDir, `stop-hang-${victim.name}.gdb.txt`),
+			await new Response(dump.stdout).text(),
+		);
 		record({
 			t: Date.now(),
 			source: "harness",

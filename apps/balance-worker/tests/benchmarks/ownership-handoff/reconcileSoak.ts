@@ -49,6 +49,10 @@ export async function reconcileSoak({
 	let logRecords = 0;
 	let rejectedRecords = 0;
 	let nonMutationRecords = 0;
+	let staleRecords = 0;
+	const staleCommands = new Set<string>();
+	/** Per partition, the highest owner epoch seen so far: a record under a lower epoch after it is a zombie's, which readers drop. */
+	const fenceEpoch = new Map<number, bigint>();
 	const reader = kafka.consumer({
 		groupId: `reconcile-${crypto.randomUUID()}`,
 		readUncommitted: false,
@@ -62,6 +66,16 @@ export async function reconcileSoak({
 		eachBatch: async ({ batch, resolveOffset }) => {
 			for (const message of batch.messages) {
 				logRecords++;
+				const epochHeader = message.headers?.ownerEpoch;
+				const epochText = Array.isArray(epochHeader)
+					? epochHeader[0]?.toString()
+					: epochHeader?.toString();
+				const epoch = epochText === undefined ? undefined : BigInt(epochText);
+				const fence = fenceEpoch.get(batch.partition);
+				const stale =
+					epoch !== undefined && fence !== undefined && epoch < fence;
+				if (epoch !== undefined && (fence === undefined || epoch > fence))
+					fenceEpoch.set(batch.partition, epoch);
 				let record: AppliedTrack;
 				try {
 					record = parseTrustedMeteringRecord({
@@ -74,6 +88,11 @@ export async function reconcileSoak({
 				}
 				const id = record.command.commandId;
 				if (record.command.type !== "track" || !id) continue;
+				if (stale) {
+					staleRecords++;
+					staleCommands.add(id);
+					continue;
+				}
 				if (record.result.status !== "applied") {
 					rejectedRecords++;
 					continue;
@@ -101,6 +120,7 @@ export async function reconcileSoak({
 
 	let acknowledged = 0;
 	let acknowledgedMissingFromLog = 0;
+	let acknowledgedStale = 0;
 	const failedButApplied: Record<string, number> = {};
 	const seen = new Set<string>();
 	const lines = createInterface({
@@ -113,6 +133,7 @@ export async function reconcileSoak({
 		if (outcome === "200") {
 			acknowledged++;
 			if (!appliedByCommand.has(id)) acknowledgedMissingFromLog++;
+			if (staleCommands.has(id)) acknowledgedStale++;
 		} else if (appliedByCommand.has(id))
 			failedButApplied[outcome] = (failedButApplied[outcome] ?? 0) + 1;
 	}
@@ -138,6 +159,8 @@ export async function reconcileSoak({
 		logRecords,
 		rejectedRecords,
 		nonMutationRecords,
+		staleRecords,
+		acknowledgedStale,
 		appliedCommands: appliedByCommand.size,
 		acknowledged,
 		acknowledgedMissingFromLog,
