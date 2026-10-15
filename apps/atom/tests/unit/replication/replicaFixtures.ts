@@ -70,6 +70,9 @@ export const createReplica = ({
 	joined = ringPeers,
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
+	membershipTable,
+	thread = 0,
+	threads = 1,
 }: {
 	address: string;
 	peers: string[];
@@ -84,10 +87,18 @@ export const createReplica = ({
 	journalForwarder?: typeof forwardingNowhere;
 	/** True from the moment the thread starts stopping, as its server's stop sets it. */
 	stopping?: () => boolean;
+	/** Shared with the replica's other threads, as a deployed replica's threads share one SharedArrayBuffer. */
+	membershipTable?: Int32Array;
+	/** Which of the replica's `threads` this one is, as its handover announces it. */
+	thread?: number;
+	threads?: number;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
-	const membership = createMembership({ self: address });
+	const membership = createMembership({
+		self: address,
+		...(membershipTable && { table: membershipTable }),
+	});
 	// Settled members: counted, this replica granted by them, nothing left to hand over.
 	for (const peer of joined) {
 		membership.markJoined({ address: peer, boot: "fixture" });
@@ -164,8 +175,8 @@ export const createReplica = ({
 		membership,
 		replication: { peers: async () => ringPeers },
 		folders: createDeployedFolders({ slots: auth.slots }),
-		thread: 0,
-		threads: 1,
+		thread,
+		threads,
 		publicPort: PUBLIC_PORT,
 		peer: { port: PEER_PORT, secret },
 		logger: quiet,

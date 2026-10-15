@@ -9,6 +9,8 @@ import { createJournalForwarder } from "../../../src/journalForwarder/createJour
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { PEER_ANNOUNCEMENT_PATH } from "../../../src/replicas/handover/announcementContract.js";
 import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
+import { MEMBERSHIP_INTS } from "../../../src/replicas/membership/createMembership.js";
+import { PROBE_EVERY_MS } from "../../../src/replicas/membership/startReadinessProber.js";
 import { KEYS_RELAY } from "../../../src/replication/keys/createKeyRelay.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
@@ -1047,3 +1049,55 @@ describe("an idempotency key taken on the leaving owner just before it hands ove
 });
 
 export { PEER_PORT };
+
+describe("a stand-in with more than one thread hands a joining peer its customers", () => {
+	/** B's two threads: one membership table, as a deployed replica's threads share it; CUSTOMER's entries are on thread 1. */
+	const twoThreadStandIn = async () => {
+		const table = new Int32Array(MEMBERSHIP_INTS);
+		const standInThread = (thread: number) =>
+			createReplica({
+				address: B,
+				peers: [A],
+				ringPeers: [A],
+				joined: [],
+				membershipTable: table,
+				thread,
+				threads: 2,
+			});
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			joined: [],
+		});
+		const b0 = standInThread(0);
+		const b1 = standInThread(1);
+		for (const replica of [a, b0, b1])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b0] });
+		// B owned everything while A was away; thread 1 deducted twice on CUSTOMER.
+		await deductOn({ replica: b1, times: 2 });
+		// A has booted and probed B: it counts B, and waits for B's grant and handoff.
+		a.membership.markJoined({ address: B, boot: "fixture" });
+		return { a, b0, b1 };
+	};
+
+	test("rig red (n-stack matrix, handoffLate at every join): every thread hands over when the first one flips the ring, so the joiner's first request is answered inside the barrier with the moved entries", async () => {
+		const { a, b0, b1 } = await twoThreadStandIn();
+
+		// Thread 0's prober ticks first: it marks A joined for both threads, grants it and hands what thread 0 owes (nothing).
+		await b0.probeOnce();
+		expect(b1.membership.isMember(A)).toBe(true);
+		expect(await b1.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
+		// Thread 1's own tick comes later in its PROBE_EVERY_MS cycle (0.1-0.4 s later on the rig).
+		const thread1Tick = Bun.sleep(PROBE_EVERY_MS / 5).then(() =>
+			b1.probeOnce(),
+		);
+
+		const first = await remainingAt(a);
+		await thread1Tick;
+
+		expect(a.stats().handoffLate).toBe(0);
+		expect(first).toBe(8);
+	});
+});
