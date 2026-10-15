@@ -512,6 +512,12 @@ async function spawnWorker(name: string): Promise<Worker> {
 	);
 	const spawnedAt = Date.now();
 	children.push(child);
+	workerEvents.push({
+		t: spawnedAt,
+		worker: name,
+		event: "worker.spawned",
+		pid: child.pid,
+	});
 	void child.exited.then((exitCode) =>
 		workerEvents.push({
 			t: Date.now(),
@@ -678,7 +684,8 @@ const SPAWN_AFTER_GROW = process.env.CHURN_SPAWN_AFTER_GROW === "1";
 const BROKER_IDS = [1, 2, 3];
 const OFFSETS_TOPIC = "__consumer_offsets";
 const OFFSETS_TOPIC_PARTITIONS = 50;
-const marks: { t: number; label: string }[] = [];
+const marks: { t: number; label: string; moved?: Record<string, number[]> }[] =
+	[];
 
 /** Which of our topics a leader wave moves: CHURN_TOPICS=metering,commands,... narrows it to find what hurts. */
 const churnTopics = (process.env.CHURN_TOPICS ?? Object.keys(topics).join(","))
@@ -703,6 +710,16 @@ async function moveLeadersOff({ broker }: { broker: number }): Promise<number> {
 			reassign.push({ topic: topic.name, partitionAssignment });
 	}
 	if (reassign.length) await reassignPartitions({ reassign });
+	marks.push({
+		t: Date.now(),
+		label: `moves off ${broker}`,
+		moved: Object.fromEntries(
+			reassign.map(({ topic, partitionAssignment }) => [
+				topic,
+				partitionAssignment.map((p) => p.partition),
+			]),
+		),
+	});
 	return moved;
 }
 

@@ -93,8 +93,12 @@ export function createKafkaLog({
 	function shimWarn(message: string, extra?: object): void {
 		write("warn", message, extra);
 	}
-	function shimDebug(): void {
-		// The shim's debug lines are per message; they would drown everything else.
+	const debugFile = openDebugFile();
+	function shimDebug(message: string, extra?: { fac?: string }): void {
+		// The shim's debug lines are per message; they would drown everything else, so only a bench keeps them.
+		debugFile?.write(
+			`${(performance.timeOrigin + performance.now()).toFixed(3)} ${extra?.fac ?? "-"} ${message}\n`,
+		);
 	}
 	function namespace(): ShimLogger {
 		return shim;
@@ -109,4 +113,16 @@ export function createKafkaLog({
 		setLogLevel,
 	};
 	return { shim, write, writeNative };
+}
+
+/** Bench-only: LIBRDKAFKA_DEBUG_FILE collects librdkafka's debug lines per process and thread, timestamped on arrival. */
+function openDebugFile(): { write(line: string): void } | null {
+	const base = process.env.LIBRDKAFKA_DEBUG_FILE;
+	if (!base) return null;
+	const writer = Bun.file(
+		`${base}.${process.pid}.${crypto.randomUUID().slice(0, 6)}.log`,
+	).writer({ highWaterMark: 1 << 16 });
+	const flush = setInterval(() => void writer.flush(), 250);
+	flush.unref?.();
+	return { write: (line) => void writer.write(line) };
 }

@@ -242,6 +242,10 @@ export function createLibrdkafkaProducer({
 		...ctx.nativeClientConfig,
 		...nativeConfig,
 		stats_cb: onStatistics,
+		// Bench-only: the leader-churn bench traces producers alone (`msg,eos,...`) without drowning consumers.
+		...(process.env.LIBRDKAFKA_PRODUCER_DEBUG && {
+			debug: process.env.LIBRDKAFKA_PRODUCER_DEBUG,
+		}),
 		kafkaJS: { logger: ctx.log.shim },
 	} as KafkaJS.ProducerConstructorConfig);
 
