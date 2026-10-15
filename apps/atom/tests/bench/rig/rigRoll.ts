@@ -4,7 +4,12 @@
  * registered), with every second's answered / forwarded / failed counts kept per owner class and the stub's applied
  * deductions reconciled against the clients' (P1). `bun run rig:roll --replicas <ipA>,<ipB> [--out <dir>]`.
  */
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+	appendFileSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -23,6 +28,13 @@ import {
 	type RollLockCounts,
 	type RollRouting,
 } from "./rigShared.js";
+import {
+	detectTwoOwner,
+	type HandIn,
+	swapDurationsOf,
+	swapWindowsOf,
+	windowBarsOf,
+} from "./rigTwoOwner.js";
 
 const { values } = parseArgs({
 	options: { replicas: { type: "string" }, out: { type: "string" } },
@@ -139,7 +151,53 @@ const statusOf = async (replica: OwnerClass) =>
 	(await (await fetch(`${controlUrls[replica]}/status`)).json()) as {
 		readyAt: number | null;
 		exitedAt: number | null;
+		now: number;
+		chaos: Record<string, number | string | boolean | null>;
 	};
+
+const waitReady = async (replica: OwnerClass) => {
+	for (;;) {
+		const status = await statusOf(replica);
+		if (status.readyAt) {
+			mark(`${replica} ready`, status.readyAt);
+			return;
+		}
+		if (status.exitedAt) throw new Error(`${replica} died while starting`);
+		await Bun.sleep(STATUS_POLL_MS);
+	}
+};
+
+/** The leaver's chaos before its SIGTERM; marks what the supervisor did once it has exited. */
+const KILL_PATTERN = '"type":"atom_handoff".*"handed":[1-9]';
+const armChaos = async (replica: OwnerClass) => {
+	if (roll.chaos === "netem-handoff") {
+		const on = await control(replica, "/netem", {
+			delayMs: roll.netemDelayMs,
+			durationMs: 60_000,
+			port: config.replica.peerPort,
+		}).catch((error) => ({ error: String(error), at: null }));
+		mark(
+			on.at
+				? `${replica} netem ${roll.netemDelayMs}ms on`
+				: `${replica} netem failed ${JSON.stringify(on)}`,
+			typeof on.at === "number" ? on.at : Date.now(),
+		);
+	}
+	if (roll.chaos === "kill9-wipe" && replica === roll.order[0]) {
+		await control(replica, "/killOn", { pattern: KILL_PATTERN, wipe: true });
+		mark(`${replica} kill armed`);
+	}
+};
+const markChaos = async (replica: OwnerClass) => {
+	const { chaos } = await statusOf(replica);
+	for (const [field, name] of [
+		["netemClearedAt", "netem cleared"],
+		["killedAt", "killed"],
+		["wipedAt", "wiped"],
+	] as const)
+		if (typeof chaos[field] === "number")
+			mark(`${replica} ${name}`, chaos[field] as number);
+};
 
 const sleepUntil = async (at: number) => {
 	const ms = at - Date.now();
@@ -147,15 +205,23 @@ const sleepUntil = async (at: number) => {
 };
 
 /** One replica swapped as Alien swaps a container, each step at its measured offset; the other keeps serving. */
-const swap = async (replica: OwnerClass) => {
+const swap = async (
+	replica: OwnerClass,
+	{
+		sigtermAtOnce = false,
+		registerAtReady = false,
+	}: { sigtermAtOnce?: boolean; registerAtReady?: boolean } = {},
+) => {
 	const other: OwnerClass = replica === "a" ? "b" : "a";
 	route([other]);
 	mark(`${replica} deregistered`);
-	await Bun.sleep(roll.deregisterToSigtermMs);
+	if (!sigtermAtOnce) await Bun.sleep(roll.deregisterToSigtermMs);
+	await armChaos(replica);
 	const stopped = await control(replica, "/stop");
 	mark(`${replica} sigterm`, stopped.sigtermAt ?? Date.now());
 	const exitedAt = stopped.exitedAt ?? Date.now();
 	mark(`${replica} exited`, exitedAt);
+	await markChaos(replica);
 	await sleepUntil(exitedAt + roll.exitToDnsDropMs);
 	await control(other, "/peers", { peers: [] });
 	mark(`${replica} dns drop`);
@@ -166,18 +232,49 @@ const swap = async (replica: OwnerClass) => {
 	mark(`${replica} started`, started.startedAt ?? Date.now());
 	await control(other, "/peers", { peers: [members[replica]] });
 	mark(`${replica} dns add`);
-	for (;;) {
-		const status = await statusOf(replica);
-		if (status.readyAt) {
-			mark(`${replica} ready`, status.readyAt);
-			break;
-		}
-		if (status.exitedAt) throw new Error(`${replica} died while starting`);
-		await Bun.sleep(STATUS_POLL_MS);
-	}
+	await waitReady(replica);
+	if (registerAtReady) return;
 	await Bun.sleep(roll.readyToRegisteredMs);
 	route(["a", "b"]);
 	mark(`${replica} registered`);
+};
+
+/** H8: both replicas leave at once (A's SIGTERM, then B's `bothSigtermGapMs` later), then both come back. */
+const swapBoth = async () => {
+	route(["b"]);
+	mark("a deregistered");
+	await Bun.sleep(roll.deregisterToSigtermMs);
+	const exits = await Promise.all(
+		(["a", "b"] as const).map(async (replica, index) => {
+			if (index > 0) await Bun.sleep(roll.bothSigtermGapMs);
+			const stopped = await control(replica, "/stop");
+			mark(`${replica} sigterm`, stopped.sigtermAt ?? Date.now());
+			mark(`${replica} exited`, stopped.exitedAt ?? Date.now());
+			return stopped.exitedAt ?? Date.now();
+		}),
+	);
+	await sleepUntil(Math.max(...exits) + roll.exitToDnsDropMs);
+	for (const replica of ["a", "b"] as const)
+		await control(replica, "/peers", { peers: [] });
+	mark("a+b dns drop");
+	await Bun.sleep(roll.dnsDropToStartMs);
+	for (const replica of ["a", "b"] as const) {
+		const started = await control(replica, "/start", {
+			peers: [members[replica === "a" ? "b" : "a"]],
+		});
+		mark(`${replica} started`, started.startedAt ?? Date.now());
+	}
+	mark("a+b dns add");
+	const registered: OwnerClass[] = [];
+	await Promise.all(
+		(["a", "b"] as const).map(async (replica) => {
+			await waitReady(replica);
+			await Bun.sleep(roll.readyToRegisteredMs);
+			registered.push(replica);
+			route([...registered]);
+			mark(`${replica} registered`);
+		}),
+	);
 };
 
 const healthPolls = setInterval(async () => {
@@ -282,7 +379,14 @@ const reading = Promise.all(
 await sleepUntil(startAt);
 mark("load started");
 await Bun.sleep(roll.warmupSeconds * 1000);
-for (const replica of roll.order) await swap(replica);
+mark(`chaos ${roll.chaos}`);
+if (roll.chaos === "both-sigterm") await swapBoth();
+else if (roll.chaos === "sigterm-b-at-health") {
+	const [first, second] = roll.order as [OwnerClass, OwnerClass];
+	await swap(first, { registerAtReady: true });
+	mark(`${first} registered`);
+	await swap(second, { sigtermAtOnce: true });
+} else for (const replica of roll.order) await swap(replica);
 await Bun.sleep(roll.settleSeconds * 1000);
 mark("load stopping");
 tellLoads({ type: "stop" });
@@ -336,8 +440,58 @@ writeFileSync(
 		})),
 	),
 );
+/** The two-owner detector: every hand-in the stub took, whose writer it was by each box's journals, and the swap windows. */
+const handIns = (
+	(await (await fetch(`${stubUrl}/__rig/handins`)).json()) as {
+		handIns: HandIn[];
+	}
+).handIns;
+writeFileSync(join(outDir, "handins.json"), JSON.stringify(handIns));
+const writers: Record<OwnerClass, string[]> = { a: [], b: [] };
+const clockSkewMs: Record<string, number | string> = {};
+for (const replica of ["a", "b"] as const) {
+	writers[replica] = await fetch(`${controlUrls[replica]}/writers`)
+		.then(
+			async (reply) => ((await reply.json()) as { writers: string[] }).writers,
+		)
+		.catch(() => []);
+	const sentAt = Date.now();
+	const status = await statusOf(replica).catch(() => null);
+	clockSkewMs[replica] = status
+		? status.now - (sentAt + Date.now()) / 2
+		: "unreachable";
+}
+const replicaOfWriter: Record<string, OwnerClass> = Object.fromEntries([
+	...writers.a.map((writerId) => [writerId, "a"]),
+	...writers.b.map((writerId) => [writerId, "b"]),
+]);
+const windows = swapWindowsOf({ marks });
+const readJsonl = <T>(file: string): T[] =>
+	readFileSync(join(outDir, file), "utf8")
+		.split("\n")
+		.filter(Boolean)
+		.map((line) => JSON.parse(line) as T);
+const twoOwner = detectTwoOwner({ handIns, replicaOfWriter, windows });
+const windowBars = windowBarsOf({
+	windows,
+	seconds: readJsonl<{
+		type: string;
+		second: number;
+		a: RollCounts;
+		b: RollCounts;
+	}>("roll.jsonl").filter((line) => line.type === "second"),
+	health: readJsonl("health.jsonl"),
+	startAt,
+});
+
 const summary = {
 	marks,
+	chaos: roll.chaos,
+	twoOwner,
+	windows: windowBars,
+	swapDurations: swapDurationsOf({ marks }),
+	writers,
+	clockSkewMs,
 	p1: {
 		allowed: allowed.size,
 		applied: appliedCount.size,
@@ -363,6 +517,10 @@ const summary = {
 };
 writeFileSync(join(outDir, "summary.json"), JSON.stringify(summary, null, 2));
 log(`P1 ${JSON.stringify(summary.p1)}`);
+log(
+	`twoOwner ${JSON.stringify({ events: twoOwner.events, customers: twoOwner.customers, perWindow: twoOwner.perWindow, outside: twoOwner.outside, unknownWriters: twoOwner.unknownWriters.length })}`,
+);
+log(`windows ${JSON.stringify(windowBars)}`);
 if (locks.taken > 0)
 	log(
 		`locks ${JSON.stringify({ ...locks, stubFinalizes: summary.stub.finalizes, stubFinalizeDupes: summary.stub.finalizeDupes })}`,

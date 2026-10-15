@@ -104,6 +104,61 @@ for (const owner of ["a", "b"] as const) {
 		`${owner.toUpperCase()}-owned: ${gapSeconds.length} s with gaps${gapSeconds.length ? ` (${gapSeconds[0]?.second}..${gapSeconds.at(-1)?.second})` : ""}; forwarded ${forwarded} [${record(reasons)}]; failed ${failed} [${record(failures)}]`,
 	);
 }
-console.log(`\nP1: ${JSON.stringify(summary.p1)}`);
+type WindowBar = {
+	replica: string;
+	fromSecond: number;
+	toSecond: number;
+	requests: number;
+	ownerUnavailable: number;
+	forwarded: number;
+	failed: number;
+	handoffLate: number;
+	handoffLatePercent: number;
+};
+type TwoOwnerWindow = {
+	replica: string;
+	switches: number;
+	legal: number;
+	events: number;
+	customers: number;
+};
+if (summary.twoOwner) {
+	const bars = (summary.windows ?? []) as WindowBar[];
+	const detector = summary.twoOwner.perWindow as TwoOwnerWindow[];
+	console.log(
+		`\n== swap windows (SIGTERM -> /health 200 + 15 s), chaos ${summary.chaos ?? "none"} ==`,
+	);
+	console.log(
+		"  swap | seconds        | requests | owner_unavailable | fwd  | failed | handoffLate (%)   | twoOwner events / customers | switches (legal)",
+	);
+	for (const [index, bar] of bars.entries()) {
+		const two = detector[index];
+		console.log(
+			`  ${bar.replica.padEnd(4)} | ${`${bar.fromSecond}..${bar.toSecond}`.padEnd(14)} | ${String(bar.requests).padStart(8)} | ${String(bar.ownerUnavailable).padStart(17)} | ${String(bar.forwarded).padStart(4)} | ${String(bar.failed).padStart(6)} | ${`${bar.handoffLate} (${bar.handoffLatePercent}%)`.padEnd(17)} | ${`${two?.events ?? "-"} / ${two?.customers ?? "-"}`.padEnd(27)} | ${two?.switches ?? "-"} (${two?.legal ?? "-"})`,
+		);
+	}
+	const { events, customers, outside, decisions, handIns, unknownWriters } =
+		summary.twoOwner;
+	console.log(
+		`twoOwner: events ${events}, customers ${customers} (outside every window: ${outside.events} events, ${outside.customers} customers); ${decisions} decisions from ${handIns} hand-ins; unknown writers ${unknownWriters.length}`,
+	);
+	if (summary.twoOwner.samples?.length)
+		console.log(
+			`twoOwner samples: ${JSON.stringify(summary.twoOwner.samples.slice(0, 10))}`,
+		);
+	console.log(`swaps: ${JSON.stringify(summary.swapDurations)}`);
+	console.log(
+		`clock skew vs driver (ms): ${JSON.stringify(summary.clockSkewMs)}`,
+	);
+}
+const atomOnlyDoubles =
+	(summary.p1.doubled ?? 0) - (summary.p1.doubledAfterForward ?? 0);
+console.log(
+	`\nP1: ${JSON.stringify(summary.p1)} atomOnlyDoubles ${atomOnlyDoubles}`,
+);
+if (summary.locks?.taken)
+	console.log(
+		`locks: ${JSON.stringify(summary.locks)} stub finalizes ${summary.stub.finalizes} finalizeDupes ${summary.stub.finalizeDupes}`,
+	);
 console.log(`stub: ${JSON.stringify(summary.stub)}`);
 console.log(`replicas: ${JSON.stringify(summary.replicas)}`);

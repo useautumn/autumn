@@ -74,6 +74,19 @@ const defaults = {
 		/** One deduction in this many is a locked check (lock_id held, 1 unit), finalized `lockFinalizeAfterMs` later; 0 sends none. */
 		lockEvery: 0,
 		lockFinalizeAfterMs: 8_000,
+		/**
+		 * One fault on top of the roll: B's SIGTERM the moment A's /health is 200; 2 s netem on each leaver's traffic to the
+		 * peer port from SIGTERM to exit; SIGKILL A at its first atom_handoff with handed > 0 and wipe its data dir; or
+		 * SIGTERM A then B 0.5 s apart.
+		 */
+		chaos: "none" as
+			| "none"
+			| "sigterm-b-at-health"
+			| "netem-handoff"
+			| "kill9-wipe"
+			| "both-sigterm",
+		netemDelayMs: 2_000,
+		bothSigtermGapMs: 500,
 	},
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,

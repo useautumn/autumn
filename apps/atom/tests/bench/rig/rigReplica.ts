@@ -4,13 +4,19 @@
  * `atom.svc`, from /etc/hosts lines the supervisor rewrites (root, as the boxes run it): the same lookup and 5 s cache as
  * on Alien, with the record's timing in the driver's hands. `bun run rig:replica --self <ip> --peer <ip> --stub <url> --peer-secret <s>`.
  */
+import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import {
+	closeSync,
+	fstatSync,
 	mkdirSync,
 	mkdtempSync,
 	openSync,
+	readdirSync,
 	readFileSync,
+	readSync,
 	renameSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
@@ -70,6 +76,163 @@ type AtomRun = {
 let peers: string[] = [peer];
 let run: AtomRun | null = null;
 let restarts = 0;
+/** Chaos: what the supervisor did to the Atom on the driver's say (netem on the peer port, SIGKILL + wipe). */
+const chaos = {
+	netemAt: null as number | null,
+	netemClearedAt: null as number | null,
+	netemError: null as string | null,
+	killArmedAt: null as number | null,
+	killedAt: null as number | null,
+	killLine: null as string | null,
+	wipedAt: null as number | null,
+	wipePending: false,
+};
+/** Every journal writer id this box's data dir has held, so the driver can tell whose decision each hand-in was. */
+const knownWriters = new Set<string>();
+
+const readWriters = (): string[] => {
+	const files = (readdirSync(dataDir, { recursive: true }) as string[]).filter(
+		(name) => name.endsWith(".sqlite"),
+	);
+	for (const file of files) {
+		try {
+			const database = new Database(join(dataDir, file), { readonly: true });
+			const row = database
+				.query<{ writerId: string }, []>(
+					"SELECT writer_id AS writerId FROM journal_meta WHERE id = 1",
+				)
+				.get();
+			database.close();
+			if (row?.writerId) knownWriters.add(row.writerId);
+		} catch {}
+	}
+	return [...knownWriters];
+};
+
+const sh = (args: string[]) => {
+	const result = Bun.spawnSync(args, { stdout: "pipe", stderr: "pipe" });
+	if (result.exitCode !== 0)
+		throw new Error(`${args.join(" ")}: ${result.stderr.toString().trim()}`);
+	return result.stdout.toString();
+};
+const peerIface = () =>
+	/ dev (\S+)/.exec(sh(["ip", "-o", "route", "get", peer]))?.[1] ?? "ens5";
+
+/** Delays what this box sends to the peer port (a prio band with netem, picked by a u32 dport filter) until cleared. */
+const startNetem = ({
+	delayMs,
+	durationMs,
+	port,
+}: {
+	delayMs: number;
+	durationMs: number;
+	port: number;
+}) => {
+	const dev = peerIface();
+	sh(["modprobe", "sch_netem"]);
+	sh([
+		"tc",
+		"qdisc",
+		"replace",
+		"dev",
+		dev,
+		"root",
+		"handle",
+		"1:",
+		"prio",
+		"bands",
+		"4",
+		"priomap",
+		..."1 2 2 2 1 2 0 0 1 1 1 1 1 1 1 1".split(" "),
+	]);
+	sh([
+		"tc",
+		"qdisc",
+		"replace",
+		"dev",
+		dev,
+		"parent",
+		"1:4",
+		"handle",
+		"40:",
+		"netem",
+		"delay",
+		`${delayMs}ms`,
+	]);
+	sh([
+		"tc",
+		"filter",
+		"add",
+		"dev",
+		dev,
+		"protocol",
+		"ip",
+		"parent",
+		"1:0",
+		"prio",
+		"4",
+		"u32",
+		"match",
+		"ip",
+		"dport",
+		String(port),
+		"0xffff",
+		"flowid",
+		"1:4",
+	]);
+	chaos.netemAt = Date.now();
+	chaos.netemClearedAt = null;
+	setTimeout(clearNetem, durationMs);
+	return { dev };
+};
+
+const clearNetem = () => {
+	if (chaos.netemAt === null || chaos.netemClearedAt !== null) return;
+	Bun.spawnSync(["tc", "qdisc", "del", "dev", peerIface(), "root"]);
+	chaos.netemClearedAt = Date.now();
+};
+
+/** Tails the Atom's log from now; on the first line matching `pattern`, SIGKILLs the Atom and, if asked, wipes its data dir. */
+const killOn = ({ pattern, wipe }: { pattern: string; wipe: boolean }) => {
+	const target = run;
+	if (!target) throw new Error("no Atom running");
+	const matcher = new RegExp(pattern);
+	const fd = openSync(logPath, "r");
+	let offset = fstatSync(fd).size;
+	let carry = "";
+	chaos.killArmedAt = Date.now();
+	const buffer = Buffer.alloc(1 << 20);
+	const poll = async () => {
+		while (target.exitedAt === null) {
+			const n = readSync(fd, buffer, 0, buffer.length, offset);
+			if (n > 0) {
+				offset += n;
+				const lines = (carry + buffer.toString("utf8", 0, n)).split("\n");
+				carry = lines.pop() ?? "";
+				const hit = lines.find((line) => matcher.test(line));
+				if (hit) {
+					target.child.kill("SIGKILL");
+					chaos.killedAt = Date.now();
+					chaos.wipePending = wipe;
+					chaos.killLine = hit.slice(0, 2_000);
+					await target.child.exited;
+					if (wipe) {
+						readWriters();
+						rmSync(dataDir, { recursive: true, force: true });
+						mkdirSync(dataDir, { recursive: true });
+						chaos.wipedAt = Date.now();
+						chaos.wipePending = false;
+					}
+					break;
+				}
+				continue;
+			}
+			await Bun.sleep(5);
+		}
+		closeSync(fd);
+	};
+	void poll();
+};
 
 /** atom.svc resolves to this box and `next`, as hickory lists the running containers; written whole and renamed into place. */
 const writePeers = (next: string[]): void => {
@@ -146,6 +309,9 @@ const stopAtom = async (): Promise<Pick<AtomRun, "sigtermAt" | "exitedAt">> => {
 	stopping.child.kill("SIGTERM");
 	await stopping.child.exited;
 	stopping.exitedAt ??= Date.now();
+	clearNetem();
+	// A SIGKILL + wipe finishes its wipe before the driver may start the Atom again.
+	while (chaos.wipePending) await Bun.sleep(10);
 	return { sigtermAt: stopping.sigtermAt, exitedAt: stopping.exitedAt };
 };
 
@@ -161,6 +327,8 @@ const statusOf = () => ({
 	readyAt: run?.readyAt ?? null,
 	sigtermAt: run?.sigtermAt ?? null,
 	exitedAt: run?.exitedAt ?? null,
+	now: Date.now(),
+	chaos,
 });
 
 const control = Bun.serve({
@@ -169,6 +337,8 @@ const control = Bun.serve({
 	fetch: async (request) => {
 		const { pathname } = new URL(request.url);
 		if (pathname === "/status") return Response.json(statusOf());
+		if (pathname === "/writers")
+			return Response.json({ writers: readWriters() });
 		if (request.method !== "POST")
 			return new Response("control: POST /stop | /start | /peers", {
 				status: 405,
@@ -176,7 +346,34 @@ const control = Bun.serve({
 		const body = (await request.json().catch(() => ({}))) as {
 			peers?: string[];
 			srcDir?: string;
+			delayMs?: number;
+			durationMs?: number;
+			port?: number;
+			pattern?: string;
+			wipe?: boolean;
 		};
+		if (pathname === "/netem") {
+			try {
+				return Response.json({
+					at: Date.now(),
+					...startNetem({
+						delayMs: body.delayMs ?? 2_000,
+						durationMs: body.durationMs ?? 60_000,
+						port: body.port ?? replica.peerPort,
+					}),
+				});
+			} catch (error) {
+				chaos.netemError = String(error);
+				return Response.json({ error: String(error) }, { status: 500 });
+			}
+		}
+		if (pathname === "/killOn") {
+			killOn({
+				pattern: body.pattern ?? "atom_handoff",
+				wipe: body.wipe ?? false,
+			});
+			return Response.json({ armedAt: chaos.killArmedAt });
+		}
 		if (pathname === "/stop") return Response.json(await stopAtom());
 		if (pathname === "/peers") {
 			writePeers(body.peers ?? []);
