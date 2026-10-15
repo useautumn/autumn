@@ -201,7 +201,7 @@ export const useIsSettingsTabEnabled = () => {
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
-		// Approvals reads mocked rules until its routes ship, so it stays local-only.
+		// Approvals stays local-only until rules can be created (U3b editor).
 		if (tab === "approvals") return import.meta.env.DEV;
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
