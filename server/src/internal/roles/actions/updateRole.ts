@@ -1,7 +1,9 @@
+import { AppEnv } from "@autumn/shared";
 import type {
 	ApiRole,
 	UpdateRoleParams,
 } from "@autumn/shared/api/roles/apiRole";
+import { clearApprovalRulesCache } from "@/external/redis/actions/approvalRulesCache/approvalRulesCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleBuiltInRoleErrors } from "../errors/handleBuiltInRoleErrors.js";
 import { handleRoleNameTakenErrors } from "../errors/handleRoleNameTakenErrors.js";
@@ -33,10 +35,16 @@ export const updateRole = async ({
 		await handleRoleNameTakenErrors({ db, orgId: org.id, name: newName });
 	}
 
-	const role = await withRoleNameConflictAsRoleExists({
-		name: newName ?? name,
-		write: () => roleRepo.update({ db, orgId: org.id, name, params }),
+	const role = handleRoleNotFoundErrors({
+		name,
+		role: await withRoleNameConflictAsRoleExists({
+			name: newName ?? name,
+			write: () => roleRepo.update({ db, orgId: org.id, name, params }),
+		}),
 	});
+	if (isRename) {
+		await clearApprovalRulesCache({ orgId: org.id, env: AppEnv.Live });
+	}
 	const usage = await roleRepo.getUsage({ db, orgId: org.id });
 	return customRoleToApiRole({ role, usage });
 };

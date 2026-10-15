@@ -32,7 +32,7 @@ import { getAgentIdOAuthConfigs } from "@/external/agentId/agentIdOAuthConfig.js
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { deleteMarketingContacts } from "@/external/resend/deleteMarketingContacts.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
-import { deleteMemberRuleSubjects } from "@/internal/approvals/repos/deleteMemberRuleSubjects.js";
+import { dropMemberFromRules } from "@/internal/approvals/actions/dropMemberFromRules.js";
 import { getOAuthValidAudiences } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
 import { getTrustedSsoOrigins } from "@/internal/auth/sso/ssoTrustedOrigins.js";
@@ -383,7 +383,7 @@ const options = {
 					await afterOrgCreated({ org: organization, user });
 				},
 				afterRemoveMember: async ({ member, organization }) => {
-					await deleteMemberRuleSubjects({
+					await dropMemberFromRules({
 						db,
 						orgId: organization.id,
 						userId: member.userId,

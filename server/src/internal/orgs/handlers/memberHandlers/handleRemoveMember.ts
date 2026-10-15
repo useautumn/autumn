@@ -7,7 +7,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
-import { deleteMemberRuleSubjects } from "../../../approvals/repos/deleteMemberRuleSubjects";
+import { dropMemberFromRules } from "../../../approvals/actions/dropMemberFromRules";
 
 export const handleRemoveMember = createRoute({
 	scopes: { ANY: [Scopes.Admin, Scopes.Owner] },
@@ -81,7 +81,7 @@ export const handleRemoveMember = createRoute({
 				),
 			);
 
-		await deleteMemberRuleSubjects({
+		await dropMemberFromRules({
 			db,
 			orgId: org.id,
 			userId: existingMember.userId,

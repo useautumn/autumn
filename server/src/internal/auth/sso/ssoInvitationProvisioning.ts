@@ -84,10 +84,11 @@ export const ensureInvitedSsoMembership = async ({
 					eq(invitation.status, "pending"),
 				),
 			)
-			.returning({ id: invitation.id });
+			.returning({ role: invitation.role });
 		if (!claimed) return null;
 
-		const role = pendingInvite.role ?? "member";
+		// The claimed row's role, not the earlier read: a role rename may have moved it.
+		const role = claimed.role ?? "member";
 		await tx.insert(member).values({
 			id: `mem_${crypto.randomUUID()}`,
 			organizationId,
