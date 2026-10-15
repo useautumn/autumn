@@ -3,7 +3,7 @@ import { openSqliteDatabase } from "../openSqliteDatabase.js";
 import { createJournalKeysTable } from "../repos/journalKeys.js";
 
 /** A file of another version is emptied on open, and with it what was owed: bump only with a migration of the rows. */
-const JOURNAL_SCHEMA_VERSION = 1;
+const JOURNAL_SCHEMA_VERSION = 3;
 
 const dropJournalSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS journal_entries");
