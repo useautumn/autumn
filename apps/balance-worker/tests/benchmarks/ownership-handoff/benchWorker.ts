@@ -197,10 +197,14 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	emit("consumer.group_join", {
 		partitions:
 			event.payload.memberAssignment[env.BALANCE_WORKER_METERING_TOPIC] ?? [],
+		assignment: event.payload.memberAssignment,
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+	}),
 );
 
 const slotGate =

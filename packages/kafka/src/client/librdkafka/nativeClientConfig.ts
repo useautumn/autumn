@@ -65,5 +65,9 @@ export function nativeClientConfigOf({
 		"reconnect.backoff.max.ms": config.retry.maxRetryTime,
 		"allow.auto.create.topics": false,
 		log_level: 6,
+		// Bench-only: the leader-churn bench turns on `fetch` debugging to see NOT_LEADER answers.
+		...(process.env.LIBRDKAFKA_DEBUG && {
+			debug: process.env.LIBRDKAFKA_DEBUG,
+		}),
 	};
 }
