@@ -64,6 +64,8 @@ export const setAttachedStripeTestClock = async ({
 	testClockId: string;
 }) => {
 	const cacheKey = buildStripeTestClockCacheKey(stripeCustomerId);
+	// Fail open: resolving the targets throws when no misc cache is configured, and a cache
+	// write must never fail the attach itself.
 	await forEachMiscRedisTarget({
 		operation: ({ redis }) =>
 			tryRedisOp({
@@ -77,5 +79,7 @@ export const setAttachedStripeTestClock = async ({
 				`[stripeTestClockCache] attach write failed on "${target.instanceName}"`,
 			);
 		},
+	}).catch((error) => {
+		logger.warn("[stripeTestClockCache] attach write skipped", { error });
 	});
 };
