@@ -1,6 +1,6 @@
 info:
   title: Autumn API
-  version: 2.5.0
+  version: 2.6.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
@@ -6170,7 +6170,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -7937,7 +7937,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -9425,7 +9425,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -11281,7 +11281,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -11356,7 +11356,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -11443,7 +11443,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -11679,7 +11679,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -11873,7 +11873,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -17532,7 +17532,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -21423,7 +21423,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -28410,7 +28410,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -35965,7 +35965,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -36056,7 +36056,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -37076,7 +37076,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -37688,7 +37688,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -38309,7 +38309,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -39325,7 +39325,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -39409,7 +39409,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -42610,7 +42610,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -50611,7 +50611,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -51894,7 +51894,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -55463,7 +55463,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -57042,7 +57042,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -60137,7 +60137,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -63545,7 +63545,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -63777,7 +63777,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -64325,7 +64325,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -64430,7 +64430,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -67487,7 +67487,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -68345,7 +68345,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -68721,7 +68721,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -68917,7 +68917,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -69264,7 +69264,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -69391,7 +69391,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -69492,7 +69492,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -69595,7 +69595,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -72217,7 +72217,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -72614,7 +72614,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -73054,7 +73054,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -73210,7 +73210,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -73485,7 +73485,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -73867,7 +73867,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -74105,7 +74105,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -75851,7 +75851,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -76162,7 +76162,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -76381,7 +76381,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -76734,7 +76734,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -76883,7 +76883,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -77140,7 +77140,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -77411,7 +77411,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -79288,7 +79288,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -79570,7 +79570,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -79841,7 +79841,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -79931,7 +79931,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -80021,7 +80021,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -80132,7 +80132,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
   /v1/licenses.list:
     post:
@@ -80221,7 +80221,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
   /v1/entities.create:
     post:
@@ -81506,7 +81506,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -82624,7 +82624,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -83805,7 +83805,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85154,7 +85154,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85254,7 +85254,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85341,7 +85341,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85428,7 +85428,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85605,7 +85605,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85748,7 +85748,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -85865,7 +85865,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -86024,7 +86024,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -86092,7 +86092,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -86536,7 +86536,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -86828,7 +86828,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87100,7 +87100,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87452,7 +87452,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87518,7 +87518,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87610,7 +87610,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87714,7 +87714,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87798,7 +87798,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -87888,7 +87888,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88046,7 +88046,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88194,7 +88194,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88291,7 +88291,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88375,7 +88375,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88445,7 +88445,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88580,7 +88580,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88693,7 +88693,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88764,7 +88764,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88833,7 +88833,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -88993,7 +88993,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -89121,7 +89121,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -89233,7 +89233,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -89380,7 +89380,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -89455,7 +89455,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -89952,7 +89952,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -90196,7 +90196,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.5.0
+            default: 2.6.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -90249,7 +90249,7 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: 2.5.0
+        default: 2.6.0
       x-speakeasy-globals-hidden: true
     - name: fail-open
       in: header

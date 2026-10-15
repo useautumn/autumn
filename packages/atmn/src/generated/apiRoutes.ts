@@ -21,7 +21,7 @@ export type ApiRoute = {
 };
 
 /** The x-api-version every request carries: the spec's default. */
-export const API_VERSION = "2.5.0";
+export const API_VERSION = "2.6.0";
 
 export const API_ROUTES: readonly ApiRoute[] = [
 	{
