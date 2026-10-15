@@ -237,7 +237,7 @@ test.skipIf(hostedAtom)(
 	},
 );
 
-test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's")}`, async () => {
+test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's, and its org's id and slug")}`, async () => {
 	const { db } = initDrizzle();
 	const atom = await ensureAtomDeployment({ autumn });
 	const otherOrgId = `org_atom_keys_${crypto.randomUUID()}`;
@@ -293,6 +293,7 @@ test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret
 		expect(reply.status).toBe(200);
 		expect(await reply.json()).toEqual({
 			invalid_key_hashes: [live, otherOrg, neverIssued],
+			org: { id: defaultCtx.org.id, slug: defaultCtx.org.slug },
 		});
 		expect(unknownAtom.status).toBe(401);
 	} finally {
