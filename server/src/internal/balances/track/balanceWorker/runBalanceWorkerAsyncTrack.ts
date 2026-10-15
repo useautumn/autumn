@@ -3,9 +3,10 @@ import { RouteGroup, type TrackParams } from "@autumn/shared";
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
+import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
-import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
+import { appendOrSpoolTrack } from "./spool/appendOrSpoolTrack.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
@@ -13,26 +14,31 @@ type QueueClient = Pick<BalanceWorkerClient, "queue">;
 export async function runBalanceWorkerAsyncTrack({
 	ctx,
 	body,
-	recordsCreditCost,
+	tokens,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
-	recordsCreditCost?: boolean;
+	/** A track_tokens cost: the event records `credit_cost`, and a spooled replay prices it the same way. */
+	tokens?: TokenDeduction;
 	client?: QueueClient;
 }): Promise<void> {
-	const commands = trackParamsToTrackCommands({ ctx, body, recordsCreditCost });
-	// A failed append is a 503, which releases the claim so the client can retry.
+	const commands = trackParamsToTrackCommands({
+		ctx,
+		body,
+		recordsCreditCost: tokens !== undefined,
+	});
+	// Queued on Kafka or spooled to SQS keeps the claim; a 503 when both fail releases it so the client can retry.
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
 		routeGroup: RouteGroup.Balances,
-		run: async () => {
-			try {
-				await client.queue.track({ commands });
-			} catch (cause) {
-				rethrowBalanceWorkerError({ cause });
-			}
-		},
+		run: () =>
+			appendOrSpoolTrack({
+				ctx,
+				body,
+				tokens,
+				append: ({ signal }) => client.queue.track({ commands, signal }),
+			}),
 	});
 }

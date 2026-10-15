@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
 import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
@@ -115,6 +117,54 @@ describe("shouldRetrySqsJobError", () => {
 			shouldRetrySqsJobError({
 				jobName: JobName.Track,
 				error: new Error("insufficient balance"),
+			}),
+		).toBe(false);
+	});
+
+	test("retries track jobs while the balance worker gives no verdict or applies nothing", () => {
+		const retriable = [
+			new RecaseError({
+				code: "balance_worker_unavailable",
+				statusCode: 503,
+				message: "Balance worker is temporarily unavailable",
+			}),
+			new RecaseError({
+				code: "balance_worker_result_unknown",
+				statusCode: 503,
+				message: "Balance worker did not confirm the command",
+			}),
+			new RecaseError({
+				code: "balance_worker_overloaded",
+				statusCode: 429,
+				message: "Too many concurrent requests for this customer",
+			}),
+			new RecaseError({
+				code: "balance_worker_stale_subject",
+				statusCode: 409,
+				message: "Customer changed while the command was decided",
+			}),
+			new BalanceWorkerClientError({
+				code: "WORKER_ERROR",
+				outcome: "unknown",
+				message: "Worker answered 500",
+			}),
+			new SpooledTrackTooOldError({ ageMs: 900_000 }),
+		];
+		for (const error of retriable)
+			expect(shouldRetrySqsJobError({ jobName: JobName.Track, error })).toBe(
+				true,
+			);
+	});
+
+	test("does not retry track jobs on a balance worker verdict", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.Track,
+				error: new RecaseError({
+					code: "balance_worker_record_refused",
+					statusCode: 500,
+					message: "Balance worker could not store this command",
+				}),
 			}),
 		).toBe(false);
 	});

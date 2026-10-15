@@ -22,11 +22,14 @@ export function createWorkerFixture({
 	records,
 	now,
 	catalogRows = [],
+	recentCommandsClock = () => 0,
 }: {
 	stateStore: StateStore;
 	records: MeteringRecord[];
 	now: number;
 	catalogRows?: CatalogRow[];
+	/** The clock the partition's in-memory command-id dedupe ages by. */
+	recentCommandsClock?: () => number;
 }) {
 	/** Postgres stand-in: no customers, and only the catalog rows the test hands over. */
 	const db: WorkerDb = {
@@ -81,7 +84,10 @@ export function createWorkerFixture({
 				},
 			}),
 			receiptPolicy: { retentionMs: 86_400_000, now: () => now },
-			recentCommands: createRecentCommands({ windowMs: 600_000, now: () => 0 }),
+			recentCommands: createRecentCommands({
+				windowMs: 600_000,
+				now: recentCommandsClock,
+			}),
 			assertCanRead: () => undefined,
 		},
 		config: {
@@ -133,5 +139,5 @@ export function createWorkerFixture({
 		},
 		config: { partitionCount: 1, timeoutMs: 1_000 },
 	});
-	return { client, close: () => processor.drain() };
+	return { client, processor, close: () => processor.drain() };
 }

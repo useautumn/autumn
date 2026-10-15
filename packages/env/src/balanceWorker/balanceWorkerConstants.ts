@@ -11,6 +11,11 @@ export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
  *  fitting, so that is bounded separately instead of widening this. */
 export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
 export const BALANCE_WORKER_FETCH_MAX_WAIT_MS = 250;
+/** A queued track whose command-log append has not acked by this is also written to SQS, and answered once either
+ *  write lands. Prod's queued tracks run under 170ms end to end at p99.99, so a healthy append never gets here. */
+export const BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS = 250;
+/** How long a queued track keeps retrying Kafka when SQS refused it too, the same budget the client gives an append. */
+export const BALANCE_WORKER_TRACK_APPEND_DEADLINE_MS = 3_000;
 
 /** A partition moving is routine, and the refresh lets a request that arrived
  *  mid-move still land instead of failing outright. But it must not spend the
@@ -25,6 +30,10 @@ export const BALANCE_WORKER_RECEIPT_RETENTION_MS = 86_400_000;
 /** How long a partition remembers an applied command id: long enough for a caller's
  *  retry after a 503, not the 24h the idempotency key claim already covers. */
 export const BALANCE_WORKER_DEDUP_WINDOW_MS = 600_000;
+/** A spooled track replayed later than this could arrive after the worker forgot its command id, so it is refused.
+ *  The margin covers clock skew between servers and a lagging command consumer. */
+export const BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS =
+	BALANCE_WORKER_DEDUP_WINDOW_MS - 180_000;
 /** The boot scan's offset lookup is best effort: past this it is skipped, never waited on. */
 export const BALANCE_WORKER_REPLAY_FLOOR_LOOKUP_TIMEOUT_MS = 5_000;
 export const BALANCE_WORKER_CHECKPOINT_PREFIX = "balance-checkpoints";

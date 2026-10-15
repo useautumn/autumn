@@ -11,6 +11,10 @@ import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyK
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { TokenDeduction } from "../utils/types/featureDeduction.js";
 import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
+import {
+	assertSpooledTrackReplayable,
+	logSpooledTrackDrained,
+} from "./balanceWorker/spool/spooledTrackReplay.js";
 import { getValidatedTrackFeatureDeductions } from "./utils/getValidatedTrackFeatureDeductions.js";
 import { toTokenFeatureDeduction } from "./utils/tokenFeatureDeduction.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
@@ -21,6 +25,7 @@ export const runQueuedTrack = async ({
 	apiVersion,
 	tokens,
 	validateTrackBodyIdempotencyKey = true,
+	spooledAt,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
@@ -31,6 +36,8 @@ export const runQueuedTrack = async ({
 	 *  (queueTrack marks them false); batch messages have no accept-time
 	 *  claim, so the worker's claim is their only body-key dedup. */
 	validateTrackBodyIdempotencyKey?: boolean;
+	/** Set when a worker-path track was spooled because its command-log append failed or stalled. */
+	spooledAt?: number;
 }) => {
 	const featureDeductions = getValidatedTrackFeatureDeductions({
 		ctx,
@@ -40,7 +47,15 @@ export const runQueuedTrack = async ({
 			? toTokenFeatureDeduction({ feature: deduction.feature, tokens })
 			: deduction,
 	);
+	const onWorker = isBalanceWorkerRolloutEnabled({
+		ctx,
+		customerId: body.customer_id,
+	});
+	// A late-landing original append is only deduplicated while the worker still remembers its command id.
+	if (spooledAt !== undefined && onWorker)
+		assertSpooledTrackReplayable({ ctx, body, spooledAt });
 
+	let alreadyApplied = false;
 	try {
 		await withIdempotencyKey({
 			ctx,
@@ -50,12 +65,12 @@ export const runQueuedTrack = async ({
 			routeGroup: RouteGroup.Balances,
 			// Claimed here, so the worker path must not claim it again.
 			run: () =>
-				isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })
+				onWorker
 					? runBalanceWorkerTrack({
 							ctx,
 							body,
 							validateTrackBodyIdempotencyKey: false,
-							recordsCreditCost: tokens !== undefined,
+							tokens,
 						})
 					: runTrackV3({ ctx, body, featureDeductions, apiVersion }),
 		});
@@ -67,6 +82,7 @@ export const runQueuedTrack = async ({
 			throw error;
 		}
 
+		alreadyApplied = true;
 		ctx.logger.info("[track] queued replay already applied", {
 			type: "track_queue_replay_duplicate",
 			customer_id: body.customer_id,
@@ -75,4 +91,6 @@ export const runQueuedTrack = async ({
 			event_name: body.event_name,
 		});
 	}
+	if (spooledAt !== undefined)
+		logSpooledTrackDrained({ ctx, body, spooledAt, onWorker, alreadyApplied });
 };
