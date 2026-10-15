@@ -30,7 +30,10 @@ afterEach(() => {
 		rmSync(folder, { recursive: true, force: true });
 });
 
-const otherOrg: TrackCommand["org"] = { ...org, default_currency: "eur" };
+const otherOrg: TrackCommand["org"] = {
+	...org,
+	config: { ...org.config, include_past_due: !org.config.include_past_due },
+};
 
 const commandOf = ({
 	commandId,
