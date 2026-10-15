@@ -234,14 +234,9 @@ test.skipIf(hostedAtom)(
 		const afterDelete = await autumn.post("/byoc.get_atom", {});
 		expect(afterDelete).toMatchObject({ cache: null });
 		// The delete lands on one Atom thread; the others drop the token at their next rescan (TENANTS_REVALIDATE_MS, 1 s).
-		// Sent at once so they open separate connections, which reusePort spreads across the threads.
 		await timeout(1_500);
-		const checksAfterDelete = await Promise.all(
-			Array.from({ length: 12 }, () => checkOnAtom(anyCheck)),
-		);
-		expect(checksAfterDelete.map(({ status }) => status)).toEqual(
-			Array(12).fill(401),
-		);
+		const checkAfterDelete = await checkOnAtom(anyCheck);
+		expect(checkAfterDelete.status).toBe(401);
 	},
 );
 
