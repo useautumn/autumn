@@ -193,9 +193,9 @@ const fieldConditions = ({
 			ctx,
 		});
 	}
+	const nestedKeys = new Set(field.nested);
 	const readsWholeObject =
-		isFilter(value) &&
-		Object.keys(value).every((key) => field.nested?.includes(key));
+		isFilter(value) && Object.keys(value).every((key) => nestedKeys.has(key));
 	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
 		label: field.label(ctx),
