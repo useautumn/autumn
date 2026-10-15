@@ -72,7 +72,8 @@ export const enumMatcher = <T extends readonly [string, ...string[]]>(
 export const nullableObjectFilter = <T extends z.ZodTypeAny>(inner: T) =>
 	z.union([
 		z.null(),
-		z.object({
+		// Strict, or it matches any object and strips the nested conditions.
+		z.strictObject({
 			$eq: z.null().optional(),
 			$ne: z.null().optional(),
 		}),
