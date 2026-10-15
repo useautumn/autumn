@@ -122,7 +122,12 @@ function openDebugFile(): { write(line: string): void } | null {
 	const writer = Bun.file(
 		`${base}.${process.pid}.${crypto.randomUUID().slice(0, 6)}.log`,
 	).writer({ highWaterMark: 1 << 16 });
-	const flush = setInterval(() => void writer.flush(), 250);
-	flush.unref?.();
-	return { write: (line) => void writer.write(line) };
+	function flush(): void {
+		void writer.flush();
+	}
+	function write(line: string): void {
+		void writer.write(line);
+	}
+	setInterval(flush, 250).unref?.();
+	return { write };
 }
