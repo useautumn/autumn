@@ -333,7 +333,7 @@ describe("rows that can't be stored report an issue", () => {
 	});
 });
 
-describe("rows that collide in the incoming plan element combine with $and", () => {
+describe("a row that collides in the incoming plan element becomes an $and entry", () => {
 	const quantity = (feature_id: string, quantity: number): EditorRow => ({
 		field: "feature_quantity",
 		operator: "lte",
@@ -342,6 +342,17 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 	const quantityLimit = (feature_id: string, limit: number) => ({
 		feature_quantities: { $none: { feature_id, quantity: { $gt: limit } } },
 	});
+	const trialCap = {
+		$or: [
+			{ free_trial: null },
+			...(["day", "month", "year"] as const).map((type, index) => ({
+				free_trial: {
+					duration_type: type,
+					duration_length: { $lt: 60 / [1, 30, 365][index] },
+				},
+			})),
+		],
+	};
 
 	test.each<{
 		name: string;
@@ -356,27 +367,44 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 				sampleRow("free_trial", "lt"),
 			],
 			element: {
-				$and: [
-					{ $or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }] },
-					{
-						$or: [
-							{ free_trial: null },
-							...(["day", "month", "year"] as const).map((type, index) => ({
-								free_trial: {
-									duration_type: type,
-									duration_length: { $lt: 60 / [1, 30, 365][index] },
-								},
-							})),
-						],
-					},
-				],
+				$or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
+				$and: [trialCap],
+			},
+		},
+		{
+			name: "Incoming plan · is with a version, beside is any of with a version",
+			rows: [
+				sampleRow("incoming_plan", "is"),
+				sampleRow("incoming_plan", "is_any_of"),
+			],
+			element: {
+				plan_id: "pro",
+				version: 2,
+				$or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
+			},
+		},
+		{
+			name: "Incoming plan · is with a version, beside is any of without one",
+			rows: [
+				sampleRow("incoming_plan", "is"),
+				{
+					field: "incoming_plan",
+					operator: "is_any_of",
+					value: [{ plan_id: "pro" }, { plan_id: "team" }],
+				},
+			],
+			element: {
+				plan_id: "pro",
+				version: 2,
+				$and: [{ plan_id: { $in: ["pro", "team"] } }],
 			},
 		},
 		{
 			name: "two Quantity rows",
 			rows: [quantity("seats", 10), quantity("workers", 5)],
 			element: {
-				$and: [quantityLimit("seats", 10), quantityLimit("workers", 5)],
+				...quantityLimit("seats", 10),
+				$and: [quantityLimit("workers", 5)],
 			},
 		},
 		{
@@ -386,14 +414,10 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 				quantity("seats", 10),
 			],
 			element: {
-				$and: [
-					{
-						feature_quantities: {
-							$none: { feature_id: "seats", quantity: { $lt: 5 } },
-						},
-					},
-					quantityLimit("seats", 10),
-				],
+				feature_quantities: {
+					$none: { feature_id: "seats", quantity: { $lt: 5 } },
+				},
+				$and: [quantityLimit("seats", 10)],
 			},
 		},
 		{
@@ -406,11 +430,8 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 			],
 			element: {
 				paid: true,
-				$and: [
-					quantityLimit("seats", 10),
-					quantityLimit("a", 1),
-					quantityLimit("b", 2),
-				],
+				...quantityLimit("seats", 10),
+				$and: [quantityLimit("a", 1), quantityLimit("b", 2)],
 			},
 			readsBack: [
 				sampleRow("incoming_paid", "is"),

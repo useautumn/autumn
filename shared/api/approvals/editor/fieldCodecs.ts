@@ -6,14 +6,17 @@ import type {
 	TrialDuration,
 } from "./editorFields";
 import {
+	at,
 	type Filter,
 	fromNumberMatcher,
 	fromPlanFilter,
 	fromStringMatcher,
+	get,
 	isCapOperator,
 	isEmptyObject,
 	isPlanBranches,
 	NEGATED_NUMBER_OPERATORS,
+	planSelectionsOf,
 	type RowRead,
 	toMatcher,
 	toPlanFilter,
@@ -26,16 +29,6 @@ type FieldCodec = {
 	toFilter: (row: EditorRow) => Filter | null;
 	fromFilter: (group: Filter) => RowRead[];
 };
-
-/** `{ a: { b: leaf } }` from `["a", "b"]`. */
-const at = (path: string[], leaf: unknown): Filter =>
-	path.reduceRight<unknown>((inner, key) => ({ [key]: inner }), leaf) as Filter;
-
-const get = (value: unknown, path: string[]) =>
-	path.reduce<unknown>(
-		(inner, key) => (isPlainObject(inner) ? inner[key] : undefined),
-		value,
-	);
 
 /** The incoming plan element; rows that collide in it are combined with `$and`. */
 export const INCOMING_PLAN = ["incoming", "$every"];
@@ -101,14 +94,13 @@ const planReads = ({
 	filter: unknown;
 	negative: boolean;
 }) => {
-	const selection = fromPlanFilter(filter);
-	if (!selection) return [];
 	const [single, many] = negative
 		? ["is_not", "is_none_of"]
 		: ["is", "is_any_of"];
-	return [
-		{ operator: Array.isArray(selection) ? many : single, value: selection },
-	];
+	return planSelectionsOf(filter).map((selection) => ({
+		operator: Array.isArray(selection) ? many : single,
+		value: selection,
+	}));
 };
 
 /** Every plan must match ("is"), or none may ("is not"). */
