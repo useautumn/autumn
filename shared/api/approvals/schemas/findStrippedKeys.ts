@@ -28,7 +28,7 @@ export const findStrippedKeys = ({
 	if (!isPlainObject(input) || !isPlainObject(output)) return [];
 
 	return Object.entries(input).flatMap(([key, value]) =>
-		key in output
+		Object.hasOwn(output, key)
 			? findStrippedKeys({
 					input: value,
 					output: output[key],

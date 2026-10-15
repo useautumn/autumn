@@ -235,6 +235,11 @@ const INVALID: { name: string; rule: unknown; path: string }[] = [
 		path: "when.$or.1.charges",
 	},
 	{
+		name: "unknown field named like an Object.prototype key",
+		rule: invalid({ when: { valueOf: true } }),
+		path: "when.valueOf",
+	},
+	{
 		name: "bad enum value",
 		rule: invalid({ when: { plan_schedule: "tomorrow" } }),
 		path: "when.plan_schedule",
