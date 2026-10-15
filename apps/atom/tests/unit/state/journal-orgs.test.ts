@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { FinalizeCommand, TrackCommand } from "@autumn/balance-engine";
 import type { AtomTracksAppendRequest } from "@autumn/byoc";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
@@ -162,6 +162,32 @@ describe("journal orgs", () => {
 			reopened.owed({ customerId: "cus_old" }).map((entry) => entry.command),
 		).toEqual([command]);
 		expect(await handedIn(reopened)).toEqual([command]);
+	});
+
+	test("a finalize, its org beside its lock, is rebuilt on open with that org as a track is", async () => {
+		const databasePath = journalPath();
+		const track = commandOf({ commandId: "d1", customerId: "cus_d" });
+		const finalize = {
+			...commandOf({
+				commandId: "d2",
+				customerId: "cus_d",
+				org: otherOrgOf(track),
+			}),
+			type: "finalize",
+		} as unknown as FinalizeCommand;
+		const writer = open(databasePath);
+		await writer.append({ customerId: "cus_d", command: track });
+		await writer.append({ customerId: "cus_d", command: finalize });
+		close(writer);
+
+		expect(
+			rowsIn(databasePath).commands.some((command) => "org" in command),
+		).toBe(false);
+		expect(
+			open(databasePath)
+				.owed({ customerId: "cus_d" })
+				.map(({ command }) => command),
+		).toEqual([track, finalize]);
 	});
 
 	test("after a restart, the forwarder hands in the same commands it would have before it", async () => {
