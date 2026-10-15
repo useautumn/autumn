@@ -2,11 +2,14 @@ import type { Membership } from "./types/membership.js";
 
 /** Peers a deployment can hold at once; the table is fixed-size so threads can share it. */
 const MAX_PEERS = 8;
-const INTS_PER_PEER = 3;
+const INTS_PER_PEER = 4;
 /** After the peer's address, in each row. */
 const STATE = 1;
 const LEFT_AT_S = 2;
+/** The leaver's threads that have handed everything; HANDOFF_COMPLETE once all of them have. */
+const HANDOFF_DONE = 3;
 const LEAVING = 1;
+const HANDOFF_COMPLETE = 1 << 30;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
 export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
 /** A leave holds this long whatever the service name lists: the container back under the address is counted after it.
@@ -74,8 +77,23 @@ export const createMembership = ({
 		isLeaving,
 		markLeaving: (address) => {
 			const at = rowFor(address);
+			if (!leavingAt(at)) Atomics.store(table, at + HANDOFF_DONE, 0);
 			Atomics.store(table, at + LEFT_AT_S, Math.floor(now() / 1000));
 			Atomics.store(table, at + STATE, LEAVING);
+		},
+		handoffCompleted: ({ address, threads }) => {
+			const at = rowFor(address);
+			const done = Atomics.add(table, at + HANDOFF_DONE, 1) + 1;
+			if (done < threads) return false;
+			Atomics.or(table, at + HANDOFF_DONE, HANDOFF_COMPLETE);
+			return true;
+		},
+		isHandoffComplete: (address) => {
+			const at = rowOf(address);
+			return (
+				at >= 0 &&
+				(Atomics.load(table, at + HANDOFF_DONE) & HANDOFF_COMPLETE) !== 0
+			);
 		},
 		keepOnly: (addresses) => {
 			const kept = new Set(addresses.map(codeOf));
@@ -85,6 +103,7 @@ export const createMembership = ({
 				if (code === 0 || kept.has(code) || leavingAt(at)) continue;
 				Atomics.store(table, at + STATE, 0);
 				Atomics.store(table, at + LEFT_AT_S, 0);
+				Atomics.store(table, at + HANDOFF_DONE, 0);
 				Atomics.store(table, at, 0);
 			}
 		},

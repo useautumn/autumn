@@ -9,11 +9,13 @@ export const trackCallToRequest = ({
 	apiVersionHeader,
 	requestId,
 	occurredAt,
+	movedFrom = null,
 }: {
 	body: unknown;
 	apiVersionHeader: string | undefined;
 	requestId: string;
 	occurredAt: number;
+	movedFrom?: string | null;
 }): TrackRequest => {
 	const params = TrackParamsSchema.safeParse(body);
 	const apiVersion = headerToApiVersion({ header: apiVersionHeader });
@@ -30,5 +32,6 @@ export const trackCallToRequest = ({
 		idempotencyKey: params.data.idempotency_key || null,
 		params: params.data,
 		apiVersion,
+		movedFrom,
 	};
 };

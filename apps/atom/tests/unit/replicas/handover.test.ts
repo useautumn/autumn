@@ -274,6 +274,17 @@ describe("a replica leaving the ring", () => {
 		expect(autumn.calls).toEqual(["/v1/balances.check"]);
 	});
 
+	test("names, before it leaves, the member that takes each of its customers, and nobody when it is alone", async () => {
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		expect(await a.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
+		expect(await a.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(B);
+
+		const alone = createReplica({ address: A, peers: [], ringPeers: [] });
+		expect(await alone.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(
+			null,
+		);
+	});
+
 	test("stays out of the ring while the service name drops and relists it, and is counted again once its leave has aged out", async () => {
 		let clock = 1_000_000;
 		const listed = [A];
@@ -366,6 +377,58 @@ describe("the leaving replica's owed entries", () => {
 		expect(keys).toHaveLength(4);
 		expect(new Set(keys).size).toBe(2);
 		expect(keys.every((key) => key.startsWith(`${writer}/`))).toBe(true);
+	});
+});
+
+describe("a moved customer's first requests", () => {
+	test("H5: a moved customer's first request waits for its handoff and, past the barrier, goes on without it", async () => {
+		const { a, b } = await agreeingPair();
+		await deductOnA({ a, times: 2 });
+		handoffNetwork({ replicas: [a, b], holdMs: 200 });
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const startedAt = performance.now();
+		const late = await remainingAt(b);
+		const waitedMs = performance.now() - startedAt;
+		await leaving;
+
+		expect(late).toBe(10);
+		expect(waitedMs).toBeGreaterThanOrEqual(45);
+		expect(b.stats().handoffLate).toBe(1);
+		expect(await remainingAt(b)).toBe(8);
+	});
+
+	test("a moved customer that owed nothing is answered at once, once the leaver has said it handed everything", async () => {
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+
+		await a.leave();
+		const startedAt = performance.now();
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+		const waitedMs = performance.now() - startedAt;
+
+		expect((await reply.json()).balance.remaining).toBe(10);
+		expect(waitedMs).toBeLessThan(40);
+		expect(b.membership.isHandoffComplete(A)).toBe(true);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+
+	test("a moved customer's first request inside the barrier is answered with the handed entries", async () => {
+		const { a, b } = await agreeingPair();
+		await deductOnA({ a, times: 2 });
+		handoffNetwork({ replicas: [a, b], holdMs: 20 });
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const first = await remainingAt(b);
+		await leaving;
+
+		expect(first).toBe(8);
+		expect(b.stats().handoffLate).toBe(0);
 	});
 });
 

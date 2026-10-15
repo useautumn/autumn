@@ -2,6 +2,8 @@ import { z } from "zod/v4";
 
 export const PEER_HANDOFF_PATH = "/v1/_peer/journal.handoff";
 
+/** How long the new owner holds a moved customer's first requests for its handoff before answering from its own copy. */
+export const HANDOFF_BARRIER_MS = 50;
 /** Entries per handoff request: one transaction on each side, as tracks.append's batches are for Autumn. */
 export const MAX_HANDOFF_ENTRIES = 500;
 

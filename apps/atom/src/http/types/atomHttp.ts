@@ -54,6 +54,8 @@ export type AtomHttpEnv = {
 		/** The request's JSON, or undefined when it carried none that parses. */
 		body: unknown;
 		slots: Slots;
+		/** Set by the ring hop when the customer just moved here from a leaving replica: its answer waits for the handoff. */
+		movedFrom?: string;
 		/** Set only when Atom answered a check itself, so its line need not read the body. */
 		allowed?: boolean;
 		/** Set when another replica passed the request on: applied here, passed no further. */

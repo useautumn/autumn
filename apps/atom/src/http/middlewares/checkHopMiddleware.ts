@@ -64,6 +64,11 @@ export function checkHopMiddleware({
 		// Leaving with nobody left to own the customer: the API answers, as it did a stopping replica's 503.
 		if (peer.membership?.isSelfLeaving())
 			throw new CannotAnswerError({ reason: "owner_unavailable" });
+		// A customer that just moved here: its old owner's entries for it are on their way, and its answer waits for them.
+		if (customerId && peer.membership) {
+			const from = await peer.ring.movedFrom({ customerId });
+			if (from !== null) context.set("movedFrom", from);
+		}
 		if (isServing(ctx.health)) return null;
 		const [ready] = await ctx.replication.peers();
 		return ready ? { to: ready, answeredBy: "starting" } : null;

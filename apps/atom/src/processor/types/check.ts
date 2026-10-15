@@ -17,6 +17,8 @@ export type CheckRequest = {
 	query: CheckQuery;
 	/** Null when the caller named no `x-api-version`. */
 	apiVersion: ApiVersionClass | null;
+	/** The leaving replica this customer just moved here from, whose handoff the answer waits for; null otherwise. */
+	movedFrom: string | null;
 };
 
 /** A decided check: the API's response, and the engine's result it was rendered from. */

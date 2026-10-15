@@ -14,6 +14,7 @@ import {
 	SUBJECT_PUSH,
 } from "../../../src/pushes/applyPushes.js";
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { createHandoffBarrier } from "../../../src/replicas/handover/createHandoffBarrier.js";
 import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
 import { createMembership } from "../../../src/replicas/membership/createMembership.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
@@ -79,6 +80,8 @@ export const createReplica = ({
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
+	const membership = createMembership({ self: address, now });
+	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const auth = createDeployedAuth({
 		journalForwarder,
 		dataDir,
@@ -88,6 +91,7 @@ export const createReplica = ({
 		held: freshHeld(),
 		now,
 		subjectPulls: noSubjectPulls,
+		barrier,
 	});
 	const replication = createReplication({
 		ctx: {
@@ -102,7 +106,6 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
-	const membership = createMembership({ self: address, now });
 	const ring = createReplicaRing({
 		ctx: {
 			resolver: { peers: async () => ringPeers },
@@ -161,6 +164,7 @@ export const createReplica = ({
 					ring,
 					membership,
 					folders: createDeployedFolders({ slots: auth.slots }),
+					threads: 1,
 					peer: { port: PEER_PORT, secret },
 					logger: quiet,
 				},

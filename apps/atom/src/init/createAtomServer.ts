@@ -10,8 +10,6 @@ import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { createReplicaRing } from "../replicas/createReplicaRing.js";
 import { leaveRing } from "../replicas/handover/leaveRing.js";
-import { createMembership } from "../replicas/membership/createMembership.js";
-import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -61,15 +59,13 @@ export const createAtomServer = ({
 			: undefined;
 	const loop = startLoopWatch();
 	let stopping = false;
-	// A replica set on one machine is reached at its loopback hostname, not the machine's own address.
-	const own = () =>
-		env.ATOM_PEERS_FILE ? [env.ATOM_HOSTNAME] : ownAddresses();
-	const membership = createMembership({
-		self: own()[0] ?? env.ATOM_HOSTNAME,
-		table: ctx.membershipTable,
-	});
+	const { membership } = ctx;
 	const ring = createReplicaRing({
-		ctx: { resolver: ctx.replication, own, membership },
+		ctx: {
+			resolver: ctx.replication,
+			own: () => [membership.self],
+			membership,
+		},
 	});
 	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
 	const httpContext = {
@@ -138,7 +134,14 @@ export const createAtomServer = ({
 	 */
 	async function stop(): Promise<void> {
 		await leaveRing({
-			ctx: { ring, membership, folders: ctx.folders, peer, logger: ctx.logger },
+			ctx: {
+				ring,
+				membership,
+				folders: ctx.folders,
+				threads: env.ATOM_THREADS,
+				peer,
+				logger: ctx.logger,
+			},
 		});
 		pushReceiver?.stop();
 		await receiving;

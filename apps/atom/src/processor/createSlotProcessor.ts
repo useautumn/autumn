@@ -39,9 +39,25 @@ export const createSlotProcessor = ({
 		throw new CannotAnswerError({ reason: "subject_not_written" });
 	};
 
+	const awaitHandoff = async ({
+		customerId,
+		movedFrom,
+	}: {
+		customerId: string;
+		movedFrom: string | null;
+	}) => {
+		if (movedFrom && ctx.barrier)
+			await ctx.barrier.wait({ customerId, from: movedFrom });
+	};
+
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
+			// The handoff first: a moved customer's keys arrive with its entries, so the claim reads them.
+			await awaitHandoff({
+				customerId: request.params.customer_id,
+				movedFrom: request.movedFrom,
+			});
 			return callerKeys.run({
 				customerId: request.params.customer_id,
 				key: checkCallerKeyOf({ request }),
@@ -59,6 +75,10 @@ export const createSlotProcessor = ({
 		},
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
+			await awaitHandoff({
+				customerId: request.params.customer_id,
+				movedFrom: request.movedFrom,
+			});
 			return callerKeys.run({
 				customerId: request.params.customer_id,
 				key: trackCallerKeyOf({ request }),
@@ -80,11 +100,14 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
-		receiveHandoff: async ({ handoffs }) => ({
-			held: await ctx.journal.appendForeign({
+		receiveHandoff: async ({ handoffs }) => {
+			const held = await ctx.journal.appendForeign({
 				entries: handoffs.flatMap(({ entries }) => entries),
-			}),
-		}),
+			});
+			for (const { customerId } of handoffs)
+				ctx.barrier?.arrived({ customerId });
+			return { held };
+		},
 		deleteSubject: async (params) =>
 			deleteSubject({ ctx, subject: deletePushToDeletedSubject(params) }),
 	};

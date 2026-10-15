@@ -17,6 +17,7 @@ export const THREAD_STAT_FIELDS = [
 	/** Checks another replica answered (the customer's owner, or a ready peer while this one starts); and those the owner could not take, left to the API. */
 	"checksProxied",
 	"ownerUnavailable",
+	"handoffLate",
 	/** Checks the stored rows could not answer: no customer, no entity, or an entity read before its customer's evict. */
 	/** What this thread's journals hold that Autumn does not, and how long the oldest of it has waited. */
 	"journalUnsent",

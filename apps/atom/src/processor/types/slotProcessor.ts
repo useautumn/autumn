@@ -1,6 +1,7 @@
 import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
+import type { HandoffBarrier } from "../../replicas/handover/createHandoffBarrier.js";
 import type {
 	HandedEntry,
 	Journal,
@@ -22,6 +23,8 @@ export type SlotProcessorContext = {
 	journal: Journal;
 	/** The locks this slot took: a retried lock_id is compared with its track, a finalize carries its row. */
 	openLocks: OpenLocks;
+	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
+	barrier?: HandoffBarrier;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */
