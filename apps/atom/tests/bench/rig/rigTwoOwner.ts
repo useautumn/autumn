@@ -20,13 +20,9 @@ export type SwapWindow = {
 	from: number;
 	to: number;
 	startedAt: number | null;
-	/** The join (peer → this replica) stays legal until this replica's next swap: a sparse customer's first request after the restart can come after `to`. */
-	joinUntil: number;
 };
 
 const WINDOW_TAIL_MS = 15_000;
-/** A request already being decided at its replica's SIGTERM finishes there (the Atom's IN_FLIGHT_WAIT_MS). */
-const IN_FLIGHT_GRACE_MS = 2_000;
 
 /** The marks of one replica's swaps, k-th with k-th: each swap starts at a SIGTERM (or an unplanned kill9). */
 const swapMarksOf = ({
@@ -68,18 +64,12 @@ export const swapWindowsOf = ({ marks }: { marks: Mark[] }): SwapWindow[] =>
 					: [],
 			),
 		)
-		.sort((x, y) => x.from - y.from)
-		.map((window, index, sorted) => ({
-			...window,
-			joinUntil: Math.max(
-				window.to,
-				(sorted.slice(index + 1).find((next) => next.replica === window.replica)
-					?.from ?? Number.POSITIVE_INFINITY) + IN_FLIGHT_GRACE_MS,
-			),
-		}));
+		.sort((x, y) => x.from - y.from);
 
 type Switch = {
 	customerId: string;
+	/** The switch happened between the old owner's last decision and the new owner's first. */
+	prevAt: number;
 	at: number;
 	from: string;
 	to: string;
@@ -88,9 +78,9 @@ type Switch = {
 };
 
 /**
- * Per customer: duplicates (writer, seq) dropped, sorted by appendedAt, each change of deciding replica is a switch. In a
- * swap of X (peer Y) the legal moves are one X→Y (the leave) then one Y→X at or after X's restart (the join); every
- * other switch, and any switch outside every window, is a two-owner event.
+ * Per customer: duplicates (writer, seq) dropped, sorted by appendedAt; a change of deciding replica is a switch, placed
+ * between the two decisions. In a swap of X (peer Y) the legal moves are one X→Y then one Y→X decided after X restarted;
+ * any other switch overlapping a window, or a switch overlapping none, is a two-owner event.
  */
 export const detectTwoOwner = ({
 	handIns,
@@ -130,15 +120,15 @@ export const detectTwoOwner = ({
 		// Per window, which legal move this customer may still make: 0 = the leave, 1 = the join, 2 = none.
 		const expect = windows.map(() => 0);
 		for (let i = 1; i < sorted.length; i++) {
-			const [, fromWriter] = sorted[i - 1] as HandIn;
+			const [, fromWriter, , prevAt] = sorted[i - 1] as HandIn;
 			const [, toWriter, , at] = sorted[i] as HandIn;
 			const from = replicaOf(fromWriter);
 			const to = replicaOf(toWriter);
 			if (from === to) continue;
-			const sw = { customerId, at, from, to, fromWriter, toWriter };
+			const sw = { customerId, prevAt, at, from, to, fromWriter, toWriter };
 			const inside = windows
 				.map((window, index) => ({ window, index }))
-				.filter(({ window }) => at >= window.from && at <= window.joinUntil);
+				.filter(({ window }) => prevAt <= window.to && at >= window.from);
 			if (inside.length === 0) {
 				outside.events++;
 				outside.customers.add(customerId);
@@ -149,12 +139,7 @@ export const detectTwoOwner = ({
 				(perWindow[index] as { switches: number }).switches++;
 			const legal = inside.find(({ window, index }) => {
 				const peer = window.replica === "a" ? "b" : "a";
-				if (
-					expect[index] === 0 &&
-					at <= window.to &&
-					from === window.replica &&
-					to === peer
-				) {
+				if (expect[index] === 0 && from === window.replica && to === peer) {
 					expect[index] = 1;
 					return true;
 				}

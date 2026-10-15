@@ -3,9 +3,10 @@
  * every swap, with the swap's events as markers, then the gap windows: the first and last second a class saw anything but
  * an answer, and the P1 reconciliation. `bun run rig:rollreport <run dir>`.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type OwnerClass, percentileOf, type RollCounts } from "./rigShared.js";
+import { detectTwoOwner, type HandIn, swapWindowsOf } from "./rigTwoOwner.js";
 
 const dir = process.argv[2];
 if (!dir) throw new Error("Usage: rig:rollreport <run dir>");
@@ -21,6 +22,25 @@ const seconds = lines
 	.filter((line): line is Second => line.type === "second")
 	.sort((x, y) => x.second - y.second);
 const summary = JSON.parse(readFileSync(join(dir, "summary.json"), "utf8"));
+// Re-run the detector from the hand-ins, so a run is read with this checkout's detector whatever the box ran.
+if (existsSync(join(dir, "handins.json")) && summary.writers) {
+	const replicaOfWriter: Record<string, OwnerClass> = Object.fromEntries(
+		(["a", "b"] as const).flatMap((replica) =>
+			(summary.writers[replica] as string[]).map((writerId) => [
+				writerId,
+				replica,
+			]),
+		),
+	);
+	summary.twoOwner = detectTwoOwner({
+		handIns: JSON.parse(
+			readFileSync(join(dir, "handins.json"), "utf8"),
+		) as HandIn[],
+		replicaOfWriter,
+		windows: swapWindowsOf({ marks: summary.marks }),
+	});
+	writeFileSync(join(dir, "summary.json"), JSON.stringify(summary, null, 2));
+}
 
 const record = (counts: Record<string, number>) =>
 	Object.entries(counts)
