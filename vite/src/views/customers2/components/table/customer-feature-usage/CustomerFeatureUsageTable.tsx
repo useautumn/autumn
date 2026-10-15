@@ -17,7 +17,6 @@ import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import {
 	type CustomerProductsStatusOption,
 	DEFAULT_PRODUCT_STATUSES,
@@ -39,8 +38,7 @@ import {
 } from "./customerFeatureUsageUtils";
 
 export function CustomerFeatureUsageTable() {
-	const { customer } = useCustomerContext();
-	const { features, isLoading } = useCusQuery();
+	const { customer, features, isLoading } = useCusQuery();
 	const { setSheet } = useSheetStore();
 
 	const { entityId } = useEntity();

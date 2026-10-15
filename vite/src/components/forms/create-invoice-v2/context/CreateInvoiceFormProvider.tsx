@@ -18,6 +18,7 @@ import { fullPlanLicensesToPlanLicenses } from "@/hooks/queries/usePlanLicensesQ
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import type { CreateInvoiceForm } from "../createInvoiceFormSchema";
 import {
@@ -66,14 +67,12 @@ export function CreateInvoiceFormProvider({
 }: {
 	children: ReactNode;
 }) {
+	const { customer } = useCusQuery();
 	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { rewards } = useRewardsQuery();
-	const {
-		customer,
-		setIsInlineEditorOpen,
-		entityId: pageEntityId,
-	} = useCustomerContext();
+	const { setIsInlineEditorOpen, entityId: pageEntityId } =
+		useCustomerContext();
 	const form = useCreateInvoiceForm({ defaultEntityId: pageEntityId });
 	const formValues = useStore(form.store, (state) => state.values);
 

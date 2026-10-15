@@ -62,8 +62,8 @@ export function BillingUsageAlertSheet() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
-	const { refetch } = useCusQuery();
-	const { customer, entityId } = useCustomerContext();
+	const { customer, refetch } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 

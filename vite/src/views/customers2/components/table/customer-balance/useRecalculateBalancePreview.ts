@@ -4,7 +4,7 @@ import type {
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getRecalculateBalanceParams } from "./customerBalanceUtils";
 
 export const useRecalculateBalancePreview = ({
@@ -17,7 +17,7 @@ export const useRecalculateBalancePreview = ({
 	enabled: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const customerId = customer?.id || customer?.internal_id;
 	const featureId = balance?.entitlement.feature.id;
 	return useQuery({

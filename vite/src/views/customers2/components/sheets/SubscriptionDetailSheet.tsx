@@ -43,7 +43,6 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { paymentMethodLabel } from "@/utils/invoicePaymentMethodOptions";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 import { CustomPlanDiffHoverCard } from "./CustomPlanDiffHoverCard";
 import { ReadOnlyPlanItems } from "./ReadOnlyPlanItems";
@@ -58,8 +57,7 @@ import { usePendingPaymentLink } from "./usePendingPaymentLink";
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
 export function SubscriptionDetailSheet() {
-	const { customer } = useCustomerContext();
-	const { features = [], testClockFrozenTimeMs } = useCusQuery();
+	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
 	const { displayCurrency, itemsForDisplay } = useCustomerDisplayCurrency();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);

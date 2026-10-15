@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCusInvoicePreviewsQuery } from "@/views/customers2/customer/hooks/useCusInvoicePreviewsQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
@@ -23,8 +22,7 @@ import { CustomerUpcomingInvoices } from "./CustomerUpcomingInvoices";
 import { getInvoiceProductNames } from "./getInvoiceProductNames";
 
 export function CustomerInvoicesTable() {
-	const { customer } = useCustomerContext();
-	const { products, features, isLoading } = useCusQuery();
+	const { customer, products, features, isLoading } = useCusQuery();
 	const setSheet = useSheetStore((s) => s.setSheet);
 
 	const { invoicePreviews, isLoading: previewsLoading } =
@@ -63,7 +61,7 @@ export function CustomerInvoicesTable() {
 
 	const invoices = useMemo(
 		() =>
-			customer.invoices?.map((invoice: Invoice) => ({
+			customer?.invoices.map((invoice: Invoice) => ({
 				...invoice,
 				productNames: getInvoiceProductNames({
 					invoice,

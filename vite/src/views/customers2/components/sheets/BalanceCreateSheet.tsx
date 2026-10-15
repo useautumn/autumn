@@ -53,8 +53,8 @@ const RESET_INTERVAL_LABELS: Record<string, string> = {
 
 export function BalanceCreateSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const { refetch } = useCusQuery();
-	const { customer, entityId } = useCustomerContext();
+	const { customer, refetch } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 

@@ -5,7 +5,6 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { getRecalculateBalanceParams } from "./customerBalanceUtils";
 
 export const useRecalculateBalances = ({
@@ -14,8 +13,7 @@ export const useRecalculateBalances = ({
 	entityId: string | null;
 }) => {
 	const axiosInstance = useAxiosInstance();
-	const { customer } = useCustomerContext();
-	const { refetch } = useCusQuery();
+	const { customer, refetch } = useCusQuery();
 	const queryClient = useQueryClient();
 	const buildQueryKey = useQueryKeyFactory();
 	const customerId = customer?.id || customer?.internal_id;

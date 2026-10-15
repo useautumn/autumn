@@ -21,7 +21,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 import {
 	CheckAdvancedSection,
@@ -32,7 +32,7 @@ import {
 export function CheckBalanceSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);

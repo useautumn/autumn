@@ -7,8 +7,8 @@ import {
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useSyncProposalsV2 } from "@/views/customers2/components/sync-stripe-v2/hooks/useSyncProposalsV2";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { SubscriptionPickerTable } from "./SubscriptionPickerTable";
 import {
 	buildSubscriptionPickerRows,
@@ -20,7 +20,7 @@ import { findUnlinkedFreePlanNames } from "./utils/findUnlinkedFreePlanNames";
 const MAX_ROWS_WITHOUT_CHOICE = 1;
 
 export function ChooseSubscriptionSheet() {
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 	const setSheet = useSheetStore((state) => state.setSheet);
 	const closeSheet = useSheetStore((state) => state.closeSheet);

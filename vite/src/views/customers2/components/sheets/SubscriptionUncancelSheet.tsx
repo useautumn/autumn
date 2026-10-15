@@ -19,7 +19,7 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent() {
@@ -70,7 +70,7 @@ export function SubscriptionUncancelSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const sheetData = useSheetStore((s) => s.data);
 	const { closeSheet } = useSheetStore();
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 
 	const initialCancelAction: CancelAction =
 		(sheetData?.cancelAction as CancelAction | undefined) ?? "uncancel";

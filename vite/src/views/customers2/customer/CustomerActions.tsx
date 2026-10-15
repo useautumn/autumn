@@ -36,7 +36,6 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
 import { TestClockDialog } from "./components/TestClockDialog";
@@ -49,8 +48,7 @@ export function CustomerActions() {
 	const [testClockOpen, setTestClockOpen] = useState(false);
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [clearCacheLoading, setClearCacheLoading] = useState(false);
-	const { customer } = useCustomerContext();
-	const { testClockFrozenTimeMs, refetch } = useCusQuery();
+	const { customer, testClockFrozenTimeMs, refetch } = useCusQuery();
 	const { org } = useOrg({ skipSandbox: false });
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
@@ -220,7 +218,7 @@ export function CustomerActions() {
 							onClick={() => {
 								window.open(
 									getRevenueCatCusLink({
-										customerId: customer.id ?? "",
+										customerId: customer.id,
 										projectId:
 											env === AppEnv.Live
 												? (org?.processor_configs?.revenuecat?.project_id?.replace(

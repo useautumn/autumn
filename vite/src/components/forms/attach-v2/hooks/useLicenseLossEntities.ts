@@ -1,7 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
 import { useLicenseBalancesQuery } from "@/hooks/queries/useLicenseBalancesQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export type LicenseLossEntity = { id: string; label: string };
@@ -12,7 +12,7 @@ export function useLicenseLossEntities(): LicenseLossEntity[] {
 		useAttachFormContext();
 	const { planLicenses } = usePlanLicensesQuery(product?.id);
 	const { assignments } = useLicenseBalancesQuery({ customerId });
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 
 	const keepsAnyLicense =
 		planLicenses.length + (formValues.addLicenses?.length ?? 0) > 0;

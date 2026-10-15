@@ -5,7 +5,7 @@ import { entityKey } from "@/components/forms/shared/utils/entityKey";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useEntitiesQuery } from "./useEntitiesQuery";
 
 const PLACEHOLDER = "PENDING";
@@ -40,7 +40,7 @@ export const useEntitySelector = () => {
 	const [search, setSearch] = useState("");
 	const { entityId, setEntityId } = useEntity();
 	const { features } = useFeaturesQuery();
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 
 	const customerEntities = (customer as FullCustomer)?.entities ?? [];
 	const hasEntities = customerEntities.length > 0;

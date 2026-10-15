@@ -15,8 +15,8 @@ import { decoratePlanUsageLimits } from "./decoratePlanUsageLimits";
 
 /** Billing controls that apply to the customer or selected entity, tagged by origin. */
 export const useDisplayedBillingControls = () => {
-	const { features, isLoading, refetch } = useCusQuery();
-	const { customer, entityId } = useCustomerContext();
+	const { customer, features, isLoading, refetch } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const fullCustomer = customer as FullCustomer | undefined;
 
 	const selectedEntity = useMemo(() => {

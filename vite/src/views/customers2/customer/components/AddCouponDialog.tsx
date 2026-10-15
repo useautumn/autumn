@@ -27,7 +27,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 export const AddCouponDialog = ({
@@ -38,8 +37,7 @@ export const AddCouponDialog = ({
 	setOpen: (open: boolean) => void;
 }) => {
 	const { stripeCus, cusRewardRefetch } = useCusReferralQuery();
-	const { customer } = useCustomerContext();
-	const { refetch } = useCusQuery();
+	const { customer, refetch } = useCusQuery();
 
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 	const [promoCodeSelected, setPromoCodeSelected] = useState<string | null>(
@@ -96,7 +94,7 @@ export const AddCouponDialog = ({
 			setLoading(true);
 			await CusService.addCouponToCustomer({
 				axios: axiosInstance,
-				customer_id: customer.id || customer.internal_id,
+				customer_id: customer.id,
 				coupon_id: selectedId,
 				promo_code: promoCodeSelected ?? undefined,
 			});

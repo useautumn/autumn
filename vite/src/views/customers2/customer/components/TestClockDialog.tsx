@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { getTestClockTimeError } from "../utils/getTestClockTimeError";
 
 export function TestClockDialog({
@@ -24,8 +23,7 @@ export function TestClockDialog({
 	frozenTime: number;
 	setOpen: (open: boolean) => void;
 }) {
-	const { customer } = useCustomerContext();
-	const { refetch } = useCusQuery();
+	const { customer, refetch } = useCusQuery();
 	const axios = useAxiosInstance();
 	const advanceClock = useMutation({
 		mutationFn: (target: number) =>

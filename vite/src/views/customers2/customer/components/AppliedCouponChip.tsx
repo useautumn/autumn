@@ -19,7 +19,6 @@ import { getBackendErr } from "@/utils/genUtils";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 const getAppliedCouponId = (
 	discount: Stripe.Discount | null | undefined,
@@ -87,8 +86,7 @@ const buildCouponTooltipRows = ({
 
 export const AppliedCouponChip = ({ className }: { className?: string }) => {
 	const { stripeCus, cusRewardRefetch } = useCusReferralQuery();
-	const { customer } = useCustomerContext();
-	const { refetch } = useCusQuery();
+	const { customer, refetch } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
 	const [removing, setRemoving] = useState(false);
 
@@ -114,7 +112,7 @@ export const AppliedCouponChip = ({ className }: { className?: string }) => {
 			setRemoving(true);
 			await CusService.removeCouponFromCustomer({
 				axios: axiosInstance,
-				customer_id: customer.id || customer.internal_id,
+				customer_id: customer.id,
 			});
 			await Promise.all([refetch(), cusRewardRefetch()]);
 			toast.success("Reward removed from customer");

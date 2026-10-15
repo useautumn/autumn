@@ -25,14 +25,14 @@ import {
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useVerifyStripeQuery } from "../../components/verify-stripe/hooks/useVerifyStripeQuery";
 import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 import { CustomButtons } from "./CustomButtons";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
 
 export function CustomerHeaderActions() {
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
 	const { isAdmin } = useAdmin();

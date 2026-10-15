@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { SubscriptionLinks } from "@/components/forms/customer-state/types/subscriptionLinks";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useSyncProposalsV2QueryOptions } from "@/views/customers2/components/sync-stripe-v2/hooks/useSyncProposalsV2";
 import { STRIPE_STATUS_INDICATORS } from "@/views/customers2/components/sync-stripe-v2/StripeStatusBadge";
-import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import {
 	buildSubscriptionPickerRows,
 	subscriptionPickerRowDetails,
@@ -18,7 +18,7 @@ export const useSubscriptionLinks = ({
 }: {
 	enabled: boolean;
 }): SubscriptionLinks | null => {
-	const { customer } = useCustomerContext();
+	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 	const setSheet = useSheetStore((state) => state.setSheet);
 	const queryOptions = useSyncProposalsV2QueryOptions({
