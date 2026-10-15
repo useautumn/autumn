@@ -3,6 +3,7 @@ import type { Replication } from "../../replication/types/replication.js";
 import {
 	type HandOffContext,
 	handOffJournals,
+	type LockMarks,
 } from "../handover/handOffJournals.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import type { Membership } from "./types/membership.js";
@@ -12,6 +13,10 @@ export const PROBE_EVERY_MS = 1_000;
 const PROBE_TIMEOUT_MS = 1_000;
 /** A listed peer that has answered no probe for this long is worth a line: both replicas may be owning everything. */
 const UNPROBED_WARN_MS = 60_000;
+/** Between a thread's sweeps for what it took for the moving customers while the other threads were still handing off. */
+const JOIN_SWEEP_MS = 20;
+/** Sweeps before a thread gives up waiting for the others (5 s): a wedged thread never holds the join for good. */
+const MAX_JOIN_SWEEPS = 250;
 
 export type ReadinessProberContext = Omit<HandOffContext, "ring"> & {
 	ring: ReplicaRing;
@@ -95,6 +100,53 @@ export const startReadinessProber = ({
 		unreadySince.delete(peer);
 	}
 
+	/**
+	 * Until the last thread has handed off, this thread still owns the moving customers and may take locks or append
+	 * entries for them: it hands those too, every JOIN_SWEEP_MS, and once more after the peer is counted. In the
+	 * background, so a slow thread never holds this one's probing of its other peers.
+	 */
+	async function sweepUntilJoined({
+		ctx,
+		peer,
+		ownerOf,
+		marks,
+	}: {
+		ctx: ReadinessProberContext;
+		peer: string;
+		ownerOf: (customerId: string) => Promise<string>;
+		marks: LockMarks;
+	}): Promise<void> {
+		let sweeps = 0;
+		let handed = 0;
+		let locks = 0;
+		const sweep = async () => {
+			const swept = await handOffJournals({ ctx, ownerOf, marks, quiet: true });
+			sweeps++;
+			handed += swept.handed;
+			locks += swept.locks;
+		};
+		while (
+			!stopped &&
+			!ctx.membership.isMember(peer) &&
+			sweeps < MAX_JOIN_SWEEPS
+		) {
+			await sleep(JOIN_SWEEP_MS);
+			await sweep();
+		}
+		if (stopped) return;
+		if (ctx.membership.isMember(peer)) await sweep();
+		else
+			ctx.logger.warn(
+				{ type: "atom_join_sweeps_exhausted", data: { peer, sweeps } },
+				`Swept ${sweeps} times without every thread handing off to ${peer}; what this thread takes for its customers from now on drains to Autumn`,
+			);
+		if (handed > 0 || locks > 0)
+			ctx.logger.info(
+				{ type: "atom_join_swept", data: { peer, sweeps, handed, locks } },
+				`Handed ${peer} ${handed} more entries and ${locks} more locks taken while the other threads were still handing off`,
+			);
+	}
+
 	/** Dropped by the name and answering from no boot this replica knows: gone, so its row is cleared. */
 	async function forgetGone(peer: string): Promise<void> {
 		const boot = await readyBootOf({ ctx, peer });
@@ -117,10 +169,10 @@ export const startReadinessProber = ({
 				ctx.membership.hasHandedOff({ address: peer, thread: ctx.thread })
 			)
 				continue;
-			await handOffJournals({
-				ctx,
-				ownerOf: (customerId) => ctx.ring.ownerOnceJoined({ customerId, peer }),
-			});
+			const ownerOf = (customerId: string) =>
+				ctx.ring.ownerOnceJoined({ customerId, peer });
+			const marks: LockMarks = new Map();
+			await handOffJournals({ ctx, ownerOf, marks });
 			ctx.onHandedOff?.(peer);
 			const joined = ctx.membership.handedOff({
 				address: peer,
@@ -131,6 +183,13 @@ export const startReadinessProber = ({
 				ctx.logger.info(
 					{ type: "atom_peer_joined", data: { peer } },
 					`${peer} is ready and holds its customers' entries: it owns them from now on`,
+				);
+			else
+				void sweepUntilJoined({ ctx, peer, ownerOf, marks }).catch((error) =>
+					ctx.logger.warn(
+						{ type: "atom_join_sweep_failed", error },
+						"Could not hand the peer what this thread took while the other threads were still handing off",
+					),
 				);
 		}
 	}
