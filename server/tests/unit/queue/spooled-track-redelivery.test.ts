@@ -34,7 +34,7 @@ const spooledJob = {
 const queuedJob = { name: JobName.Track, data: { body: {} } };
 
 describe("a spooled track's failed replays spread across the replay window", () => {
-	test("waits 30/60/120/150 s after receives 1-4, so receive 5 lands ~6 min in, inside the 7-min cap", () => {
+	test("waits 20/40/90/150 s after receives 1-4, so receive 5 lands ~5 min in, 2 min inside the 7-min cap", () => {
 		const delays = [1, 2, 3, 4, 5].map((receiveCount) =>
 			spooledTrackRedeliveryDelaySeconds({
 				job: spooledJob,
@@ -42,9 +42,9 @@ describe("a spooled track's failed replays spread across the replay window", () 
 				receiveCount,
 			}),
 		);
-		expect(delays).toEqual([30, 60, 120, 150, null]);
-		const fifthReceiveAtSeconds = [30, 60, 120, 150].reduce((a, b) => a + b);
-		expect(fifthReceiveAtSeconds).toBe(360);
+		expect(delays).toEqual([20, 40, 90, 150, null]);
+		const fifthReceiveAtSeconds = [20, 40, 90, 150].reduce((a, b) => a + b);
+		expect(fifthReceiveAtSeconds).toBe(300);
 	});
 
 	test("leaves a too-old spool and an ordinary queued track on the receive's own visibility", () => {
@@ -109,7 +109,7 @@ describe("a spooled track's failed replays spread across the replay window", () 
 			{
 				QueueUrl: "https://sqs.eu-west-2.amazonaws.com/123/track-async",
 				ReceiptHandle: "receipt-1",
-				VisibilityTimeout: 60,
+				VisibilityTimeout: 40,
 			},
 		]);
 		expect(deletes.flat()).toHaveLength(0);

@@ -9,6 +9,8 @@ import { trackParamsToTrackCommands } from "../balanceWorkerTrackRequest.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
+const SPOOLED_TRACK_REPLAY_APPEND_TIMEOUT_MS = 1_000;
+
 /** Retried rather than dropped, so the queue's redrive parks it in the DLQ: replaying could deduct twice, dropping could lose it. */
 export class SpooledTrackTooOldError extends Error {
 	constructor({ ageMs }: { ageMs: number }) {
@@ -64,7 +66,11 @@ export async function replaySpooledTrack({
 		body,
 		recordsCreditCost: tokens !== undefined,
 	});
-	await client.queue.track({ commands });
+	// Short, so a replay failing on a still-sick log frees its poll batch fast; SQS retries it later.
+	await client.queue.track({
+		commands,
+		signal: AbortSignal.timeout(SPOOLED_TRACK_REPLAY_APPEND_TIMEOUT_MS),
+	});
 	logSpooledTrackDrained({ ctx, body, spooledAt });
 }
 
