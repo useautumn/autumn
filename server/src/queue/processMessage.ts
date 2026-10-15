@@ -25,6 +25,7 @@ import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateB
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
+import { RedisDeductionError } from "@/internal/balances/utils/types/redisDeductionError.js";
 import { persistPublishedBalanceTransitions } from "@/internal/billing/v2/publish/persistPublishedBalanceTransitions.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
@@ -94,8 +95,13 @@ export const shouldRetrySqsJobError = ({
 			return isTransientDbError({ error });
 		// Signal jobs are meaningless without Redis: an unreachable Redis must
 		// leave the message in SQS for redelivery, not swallow-and-ack.
-		case JobName.SyncCustomerDirty:
 		case JobName.Track:
+			return (
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error }) ||
+				(error instanceof RedisDeductionError && error.isSubjectViewChanged())
+			);
+		case JobName.SyncCustomerDirty:
 		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		// Finalize replays also redeliver while a dying attempt's claim marker

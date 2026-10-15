@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
@@ -80,6 +84,30 @@ describe("shouldRetrySqsJobError", () => {
 				}),
 			}),
 		).toBe(true);
+	});
+
+	test("retries track jobs when the subject view changed mid-deduction", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.Track,
+				error: new RedisDeductionError({
+					message: "Redis deduction failed: SUBJECT_VIEW_CHANGED",
+					code: RedisDeductionErrorCode.SubjectViewChanged,
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("does not retry track jobs on other Redis deduction errors", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.Track,
+				error: new RedisDeductionError({
+					message: "Redis deduction failed: INSUFFICIENT_BALANCE",
+					code: RedisDeductionErrorCode.InsufficientBalance,
+				}),
+			}),
+		).toBe(false);
 	});
 
 	test("does not retry track jobs on non-transient application errors", () => {
