@@ -116,4 +116,36 @@ describe("evaluateApprovalRules: groups", () => {
 		});
 		expect(WHEN_FIELD_LABELS.billing_change.plan_schedule).toBe("Timing");
 	});
+
+	test("trial unit and on_end matchers read as limits", () => {
+		const verdict = evaluate({
+			when: {
+				incoming: {
+					$every: {
+						free_trial: {
+							duration_type: { $in: ["day", "month"] },
+							on_end: { $nin: ["bill"] },
+						},
+					},
+				},
+			},
+			billingFacts: facts.billingChange({
+				incoming: [
+					facts.incomingPlan({
+						planId: "pro",
+						freeTrial: facts.trial({ length: 1, type: "year", onEnd: "bill" }),
+					}),
+				],
+			}),
+		});
+		expect(verdict).toMatchObject({
+			verdict: "deny",
+			violations: [
+				{
+					field: "incoming[0].free_trial",
+					limit: "in day or month, on end: not bill",
+				},
+			],
+		});
+	});
 });
