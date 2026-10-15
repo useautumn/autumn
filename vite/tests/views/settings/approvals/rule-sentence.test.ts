@@ -339,6 +339,26 @@ describe("rule sentence: when clauses from the boards", () => {
 			"Sales can Attach when Custom condition",
 		],
 		[
+			"a trial filter without its unit stays custom",
+			{
+				when: {
+					incoming: {
+						$every: { free_trial: { duration_length: { $lte: 2 } } },
+					},
+				},
+			},
+			"Sales can Attach when Custom condition",
+		],
+		[
+			"an empty refund filter stays custom",
+			{
+				subjects: [support],
+				actions: ["billing.cancel"],
+				when: { refund: {} },
+			},
+			"Support can Cancel when Custom condition",
+		],
+		[
 			"a shape the list can't word yet",
 			{ when: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",

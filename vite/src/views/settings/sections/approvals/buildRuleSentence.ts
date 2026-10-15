@@ -173,7 +173,8 @@ const fieldConditions = ({
 	const readsWholeObject =
 		isFilter(value) &&
 		Object.keys(value).every((key) => nestedKeys.has(key)) &&
-		field.nested?.slice(1).every((key) => !isFilter(value[key]));
+		field.nested?.every((key) => value[key] !== undefined) &&
+		field.nested.slice(1).every((key) => !isFilter(value[key]));
 	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
 		label,
