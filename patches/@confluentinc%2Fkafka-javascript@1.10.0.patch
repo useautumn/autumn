@@ -85,7 +85,7 @@ index f7e5906a4a0a2213b3059af59c928277cf076931..3dff42824726a4981df70b152d148f07
                          rd_kafka_dbg(
                              rk, TOPIC, pause ? "PAUSE" : "RESUME",
 diff --git a/src/admin.cc b/src/admin.cc
-index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a5241062e 100644
+index 84603c279e7802d32c09b9ee96cb2446d28052bf..6d372c8db33d4c4ec0aa17a2bfb39798eb8788c5 100644
 --- a/src/admin.cc
 +++ b/src/admin.cc
 @@ -16,7 +16,7 @@
@@ -315,7 +315,17 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  }
  
  /**
-@@ -317,14 +323,14 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
+@@ -262,7 +268,8 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -317,14 +324,14 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
        const char *errmsg = rd_kafka_topic_result_error_string(terr);
  
        if (errcode != RD_KAFKA_RESP_ERR_NO_ERROR) {
@@ -338,7 +348,17 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -395,8 +401,8 @@ Baton AdminClient::DeleteTopic(rd_kafka_DeleteTopic_t* topic, int timeout_ms) {
+@@ -339,7 +346,8 @@ Baton AdminClient::DeleteTopic(rd_kafka_DeleteTopic_t* topic, int timeout_ms) {
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -395,8 +403,8 @@ Baton AdminClient::DeleteTopic(rd_kafka_DeleteTopic_t* topic, int timeout_ms) {
        const rd_kafka_resp_err_t errcode = rd_kafka_topic_result_error(terr);
  
        if (errcode != RD_KAFKA_RESP_ERR_NO_ERROR) {
@@ -349,7 +369,17 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -471,14 +477,14 @@ Baton AdminClient::CreatePartitions(
+@@ -413,7 +421,8 @@ Baton AdminClient::CreatePartitions(
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -471,14 +480,14 @@ Baton AdminClient::CreatePartitions(
        const char *errmsg = rd_kafka_topic_result_error_string(terr);
  
        if (errcode != RD_KAFKA_RESP_ERR_NO_ERROR) {
@@ -372,7 +402,16 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -505,21 +511,21 @@ Baton AdminClient::ListGroups(
+@@ -498,28 +507,29 @@ Baton AdminClient::ListGroups(
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are listing groups
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -399,7 +438,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -541,7 +547,7 @@ Baton AdminClient::ListGroups(
+@@ -541,7 +551,7 @@ Baton AdminClient::ListGroups(
      // DON'T destroy the event. It is the out parameter, and ownership is
      // the caller's.
      *event_response = PollForEvent(
@@ -408,7 +447,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -569,9 +575,9 @@ Baton AdminClient::ListGroups(
+@@ -569,36 +579,37 @@ Baton AdminClient::ListGroups(
  }
  
  Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
@@ -421,7 +460,14 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    if (!IsConnected()) {
      return Baton(RdKafka::ERR__STATE);
    }
-@@ -584,21 +590,21 @@ Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are describing groups
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -448,7 +494,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -612,13 +618,13 @@ Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
+@@ -612,13 +623,13 @@ Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
      }
  
      rd_kafka_DescribeConsumerGroups(m_client->c_ptr(), &c_groups[0],
@@ -464,7 +510,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -646,8 +652,8 @@ Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
+@@ -646,25 +657,26 @@ Baton AdminClient::DescribeGroups(std::vector<std::string> &groups,
  }
  
  Baton AdminClient::DeleteGroups(rd_kafka_DeleteGroup_t **group_list,
@@ -475,7 +521,14 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    if (!IsConnected()) {
      return Baton(RdKafka::ERR__STATE);
    }
-@@ -660,11 +666,11 @@ Baton AdminClient::DeleteGroups(rd_kafka_DeleteGroup_t **group_list,
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are deleting groups
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -489,7 +542,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
      if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
        return Baton(static_cast<RdKafka::ErrorCode>(err), errstr);
      }
-@@ -673,13 +679,13 @@ Baton AdminClient::DeleteGroups(rd_kafka_DeleteGroup_t **group_list,
+@@ -673,13 +685,13 @@ Baton AdminClient::DeleteGroups(rd_kafka_DeleteGroup_t **group_list,
      rd_kafka_queue_t *rkqu = rd_kafka_queue_new(m_client->c_ptr());
  
      rd_kafka_DeleteGroups(m_client->c_ptr(), group_list, group_cnt, options,
@@ -505,7 +558,16 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -722,21 +728,21 @@ Baton AdminClient::ListConsumerGroupOffsets(
+@@ -715,28 +727,29 @@ Baton AdminClient::ListConsumerGroupOffsets(
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are fetching offsets
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -532,7 +594,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
        }
      }
  
-@@ -744,13 +750,13 @@ Baton AdminClient::ListConsumerGroupOffsets(
+@@ -744,13 +757,13 @@ Baton AdminClient::ListConsumerGroupOffsets(
      rd_kafka_queue_t *rkqu = rd_kafka_queue_new(m_client->c_ptr());
  
      rd_kafka_ListConsumerGroupOffsets(m_client->c_ptr(), req, req_cnt, options,
@@ -548,7 +610,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -778,9 +784,9 @@ Baton AdminClient::ListConsumerGroupOffsets(
+@@ -778,32 +791,33 @@ Baton AdminClient::ListConsumerGroupOffsets(
  }
  
  Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
@@ -561,7 +623,14 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    if (!IsConnected()) {
      return Baton(RdKafka::ERR__STATE);
    }
-@@ -793,17 +799,17 @@ Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are deleting records
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -582,7 +651,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
      if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
        return Baton(static_cast<RdKafka::ErrorCode>(err), errstr);
      }
-@@ -812,13 +818,13 @@ Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
+@@ -812,13 +826,13 @@ Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
      rd_kafka_queue_t *rkqu = rd_kafka_queue_new(m_client->c_ptr());
  
      rd_kafka_DeleteRecords(m_client->c_ptr(), del_records,
@@ -598,7 +667,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -846,9 +852,9 @@ Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
+@@ -846,35 +860,36 @@ Baton AdminClient::DeleteRecords(rd_kafka_DeleteRecords_t **del_records,
  }
  
  Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
@@ -611,7 +680,14 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    if (!IsConnected()) {
      return Baton(RdKafka::ERR__STATE);
    }
-@@ -861,20 +867,20 @@ Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are describing topics
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -637,7 +713,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
      if (err != RD_KAFKA_RESP_ERR_NO_ERROR) {
        return Baton(static_cast<RdKafka::ErrorCode>(err), errstr);
      }
-@@ -888,7 +894,7 @@ Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
+@@ -888,7 +903,7 @@ Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
      // DON'T destroy the event. It is the out parameter, and ownership is
      // the caller's.
      *event_response =
@@ -646,7 +722,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -917,9 +923,9 @@ Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
+@@ -917,32 +932,33 @@ Baton AdminClient::DescribeTopics(rd_kafka_TopicCollection_t *topics,
  
  
  Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
@@ -659,7 +735,14 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    if (!IsConnected()) {
      return Baton(RdKafka::ERR__STATE);
    }
-@@ -932,17 +938,17 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
  
      // Make admin options to establish that we are fetching offsets
      rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
@@ -680,7 +763,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
      if (error) {
        return Baton::BatonFromErrorAndDestroy(error);
      }
-@@ -956,7 +962,7 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
+@@ -956,7 +972,7 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
      // DON'T destroy the event. It is the out parameter, and ownership is
      // the caller's.
      *event_response =
@@ -689,7 +772,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      // Destroy the queue since we are done with it.
      rd_kafka_queue_destroy(rkqu);
-@@ -985,13 +991,13 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
+@@ -985,13 +1001,13 @@ Baton AdminClient::ListOffsets(rd_kafka_topic_partition_list_t *partitions,
  
  void AdminClient::ActivateDispatchers() {
    // Listen to global config
@@ -705,7 +788,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  }
  void AdminClient::DeactivateDispatchers() {
    // Stop listening to the config dispatchers
-@@ -1006,10 +1012,9 @@ void AdminClient::DeactivateDispatchers() {
+@@ -1006,10 +1022,9 @@ void AdminClient::DeactivateDispatchers() {
   * C++ Exported prototype functions
   */
  
@@ -719,7 +802,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
    // Activate the dispatchers before the connection, as some callbacks may run
    // on the background thread.
-@@ -1017,138 +1022,151 @@ NAN_METHOD(AdminClient::NodeConnect) {
+@@ -1017,138 +1032,151 @@ NAN_METHOD(AdminClient::NodeConnect) {
    // Because the Admin Client connect is synchronous, we can do this within
    // AdminClient::Connect as well, but we do it here to keep the code similiar
    // to the Producer and Consumer.
@@ -927,7 +1010,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
    // Create an error buffer we can throw
    char* errbuf = reinterpret_cast<char*>(malloc(100));
-@@ -1160,108 +1178,119 @@ NAN_METHOD(AdminClient::NodeCreatePartitions) {
+@@ -1160,108 +1188,119 @@ NAN_METHOD(AdminClient::NodeCreatePartitions) {
    // If we got a failure on the create new partitions request,
    // fail here
    if (new_partitions == NULL) {
@@ -1091,7 +1174,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
    // Get the timeout - default 5000.
    int timeout_ms = GetParameter<int64_t>(config, "timeout", 5000);
-@@ -1271,40 +1300,52 @@ NAN_METHOD(AdminClient::NodeDescribeGroups) {
+@@ -1271,40 +1310,52 @@ NAN_METHOD(AdminClient::NodeDescribeGroups) {
        GetParameter<bool>(config, "includeAuthorizedOperations", false);
  
    // Create the final callback object
@@ -1160,7 +1243,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    }
    std::vector<std::string> group_names_vector =
        v8ArrayToStringVector(group_names);
-@@ -1316,39 +1357,50 @@ NAN_METHOD(AdminClient::NodeDeleteGroups) {
+@@ -1316,39 +1367,50 @@ NAN_METHOD(AdminClient::NodeDeleteGroups) {
      group_list[i] = rd_kafka_DeleteGroup_new(group_names_vector[i].c_str());
    }
  
@@ -1226,7 +1309,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    }
  
    /**
-@@ -1358,53 +1410,53 @@ NAN_METHOD(AdminClient::NodeListConsumerGroupOffsets) {
+@@ -1358,53 +1420,53 @@ NAN_METHOD(AdminClient::NodeListConsumerGroupOffsets) {
     */
    rd_kafka_ListConsumerGroupOffsets_t **requests =
        static_cast<rd_kafka_ListConsumerGroupOffsets_t **>(
@@ -1317,7 +1400,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
      if (partitions != NULL) {
        rd_kafka_topic_partition_list_destroy(partitions);
-@@ -1412,48 +1464,58 @@ NAN_METHOD(AdminClient::NodeListConsumerGroupOffsets) {
+@@ -1412,48 +1474,58 @@ NAN_METHOD(AdminClient::NodeListConsumerGroupOffsets) {
    }
  
    // Now process the second argument: options (timeout and requireStableOffsets)
@@ -1395,7 +1478,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    }
  
    /**
-@@ -1463,55 +1525,67 @@ NAN_METHOD(AdminClient::NodeDeleteRecords) {
+@@ -1463,55 +1535,67 @@ NAN_METHOD(AdminClient::NodeDeleteRecords) {
     */
    rd_kafka_DeleteRecords_t **delete_records =
        static_cast<rd_kafka_DeleteRecords_t **>(
@@ -1483,7 +1566,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
    }
  
    std::vector<std::string> topicNamesVector = v8ArrayToStringVector(topicNames);
-@@ -1533,38 +1607,47 @@ NAN_METHOD(AdminClient::NodeDescribeTopics) {
+@@ -1533,38 +1617,47 @@ NAN_METHOD(AdminClient::NodeDescribeTopics) {
  
    free(topics);
  
@@ -1545,7 +1628,7 @@ index 84603c279e7802d32c09b9ee96cb2446d28052bf..220edd46499a954c0e9c3bdd187e769a
  
    /**
     * The ownership of this is taken by
-@@ -1575,23 +1658,26 @@ NAN_METHOD(AdminClient::NodeListOffsets) {
+@@ -1575,23 +1668,26 @@ NAN_METHOD(AdminClient::NodeListOffsets) {
        TopicPartitionOffsetSpecv8ArrayToTopicPartitionList(listOffsets);
  
    // Now process the second argument: options (timeout and isolationLevel)
@@ -6516,7 +6599,7 @@ index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..53dff7a8d0f3a8eff7b6de13e88cdf2d
  }  // namespace NodeKafka
  
 diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
-index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa956785e52 100644
+index 4bc778d46a53f271b825e1d2646b76ffafee10f7..751d2ef9516661bf3b62dc894af70426a06ccbbd 100644
 --- a/src/kafka-consumer.cc
 +++ b/src/kafka-consumer.cc
 @@ -9,14 +9,14 @@
@@ -6565,31 +6648,31 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 +  }
 +
 +  std::string errstr;
- 
--    if (m_tconfig)
--      m_gconfig->set("default_topic_conf", m_tconfig, errstr);
++
 +  Conf* gconfig =
 +    Conf::create(RdKafka::Conf::CONF_GLOBAL, info[0].ToObject(), errstr);
- 
--    m_consume_loop = nullptr;
++
 +  if (!gconfig) {
 +    Napi::Error::New(env, errstr.c_str()).ThrowAsJavaScriptException();
 +    return;
-   }
++  }
  
+-    if (m_tconfig)
+-      m_gconfig->set("default_topic_conf", m_tconfig, errstr);
 +  // If tconfig isn't set, then just let us pick properties from gconf.
 +  Conf* tconfig = nullptr;
 +  if (info[1].IsObject()) {
 +    tconfig = Conf::create(RdKafka::Conf::CONF_TOPIC, info[1].ToObject(),
 +        errstr);
-+
+ 
+-    m_consume_loop = nullptr;
 +    if (!tconfig) {
 +      delete gconfig;
 +      Napi::Error::New(env, errstr.c_str()).ThrowAsJavaScriptException();
 +      return;
 +    }
-+  }
-+
+   }
+ 
 +  this->Config(gconfig, tconfig);
 +
 +  if (m_tconfig)
@@ -6619,7 +6702,15 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  }
  
  Baton KafkaConsumer::Disconnect() {
-@@ -129,8 +171,8 @@ void KafkaConsumer::DeactivateDispatchers() {
+@@ -115,6 +157,7 @@ Baton KafkaConsumer::Disconnect() {
+   }
+ 
+   m_is_closing = false;
++  m_deferred_consume_error = RdKafka::ERR_NO_ERROR;
+ 
+   return Baton(err);
+ }
+@@ -129,8 +172,8 @@ void KafkaConsumer::DeactivateDispatchers() {
  }
  
  void KafkaConsumer::ConfigureCallback(const std::string& string_key,
@@ -6630,7 +6721,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    if (string_key.compare("queue_non_empty_cb") == 0) {
      if (add) {
        this->m_queue_not_empty_cb.dispatcher.AddCallback(cb);
-@@ -175,7 +217,7 @@ Baton KafkaConsumer::GetWatermarkOffsets(
+@@ -175,7 +218,7 @@ Baton KafkaConsumer::GetWatermarkOffsets(
      if (IsConnected()) {
        // Always send true - we
        err = m_client->get_watermark_offsets(topic_name, partition,
@@ -6639,7 +6730,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
      } else {
        err = RdKafka::ERR__STATE;
      }
-@@ -267,13 +309,13 @@ Baton KafkaConsumer::IncrementalUnassign(
+@@ -267,13 +310,13 @@ Baton KafkaConsumer::IncrementalUnassign(
      // For now, use two for loops. Make more efficient if needed later.
      for (unsigned int i = 0; i < partitions.size(); i++) {
        for (unsigned int j = 0; j < m_partitions.size(); j++) {
@@ -6660,7 +6751,124 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
        }
      }
    }
-@@ -459,6 +501,17 @@ Baton KafkaConsumer::Subscribe(std::vector<std::string> topics) {
+@@ -293,6 +336,12 @@ Baton KafkaConsumer::Commit(std::vector<RdKafka::TopicPartition*> toppars) {
+     return Baton(RdKafka::ERR__STATE);
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitAsync(toppars);
+ 
+   return Baton(err);
+@@ -303,6 +352,12 @@ Baton KafkaConsumer::Commit(RdKafka::TopicPartition * toppar) {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   // Need to put topic in a vector for it to work
+   std::vector<RdKafka::TopicPartition*> offsets = {toppar};
+   RdKafka::ErrorCode err = m_consumer->commitAsync(offsets);
+@@ -316,6 +371,12 @@ Baton KafkaConsumer::Commit() {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitAsync();
+ 
+   return Baton(err);
+@@ -327,6 +388,12 @@ Baton KafkaConsumer::CommitSync(std::vector<RdKafka::TopicPartition*> toppars) {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitSync(toppars);
+   // RdKafka::TopicPartition::destroy(toppars);
+ 
+@@ -338,6 +405,12 @@ Baton KafkaConsumer::CommitSync(RdKafka::TopicPartition * toppar) {
+     return Baton(RdKafka::ERR__STATE);
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   // Need to put topic in a vector for it to work
+   std::vector<RdKafka::TopicPartition*> offsets = {toppar};
+   RdKafka::ErrorCode err = m_consumer->commitSync(offsets);
+@@ -351,6 +424,12 @@ Baton KafkaConsumer::CommitSync() {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitSync();
+ 
+   return Baton(err);
+@@ -361,6 +440,12 @@ Baton KafkaConsumer::Seek(const RdKafka::TopicPartition &partition, int timeout_
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->seek(partition, timeout_ms);
+ 
+   return Baton(err);
+@@ -372,6 +457,12 @@ Baton KafkaConsumer::Committed(std::vector<RdKafka::TopicPartition*> &toppars,
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->committed(toppars, timeout_ms);
+ 
+   return Baton(err);
+@@ -382,6 +473,12 @@ Baton KafkaConsumer::Position(std::vector<RdKafka::TopicPartition*> &toppars) {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->position(toppars);
+ 
+   return Baton(err);
+@@ -459,6 +556,17 @@ Baton KafkaConsumer::Subscribe(std::vector<std::string> topics) {
    return Baton(RdKafka::ERR_NO_ERROR);
  }
  
@@ -6678,7 +6886,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  Baton KafkaConsumer::Consume(int timeout_ms) {
    if (IsConnected()) {
      scoped_shared_read_lock lock(m_connection_lock);
-@@ -469,12 +522,11 @@ Baton KafkaConsumer::Consume(int timeout_ms) {
+@@ -469,12 +577,11 @@ Baton KafkaConsumer::Consume(int timeout_ms) {
        RdKafka::ErrorCode response_code = message->err();
        // we want to handle these errors at the call site
        if (response_code != RdKafka::ERR_NO_ERROR &&
@@ -6696,7 +6904,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
        }
  
        return Baton(message);
-@@ -522,278 +574,235 @@ std::string KafkaConsumer::RebalanceProtocol() {
+@@ -522,278 +629,235 @@ std::string KafkaConsumer::RebalanceProtocol() {
    return m_consumer->rebalance_protocol();
  }
  
@@ -6977,12 +7185,12 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
 -NAN_METHOD(KafkaConsumer::NodeSubscription) {
 -  Nan::HandleScope scope;
+-
+-  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
 +Napi::Value KafkaConsumer::NodeSubscription(const Napi::CallbackInfo &info) {
 +    const Napi::Env env = info.Env();
 +  Napi::HandleScope scope(env);
  
--  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
--
 -  Baton b = consumer->Subscription();
 +  Baton b = this->Subscription();
  
@@ -7005,12 +7213,12 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
 -NAN_METHOD(KafkaConsumer::NodePosition) {
 -  Nan::HandleScope scope;
--
--  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
 +Napi::Value KafkaConsumer::NodePosition(const Napi::CallbackInfo &info) {
 +  Napi::Env env = info.Env();
 +  Napi::HandleScope scope(env);
  
+-  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
+-
 -  if (info.Length() < 1 || !info[0]->IsArray()) {
 +  if (info.Length() < 1 || !info[0].IsArray()) {
      // Just throw an exception
@@ -7067,12 +7275,12 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
 -NAN_METHOD(KafkaConsumer::NodeAssignmentLost) {
 -  Nan::HandleScope scope;
+-
+-  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
 +Napi::Value KafkaConsumer::NodeAssignmentLost(const Napi::CallbackInfo &info) {
 +  Napi::Env env = info.Env();
 +  Napi::HandleScope scope(env);
  
--  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
--
 -  Baton b = consumer->AssignmentLost();
 +  Baton b = this->AssignmentLost();
  
@@ -7131,7 +7339,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -803,75 +812,80 @@ NAN_METHOD(KafkaConsumer::NodeAssign) {
+@@ -803,75 +867,80 @@ NAN_METHOD(KafkaConsumer::NodeAssign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7244,7 +7452,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -881,56 +895,58 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalAssign) {
+@@ -881,56 +950,58 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalAssign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7325,7 +7533,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -940,321 +956,351 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalUnassign) {
+@@ -940,321 +1011,351 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalUnassign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7371,15 +7579,15 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
 -NAN_METHOD(KafkaConsumer::NodeUnsubscribe) {
 -  Nan::HandleScope scope;
--
--  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
 +Napi::Value KafkaConsumer::NodeUnsubscribe(const Napi::CallbackInfo &info) {
 +  const Napi::Env env = info.Env();
 +  Napi::HandleScope scope(env);
  
--  Baton b = consumer->Unsubscribe();
+-  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
 +  Baton b = this->Unsubscribe();
  
+-  Baton b = consumer->Unsubscribe();
+-
 -  info.GetReturnValue().Set(Nan::New<v8::Number>(static_cast<int>(b.err())));
 +  return Napi::Number::New(env, static_cast<int>(b.err()));
  }
@@ -7570,9 +7778,9 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 -      toppars));
 +  callback = new Napi::FunctionReference();
 +  callback->Reset(info[1].As<Napi::Function>());
-+
  
 -  info.GetReturnValue().Set(Nan::Null());
++
 +  Workers::KafkaConsumerCommitCb *worker =
 +      new Workers::KafkaConsumerCommitCb(callback, this, toppars);
 +
@@ -7691,13 +7899,13 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 -  Nan::AsyncQueueWorker(
 -    new Workers::KafkaConsumerSeek(callback, consumer, toppar, timeout_ms));
 +  Napi::FunctionReference *callback = new Napi::FunctionReference();
- 
--  info.GetReturnValue().Set(Nan::Null());
++
 +  callback->Reset(info[2].As<Napi::Function>());
 +
 +  Napi::AsyncWorker *worker =
 +      new Workers::KafkaConsumerSeek(callback, this, toppar, timeout_ms);
-+
+ 
+-  info.GetReturnValue().Set(Nan::Null());
 +  worker->Queue();
 +
 +  return env.Null();
@@ -7823,7 +8031,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    RdKafka::TopicPartition::destroy(toppars);
  
    #if 0
-@@ -1271,28 +1317,31 @@ NAN_METHOD(KafkaConsumer::NodePause) {
+@@ -1271,28 +1372,31 @@ NAN_METHOD(KafkaConsumer::NodePause) {
    #endif
  
    int error_code = static_cast<int>(b.err());
@@ -7865,7 +8073,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
    // Now iterate through and delete these toppars
    for (std::vector<RdKafka::TopicPartition *>::const_iterator it = toppars.begin();  // NOLINT
-@@ -1306,233 +1355,246 @@ NAN_METHOD(KafkaConsumer::NodeResume) {
+@@ -1306,233 +1410,246 @@ NAN_METHOD(KafkaConsumer::NodeResume) {
    }
  
    int error_code = static_cast<int>(b.err());
@@ -7927,18 +8135,18 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    int timeout_sleep_delay_ms;
 -  Nan::Maybe<uint32_t> maybeSleep =
 -    Nan::To<uint32_t>(info[1].As<v8::Number>());
-+  uint32_t maybeSleep =
-+    info[1].As<Napi::Number>().Uint32Value();
- 
+-
 -  if (maybeSleep.IsNothing()) {
 -    timeout_sleep_delay_ms = 500;
 -  } else {
 -    timeout_sleep_delay_ms = static_cast<int>(maybeSleep.FromJust());
 -  }
-+  timeout_sleep_delay_ms = static_cast<int>(maybeSleep);
++  uint32_t maybeSleep =
++    info[1].As<Napi::Number>().Uint32Value();
  
 -  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
--
++  timeout_sleep_delay_ms = static_cast<int>(maybeSleep);
+ 
 -  if (consumer->m_consume_loop != nullptr) {
 -    return Nan::ThrowError("Consume was already called");
 +  if (this->m_consume_loop != nullptr) {
@@ -7988,15 +8196,15 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    int timeout_ms;
 -  Nan::Maybe<uint32_t> maybeTimeout =
 -    Nan::To<uint32_t>(info[0].As<v8::Number>());
--
++  uint32_t maybeTimeout =
++    info[0].As<Napi::Number>().Uint32Value();
+ 
 -  if (maybeTimeout.IsNothing()) {
 -    timeout_ms = 1000;
 -  } else {
 -    timeout_ms = static_cast<int>(maybeTimeout.FromJust());
 -  }
-+  uint32_t maybeTimeout =
-+    info[0].As<Napi::Number>().Uint32Value();
- 
+-
 -  if (info[1]->IsNumber()) {
 -    if (!info[2]->IsBoolean()) {
 -      return Nan::ThrowError("Need to specify a boolean");

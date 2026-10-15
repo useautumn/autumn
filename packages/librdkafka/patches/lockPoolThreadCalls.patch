@@ -1,0 +1,231 @@
+diff --git a/src/admin.cc b/src/admin.cc
+--- a/src/admin.cc
++++ b/src/admin.cc
+@@ -268,7 +268,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -345,7 +346,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -419,7 +421,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -504,7 +507,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -583,7 +587,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -659,7 +664,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -721,7 +727,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -792,7 +799,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -860,7 +868,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+@@ -931,7 +940,8 @@
+   }
+ 
+   {
+-    scoped_shared_write_lock lock(m_connection_lock);
++    // Admin requests are thread-safe: share the client, only a disconnect excludes them.
++    scoped_shared_read_lock lock(m_connection_lock);
+     if (!IsConnected()) {
+       return Baton(RdKafka::ERR__STATE);
+     }
+diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
+--- a/src/kafka-consumer.cc
++++ b/src/kafka-consumer.cc
+@@ -157,6 +157,7 @@
+   }
+ 
+   m_is_closing = false;
++  m_deferred_consume_error = RdKafka::ERR_NO_ERROR;
+ 
+   return Baton(err);
+ }
+@@ -335,6 +336,12 @@
+     return Baton(RdKafka::ERR__STATE);
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitAsync(toppars);
+ 
+   return Baton(err);
+@@ -345,6 +352,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   // Need to put topic in a vector for it to work
+   std::vector<RdKafka::TopicPartition*> offsets = {toppar};
+   RdKafka::ErrorCode err = m_consumer->commitAsync(offsets);
+@@ -358,6 +371,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitAsync();
+ 
+   return Baton(err);
+@@ -369,6 +388,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitSync(toppars);
+   // RdKafka::TopicPartition::destroy(toppars);
+ 
+@@ -380,6 +405,12 @@
+     return Baton(RdKafka::ERR__STATE);
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   // Need to put topic in a vector for it to work
+   std::vector<RdKafka::TopicPartition*> offsets = {toppar};
+   RdKafka::ErrorCode err = m_consumer->commitSync(offsets);
+@@ -393,6 +424,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->commitSync();
+ 
+   return Baton(err);
+@@ -403,6 +440,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->seek(partition, timeout_ms);
+ 
+   return Baton(err);
+@@ -414,6 +457,12 @@
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
+ 
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
++
+   RdKafka::ErrorCode err = m_consumer->committed(toppars, timeout_ms);
+ 
+   return Baton(err);
+@@ -423,6 +472,12 @@
+   if (!IsConnected()) {
+     return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
+   }
++
++  // These run on pool threads; a disconnect frees the client under them otherwise.
++  scoped_shared_read_lock lock(m_connection_lock);
++  if (!IsConnected()) {
++    return Baton(RdKafka::ERR__STATE, "KafkaConsumer is not connected");
++  }
+ 
+   RdKafka::ErrorCode err = m_consumer->position(toppars);
+ 
