@@ -1258,6 +1258,48 @@ test("a handler that holds a batch's durability settles it before the batch's of
 	await consumer.stop();
 });
 
+test("a handler may look at a batch once, before any of its records is applied", async () => {
+	const fixture = createConsumerFixture();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: {
+				readResumeOffset,
+				beginBatch: ({ partition: begun, messages }) => {
+					fixture.events.push(
+						`begin:${begun}:${messages.map(({ offset }) => offset).join(",")}`,
+					);
+				},
+				applyRecord: ({ message }) => {
+					fixture.events.push(`apply:${message.offset}`);
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+
+	await fixture.deliverBatch({
+		records: [createRecord("0"), createRecord("1")],
+	});
+
+	expect(fixture.events).toEqual([
+		"connect",
+		"subscribe",
+		"run",
+		`begin:${partition}:0,1`,
+		"apply:0",
+		"resolve:0",
+		"heartbeat",
+		"apply:1",
+		"resolve:1",
+		"heartbeat",
+		"commit",
+	]);
+	await consumer.stop();
+});
+
 test("the metering consumer settles a command batch through the command topic's own handler", async () => {
 	const fixture = createConsumerFixture();
 	const commandTopic = "commands";
@@ -1285,6 +1327,39 @@ test("the metering consumer settles a command batch through the command topic's 
 		records: [createRecord("0")],
 	});
 	expect(settled).toEqual([commandTopic]);
+	await consumer.stop();
+});
+
+test("the metering consumer begins a command batch through the command topic's own handler, before its records", async () => {
+	const fixture = createConsumerFixture();
+	const commandTopic = "commands";
+	const events: string[] = [];
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord: () => undefined },
+			secondaryHandlers: {
+				[commandTopic]: {
+					readResumeOffset,
+					beginBatch: ({ topic: begunTopic, messages }) => {
+						events.push(`begin:${begunTopic}:${messages.length}`);
+					},
+					applyRecord: () => {
+						events.push("apply");
+						return applyRecord();
+					},
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		topic: commandTopic,
+		records: [createRecord("0")],
+	});
+	expect(events).toEqual([`begin:${commandTopic}:1`, "apply"]);
 	await consumer.stop();
 });
 

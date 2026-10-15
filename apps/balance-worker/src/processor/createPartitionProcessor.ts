@@ -14,8 +14,10 @@ import type {
 	TrackCommand,
 	UpdateBalanceCommand,
 } from "@autumn/balance-engine";
+import { parseWorkerLock } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
+import { decideAtomFinalize as decideAtomFinalizePartition } from "./commands/atomFinalize.js";
 import { check as checkPartition } from "./commands/check.js";
 import { checkInline as checkInlineCommand } from "./commands/checkInline.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
@@ -154,6 +156,19 @@ function createProcessor({
 		});
 	}
 
+	function pendingLockRow(
+		params: Parameters<PartitionProcessor["pendingLockRow"]>[0],
+	) {
+		return scope.ctx.writer.pendingLockRow(params);
+	}
+
+	async function readLockRows({
+		keys,
+	}: Parameters<PartitionProcessor["readLockRows"]>[0]) {
+		const rows = await scope.ctx.db.readLockRows({ keys });
+		return rows.map((row) => parseWorkerLock({ input: row }));
+	}
+
 	function applyBillingPlan({ request }: { request: ApplyBillingPlanRequest }) {
 		return acceptCommand({
 			accepted: scope.accepted,
@@ -201,6 +216,15 @@ function createProcessor({
 		return acceptCommand({
 			accepted: scope.accepted,
 			operation: decideFinalizePartition({ scope, command }),
+		});
+	}
+
+	function decideAtomFinalize(
+		params: Parameters<PartitionProcessor["decideAtomFinalize"]>[0],
+	) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideAtomFinalizePartition({ scope, ...params }),
 		});
 	}
 
@@ -333,12 +357,15 @@ function createProcessor({
 		check,
 		applyBillingPlan,
 		readSubjectState,
+		pendingLockRow,
+		readLockRows,
 		initialize,
 		evict,
 		evictResident,
 		flush,
 		finalize,
 		decideFinalize,
+		decideAtomFinalize,
 		confirmExpiredLock,
 		reset,
 		decideReset,

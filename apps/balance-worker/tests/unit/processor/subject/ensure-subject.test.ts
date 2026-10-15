@@ -152,6 +152,7 @@ const createScope = ({
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
 		listPooledBalancesWithoutOtherContributions: async () => [],
+		readLockRows: async () => [],
 		sumPooledContributionGrants: async () => ({}),
 		getCatalogRows: async ({ ids }) => {
 			calls.push(ids);

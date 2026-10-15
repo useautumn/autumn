@@ -743,6 +743,13 @@
       "when": 1791979465529,
       "tag": "0105_pooled_balance_identity_constraint",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1792080873519,
+      "tag": "0106_customers_atom_seqs",
+      "breakpoints": true
     }
   ]
 }

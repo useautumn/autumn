@@ -16,12 +16,15 @@ import {
 	identity,
 	occurredAt,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../../src/lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { SlotProcessor } from "../../../src/processor/types/slotProcessor.js";
+import type { TrackRequest } from "../../../src/processor/types/track.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import type { Replication } from "../../../src/replication/types/replication.js";
 import { createHeldSubjects } from "../../../src/state/heldSubjects/createHeldSubjects.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
@@ -94,6 +97,24 @@ export const deletedPushOf = ({
 		log_offset: logOffset.toString(),
 		read_at: readAt,
 	}),
+});
+
+/** The subject as Autumn pushes it once its worker applied this Atom's tracks: its customer row holds each journal's seq. */
+export const withAtomSeqs = ({
+	subject,
+	writerSeqs,
+}: {
+	subject: StoredSubject;
+	writerSeqs: Record<string, number> | null;
+}): StoredSubject => ({
+	...subject,
+	state: {
+		...subject.state,
+		customer: {
+			...subject.state.customer,
+			atom_seqs: writerSeqs && { atom_1: writerSeqs },
+		},
+	},
 });
 
 /** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
@@ -169,9 +190,27 @@ export const checkRequestFor = ({
 } = {}): CheckRequest => ({
 	requestId: "req_check_1",
 	occurredAt,
+	idempotencyKey: null,
 	params: { customer_id: "cus_1", feature_id: "messages", ...params },
 	query,
 	apiVersion,
+	movedFrom: null,
+});
+
+/** A queued track of `cus_1`'s messages as a caller on the latest API version sends it. */
+export const trackRequestFor = ({
+	params = {},
+	idempotencyKey = null,
+}: {
+	params?: Partial<TrackRequest["params"]>;
+	idempotencyKey?: string | null;
+} = {}): TrackRequest => ({
+	requestId: "atom_req_1",
+	occurredAt,
+	idempotencyKey,
+	params: { customer_id: "cus_1", feature_id: "messages", ...params },
+	apiVersion: latestApiVersion,
+	movedFrom: null,
 });
 
 /** The reason `run` left its request to the API; null when it answered itself. */
@@ -201,6 +240,7 @@ export const allSlotsOwnedHere: SlotOwners = {
 	listSinceOn: noOtherThread,
 	digestSinceOn: noOtherThread,
 	fetchSubjectsOn: noOtherThread,
+	recentKeysOn: noOtherThread,
 };
 
 /** A thread's held subjects, roomy enough that a test never evicts by accident. */
@@ -208,7 +248,10 @@ export const freshHeld = () =>
 	createHeldSubjects({ budgetBytes: 64 * 1024 * 1024 });
 
 /** A folder whose misses are only forwarded, for tests not about pulls. */
-export const noFolderPulls: FolderSubjectPulls = { request() {} };
+export const noFolderPulls: FolderSubjectPulls = {
+	request() {},
+	settle: async () => {},
+};
 
 /** A thread whose loop is never behind, for tests not about refusing checks under load. */
 export const loopOnTime = { lagMs: () => 0 };
@@ -219,10 +262,24 @@ export const noReplication: Replication = {
 	peers: async () => [],
 	stop: async () => {},
 };
-/** The peer port a lone replica would proxy to while starting; no peer answers there. */
-export const noPeer = { port: 0 };
+/** A lone replica's way to its peers: none answers there, and it owns every customer. */
+export const noPeer = {
+	port: 0,
+	secret: "",
+	ring: createReplicaRing({
+		ctx: { resolver: noReplication, own: () => ["10.0.0.1"] },
+	}),
+};
 
 export const noSubjectPulls: SubjectPulls = {
 	forFolder: () => noFolderPulls,
 	stop() {},
 };
+
+/** A thread's forwarder to an Autumn that never answers, for tests not about the journal; one holding nothing retires at once. */
+export const forwardingNowhere = createJournalForwarder({
+	ctx: {
+		autumnClient: { appendTracks: () => new Promise(() => {}) },
+		logger: { info() {}, warn() {} },
+	},
+});

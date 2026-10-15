@@ -8,7 +8,9 @@ import {
 	atomTokenToHash,
 	generateAtomToken,
 } from "@/internal/byoc/utils/atomTokenUtils.js";
+import { createReplicaRing } from "../../../../../../apps/atom/src/replicas/createReplicaRing.js";
 import { createReplicaBalancer } from "./createReplicaBalancer.js";
+import { type AutumnGate, createAutumnGate } from "./gates/createAutumnGate.js";
 import { cutKey, PEER_VIEW_REREAD_MS, writePeerViews } from "./peerViews.js";
 import {
 	registerReplicaSet,
@@ -174,13 +176,16 @@ const healPeers = async ({ ctx }: { ctx: ReplicaSetContext }) => {
 const restore = async ({
 	ctx,
 	balancer,
+	autumnGate,
 	size,
 }: {
 	ctx: ReplicaSetContext;
 	balancer: Balancer;
+	autumnGate: AutumnGate;
 	size: number;
 }): Promise<void> => {
 	balancer.routeTo(null);
+	await Promise.all([balancer.pushGate.open(), autumnGate.handIns.open()]);
 	await healPeers({ ctx });
 	await scaleTo({ ctx, size });
 	const stopped = ctx.replicas.filter((replica) => replica.process === null);
@@ -192,17 +197,37 @@ const restore = async ({
 const close = async ({
 	ctx,
 	balancer,
+	autumnGate,
 }: {
 	ctx: ReplicaSetContext;
 	balancer: Balancer;
+	autumnGate: AutumnGate;
 }): Promise<void> => {
 	await unregisterReplicaSet();
+	autumnGate.stop();
 	await Promise.all(
 		ctx.replicas.map((replica) =>
 			signalReplica({ replica, signal: "SIGKILL" }),
 		),
 	);
 	await balancer.stop();
+};
+
+const ownerIndexOf = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: ReplicaSetContext;
+	customerId: string;
+}): Promise<number> => {
+	const hostnames = ctx.replicas.map(({ hostname }) => hostname);
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => hostnames },
+			own: () => hostnames.slice(0, 1),
+		},
+	});
+	return hostnames.indexOf(await ring.ownerOf({ customerId }));
 };
 
 /**
@@ -217,12 +242,15 @@ export const createReplicaSet = async ({
 	size: number;
 }): Promise<ReplicaSet> => {
 	const token = generateAtomToken();
+	const autumnGate = createAutumnGate({
+		autumnApiUrl: autumn.baseUrl.replace(/\/v1$/, ""),
+	});
 	const ctx: ReplicaSetContext = {
 		dir: mkdtempSync(join(tmpdir(), "atom-replica-set-")),
 		subnet: 1 + Math.floor(Math.random() * 250),
 		tokenHash: atomTokenToHash({ token }),
 		peerSecret: randomBytes(32).toString("hex"),
-		autumnApiUrl: autumn.baseUrl.replace(/\/v1$/, ""),
+		autumnApiUrl: autumnGate.url,
 		replicas: [],
 		cuts: new Set(),
 	};
@@ -231,7 +259,7 @@ export const createReplicaSet = async ({
 		await registerReplicaSet({ autumn, endpointUrl: balancer.url, token });
 		await scaleTo({ ctx, size });
 	} catch (error) {
-		await close({ ctx, balancer });
+		await close({ ctx, balancer, autumnGate });
 		throw error;
 	}
 
@@ -252,10 +280,16 @@ export const createReplicaSet = async ({
 		scaleTo: (size) => scaleTo({ ctx, size }),
 		cutPeer: (left, right) => cutPeer({ ctx, left, right }),
 		healPeers: () => healPeers({ ctx }),
+		ownerIndexOf: ({ customerId }) => ownerIndexOf({ ctx, customerId }),
 		routeTo: balancer.routeTo,
 		pushes: balancer.pushes,
-		restore: (size) => restore({ ctx, balancer, size }),
+		holdHandIns: autumnGate.handIns.shut,
+		releaseHandIns: autumnGate.handIns.open,
+		heldHandIns: autumnGate.handIns.heldCount,
+		holdPushes: balancer.pushGate.shut,
+		releasePushes: balancer.pushGate.open,
+		restore: (size) => restore({ ctx, balancer, autumnGate, size }),
 		health: (index) => replicaHealth({ replica: replicaAt({ ctx, index }) }),
-		close: () => close({ ctx, balancer }),
+		close: () => close({ ctx, balancer, autumnGate }),
 	};
 };

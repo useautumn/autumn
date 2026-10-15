@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, beforeEach } from "bun:test";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
-import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { atomTestClient } from "../atomTestClient.js";
 import { atomIsHosted } from "../ensureAtomDeployment.js";
 import { createReplicaSet } from "./createReplicaSet.js";
 import type { ReplicaSet } from "./types/replicaSet.js";
@@ -20,8 +19,8 @@ export const useReplicaSet = ({ size }: { size: number }) => {
 
 	beforeAll(async () => {
 		if (!replicaSetRunsHere) return;
-		const autumn = new AutumnInt({ secretKey: defaultCtx.orgSecretKey });
-		replicaSet = await createReplicaSet({ autumn, size });
+		// Registering deletes the org's own Atom first, which Autumn's billing gates on `atoms`.
+		replicaSet = await createReplicaSet({ autumn: atomTestClient(), size });
 	}, STARTUP_TIMEOUT_MS);
 
 	beforeEach(async () => {

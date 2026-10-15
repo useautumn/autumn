@@ -15,6 +15,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	freshHeld,
 	noReplication,
@@ -120,6 +121,7 @@ const checkCustomer = async (slots: ReturnType<Auth["authorize"]>) => {
 describe("push receiver", () => {
 	test("an org's Atom applies a queued subject through the HTTP route's apply, then acks it", async () => {
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
@@ -138,6 +140,7 @@ describe("push receiver", () => {
 
 	test("a queued push routed to another customer than it holds is dropped, never redelivered", async () => {
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
@@ -159,6 +162,7 @@ describe("push receiver", () => {
 
 	test("a queued subject push without its customer id is dropped, never redelivered", async () => {
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
@@ -180,6 +184,7 @@ describe("push receiver", () => {
 
 	test("a multi-tenant Atom applies a push to the folder it names", async () => {
 		const auth = createMultiTenantAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
@@ -207,6 +212,7 @@ describe("push receiver", () => {
 
 	test("a push that can never apply is acked and logged, not redelivered forever", async () => {
 		const auth = createMultiTenantAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
@@ -233,6 +239,7 @@ describe("push receiver", () => {
 
 	test("a failed receive is logged and retried, never ending the receiver", async () => {
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,
@@ -277,6 +284,7 @@ describe("push receiver under a hung or stopped queue", () => {
 	const never = <T>() => new Promise<T>(() => {});
 	const openDeployed = () => {
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir: newDataDir(),
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,

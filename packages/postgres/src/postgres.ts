@@ -1,3 +1,7 @@
+export {
+	type LockRowKey,
+	readLockRows,
+} from "./balanceLocks/repos/readLockRows.js";
 export { getCatalogRows } from "./catalog/repos/getCatalogRows/getCatalogRows.js";
 export { getSharedCatalogRows } from "./catalog/repos/getSharedCatalogRows/getSharedCatalogRows.js";
 export type {
@@ -6,13 +10,13 @@ export type {
 } from "./catalog/types/catalogRowsEnvelope.js";
 export { attachPoolErrorHandlers } from "./common/attachPoolErrorHandlers.js";
 export { parseRows, RowsInvalidError } from "./common/parseRows.js";
-export { runInTransaction } from "./common/runInTransaction.js";
 export {
 	isPostgresConnectionFailure,
 	isTransientPostgresError,
 	PostgresSqlState,
 	postgresSqlStateOf,
 } from "./common/postgresErrors.js";
+export { runInTransaction } from "./common/runInTransaction.js";
 export {
 	createPostgresClient,
 	poolConfigOf,

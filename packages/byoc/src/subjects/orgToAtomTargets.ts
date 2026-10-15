@@ -30,6 +30,7 @@ const shadowAtomConnection = ({
 	if (!holdsSubject) return null;
 	return {
 		target: "shadow",
+		id: null,
 		endpointUrl: config.endpointUrl,
 		encryptedToken: registered.encryptedTokens[env],
 		queue:

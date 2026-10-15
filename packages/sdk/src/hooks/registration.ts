@@ -1,6 +1,7 @@
 import { BufferLoggedResponseHook } from "./bufferLoggedResponseHook.js";
 import { EdgeHook } from "./edge/edgeHook.js";
 import { FailOpenHook } from "./failOpenHook.js";
+import { IdempotencyKeyHook } from "./idempotencyKeyHook.js";
 import { RedactDebugLogHook } from "./redactDebugLogHook.js";
 import { TimeoutFixHook } from "./timeoutFixHook.js";
 import type { Hooks } from "./types.js";
@@ -11,16 +12,20 @@ import type { Hooks } from "./types.js";
  * in this file or in separate files in the hooks folder.
  */
 
+/** Every way this SDK patches the generated client, one hook each; README.md in this folder lists them. */
 export function initHooks(hooks: Hooks) {
 	const failOpenHook = new FailOpenHook();
-	const timeoutFixHook = new TimeoutFixHook();
+	const edgeHook = new EdgeHook();
+
+	// Fail-open first: it replaces the HTTP client, and the edge client wraps whatever is there.
 	hooks.registerSDKInitHook(failOpenHook);
 	hooks.registerSDKInitHook(new RedactDebugLogHook());
-	// After fail-open, which replaces the HTTP client the edge one wraps.
-	const edgeHook = new EdgeHook();
 	hooks.registerSDKInitHook(edgeHook);
+
+	hooks.registerBeforeCreateRequestHook(new IdempotencyKeyHook());
 	hooks.registerBeforeCreateRequestHook(edgeHook);
-	hooks.registerBeforeCreateRequestHook(timeoutFixHook);
+	hooks.registerBeforeCreateRequestHook(new TimeoutFixHook());
+
 	hooks.registerAfterSuccessHook(new BufferLoggedResponseHook());
 	hooks.registerAfterErrorHook(failOpenHook);
 }

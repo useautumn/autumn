@@ -5,7 +5,10 @@ import {
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import { buildIdempotencyStorageKey } from "@autumn/dynamodb";
-import { consumeTrack } from "../../../src/consume/consumeTrack.js";
+import {
+	consumeTrack,
+	prepareTrackBatch,
+} from "../../../src/consume/consumeTrack.js";
 import type { PartitionProcessor } from "../../../src/processor/types/partitionProcessor.js";
 import { PartitionWriterDuplicateCommandError } from "../../../src/processor/writer/writerErrors.js";
 import { createFakeIdempotencyKeys } from "../../fixtures/idempotencyKeys.js";
@@ -38,16 +41,23 @@ function commandOf({
 
 function createFixture({
 	outcome,
+	refuses,
 }: {
 	outcome?: "applied" | "rejected" | Error;
+	/** Refuses just the commands it names, for good. */
+	refuses?: (command: TrackCommand) => boolean;
 } = {}) {
 	const tracked: string[] = [];
+	const decided: TrackCommand[] = [];
 	const logs: string[] = [];
 	const keys = createFakeIdempotencyKeys();
 	const processor = {
 		decideTrack: async ({ command }: { command: TrackCommand }) => {
 			tracked.push(command.commandId);
+			decided.push(command);
 			if (outcome instanceof Error) throw outcome;
+			if (refuses?.(command))
+				throw new UnsupportedCommandError({ reason: "feature_not_found" });
 			const result = {
 				type: "track",
 				status: outcome ?? "applied",
@@ -67,7 +77,7 @@ function createFixture({
 			warn: (message: string) => logs.push(`warn:${message}`),
 		} as never,
 	};
-	return { ctx, tracked, logs, keys };
+	return { ctx, tracked, decided, logs, keys };
 }
 
 describe("consumeTrack", () => {
@@ -166,5 +176,230 @@ describe("consumeTrack", () => {
 
 		await queued?.onRefused?.();
 		expect(keys.released).toEqual([storageKey]);
+	});
+
+	const source = { atomId: "atom_1", writerId: "w_1", seq: 4 };
+	const sourced = ({
+		commandId,
+		requestId,
+	}: {
+		commandId: string;
+		requestId: string;
+	}) =>
+		parseTrackCommand({
+			input: { ...commandOf({ commandId, requestId }), source },
+		});
+	/** What lands for a sourced command that will never deduct: its seq alone, under its own command id. */
+	const seqOnly = (command: TrackCommand) => ({
+		commandId: command.commandId,
+		value: 0,
+		usageEvent: null,
+		enforceOverdueBlock: false,
+		idempotency: undefined,
+		source,
+	});
+
+	test("an Atom's command skipped as a duplicate still lands its seq, as a track of nothing", async () => {
+		const { ctx, decided, keys } = createFixture();
+		await consumeTrack({
+			ctx,
+			command: commandOf({ commandId: "c1", requestId: "r1" }),
+		});
+		const atomCommand = sourced({ commandId: "c2", requestId: "r2" });
+		const queued = await consumeTrack({ ctx, command: atomCommand });
+
+		expect(queued).not.toBeNull();
+		expect(decided.map(({ commandId }) => commandId)).toEqual(["c1", "c2"]);
+		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
+		expect(keys.owners.get(storageKey)).toBe("r1");
+	});
+
+	test("an Atom's command refused for good lands its seq the same way, and still frees its claim", async () => {
+		const { ctx, decided, keys } = createFixture({
+			refuses: (command) => command.value > 0,
+		});
+		const atomCommand = sourced({ commandId: "c1", requestId: "r1" });
+		const queued = await consumeTrack({ ctx, command: atomCommand });
+
+		expect(queued).not.toBeNull();
+		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
+		expect(keys.released).toEqual([storageKey]);
+	});
+
+	test("an Atom's keyless track carries no idempotency and claims nothing; one under its caller's key still claims", async () => {
+		const { ctx, decided, keys } = createFixture();
+		const keyless = parseTrackCommand({
+			input: {
+				...sourced({ commandId: "atom_req_1", requestId: "atom_req_1" }),
+				idempotency: undefined,
+			},
+		});
+		await consumeTrack({ ctx, command: keyless });
+		expect(keys.owners.size).toBe(0);
+		expect(decided[0]).toMatchObject({ commandId: "atom_req_1", value: 1 });
+
+		await consumeTrack({
+			ctx,
+			command: sourced({ commandId: "atom_req_2", requestId: "atom_req_2" }),
+		});
+		expect(keys.owners.get(storageKey)).toBe("atom_req_2");
+	});
+});
+
+describe("consumeTrack: a Kafka batch's claims, sent together", () => {
+	const source = { atomId: "atom_1", writerId: "w_1", seq: 1 };
+	const keyed = ({ n, key }: { n: number; key: string }) =>
+		parseTrackCommand({
+			input: {
+				...commandOf({ commandId: `c${n}`, requestId: `r${n}` }),
+				idempotency: { key, ttlMs: 60_000 },
+				source: { ...source, seq: n },
+			},
+		});
+	const storageKeyOf = (key: string) =>
+		buildIdempotencyStorageKey({
+			orgId: testIdentity.orgId,
+			env: testIdentity.env,
+			idempotencyKey: key,
+		}).storageKey;
+	const deducted = (commands: TrackCommand[]) =>
+		commands.map(({ commandId, value }) => `${commandId}:${value}`);
+
+	test("every key is claimed before the first track decides; each then decides in order with today's outcome", async () => {
+		const { ctx, decided, keys } = createFixture({
+			refuses: (command) => command.commandId === "c3" && command.value > 0,
+		});
+		keys.owners.set(storageKeyOf("k2"), "someone_else");
+		const claimsSent: string[] = [];
+		const claim = ctx.idempotencyKeys.claim;
+		ctx.idempotencyKeys = {
+			...ctx.idempotencyKeys,
+			claim: (params) => {
+				claimsSent.push(params.storageKey);
+				return claim(params);
+			},
+		};
+		const commands = [1, 2, 3].map((n) => keyed({ n, key: `k${n}` }));
+
+		const batch = await prepareTrackBatch({
+			commands,
+			idempotencyKeys: ctx.idempotencyKeys,
+		});
+		expect(claimsSent).toHaveLength(3);
+		expect(decided).toEqual([]);
+		for (const command of commands) await consumeTrack({ ctx, command, batch });
+
+		expect(claimsSent).toHaveLength(3);
+		expect(deducted(decided)).toEqual(["c1:1", "c2:0", "c3:1", "c3:0"]);
+		expect(keys.released).toEqual([storageKeyOf("k3")]);
+	});
+
+	test("a key the batch repeats goes to its earlier item; the later one lands its seq only", async () => {
+		const { ctx, decided } = createFixture();
+		const commands = [1, 2].map((n) => keyed({ n, key: "k" }));
+		const batch = await prepareTrackBatch({
+			commands,
+			idempotencyKeys: ctx.idempotencyKeys,
+		});
+		for (const command of commands) await consumeTrack({ ctx, command, batch });
+
+		expect(deducted(decided)).toEqual(["c1:1", "c2:0"]);
+	});
+
+	test("one key's failed claim fails only its own track; the others still decide", async () => {
+		const { ctx, decided } = createFixture();
+		const claim = ctx.idempotencyKeys.claim;
+		ctx.idempotencyKeys = {
+			...ctx.idempotencyKeys,
+			claim: async (params) => {
+				if (params.storageKey === storageKeyOf("k2"))
+					throw new Error("dynamo away");
+				return claim(params);
+			},
+		};
+		const [first, second, third] = [1, 2, 3].map((n) =>
+			keyed({ n, key: `k${n}` }),
+		) as [TrackCommand, TrackCommand, TrackCommand];
+		const batch = await prepareTrackBatch({
+			commands: [first, second, third],
+			idempotencyKeys: ctx.idempotencyKeys,
+		});
+		await consumeTrack({ ctx, command: first, batch });
+		await expect(consumeTrack({ ctx, command: second, batch })).rejects.toThrow(
+			"dynamo away",
+		);
+		await consumeTrack({ ctx, command: third, batch });
+
+		expect(decided.map(({ commandId }) => commandId)).toEqual(["c1", "c3"]);
+	});
+});
+
+describe("consumeTrack: an Atom's lock that lands after its expiry", () => {
+	const source = { atomId: "atom_1", writerId: "w_1", seq: 7 };
+	const lockedAtom = ({
+		expiryAction,
+		expiresAt,
+	}: {
+		expiryAction: "release" | "confirm";
+		expiresAt: number;
+	}) =>
+		parseTrackCommand({
+			input: {
+				...commandOf({ commandId: "c1", requestId: "r1" }),
+				lock: { id: "lck_1", lockId: "L1", expiresAt, expiryAction },
+				source,
+			},
+		});
+
+	test("a release lock already past its expiry holds nothing: only its seq lands, and no key is claimed", async () => {
+		const { ctx, decided, keys } = createFixture();
+		const queued = await consumeTrack({
+			ctx,
+			command: lockedAtom({
+				expiryAction: "release",
+				expiresAt: Date.now() - 1_000,
+			}),
+		});
+
+		expect(queued).not.toBeNull();
+		expect(decided).toHaveLength(1);
+		expect(decided[0]).toMatchObject({
+			commandId: "c1",
+			value: 0,
+			lock: undefined,
+			usageEvent: null,
+			source,
+		});
+		expect(keys.owners.size).toBe(0);
+	});
+
+	test("a confirm lock past its expiry is taken as sent; the sweep confirms it, being due", async () => {
+		const { ctx, decided } = createFixture();
+		const expiresAt = Date.now() - 1_000;
+		await consumeTrack({
+			ctx,
+			command: lockedAtom({ expiryAction: "confirm", expiresAt }),
+		});
+
+		expect(decided[0]).toMatchObject({
+			value: 1,
+			lock: { lockId: "L1", expiresAt, expiryAction: "confirm" },
+		});
+	});
+
+	test("a release lock still before its expiry is taken as sent", async () => {
+		const { ctx, decided } = createFixture();
+		await consumeTrack({
+			ctx,
+			command: lockedAtom({
+				expiryAction: "release",
+				expiresAt: Date.now() + 60_000,
+			}),
+		});
+
+		expect(decided[0]).toMatchObject({
+			value: 1,
+			lock: { lockId: "L1", expiryAction: "release" },
+		});
 	});
 });

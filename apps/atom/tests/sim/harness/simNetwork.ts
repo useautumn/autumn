@@ -151,7 +151,8 @@ export const createSimNetwork = ({
 				path: url.pathname,
 				relayed: headers.get("x-atom-relayed") === "1",
 				resend: headers.get("x-atom-resend") === "1",
-				proxied: headers.get("x-atom-proxied") === "1",
+				// A check one replica hands another, to its owner or past its own start: never a relay of a push.
+				proxied: from.id !== 0 && url.pathname === "/v1/balances.check",
 				body: typeof init.body === "string" ? init.body : "",
 				outcome: "dropped",
 			};

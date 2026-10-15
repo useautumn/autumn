@@ -26,23 +26,27 @@ type CatchUpResult = {
 	folders: number;
 	slots: number;
 	written: number;
+	keys: number;
 	ms: number;
 };
 
 /**
  * Copies from one peer, folder by folder, what each lacks: first the tenants the peer holds that this replica does
- * not, so a folder registered on the peer alone exists here before its rows are asked for.
+ * not, so a folder registered on the peer alone exists here before its rows are asked for. With `withRecentKeys`, the
+ * idempotency keys the peer took within the key window too: the relay carries every later one.
  */
 const catchUpFrom = async ({
 	ctx,
 	folders,
 	peer,
 	windowOf,
+	withRecentKeys,
 }: {
 	ctx: CatchUpContext;
 	folders: ReplicaFolders;
 	peer: string;
 	windowOf: (folder: ReplicaFolder) => number | null;
+	withRecentKeys: boolean;
 }): Promise<CatchUpResult> => {
 	const startedAt = performance.now();
 	const peerContext = {
@@ -52,7 +56,7 @@ const catchUpFrom = async ({
 		fetch: ctx.fetch,
 	};
 	folders.learn({ tenants: await listPeerAtoms({ ctx: peerContext }) });
-	const result = { peer, folders: 0, slots: 0, written: 0 };
+	const result = { peer, folders: 0, slots: 0, written: 0, keys: 0 };
 	for (const folder of folders.all()) {
 		const source = createPeerSubjectSource({
 			ctx: { ...peerContext, atomId: folder.atomId },
@@ -64,17 +68,19 @@ const catchUpFrom = async ({
 		result.folders += 1;
 		result.slots += copied.slots;
 		result.written += copied.written;
+		if (withRecentKeys)
+			result.keys += await folder.slots.copyRecentKeys({ source });
 	}
 	return { ...result, ms: Math.round(performance.now() - startedAt) };
 };
 
 const describe = (result: CatchUpResult) =>
-	`Caught up from ${result.peer}: ${result.written} subjects written across ${result.slots} slots in ${result.folders} folders`;
+	`Caught up from ${result.peer}: ${result.written} subjects written across ${result.slots} slots in ${result.folders} folders, ${result.keys} idempotency keys`;
 
 /**
  * Before this replica serves: copies from the first ready peer that answers what its folders lack, everything on a fresh
- * volume. With no peer there is nothing to copy; with none ready or answering it gives up after a few tries, so two
- * replicas restarting at once cannot wait on each other.
+ * volume, and the peer's idempotency keys taken within the key window. With no peer there is nothing to copy; with none ready or
+ * answering it gives up after a few tries, so two replicas restarting at once cannot wait on each other.
  */
 export const catchUpBeforeServing = async ({
 	ctx,
@@ -97,7 +103,13 @@ export const catchUpBeforeServing = async ({
 		}
 		for (const peer of peers) {
 			try {
-				const result = await catchUpFrom({ ctx, folders, peer, windowOf });
+				const result = await catchUpFrom({
+					ctx,
+					folders,
+					peer,
+					windowOf,
+					withRecentKeys: true,
+				});
 				ctx.logger.info(
 					{ type: "atom_catch_up", data: { attempt, ...result } },
 					describe(result),
@@ -143,6 +155,7 @@ export const catchUpFromEveryPeer = async ({
 				folders,
 				peer,
 				windowOf: () => windowFor(peer),
+				withRecentKeys: false,
 			});
 			caughtUp.push(peer);
 			if (result.written > 0)

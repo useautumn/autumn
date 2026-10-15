@@ -3,6 +3,7 @@ import type { ThreadCounters } from "../../../threads/stats/threadStats.js";
 /** What the thread counts for /health, by route. */
 const COUNTED_PATHS = {
 	"/v1/balances.check": "checks",
+	"/v1/track": "checks",
 	"/v1/subjects.set": "pushes",
 	"/v1/catalog.set": "pushes",
 } as const;

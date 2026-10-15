@@ -1,4 +1,4 @@
-import { type FinalizeLockParamsV0, RecaseError } from "@autumn/shared";
+import { type FinalizeLockParamsV1, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { finalizeWhereTheLockLives } from "./runFinalizeLock.js";
 
@@ -9,7 +9,7 @@ export const runQueuedFinalizeLock = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: FinalizeLockParamsV0;
+	params: FinalizeLockParamsV1;
 }) => {
 	try {
 		return await finalizeWhereTheLockLives({ ctx, params });

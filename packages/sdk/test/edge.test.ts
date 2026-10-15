@@ -291,8 +291,11 @@ const WRITES: { name: string; request: CheckParams }[] = [
 	},
 ];
 
+const keysSent = (stub: Stub) =>
+	stub.requests.map(({ headers }) => headers.get("idempotency-key"));
+
 for (const write of WRITES) {
-	test(`a check with ${write.name} goes straight to Autumn`, async () => {
+	test(`a check with ${write.name} goes to the edge with a generated idempotency key`, async () => {
 		const edge = startEdge();
 		const autumn = startAutumn();
 
@@ -301,11 +304,162 @@ for (const write of WRITES) {
 			autumnURL: autumn.url,
 		}).check(write.request);
 
+		expect(response.customerId).toBe("from_edge");
+		expect(autumn.requests).toHaveLength(0);
+		const [key] = keysSent(edge);
+		expect(key).toMatch(/^[0-9a-f-]{36}$/);
+	});
+
+	test(`each check with ${write.name} gets its own key`, async () => {
+		const edge = startEdge();
+		const client = edgeClientFor({
+			edgeURL: edge.url,
+			autumnURL: "http://127.0.0.1:1",
+		});
+
+		await client.check(write.request);
+		await client.check(write.request);
+
+		const [first, second] = keysSent(edge);
+		expect(first).toBeString();
+		expect(second).toBeString();
+		expect(first).not.toBe(second);
+	});
+
+	test(`a check with ${write.name} sends the caller's idempotency key unchanged`, async () => {
+		const edge = startEdge();
+		const autumn = startAutumn();
+
+		await edgeClientFor({ edgeURL: edge.url, autumnURL: autumn.url }).check(
+			write.request,
+			{ headers: { "Idempotency-Key": "caller_key_1" } },
+		);
+
+		expect(keysSent(edge)).toEqual(["caller_key_1"]);
+	});
+
+	for (const down of EDGE_DOWN_REPLIES) {
+		test(`a check with ${write.name} falls back on ${down.name} with the same key`, async () => {
+			const edge = startStub({ reply: down.reply });
+			const autumn = startAutumn();
+
+			const response = await edgeClientFor({
+				edgeURL: edge.url,
+				autumnURL: autumn.url,
+				failOpen: false,
+			}).check(write.request);
+
+			expect(response.customerId).toBe("from_autumn");
+			const [key] = keysSent(edge);
+			expect(key).toBeString();
+			expect(keysSent(autumn)).toEqual([key]);
+		});
+	}
+
+	test(`a check with ${write.name} falls back after the edge's 1s budget with the same key`, async () => {
+		const edge = startStub({
+			reply: async () => {
+				await Bun.sleep(2_000);
+				return Response.json(checkAnswer({ customerId: "from_edge" }));
+			},
+		});
+		const autumn = startAutumn();
+
+		const response = await edgeClientFor({
+			edgeURL: edge.url,
+			autumnURL: autumn.url,
+			failOpen: false,
+		}).check(write.request);
+
 		expect(response.customerId).toBe("from_autumn");
+		const [key] = keysSent(edge);
+		expect(key).toBeString();
+		expect(keysSent(autumn)).toEqual([key]);
+	});
+
+	test(`a check with ${write.name} falls back with the caller's key when the edge refuses the connection`, async () => {
+		const autumn = startAutumn();
+
+		await edgeClientFor({
+			edgeURL: await closedURL(),
+			autumnURL: autumn.url,
+		}).check(write.request, { headers: { "Idempotency-Key": "caller_key_1" } });
+
+		expect(keysSent(autumn)).toEqual(["caller_key_1"]);
+	});
+
+	test(`a check with ${write.name} keeps one key across every retry and fallback`, async () => {
+		const edge = startStub({
+			reply: () => Response.json({ code: "atom_unavailable" }, { status: 503 }),
+		});
+		const autumn = startStub({
+			reply: () => Response.json({ message: "Down" }, { status: 503 }),
+		});
+
+		await edgeClientFor({
+			edgeURL: edge.url,
+			autumnURL: autumn.url,
+			failOpen: false,
+			retryConfig: {
+				strategy: "backoff",
+				backoff: {
+					initialInterval: 1,
+					maxInterval: 5,
+					exponent: 1,
+					maxElapsedTime: 50,
+				},
+			},
+		})
+			.check(write.request)
+			.catch(() => undefined);
+
+		const keys = [...keysSent(edge), ...keysSent(autumn)];
+		expect(edge.requests.length).toBeGreaterThan(1);
+		expect(new Set(keys).size).toBe(1);
+		expect(keys[0]).toBeString();
+	});
+
+	test(`without useEdge, a check with ${write.name} goes to Autumn with no generated key`, async () => {
+		const edge = startEdge();
+		const autumn = startAutumn();
+
+		await clientFor({ edgeURL: edge.url, autumnURL: autumn.url }).check(
+			write.request,
+		);
+
 		expect(edge.requests).toHaveLength(0);
-		expect(autumn.requests).toHaveLength(1);
+		expect(keysSent(autumn)).toEqual([null]);
 	});
 }
+
+test("a plain check carries no idempotency key to the edge or the fallback", async () => {
+	const edge = startStub({
+		reply: () => Response.json({ code: "atom_unavailable" }, { status: 503 }),
+	});
+	const autumn = startAutumn();
+
+	await edgeClientFor({ edgeURL: edge.url, autumnURL: autumn.url }).check(
+		CHECK,
+	);
+
+	expect(keysSent(edge)).toEqual([null]);
+	expect(keysSent(autumn)).toEqual([null]);
+});
+
+test("useEdge leaves finalize with Autumn until the edge dedupes it", async () => {
+	const edge = startEdge();
+	const autumn = startStub({ reply: () => Response.json({ success: true }) });
+
+	await edgeClientFor({
+		edgeURL: edge.url,
+		autumnURL: autumn.url,
+	}).balances.finalize({ lockId: "lock_1", action: "confirm" });
+
+	expect(edge.requests).toHaveLength(0);
+	expect(autumn.requests.map(({ url }) => new URL(url).pathname)).toEqual([
+		"/v1/balances.finalize",
+	]);
+});
 
 test("without an edgeURL, edge calls go straight to Autumn", async () => {
 	const autumn = startAutumn();

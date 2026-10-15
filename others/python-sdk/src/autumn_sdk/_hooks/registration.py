@@ -1,5 +1,6 @@
 from .edge_hook import EdgeHook
 from .fail_open_hook import FailOpenHook
+from .idempotency_key_hook import IdempotencyKeyHook
 from .timeout_hook import TimeoutHook
 from .types import Hooks
 
@@ -10,16 +11,17 @@ from .types import Hooks
 
 
 def init_hooks(hooks: Hooks):
-    """Add hooks by calling hooks.register{sdk_init/before_request/after_success/after_error}Hook
-    with an instance of a hook that implements that specific Hook interface
-    Hooks are registered per SDK instance, and are valid for the lifetime of the SDK instance"""
+    """Every way this SDK patches the generated client, one hook each; README.md in this folder lists them."""
     fail_open_hook = FailOpenHook()
-    timeout_hook = TimeoutHook()
-
-    hooks.register_sdk_init_hook(fail_open_hook)
-    # After fail-open, which wraps the HTTP clients the edge ones wrap in turn.
     edge_hook = EdgeHook()
+
+    # Fail-open first: it replaces the HTTP clients, and the edge clients wrap whatever is there.
+    hooks.register_sdk_init_hook(fail_open_hook)
     hooks.register_sdk_init_hook(edge_hook)
+
+    # The key hook before the edge hook: retries start from the original request, which the edge hook copies.
+    hooks.register_before_request_hook(IdempotencyKeyHook())
     hooks.register_before_request_hook(edge_hook)
-    hooks.register_before_request_hook(timeout_hook)
+    hooks.register_before_request_hook(TimeoutHook())
+
     hooks.register_after_error_hook(fail_open_hook)
