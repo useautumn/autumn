@@ -39,14 +39,17 @@ import {
 	seedBenchPlanItems,
 } from "./utils/seedBenchPlanItems.js";
 
+const BENCH_INTERNAL_CUSTOMER_BASE = "cus_bench_wrm_";
+// Fresh ids per run: a previous run's finalize queues worker evicts for its customers, which would evict this run's warm subjects.
+const RUN_TAG = Date.now().toString(36);
 const PREFIXES: BenchPlanItemPrefixes = {
 	productId: "bench-worker-remove",
-	customerId: "bench-wrm-c-",
-	internalCustomer: "cus_bench_wrm_",
-	customerProduct: "cp_bench_wrm_",
-	entitlement: "ce_bench_wrm_msg_",
+	customerId: `bench-wrm-${RUN_TAG}-c-`,
+	internalCustomer: `${BENCH_INTERNAL_CUSTOMER_BASE}${RUN_TAG}_`,
+	customerProduct: `cp_bench_wrm_${RUN_TAG}_`,
+	entitlement: `ce_bench_wrm_msg_${RUN_TAG}_`,
 };
-const KEPT_ENTITLEMENT_PREFIX = "ce_bench_wrm_kept_";
+const KEPT_ENTITLEMENT_PREFIX = `ce_bench_wrm_kept_${RUN_TAG}_`;
 const SEED_STARTS_AT = Date.UTC(2026, 8, 20);
 const WORDS_SEED_BALANCE = 60;
 
@@ -147,16 +150,16 @@ const main = async () => {
 	if (!words) throw new Error("bench: words feature missing");
 
 	await db.execute(sql`
-		DELETE FROM customer_entitlements WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}
+		DELETE FROM customer_entitlements WHERE internal_customer_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_BASE}%`}
 	`);
 	await db.execute(sql`
-		DELETE FROM customer_products WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}
+		DELETE FROM customer_products WHERE internal_customer_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_BASE}%`}
 	`);
 	await db.execute(sql`
-		DELETE FROM migration_item_runs WHERE item_id LIKE ${`${PREFIXES.internalCustomer}%`}
+		DELETE FROM migration_item_runs WHERE item_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_BASE}%`}
 	`);
 	await db.execute(sql`
-		DELETE FROM customers WHERE internal_id LIKE ${`${PREFIXES.internalCustomer}%`}
+		DELETE FROM customers WHERE internal_id LIKE ${`${BENCH_INTERNAL_CUSTOMER_BASE}%`}
 	`);
 
 	const removed = await ensureBenchPlanItemProduct({
@@ -252,6 +255,9 @@ const main = async () => {
 			`bench: warm pass 1 ${first.ms}ms (${first.failures} failed), pass 2 ${second.ms}ms (${second.failures} failed)`,
 		);
 	}
+
+	// Separates warm-up subject loads from the migration in the worker's 10 s telemetry windows.
+	if (!args.skipWarm) await Bun.sleep(11_000);
 
 	const latencies: number[] = [];
 	let callErrors = 0;
@@ -393,7 +399,7 @@ const main = async () => {
 			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${PREFIXES.entitlement}%`}) AS removed_left,
 			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${KEPT_ENTITLEMENT_PREFIX}%`}) AS kept_left,
 			(SELECT md5(string_agg(row_text, ',' ORDER BY row_text)) FROM (
-				SELECT concat_ws(':', ce.internal_customer_id, ce.customer_product_id, ce.feature_id, e.allowance, e.interval,
+				SELECT concat_ws(':', substring(ce.customer_product_id from '([0-9]+)$'), ce.feature_id, e.allowance, e.interval,
 					ce.balance, ce.adjustment, ce.additional_balance, ce.unlimited, ce.usage_allowed,
 					ce.reset_cycle_anchor, ce.next_reset_at, ce.internal_entity_id, coalesce(ce.expired, false), ce.invoice_credit) AS row_text
 				FROM customer_entitlements ce JOIN entitlements e ON e.id = ce.entitlement_id
@@ -401,7 +407,7 @@ const main = async () => {
 			(SELECT json_object_agg(feature_id || ':' || balance, n) FROM (
 				SELECT ce.feature_id, ce.balance, count(*) AS n FROM customer_entitlements ce
 				WHERE ce.internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`} GROUP BY 1, 2) AS shape) AS shape,
-			(SELECT md5(string_agg(id || ':' || status || ':' || internal_product_id, ',' ORDER BY id))
+			(SELECT md5(string_agg(substring(id from '([0-9]+)$') || ':' || status || ':' || internal_product_id, ',' ORDER BY id))
 			 FROM customer_products WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}) AS product_hash
 	`);
 	const runStatuses: Array<{ status: string; count: string }> =
