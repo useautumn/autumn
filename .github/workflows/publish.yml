@@ -43,7 +43,6 @@ jobs:
       sha: ${{ steps.source.outputs.sha }}
       packages: ${{ steps.plan.outputs.packages }}
       has-changes: ${{ steps.patch.outputs.has-changes }}
-      unknown-files: ${{ steps.unknown.outputs.files }}
       dry-run: ${{ env.DRY_RUN }}
     steps:
       # The branch tip, not the triggering commit, so a queued run builds on the previous bot commit.
@@ -92,18 +91,7 @@ jobs:
         run: bun install --lockfile-only
 
       - name: Stage generated files
-        id: stage
-        run: |
-          set -o pipefail
-          bun scripts/release/stagePublish.ts 2>&1 | tee "$RUNNER_TEMP/stage.log"
-
-      # The guard names each unknown file; hand them to the #shipped alert.
-      - name: Record unknown regenerated files
-        id: unknown
-        if: failure() && steps.stage.outcome == 'failure'
-        run: |
-          files=$(grep -o '::error file=[^:]*' "$RUNNER_TEMP/stage.log" | cut -d= -f2 | paste -sd, - || true)
-          echo "files=$files" >> "$GITHUB_OUTPUT"
+        run: bun scripts/release/stagePublish.ts
 
       - name: Build patch
         id: patch
@@ -239,49 +227,3 @@ jobs:
             git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null || git tag "${tag}" HEAD
             git push origin "refs/tags/${tag}"
           done
-
-  alert:
-    name: "Alert #shipped"
-    needs: [prepare, publish, commit]
-    # Reports failures and left-out files; best effort, so it can never fail the run.
-    if: always() && github.ref_name == 'main' && needs.prepare.result != 'skipped'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    continue-on-error: true
-    steps:
-      - name: Checkout scripts
-        uses: actions/checkout@v4
-        with:
-          sparse-checkout: scripts/release
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-
-      - name: Post to #shipped
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-          UNKNOWN_FILES: ${{ needs.prepare.outputs.unknown-files }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
-          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
-        run: |
-          payload=$(cd scripts/release && bun publishAlert.ts || true)
-          if [ -z "$payload" ]; then
-            echo "Publish needs no attention."
-            exit 0
-          fi
-          echo "$payload" | jq -r '"Needs attention: failed=\(.failedJobs|join(",")) unknown=\(.unknownFiles|join(","))"'
-          if [ -z "$DEPLOY_URL" ] || [ -z "$DEPLOY_SECRET" ]; then
-            echo "::warning::DEPLOY_URL/DEPLOY_SECRET missing; #shipped not alerted"
-            exit 0
-          fi
-          curl --silent --show-error --fail-with-body \
-            --retry 2 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --header "x-deploy-secret: $DEPLOY_SECRET" \
-            --data-binary "$payload" \
-            "$DEPLOY_URL/api/shipped/publish-alert" \
-            || echo "::warning::Couldn't alert #shipped"
