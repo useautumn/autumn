@@ -34,6 +34,9 @@ type SyncedAnchor = {
 	resetCycleAnchor?: number;
 };
 
+/** A free plan with no paid plan on its own customer or entity to follow. */
+const MISSING_BILLING_ANCHOR = "missing_billing_anchor" as const;
+
 type CustomerEntitlementToSync = Awaited<
 	ReturnType<typeof CusEntService.getStrict>
 >;
@@ -151,7 +154,7 @@ const getSyncedNextResetAt = async ({
 	fullCustomer: FullCustomer;
 	customerEntitlement: CustomerEntitlementToSync;
 	now: number;
-}): Promise<SyncedAnchor | null> => {
+}): Promise<SyncedAnchor | typeof MISSING_BILLING_ANCHOR | null> => {
 	if (
 		(customerEntitlement.expires_at != null &&
 			customerEntitlement.expires_at <= now) ||
@@ -189,13 +192,7 @@ const getSyncedNextResetAt = async ({
 		? customerProduct
 		: findPaidRecurringAnchorProduct({ fullCustomer, customerProduct });
 	const subscriptionId = anchorProduct?.subscription_ids?.[0];
-	if (!anchorProduct || !subscriptionId) {
-		throw new RecaseError({
-			message: "No billing anchor to sync to, please start a subscription",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
+	if (!anchorProduct || !subscriptionId) return MISSING_BILLING_ANCHOR;
 	const anchor = await getStripeBillingCycleAnchor({ ctx, subscriptionId });
 	const pendingAnchorResetsAt = getPendingAnchorResetsAt({
 		customerProducts: [anchorProduct],
@@ -253,28 +250,37 @@ export const syncCustomerEntitlementAnchors = async ({
 		return fullCustomer;
 	};
 	const now = Date.now();
-	const updates = (
-		await Promise.all(
-			customerEntitlements.map(async (customerEntitlement) => ({
+	const results = await Promise.all(
+		customerEntitlements.map(async (customerEntitlement) => ({
+			customerEntitlement,
+			synced: await getSyncedNextResetAt({
+				ctx,
+				fullCustomer: await getFullCustomer(
+					customerEntitlement.customer.internal_id,
+				),
 				customerEntitlement,
-				synced: await getSyncedNextResetAt({
-					ctx,
-					fullCustomer: await getFullCustomer(
-						customerEntitlement.customer.internal_id,
-					),
-					customerEntitlement,
-					now,
-				}),
-			})),
-		)
-	).filter(
+				now,
+			}),
+		})),
+	);
+	const updates = results.filter(
 		(
 			update,
 		): update is typeof update & {
 			synced: SyncedAnchor;
-		} => update.synced != null,
+		} => update.synced != null && update.synced !== MISSING_BILLING_ANCHOR,
 	);
 	if (updates.length === 0) {
+		// The dashboard syncs every row of a feature at once, so a free plan on
+		// another entity is skipped and only fails the request when nothing else
+		// in the batch has an anchor.
+		if (results.some(({ synced }) => synced === MISSING_BILLING_ANCHOR)) {
+			throw new RecaseError({
+				message: "No billing anchor to sync to, please start a subscription",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
 		return { updated: 0, skipped: uniqueIds.length };
 	}
 
