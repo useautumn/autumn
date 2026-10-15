@@ -19,4 +19,4 @@ export const isAtomForwardedRequest = ({
 	ctx,
 }: {
 	ctx: AutumnContext;
-}): boolean => ctx.state[ATOM_FORWARDED_REQUEST_KEY] === true;
+}): boolean => ctx.state?.[ATOM_FORWARDED_REQUEST_KEY] === true;
