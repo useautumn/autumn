@@ -5,6 +5,10 @@ import { actions } from "../models/analyticsModels/actionTable.js";
 // Approvals
 import { approvalDecisions } from "../models/approvalModels/approvalDecisionTable.js";
 import {
+	approvalRuleSubjectsRelations,
+	approvalRulesRelations,
+} from "../models/approvalModels/approvalRuleRelations.js";
+import {
 	approvalRuleSubjects,
 	approvalRules,
 	approvalRuleVersions,
@@ -139,11 +143,11 @@ import {
 	invitation,
 	jwks,
 	member,
-	organizationRole,
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	organizationRole,
 	passkey,
 	session,
 	ssoConnection,
@@ -157,7 +161,9 @@ export {
 	actions,
 	approvalDecisions,
 	approvalRuleSubjects,
+	approvalRuleSubjectsRelations,
 	approvalRules,
+	approvalRulesRelations,
 	approvalRuleVersions,
 	apiKeyRelations,
 	apiKeys,

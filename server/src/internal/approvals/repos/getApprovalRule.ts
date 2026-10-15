@@ -5,7 +5,7 @@ import {
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { attachSubjectsToRules } from "./attachSubjectsToRules.js";
+import { subjectColumns } from "./subjectColumns.js";
 
 export const getApprovalRule = async ({
 	db,
@@ -17,18 +17,12 @@ export const getApprovalRule = async ({
 	orgId: string;
 	env: AppEnv;
 	ruleId: string;
-}): Promise<ApprovalRuleWithSubjects | undefined> => {
-	const rules = await db
-		.select()
-		.from(approvalRules)
-		.where(
-			and(
-				eq(approvalRules.id, ruleId),
-				eq(approvalRules.org_id, orgId),
-				eq(approvalRules.env, env),
-			),
-		);
-
-	const [rule] = await attachSubjectsToRules({ db, rules });
-	return rule;
-};
+}): Promise<ApprovalRuleWithSubjects | undefined> =>
+	db.query.approvalRules.findFirst({
+		where: and(
+			eq(approvalRules.id, ruleId),
+			eq(approvalRules.org_id, orgId),
+			eq(approvalRules.env, env),
+		),
+		with: { subjects: { columns: subjectColumns } },
+	});
