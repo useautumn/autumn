@@ -7,6 +7,7 @@ import {
 	createPercentCoupon,
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils.js";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -76,6 +77,61 @@ test.concurrent(
 
 		expect(facts.incoming[0].plan_id).toBe(premium.id);
 		expect(facts.discounts).toEqual([]);
+	},
+	300_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("discount facts 3: more units under a forever 100% coupon cost nothing, so it isn't paid")}`,
+	async () => {
+		const customerId = "approvals-facts-units-free-coupon";
+		const billingUnits = 10;
+		const prepaid = products.base({
+			id: "prepaid-coupon",
+			items: [
+				items.prepaid({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: 5,
+				}),
+			],
+		});
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [prepaid] }),
+			],
+			actions: [
+				s.attach({
+					productId: prepaid.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+		const coupon = await createPercentCoupon({ stripeCli, percentOff: 100 });
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
+
+		const { _permission_facts: facts } =
+			await permissionFactsClient().subscriptions.previewUpdate({
+				customer_id: customerId,
+				plan_id: prepaid.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+				],
+			});
+
+		expect(facts.total).toBeLessThanOrEqual(0);
+		expect(facts.paid).toBe(false);
 	},
 	300_000,
 );
