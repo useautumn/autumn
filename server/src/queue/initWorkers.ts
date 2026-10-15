@@ -18,6 +18,7 @@ import {
 	type QueueCapacityLease,
 	reserveQueueCapacity,
 } from "@/external/redis/actions/queueCapacityLease/queueCapacityLease.js";
+import { flushBalanceBatchingManagers } from "@/internal/balances/utils/flushBalanceBatchingManagers.js";
 import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
@@ -64,6 +65,7 @@ const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
+const IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS = ms.seconds(5);
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
 type JobOverride = {
@@ -643,7 +645,16 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
+		await withTimeout({
+			fn: () => Promise.allSettled(pollingLoops),
+			timeoutMs: IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS,
+		}).catch(() =>
+			console.warn(
+				`[SQS Worker ${process.pid}] proceeding with jobs still in flight after ${IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS}ms`,
+			),
+		);
 		await stopBalanceShadow();
+		await flushBalanceBatchingManagers();
 		await shutdownSqsSendBatchers();
 		await getSqsJobs().shutdown();
 		await flushTelemetry();
@@ -666,7 +677,7 @@ export const initWorkers = async ({
 	console.log(
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
-	const pollingLoops = [];
+	const pollingLoops: Promise<void>[] = [];
 	const workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	});
