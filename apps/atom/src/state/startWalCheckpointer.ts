@@ -9,7 +9,7 @@ const TICK_MS = 1000;
  * Each file is checkpointed once per this many ticks, a slice of the files each tick. A completed checkpoint makes the
  * next write restart the log, and that restart syncs the log header on the writing (serving) thread.
  */
-export const TICKS_PER_FILE = 3;
+export const TICKS_PER_FILE = 10;
 /** A log past this is copied on the next tick, ahead of its turn: one hot file's 30 s of writes came back as a 163 MB
  * burst that stalled the loop for a second (rig, 2026-10-14); 16 MB every few seconds does not. */
 export const CHECKPOINT_WAL_BYTES = 16 * 1024 * 1024;
