@@ -1,3 +1,4 @@
+import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import {
 	encodeJournalEntries,
 	readJournalWriterId,
@@ -26,6 +27,35 @@ let unsentOnThread = 0;
 const unsentByJournal = new Set<Set<JournalEntry>>();
 let appendedOnThread = 0;
 let appendFailedOnThread = 0;
+
+/** A journal that refuses every commit would otherwise show as forwards alone, so its first failure is logged, then one line per interval. */
+const APPEND_ERROR_LOG_INTERVAL_MS = 10_000;
+let appendErrorLoggedAt = Number.NEGATIVE_INFINITY;
+let commitsFailedSinceLogged = 0;
+
+const logFailedCommit = ({
+	error,
+	entries,
+	at,
+}: {
+	error: unknown;
+	entries: number;
+	at: number;
+}): void => {
+	commitsFailedSinceLogged++;
+	if (at - appendErrorLoggedAt < APPEND_ERROR_LOG_INTERVAL_MS) return;
+	const reason = error instanceof Error ? error.message : String(error);
+	getAtomLogger().error(
+		{
+			error,
+			type: "atom_journal_append_failed",
+			data: { entries, commitsFailed: commitsFailedSinceLogged },
+		},
+		`A journal commit of ${entries} entries failed, left to the API: ${reason}`,
+	);
+	appendErrorLoggedAt = at;
+	commitsFailedSinceLogged = 0;
+};
 
 /** What this thread's journals hold that Autumn does not, and what they took and failed to take since boot. */
 export const readJournalThreadStats = ({ now }: { now: number }) => {
@@ -110,10 +140,15 @@ export const openJournal = ({
 
 	const groupCommit = createGroupCommit({
 		commit: async (entries: JournalEntry[]) => {
-			await file.write(
-				"insertJournalEntries",
-				encodeJournalEntries({ entries }),
-			);
+			try {
+				await file.write(
+					"insertJournalEntries",
+					encodeJournalEntries({ entries }),
+				);
+			} catch (error) {
+				logFailedCommit({ error, entries: entries.length, at: now() });
+				throw error;
+			}
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
