@@ -1,6 +1,9 @@
 import type { KafkaJS } from "@autumn/librdkafka";
 import { isKafkaRefusalOfUnwritten } from "../../kafkaErrorClassification.js";
-import { KafkaPartialDeliveryError } from "../../kafkaErrors.js";
+import {
+	KafkaPartialDeliveryError,
+	KafkaProducerClosedError,
+} from "../../kafkaErrors.js";
 import type { KafkaRequestTiming } from "../../types/kafkaClient.js";
 import {
 	CompressionTypes,
@@ -21,6 +24,7 @@ const COMPRESSION_CODECS: Record<number, string> = {
 	[CompressionTypes.ZSTD]: "zstd",
 };
 const STATISTICS_INTERVAL_MS = 10_000;
+const MAX_INT32 = 2_147_483_647;
 
 export type ProducerDefaults = {
 	requestTimeout: number;
@@ -62,8 +66,9 @@ export function nativeProducerConfigOf({
 			transactional && config.transactionTimeout
 				? Math.min(window, config.transactionTimeout)
 				: window,
-		// The KafkaJS shim would otherwise put its own default of 5 here, whatever the producer asked for.
-		retries: retry.retries,
+		// The KafkaJS shim would otherwise force 5. An idempotent producer keeps librdkafka's own unbounded
+		// count so only the message timeout ends a send, as one fate-unknown error rather than a broker code.
+		retries: (config.idempotent ?? transactional) ? MAX_INT32 : retry.retries,
 		"retry.backoff.ms": retry.initialRetryTime,
 		"retry.backoff.max.ms": retry.maxRetryTime,
 		"allow.auto.create.topics": config.allowAutoTopicCreation ?? false,
@@ -206,17 +211,33 @@ export function createLibrdkafkaProducer({
 		return producer.connect();
 	}
 
-	function disconnect(): Promise<void> {
-		return producer.disconnect();
+	// librdkafka drops the delivery reports still queued when the client closes, so their sends would never settle.
+	const closed = Promise.withResolvers<never>();
+	async function observeClosed(): Promise<void> {
+		try {
+			await closed.promise;
+		} catch {
+			// Each send racing it reports the close; nothing waits on it otherwise.
+		}
+	}
+	void observeClosed();
+
+	async function disconnect(): Promise<void> {
+		try {
+			await producer.disconnect();
+		} finally {
+			closed.reject(new KafkaProducerClosedError());
+		}
 	}
 
 	function sendOne(
 		message: ProducerRecord["messages"][number],
 		topic: string,
 	): Promise<RecordMetadata[]> {
-		return producer.send({ topic, messages: [message] }) as Promise<
+		const sent = producer.send({ topic, messages: [message] }) as Promise<
 			RecordMetadata[]
 		>;
+		return Promise.race([sent, closed.promise]);
 	}
 
 	/** librdkafka may split one send into several record batches, so each record's outcome is read on its own:

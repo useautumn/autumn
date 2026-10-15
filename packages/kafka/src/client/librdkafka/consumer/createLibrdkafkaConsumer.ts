@@ -19,6 +19,7 @@ import {
 	IDLE_POLL_MS,
 	runConsumeLoop,
 	seekNative,
+	settleSeeks,
 } from "./consumeLoop.js";
 import { emitConsumerEvent } from "./consumerEvents.js";
 import { createFetchLiveness } from "./fetchLiveness.js";
@@ -291,6 +292,7 @@ export function createLibrdkafkaConsumer({
 		state.native = null;
 		state.gaveUp = false;
 		state.topics = [];
+		await settleSeeks({ scope });
 		if (native) await closeNative(native);
 		state.restartPending = null;
 		for (const key of state.assigned.keys())
@@ -422,6 +424,8 @@ export function createLibrdkafkaConsumer({
 		state.topics = [];
 		state.assigned.clear();
 		if (!native) return;
+		// A seek runs on a native pool thread against the client the close frees.
+		await settleSeeks({ scope });
 		function disconnectNative(done: NativeDone): void {
 			native?.disconnect(done);
 		}

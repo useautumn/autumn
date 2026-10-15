@@ -73,3 +73,11 @@ export class KafkaPartialDeliveryError extends Error {
 		this.failure = failure;
 	}
 }
+
+/** The producer closed with this record's delivery report unheard; the record may or may not be written. */
+export class KafkaProducerClosedError extends Error {
+	constructor() {
+		super("Kafka producer closed before the record's delivery was reported");
+		this.name = "KafkaProducerClosedError";
+	}
+}

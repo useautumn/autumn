@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { appendFileSync } from "node:fs";
 import { LIBRDKAFKA_ERROR_CODES } from "@autumn/librdkafka";
+import { parseKafkaOffset } from "../../src/client/kafkaOffsetUtils.js";
 import { createLibrdkafkaConsumer } from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
 import type {
 	NativeConsumer,
@@ -10,7 +11,6 @@ import type {
 	NativeTopicPartitionOffset,
 } from "../../src/client/librdkafka/consumer/types/nativeConsumer.js";
 import { createKafkaLog } from "../../src/client/librdkafka/kafkaLog.js";
-import { parseKafkaOffset } from "../../src/client/kafkaOffsetUtils.js";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import type { Consumer, EachBatchPayload } from "../../src/kafka.js";
 import { createRandom, fuzzSeeds, type Random } from "./fuzzRandom.js";

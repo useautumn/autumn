@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { spanOf } from "../../src/client/librdkafka/producer/createLibrdkafkaProducer.js";
+import { createKafkaLog } from "../../src/client/librdkafka/kafkaLog.js";
+import {
+	createLibrdkafkaProducer,
+	spanOf,
+} from "../../src/client/librdkafka/producer/createLibrdkafkaProducer.js";
 import {
 	isKafkaProtocolError,
 	KafkaPartialDeliveryError,
@@ -151,5 +155,43 @@ test("a record refused after the broker may have appended it leaves the batch's 
 	}
 	expect(() => spanOf({ outcomes: [refused(3), refused(20)] })).toThrow(
 		expect.objectContaining({ code: 20 }),
+	);
+});
+
+// librdkafka drops delivery reports still queued at close; a send waiting on one would never settle.
+test("a send whose delivery is still unheard when the producer closes ends with its fate unknown", async () => {
+	const fakeProducer = {
+		connect: async () => {},
+		disconnect: async () => {},
+		send: () => new Promise<never>(() => {}),
+		transaction: async () => {
+			throw new Error("unused");
+		},
+	};
+	const producer = createLibrdkafkaProducer({
+		ctx: {
+			kafka: { producer: () => fakeProducer } as never,
+			nativeClientConfig: {},
+			defaults: {
+				requestTimeout: 1_000,
+				retry: { retries: 1, initialRetryTime: 10, maxRetryTime: 10 },
+			},
+			log: createKafkaLog({
+				clientId: "t",
+				sink: { error() {}, warn() {}, info() {}, debug() {} },
+			}),
+		},
+		config: { idempotent: true },
+	});
+	await producer.connect();
+	const sending = sendIdempotentBatch({
+		sender: producer,
+		topic: "t",
+		partition: 0,
+		messages,
+	});
+	await producer.disconnect();
+	await expect(sending).rejects.toBeInstanceOf(
+		KafkaTransactionStateUnknownError,
 	);
 });
