@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { getBackendErr } from "@/utils/genUtils";
 import { useApprovalRulesApi } from "./useApprovalRulesApi";
 import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
 
@@ -18,6 +19,7 @@ export const useToggleApprovalRule = () => {
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
 			api.update({ id, params: { enabled } }),
 		onSettled: invalidate,
-		onError: () => toast.error("Failed to update rule"),
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to update rule")),
 	});
 };
