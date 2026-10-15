@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	cp,
+	type FullCusProduct,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -22,6 +23,7 @@ export const pendingReplacementToLiveUpdate = async ({
 	| {
 			params: UpdateSubscriptionV1Params;
 			contextOverride: UpdateSubscriptionBillingContextOverride;
+			livePlan: FullCusProduct;
 	  }
 	| undefined
 > => {
@@ -68,6 +70,7 @@ export const pendingReplacementToLiveUpdate = async ({
 		return {
 			params: { customer_id, entity_id, customer_product_id: livePlan.id },
 			contextOverride,
+			livePlan,
 		};
 	}
 
@@ -86,5 +89,6 @@ export const pendingReplacementToLiveUpdate = async ({
 			invoice_mode: params.invoice_mode ?? pendingChange.invoice_mode,
 		},
 		contextOverride,
+		livePlan,
 	};
 };

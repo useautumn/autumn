@@ -85,7 +85,9 @@ function EditContent() {
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
 		formValues,
+		previewQuery,
 	} = useUpdateSubscriptionFormContext();
+	const replacedPlan = previewQuery.data?.replaces_plan;
 
 	const { customerProduct } = formContext;
 	const isPendingPlan = customerProduct.status === CusProductStatus.Pending;
@@ -137,6 +139,15 @@ function EditContent() {
 						</div>
 					</div>
 				</div>
+
+				{replacedPlan && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This pending plan will replace the existing {replacedPlan.name}{" "}
+							plan.
+						</InfoBox>
+					</div>
+				)}
 
 				{isPendingPlan && hasChanges && !hasNoBillingChanges && (
 					<div className="px-4 pt-4">

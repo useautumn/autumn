@@ -76,6 +76,15 @@ export const handlePreviewUpdateSubscription = createRoute({
 			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
 
-		return c.json(previewResponse, 200);
+		const replacesLivePlan = liveUpdate && !body.cancel_action;
+		return c.json(
+			replacesLivePlan
+				? {
+						...previewResponse,
+						replaces_plan: { name: liveUpdate.livePlan.product.name },
+					}
+				: previewResponse,
+			200,
+		);
 	},
 });
