@@ -52,9 +52,18 @@ const CustomerName = () => {
 	return <span>{customer?.name ?? "missing"}</span>;
 };
 
-const renderWithCache = (queryKey: unknown[]) => {
+const renderWithCache = (
+	queryKey: unknown[],
+	{ refreshFailed = false }: { refreshFailed?: boolean } = {},
+) => {
 	const queryClient = new QueryClient();
 	queryClient.setQueryData(queryKey, { customer });
+	if (refreshFailed) {
+		queryClient
+			.getQueryCache()
+			.find({ queryKey })
+			?.setState({ status: "error", error: new Error("refresh failed") });
+	}
 	return renderToStaticMarkup(
 		<QueryClientProvider client={queryClient}>
 			<NuqsTestingAdapter>
@@ -76,6 +85,15 @@ test("a component mounting while the entity-scoped customer refetches keeps the 
 		false,
 		...scope,
 	]);
+
+	expect(html).toContain("Example Customer");
+});
+
+test("a customer whose last refresh failed is still reused", () => {
+	const html = renderWithCache(
+		["customer", "customer_123", null, false, ...scope],
+		{ refreshFailed: true },
+	);
 
 	expect(html).toContain("Example Customer");
 });

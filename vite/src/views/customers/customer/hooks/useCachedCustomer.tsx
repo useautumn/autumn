@@ -48,8 +48,7 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 		if (!customerId) return null;
 
 		const scope = buildKey([]);
-		const isFetchedInScope = (query: Query) =>
-			query.state.status === "success" &&
+		const isInScope = (query: Query) =>
 			scope.every(
 				(part, index) => query.queryKey.at(index - scope.length) === part,
 			);
@@ -58,7 +57,7 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 			queryClient
 				.getQueryCache()
 				.findAll({ queryKey: ["customer", customerId] })
-				.filter(isFetchedInScope)
+				.filter(isInScope)
 				.sort(byNewestData)
 				.map(
 					(query) =>
