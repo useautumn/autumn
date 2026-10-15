@@ -1197,6 +1197,7 @@ async function reconcile() {
 		postgresDeducted: number;
 		ok200: number;
 		revisionBreaks: number;
+		revisionResets: number;
 		postgresNextOffset: string | null;
 	}[] = [];
 	const offsets = await admin.fetchTopicOffsets(topics.metering);
@@ -1206,8 +1207,10 @@ async function reconcile() {
 			(r) => r.customerId === customer.identity.customerId,
 		);
 		let revisionBreaks = 0;
+		let revisionResets = 0;
 		for (let i = 1; i < mine.length; i++)
-			if (mine[i]?.before !== mine[i - 1]?.after) {
+			if (mine[i]?.before === 0 && mine[i - 1]?.after !== 0) revisionResets++;
+			else if (mine[i]?.before !== mine[i - 1]?.after) {
 				revisionBreaks++;
 				if (revisionBreakSamples.length < 40)
 					revisionBreakSamples.push({
@@ -1230,6 +1233,7 @@ async function reconcile() {
 				(o) => o.partition === partition && o.outcome === "200",
 			).length,
 			revisionBreaks,
+			revisionResets,
 			postgresNextOffset: String(
 				await customer.readNextOffset({ topic: topics.metering, partition }),
 			),
@@ -1261,6 +1265,7 @@ async function reconcile() {
 		),
 		revisionBreaks: perCustomer.reduce((s, c) => s + c.revisionBreaks, 0),
 		revisionBreakSamples,
+		revisionResets: perCustomer.reduce((s, c) => s + c.revisionResets, 0),
 		logEnd: offsets.map((o) => `${o.partition}:${o.high}`),
 		perCustomer,
 	};
