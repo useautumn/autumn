@@ -97,3 +97,18 @@ export class KafkaProducerClosedError extends Error {
 		this.name = "KafkaProducerClosedError";
 	}
 }
+
+/** A send whose delivery reports never reached JS within the message timeout; its records may or may not be written. */
+export class KafkaDeliveryReportOverdueError extends Error {
+	readonly topic: string;
+	readonly deadlineMs: number;
+
+	constructor({ topic, deadlineMs }: { topic: string; deadlineMs: number }) {
+		super(
+			`Kafka delivery report for ${topic} overdue after ${deadlineMs}ms; the send's fate is unknown`,
+		);
+		this.name = "KafkaDeliveryReportOverdueError";
+		this.topic = topic;
+		this.deadlineMs = deadlineMs;
+	}
+}

@@ -1,6 +1,7 @@
 import type { KafkaJS } from "@autumn/librdkafka";
 import { isKafkaRefusalOfUnwritten } from "../../kafkaErrorClassification.js";
 import {
+	KafkaDeliveryReportOverdueError,
 	KafkaPartialDeliveryError,
 	KafkaProducerClosedError,
 } from "../../kafkaErrors.js";
@@ -181,6 +182,30 @@ export type LibrdkafkaProducer = {
 	onRequestTimings(listener: (timing: KafkaRequestTiming) => void): void;
 };
 
+/** Past the message timeout, how long a delivery report may still take to reach JS before it counts as lost. */
+const DELIVERY_REPORT_MARGIN_MS = 5_000;
+
+async function ignoreOutcome(sent: Promise<unknown>): Promise<void> {
+	try {
+		await sent;
+	} catch {
+		// The withheld report is the fault under test.
+	}
+}
+
+/** `LIBRDKAFKA_TEST_WITHHOLD_DELIVERY=<topic substring>:<partition>:<from send n>`, honoured only under NODE_ENV=test. */
+export function withheldDeliveryOf({
+	env,
+}: {
+	env: Record<string, string | undefined>;
+}): { topic: string; partition: number; fromSend: number } | null {
+	const spec = env.LIBRDKAFKA_TEST_WITHHOLD_DELIVERY;
+	if (!spec || env.NODE_ENV !== "test") return null;
+	const [topic, partition, fromSend] = spec.split(":");
+	if (!topic || partition === undefined || fromSend === undefined) return null;
+	return { topic, partition: Number(partition), fromSend: Number(fromSend) };
+}
+
 /** Confluent's KafkaJS producer with our sends' per-send `acks`/`compression` folded into its config. */
 export function createLibrdkafkaProducer({
 	ctx,
@@ -204,9 +229,18 @@ export function createLibrdkafkaProducer({
 			// Timing is telemetry; it must never fail a produce.
 		}
 	}
+	const nativeConfig = nativeProducerConfigOf({
+		config,
+		defaults: ctx.defaults,
+	});
+	// librdkafka reports every record by its message timeout; a report later than that was lost on its way to JS.
+	const deliveryDeadlineMs =
+		Number(nativeConfig["message.timeout.ms"]) + DELIVERY_REPORT_MARGIN_MS;
+	const withheld = withheldDeliveryOf({ env: process.env });
+	let sendsToWithheldPartition = 0;
 	const producer = ctx.kafka.producer({
 		...ctx.nativeClientConfig,
-		...nativeProducerConfigOf({ config, defaults: ctx.defaults }),
+		...nativeConfig,
 		stats_cb: onStatistics,
 		kafkaJS: { logger: ctx.log.shim },
 	} as KafkaJS.ProducerConstructorConfig);
@@ -241,7 +275,56 @@ export function createLibrdkafkaProducer({
 		const sent = producer.send({ topic, messages: [message] }) as Promise<
 			RecordMetadata[]
 		>;
+		if (withholds({ topic, partition: message.partition })) {
+			void ignoreOutcome(sent);
+			return closed.promise;
+		}
 		return Promise.race([sent, closed.promise]);
+	}
+
+	/** Test-only fault: from the configured send on, a partition's delivery reports never reach JS. */
+	function withholds({
+		topic,
+		partition,
+	}: {
+		topic: string;
+		partition: number | undefined;
+	}): boolean {
+		if (!withheld || partition !== withheld.partition) return false;
+		if (!topic.includes(withheld.topic)) return false;
+		sendsToWithheldPartition += 1;
+		return sendsToWithheldPartition >= withheld.fromSend;
+	}
+
+	/** A send that outlives its delivery deadline lost its report: its fate is unknown, never pending forever. */
+	async function settleWithinDeadline({
+		topic,
+		sends,
+	}: {
+		topic: string;
+		sends: Promise<RecordMetadata[]>[];
+	}): Promise<PromiseSettledResult<RecordMetadata[]>[]> {
+		const overdue = Promise.withResolvers<"overdue">();
+		const timer = setTimeout(overdue.resolve, deliveryDeadlineMs, "overdue");
+		timer.unref?.();
+		try {
+			const outcome = await Promise.race([
+				Promise.allSettled(sends),
+				overdue.promise,
+			]);
+			if (outcome !== "overdue") return outcome;
+		} finally {
+			clearTimeout(timer);
+		}
+		ctx.log.write(
+			"error",
+			"Kafka delivery report overdue; the send's fate is unknown",
+			{ topic, records: sends.length, deadlineMs: deliveryDeadlineMs },
+		);
+		throw new KafkaDeliveryReportOverdueError({
+			topic,
+			deadlineMs: deliveryDeadlineMs,
+		});
 	}
 
 	/** librdkafka may split one send into several record batches, so each record's outcome is read on its own:
@@ -254,7 +337,9 @@ export function createLibrdkafkaProducer({
 		const sends: Promise<RecordMetadata[]>[] = [];
 		for (const message of record.messages)
 			sends.push(sendOne(message, record.topic));
-		return spanOf({ outcomes: await Promise.allSettled(sends) });
+		return spanOf({
+			outcomes: await settleWithinDeadline({ topic: record.topic, sends }),
+		});
 	}
 
 	async function transaction(): Promise<Transaction> {
