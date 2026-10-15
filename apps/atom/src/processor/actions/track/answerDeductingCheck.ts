@@ -25,7 +25,6 @@ export const answerDeductingCheck = async ({
 		ctx,
 		subject,
 		command,
-		idempotencyKey,
 		track: checkToTrackCommand({
 			command,
 			subject,
