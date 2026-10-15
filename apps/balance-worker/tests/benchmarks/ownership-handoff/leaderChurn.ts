@@ -493,6 +493,7 @@ async function spawnWorker(name: string): Promise<Worker> {
 	const {
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: _,
 		LIBRDKAFKA_DEBUG: __,
+		LIBRDKAFKA_TEST_WITHHOLD_DELIVERY: ___,
 		...inherited
 	} = process.env;
 	const child = Bun.spawn(
@@ -504,11 +505,15 @@ async function spawnWorker(name: string): Promise<Worker> {
 				...(process.env.CHURN_WORKER_LIBRDKAFKA_DEBUG && {
 					LIBRDKAFKA_DEBUG: process.env.CHURN_WORKER_LIBRDKAFKA_DEBUG,
 				}),
+				// Fault injection: only CHURN_FAULT_WORKER withholds its delivery reports (CHURN_FAULT_SPEC).
+				...(name === process.env.CHURN_FAULT_WORKER && {
+					LIBRDKAFKA_TEST_WITHHOLD_DELIVERY: process.env.CHURN_FAULT_SPEC,
+				}),
 				AUTUMN_EDGE_CONFIG_OVERRIDE_B64: edgeConfigOverride,
 				BENCH_WORKER_ENV: JSON.stringify(env),
 			},
 			stdout: "pipe",
-			stderr: "inherit",
+			stderr: "pipe",
 		},
 	);
 	const spawnedAt = Date.now();
@@ -529,6 +534,26 @@ async function spawnWorker(name: string): Promise<Worker> {
 		}),
 	);
 	workersByEndpoint.set(env.BALANCE_WORKER_ENDPOINT, name);
+	// The producer thread logs to stderr; its lines are kept like stdout's, timestamped on arrival.
+	void (async () => {
+		let buffered = "";
+		for await (const chunk of child.stderr as ReadableStream<Uint8Array>) {
+			const text = new TextDecoder().decode(chunk);
+			process.stderr.write(text);
+			buffered += text;
+			const lines = buffered.split("\n");
+			buffered = lines.pop() ?? "";
+			for (const line of lines) {
+				try {
+					const parsed = JSON.parse(line);
+					if (typeof parsed.message === "string")
+						recordKafkaLog({ worker: name, line: parsed });
+				} catch {
+					// Not a log line.
+				}
+			}
+		}
+	})();
 	void (async () => {
 		let buffered = "";
 		for await (const chunk of child.stdout as ReadableStream<Uint8Array>) {
@@ -862,6 +887,31 @@ for (const partition of customers.keys()) {
 groupIds.worker = String(
 	workerEvents.find((e) => e.event === "worker.starting")?.groupId,
 );
+// A fault aimed at one worker's partition needs that worker to own it; the dealing is the broker's, so retry.
+const faultPartition = Number(process.env.CHURN_FAULT_SPEC?.split(":")[1]);
+if (process.env.CHURN_FAULT_WORKER) {
+	const owned = workerEvents
+		.filter(
+			(e) =>
+				e.event === "consumer.group_join" &&
+				e.worker === process.env.CHURN_FAULT_WORKER,
+		)
+		.at(-1)?.partitions as number[] | undefined;
+	if (!owned?.includes(faultPartition)) {
+		console.error(
+			`fault worker ${process.env.CHURN_FAULT_WORKER} owns ${JSON.stringify(owned)}, not ${faultPartition}; retry`,
+		);
+		for (const worker of workers) worker.child.kill("SIGKILL");
+		await admin.deleteTopics({ topics: Object.values(topics) });
+		for (const customer of [...customers.values(), ...extraCustomers])
+			await customer.cleanup();
+		process.exit(3);
+	}
+	marks.push({
+		t: Date.now(),
+		label: `fault armed: ${process.env.CHURN_FAULT_WORKER} owns ${faultPartition}, spec ${process.env.CHURN_FAULT_SPEC}`,
+	});
+}
 await Bun.sleep(5_000);
 // The warm-up's tracks deducted too: kept for the reconciliation, out of the per-phase counts.
 const warmupOutcomes = outcomes.splice(0);
