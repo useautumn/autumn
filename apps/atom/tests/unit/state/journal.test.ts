@@ -604,6 +604,124 @@ describe("journal entries carry their writer", () => {
 		expect([next.writerId, next.seq]).toEqual(["writer-v1", 3]);
 	});
 
+	/** The insert a build from before this chain runs: it names no writer, so the file must supply its own. */
+	const appendAsBuildFromBefore = ({
+		databasePath,
+		seq,
+	}: {
+		databasePath: string;
+		seq: number;
+	}) => {
+		const database = new Database(databasePath);
+		try {
+			database.run(
+				"INSERT INTO journal_entries (customer_id, seq, appended_at, command_json) VALUES ('cus_1', ?, ?, ?)",
+				[seq, 2_000 + seq, JSON.stringify(commandOf({ commandId: `before-${seq}` }))],
+			);
+			database.run(
+				"INSERT INTO journal_seqs (customer_id, last_seq) VALUES ('cus_1', ?) ON CONFLICT (customer_id) DO UPDATE SET last_seq = excluded.last_seq",
+				[seq],
+			);
+		} finally {
+			database.close();
+		}
+	};
+
+	/** A file as 20054ecac9 migrated it: writer_id NOT NULL with no default, so a build from before could not append. */
+	const writeMigratedFileWithoutDefault = ({ databasePath }: { databasePath: string }) => {
+		const database = new Database(databasePath, { create: true });
+		database.run("PRAGMA journal_mode = WAL");
+		database.run("PRAGMA user_version = 1");
+		database.run(
+			"CREATE TABLE journal_entries (customer_id TEXT NOT NULL, writer_id TEXT NOT NULL, seq INTEGER NOT NULL CHECK (seq > 0), appended_at INTEGER NOT NULL, command_json TEXT NOT NULL, PRIMARY KEY (customer_id, writer_id, seq)) WITHOUT ROWID",
+		);
+		database.run(
+			"CREATE TABLE journal_seqs (customer_id TEXT PRIMARY KEY, last_seq INTEGER NOT NULL CHECK (last_seq > 0)) WITHOUT ROWID",
+		);
+		database.run(
+			"CREATE TABLE journal_meta (id INTEGER PRIMARY KEY CHECK (id = 1), writer_id TEXT NOT NULL)",
+		);
+		database.run(
+			"INSERT INTO journal_meta (id, writer_id) VALUES (1, 'writer-migrated')",
+		);
+		database.run(
+			"INSERT INTO journal_entries (customer_id, writer_id, seq, appended_at, command_json) VALUES ('cus_1', 'writer-migrated', 1, 1_001, ?)",
+			[JSON.stringify(commandOf({ commandId: "m-1" }))],
+		);
+		database.run(
+			"INSERT INTO journal_seqs (customer_id, last_seq) VALUES ('cus_1', 1)",
+		);
+		database.close();
+	};
+
+	describe("a build from before this chain can still append after a rollback", () => {
+		test("to a file from before that this chain migrated: the entry lands as the file's own writer", async () => {
+			const databasePath = journalPath();
+			writeV1File({ databasePath });
+			open({ databasePath }).close();
+			journals.pop();
+
+			appendAsBuildFromBefore({ databasePath, seq: 3 });
+
+			const journal = open({ databasePath });
+			expect(
+				journal
+					.owed({ customerId: "cus_1" })
+					.map(({ writerId, seq }) => ({ writerId, seq })),
+			).toEqual([
+				{ writerId: "writer-v1", seq: 1 },
+				{ writerId: "writer-v1", seq: 2 },
+				{ writerId: "writer-v1", seq: 3 },
+			]);
+			const next = await journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId: "after" }),
+			});
+			expect([next.writerId, next.seq]).toEqual(["writer-v1", 4]);
+		});
+
+		test("to a file this chain created", async () => {
+			const databasePath = journalPath();
+			const created = openJournal({ databasePath });
+			const own = await created.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId: "own" }),
+			});
+			created.close();
+
+			appendAsBuildFromBefore({ databasePath, seq: 2 });
+
+			const journal = open({ databasePath });
+			expect(
+				journal
+					.owed({ customerId: "cus_1" })
+					.map(({ writerId, seq }) => ({ writerId, seq })),
+			).toEqual([
+				{ writerId: own.writerId, seq: 1 },
+				{ writerId: own.writerId, seq: 2 },
+			]);
+		});
+
+		test("to a file an earlier build of this chain migrated without the default: opening it here repairs the table", async () => {
+			const databasePath = journalPath();
+			writeMigratedFileWithoutDefault({ databasePath });
+			open({ databasePath }).close();
+			journals.pop();
+
+			appendAsBuildFromBefore({ databasePath, seq: 2 });
+
+			const journal = open({ databasePath });
+			expect(
+				journal
+					.owed({ customerId: "cus_1" })
+					.map(({ writerId, seq }) => ({ writerId, seq })),
+			).toEqual([
+				{ writerId: "writer-migrated", seq: 1 },
+				{ writerId: "writer-migrated", seq: 2 },
+			]);
+		});
+	});
+
 	test("an entry held under another writer keeps that writer, raises no seq of this file, and clears only against its own watermark", async () => {
 		const databasePath = journalPath();
 		const first = openJournal({ databasePath });
