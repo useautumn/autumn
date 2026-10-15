@@ -1561,7 +1561,19 @@ const out = join(
 await Bun.write(
 	out,
 	JSON.stringify(
-		{ summary, workerEvents, ownershipEvents, routingEvents },
+		{
+			summary,
+			workerEvents,
+			ownershipEvents,
+			routingEvents,
+			outcomes: outcomes.map((o) => [
+				o.partition,
+				o.sentAt,
+				o.doneAt - o.sentAt,
+				o.outcome,
+				o.step,
+			]),
+		},
 		null,
 		1,
 	),
