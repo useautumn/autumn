@@ -5,6 +5,7 @@ import {
 	type SubjectState,
 	subjectStateToFullSubject,
 	UnsupportedCommandError,
+	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 
@@ -16,17 +17,23 @@ export const replayOwed = ({
 	owed,
 	state,
 	catalog,
+	fullSubject: stateFullSubject = null,
 }: {
 	owed: readonly JournalEntry[];
 	state: SubjectState;
 	catalog: Catalog;
+	/** `state` already joined to `catalog`, when a cached view holds it: the first step need not build it again. */
+	fullSubject?: WorkerFullSubject | null;
 }): SubjectState =>
 	owed.reduce((current, { command }) => {
-		const fullSubject = subjectStateToFullSubject({
-			state: current,
-			catalog,
-			entityId: command.identity.entityId,
-		});
+		const fullSubject =
+			current === state && stateFullSubject
+				? stateFullSubject
+				: subjectStateToFullSubject({
+						state: current,
+						catalog,
+						entityId: command.identity.entityId,
+					});
 		try {
 			return applyMutation({
 				state: current,

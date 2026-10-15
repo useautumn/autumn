@@ -217,6 +217,22 @@ describe("handing the journal to Autumn", () => {
 		expect(autumn.applied).toHaveLength(1);
 	});
 
+	test("deductions committed a few ms apart go to Autumn together, not one tracks.append each", async () => {
+		const { journal } = await openForwardedSlot();
+
+		for (let index = 0; index < 10; index++) {
+			await journal.append({
+				customerId: "cus_1",
+				command: owedCommand({ commandId: `spaced_${index}`, value: 1 }),
+			});
+			await Bun.sleep(1);
+		}
+		await until(() => nothingUnsent({ journal }));
+
+		expect(autumn.applied).toHaveLength(10);
+		expect(autumn.requestSizes.length).toBeLessThanOrEqual(2);
+	});
+
 	test("batches hold at most 500 tracks, each customer's in seq order", async () => {
 		const { journal } = await openForwardedSlot();
 		autumn.switches.down = true;
