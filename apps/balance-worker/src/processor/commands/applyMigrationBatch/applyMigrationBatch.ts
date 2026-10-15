@@ -25,6 +25,8 @@ import type {
 
 type ResidentVerdict = "applied" | "stale" | "failed";
 
+const EVICTS_PER_TURN = 100;
+
 type ColdOutcome = {
 	applied: ColdMigrationItem[];
 	stale: number;
@@ -190,18 +192,20 @@ const logChangedCustomers = async ({
 	changed: { identity: MeteringIdentity; requestId: string }[];
 }): Promise<void> => {
 	const occurredAt = Date.now();
-	await Promise.all(
-		changed.map(({ identity, requestId }) => {
-			const evict: EvictCommand = {
-				schemaVersion: 1,
-				type: "evict",
-				requestId,
-				identity: { ...identity, entityId: null },
-				occurredAt,
-			};
-			return logEvict({ scope, command: evict, droppedState: null });
-		}),
-	);
+	const logged: Promise<void>[] = [];
+	for (const [index, { identity, requestId }] of changed.entries()) {
+		if (index > 0 && index % EVICTS_PER_TURN === 0)
+			await new Promise((resolve) => setImmediate(resolve));
+		const evict: EvictCommand = {
+			schemaVersion: 1,
+			type: "evict",
+			requestId,
+			identity: { ...identity, entityId: null },
+			occurredAt,
+		};
+		logged.push(logEvict({ scope, command: evict, droppedState: null }));
+	}
+	await Promise.all(logged);
 };
 
 const firstOfEachItemRun = ({
@@ -227,9 +231,11 @@ export async function applyMigrationBatch({
 	items: readonly MigrationLaneItem[];
 }): Promise<MigrationBatchOutcome> {
 	const startedAt = performance.now();
+	const parseStartedAt = performance.now();
 	const parsed = firstOfEachItemRun({
-		items: parseMigrationLaneItems({ items }),
+		items: await parseMigrationLaneItems({ items }),
 	});
+	const parseMs = performance.now() - parseStartedAt;
 	const gateStartedAt = performance.now();
 	const open = await scope.ctx.db.readOpenMigrationItemRuns?.({
 		runs: parsed.map(({ item }) => itemRunOf({ item })),
@@ -310,6 +316,7 @@ export async function applyMigrationBatch({
 		rowsUpdated: coldOutcome.rowsUpdated,
 		snapshotsDeleted: coldOutcome.snapshotsDeleted,
 		runsMarked: coldOutcome.runsMarked,
+		parseMs,
 		gateMs,
 		classifyMs,
 		coldSqlMs: coldOutcome.sqlMs,

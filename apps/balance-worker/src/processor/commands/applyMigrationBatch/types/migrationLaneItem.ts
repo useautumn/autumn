@@ -39,6 +39,7 @@ export type MigrationBatchOutcome = {
 	rowsUpdated: number;
 	snapshotsDeleted: number;
 	runsMarked: number;
+	parseMs: number;
 	gateMs: number;
 	classifyMs: number;
 	coldSqlMs: number;

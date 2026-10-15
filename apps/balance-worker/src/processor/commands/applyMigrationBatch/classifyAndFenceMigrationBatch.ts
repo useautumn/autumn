@@ -40,15 +40,22 @@ const isColdCustomer = ({
 	);
 };
 
-export const parseMigrationLaneItems = ({
+const ITEMS_PER_TURN = 50;
+
+const yieldToEventLoop = (): Promise<void> =>
+	new Promise((resolve) => setImmediate(resolve));
+
+export const parseMigrationLaneItems = async ({
 	items,
 }: {
 	items: readonly MigrationLaneItem[];
-}): ClassifiedMigrationItem[] =>
-	items.map((item) => {
+}): Promise<ClassifiedMigrationItem[]> => {
+	const parsed: ClassifiedMigrationItem[] = [];
+	for (const [index, item] of items.entries()) {
+		if (index > 0 && index % ITEMS_PER_TURN === 0) await yieldToEventLoop();
 		const request = parseApplyBillingPlanRequest({ input: item.request });
 		const { command } = request;
-		return {
+		parsed.push({
 			item,
 			request,
 			command,
@@ -56,8 +63,10 @@ export const parseMigrationLaneItems = ({
 			customerKey: meteringIdentityToPartitionKey({
 				identity: command.identity,
 			}),
-		};
-	});
+		});
+	}
+	return parsed;
+};
 
 /** Synchronous from the first residency read to the last fence: no load of a cold customer can start in between. */
 export const classifyAndFenceMigrationBatch = ({

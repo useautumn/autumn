@@ -9,6 +9,10 @@ import type { PartitionRuntimePort } from "../../partitions/types/partitions.js"
 import type { MigrationLaneItem } from "../../processor/commands/applyMigrationBatch/types/migrationLaneItem.js";
 
 const MAX_ITEMS_PER_APPLY = 500;
+const RECORDS_PER_TURN = 50;
+
+const yieldToEventLoop = (): Promise<void> =>
+	new Promise((resolve) => setImmediate(resolve));
 const RUNTIME_WAIT_MS = 10_000;
 const RUNTIME_POLL_MS = 100;
 
@@ -38,38 +42,50 @@ export function createMigrationRecordHandler({
 }): TopicRecordHandler {
 	const buffered = new Map<
 		number,
-		{ items: MigrationLaneItem[]; lastOffset: bigint }
+		{ messages: TopicRecord["message"][]; lastOffset: bigint }
 	>();
 
 	function readResumeOffset(): null {
 		return null;
 	}
 
-	function applyRecord({
-		topic,
-		partition,
-		message,
-	}: TopicRecord): TopicRecordResult {
+	function applyRecord({ partition, message }: TopicRecord): TopicRecordResult {
 		if (!message.value) return;
-		let item: MigrationLaneItem;
-		try {
-			item = migrationLaneRecordSchema.parse(
-				JSON.parse(message.value.toString("utf8")),
-			) as MigrationLaneItem;
-		} catch (cause) {
-			ctx.logger?.warn("Migration record skipped: unreadable", {
-				topic,
-				partition,
-				offset: message.offset,
-				error: cause,
-			});
-			return;
-		}
 		const offset = BigInt(message.offset);
 		const held = buffered.get(partition);
-		const items = held && held.lastOffset < offset ? held.items : [];
-		items.push(item);
-		buffered.set(partition, { items, lastOffset: offset });
+		const messages = held && held.lastOffset < offset ? held.messages : [];
+		messages.push(message);
+		buffered.set(partition, { messages, lastOffset: offset });
+	}
+
+	async function parseChunk({
+		topic,
+		partition,
+		messages,
+	}: {
+		topic: string;
+		partition: number;
+		messages: TopicRecord["message"][];
+	}): Promise<MigrationLaneItem[]> {
+		const items: MigrationLaneItem[] = [];
+		for (const [index, message] of messages.entries()) {
+			if (index > 0 && index % RECORDS_PER_TURN === 0) await yieldToEventLoop();
+			try {
+				items.push(
+					migrationLaneRecordSchema.parse(
+						JSON.parse(message.value?.toString("utf8") ?? "null"),
+					) as MigrationLaneItem,
+				);
+			} catch (cause) {
+				ctx.logger?.warn("Migration record skipped: unreadable", {
+					topic,
+					partition,
+					offset: message.offset,
+					error: cause,
+				});
+			}
+		}
+		return items;
 	}
 
 	async function ownedRuntimeOf({
@@ -96,10 +112,14 @@ export function createMigrationRecordHandler({
 		topic: string;
 		partition: number;
 	}): Promise<void> {
-		const items = buffered.get(partition)?.items ?? [];
+		const messages = buffered.get(partition)?.messages ?? [];
 		buffered.delete(partition);
-		for (let start = 0; start < items.length; start += MAX_ITEMS_PER_APPLY) {
-			const chunk = items.slice(start, start + MAX_ITEMS_PER_APPLY);
+		for (let start = 0; start < messages.length; start += MAX_ITEMS_PER_APPLY) {
+			const chunk = await parseChunk({
+				topic,
+				partition,
+				messages: messages.slice(start, start + MAX_ITEMS_PER_APPLY),
+			});
 			const runtime = await ownedRuntimeOf({ partition });
 			const outcome = await runtime
 				.process((processor) => {
