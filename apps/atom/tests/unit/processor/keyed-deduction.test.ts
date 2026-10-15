@@ -158,6 +158,56 @@ describe("a keyed deduction on the Atom", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
+	test("a retried key is 409 before the forward rules: a retry the Atom cannot answer itself is not left to the API", async () => {
+		const { processor, journal } = await openKeyedSlot();
+
+		await processor.track({ request: keyedTrack({ key: "k1" }) });
+		const retried = await answerOf(() =>
+			processor.track({
+				request: {
+					...keyedTrack({ key: "k1" }),
+					params: {
+						customer_id: "cus_1",
+						feature_id: "feature_atom_never_saw",
+					},
+				},
+			}),
+		);
+
+		expect(retried).toEqual(duplicateOf("k1"));
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+	});
+
+	test("a keyed request left to the API before any deduction frees its key for the retry", async () => {
+		const { processor, journal } = await openKeyedSlot();
+
+		const forwarded = await forwardReasonOf(() =>
+			processor.track({
+				request: keyedTrack({ key: "k1", customerId: "cus_unknown" }),
+			}),
+		);
+		await processor.setSubject(
+			subjectPushOf({
+				subject: {
+					...storedSubjectWith({ balance: 10 }),
+					state: {
+						...storedSubjectWith({ balance: 10 }).state,
+						identity: {
+							...storedSubjectWith({ balance: 10 }).state.identity,
+							customerId: "cus_unknown",
+						},
+					},
+				},
+			}),
+		);
+		await processor.track({
+			request: keyedTrack({ key: "k1", customerId: "cus_unknown" }),
+		});
+
+		expect(forwarded).toBe("customer_not_stored");
+		expect(journal.owed({ customerId: "cus_unknown" })).toHaveLength(1);
+	});
+
 	test("the same key from another customer is new", async () => {
 		const { processor, journal } = await openKeyedSlot();
 
