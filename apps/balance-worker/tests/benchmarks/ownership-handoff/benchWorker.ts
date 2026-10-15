@@ -24,6 +24,7 @@ import {
 } from "../../../src/init/workerConfig.js";
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
+import { kafkaRequestTimings } from "../../../src/logging/kafkaRequestTimings.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
 
@@ -58,6 +59,20 @@ function describe(value: unknown): unknown {
 				: item,
 		),
 	);
+}
+
+// Each partition producer's per-broker statistics window (librdkafka rtt and outbuf latency), as it reaches the worker.
+if (process.env.BENCH_EMIT_REQUEST_TIMINGS) {
+	const record = kafkaRequestTimings.record;
+	kafkaRequestTimings.record = (timing) => {
+		record(timing);
+		emit("kafka.request_timing", {
+			api: timing.apiName,
+			broker: timing.broker,
+			durationMs: timing.durationMs,
+			pendingMs: timing.pendingMs,
+		});
+	};
 }
 
 const checkpointConfig = createWorkerCheckpointConfig({ env });
@@ -200,7 +215,10 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+	}),
 );
 
 const slotGate =
