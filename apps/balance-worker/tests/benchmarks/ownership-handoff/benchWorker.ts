@@ -200,7 +200,10 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+	}),
 );
 
 const slotGate =
@@ -295,7 +298,13 @@ const slotHeartbeat =
 			})
 		: undefined;
 
-emit("worker.starting", { groupId, fleetId });
+emit("worker.starting", { groupId, fleetId, pid: process.pid });
+const statsIntervalMs = Number(process.env.BENCH_STATS_INTERVAL_MS ?? 0);
+if (statsIntervalMs > 0)
+	setInterval(
+		() => emit("stats", { ...process.memoryUsage() }),
+		statsIntervalMs,
+	).unref();
 await resources.edgeConfigs?.start();
 await resources.catalogInvalidations?.start();
 const listener = Bun.serve({
