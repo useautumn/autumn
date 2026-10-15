@@ -1,7 +1,7 @@
 import { removeCustomerEntitlementsForPage } from "../../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
+import { removeCustomerEntitlementsThroughWorker } from "../../actions/removeCustomerEntitlementsThroughWorker/removeCustomerEntitlementsThroughWorker.js";
 import { BATCH_MIGRATION_FEATURE_OP_CONCURRENCY } from "../utils/batchMigrationExecutionConstants.js";
 import { mapWithConcurrency } from "../utils/mapWithConcurrency.js";
-import { fallBackAllWorkerCustomers } from "./fallBackAllWorkerCustomers.js";
 import type { PatchPhaseArgs, PatchPhaseResult } from "./types/patchPhase.js";
 import {
 	logWorkerPhase,
@@ -10,6 +10,8 @@ import {
 
 export const runPatchRemoves = async ({
 	ctx,
+	migrationRunId,
+	workerGate,
 	patch,
 	sqlInternalCustomerIds,
 	workerCustomers,
@@ -37,7 +39,14 @@ export const runPatchRemoves = async ({
 
 	const [sqlResults, worker] = await Promise.all([
 		removeInPostgres({ internalCustomerIds: sqlInternalCustomerIds }),
-		fallBackAllWorkerCustomers({ customers: workerCustomers }),
+		removeCustomerEntitlementsThroughWorker({
+			ctx,
+			migrationRunId,
+			gate: workerGate,
+			patch,
+			customers: workerCustomers,
+			phases,
+		}),
 	]);
 	const fallbackIds = worker.fallbackInternalCustomerIds;
 	const fallbackResults =

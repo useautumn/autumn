@@ -76,9 +76,7 @@ export const removeCustomerEntitlementsForPage = async ({
 				run: () =>
 					deleteCustomerEntitlementRows({
 						db: transaction,
-						customerEntitlementIds: candidates.map(
-							(row) => row.customerEntitlementId,
-						),
+						rows: candidates,
 						scope,
 					}),
 			});
