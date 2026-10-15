@@ -1,4 +1,9 @@
-import type { ApprovalRuleWhen, WhenKey } from "../schemas/when/whenSchemas";
+import { buildWhenSchema } from "../schemas/when/buildWhenSchema";
+import {
+	type ApprovalRuleWhen,
+	WHEN_SHAPES,
+	type WhenKey,
+} from "../schemas/when/whenSchemas";
 import {
 	EDITOR_FIELDS,
 	type EditorGroup,
@@ -24,6 +29,13 @@ const rowIssue = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
 	return null;
 };
 
+/** The row's filter, or null when its value is missing or doesn't fit the field. */
+const encodeRow = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
+	const filter = FIELD_CODECS[row.field].toFilter(row);
+	const schema = buildWhenSchema({ shape: WHEN_SHAPES[area] });
+	return filter && schema.safeParse(filter).success ? filter : null;
+};
+
 const groupToFilter = ({
 	area,
 	rows,
@@ -36,8 +48,10 @@ const groupToFilter = ({
 	let filter: Filter = {};
 	const issues: EditorRowIssue[] = [];
 	rows.forEach((row, index) => {
-		const message = rowIssue({ area, row });
-		const addition = message ? null : FIELD_CODECS[row.field].toFilter(row);
+		const fieldIssue = rowIssue({ area, row });
+		const addition = fieldIssue ? null : encodeRow({ area, row });
+		const message =
+			fieldIssue ?? (addition ? null : "Choose a value for this condition.");
 		const merged = addition && mergeFilters({ base: filter, addition });
 		if (merged) filter = merged;
 		else {

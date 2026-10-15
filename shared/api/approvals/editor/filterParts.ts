@@ -55,8 +55,14 @@ export const isEmptyObject = (value: unknown) =>
 const toSelection = ({ plan_id, version }: PlanSelection): PlanSelection =>
 	version === undefined ? { plan_id } : { plan_id, version };
 
+const isPlanSelection = (value: unknown): value is PlanSelection =>
+	isPlainObject(value) &&
+	typeof value.plan_id === "string" &&
+	(value.version === undefined || typeof value.version === "number");
+
+/** Null when the picker has no valid choice yet. */
 export const toPlanFilter = (value: unknown) =>
-	toSelection(value as PlanSelection);
+	isPlanSelection(value) ? toSelection(value) : null;
 
 export const fromPlanFilter = (filter: unknown): PlanSelection | null =>
 	isPlainObject(filter) && typeof filter.plan_id === "string"

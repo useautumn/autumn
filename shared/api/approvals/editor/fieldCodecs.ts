@@ -13,7 +13,8 @@ import {
 
 /** How one field's rows are stored in a group's filter, and read back out of it. */
 type FieldCodec = {
-	toFilter: (row: EditorRow) => Filter;
+	/** Null when the row's value can't be stored. */
+	toFilter: (row: EditorRow) => Filter | null;
 	fromFilter: (group: Filter) => RowRead[];
 };
 
@@ -55,7 +56,8 @@ const daysAt = ({
 	path: string[];
 	sign: 1 | -1;
 }): FieldCodec => ({
-	toFilter: (row) => at(path, sign * (row.value as number)),
+	toFilter: (row) =>
+		typeof row.value === "number" ? at(path, sign * row.value) : null,
 	fromFilter: (group) => {
 		const days = get(group, path);
 		return typeof days === "number"
@@ -68,11 +70,10 @@ const CUSTOMER_PLAN = ["customer", "plan"];
 
 const customerPlan: FieldCodec = {
 	toFilter: (row) => {
-		if (row.operator === "has") {
-			return at([...CUSTOMER_PLAN, "$some"], toPlanFilter(row.value));
-		}
-		const none = row.operator === "has_none" ? {} : toPlanFilter(row.value);
-		return at([...CUSTOMER_PLAN, "$none"], none);
+		if (row.operator === "has_none") return at([...CUSTOMER_PLAN, "$none"], {});
+		const plan = toPlanFilter(row.value);
+		const quantifier = row.operator === "has" ? "$some" : "$none";
+		return plan && at([...CUSTOMER_PLAN, quantifier], plan);
 	},
 	fromFilter: (group) => {
 		const has = fromPlanFilter(get(group, [...CUSTOMER_PLAN, "$some"]));

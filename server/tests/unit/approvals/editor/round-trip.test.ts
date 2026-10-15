@@ -211,6 +211,18 @@ describe("rows that can't be stored report an issue", () => {
 			rows: [{ field: "paid", operator: "lt", value: 1 }],
 			issue: { group: 0, row: 0 },
 		},
+		...[
+			{ field: "customer_plan", operator: "has", value: null },
+			{ field: "total", operator: "lte", value: "lots" },
+			{ field: "starts_at", operator: "is", value: "7" },
+			{ field: "paid", operator: "is", value: null },
+			{ field: "customer", operator: "is_any_of", value: [1, 2] },
+		].map((row) => ({
+			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
+			area: "billing_change" as const,
+			rows: [row as EditorRow],
+			issue: { group: 0, row: 0 },
+		})),
 	])("$name", ({ area, rows, issue }) => {
 		expect(rowsToWhen({ area, groups: [rows] })).toEqual({
 			ok: false,
