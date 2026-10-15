@@ -6,7 +6,10 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
-import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
+import {
+	PEER_HANDOFF_PATH,
+	PEER_KEY_HANDOFF_PATH,
+} from "../../../src/replicas/handover/handoffContract.js";
 import { startReadinessProber } from "../../../src/replicas/membership/startReadinessProber.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
@@ -1145,5 +1148,28 @@ describe("a caller's idempotency key across a join", () => {
 		);
 
 		expect(retried.status).toBe(409);
+	});
+
+	test("a stand-in hands a ready peer its customers' keys before their entries, so nothing waits between the entries' handoff and the flip", async () => {
+		const { a, b } = await standInTook({ key: "k_order" });
+		const handoffs: string[] = [];
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				const { pathname } = new URL(request.url);
+				if (
+					pathname === PEER_HANDOFF_PATH ||
+					pathname === PEER_KEY_HANDOFF_PATH
+				)
+					handoffs.push(pathname);
+			},
+		});
+
+		await b.probeOnce();
+
+		expect(handoffs.slice(0, 2)).toEqual([
+			PEER_KEY_HANDOFF_PATH,
+			PEER_HANDOFF_PATH,
+		]);
 	});
 });
