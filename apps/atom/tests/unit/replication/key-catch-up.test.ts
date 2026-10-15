@@ -1,5 +1,5 @@
 /**
- * A replica that boots beside a peer copies the peer's idempotency keys of the last 90 minutes in its catch-up, before it
+ * A replica that boots beside a peer copies the peer's idempotency keys of the last 30 minutes in its catch-up, before it
  * reports ready (atom-handoff-strategy.md §3.5 K1), so a replay of a key the peer took is refused here from the start.
  */
 
@@ -72,7 +72,7 @@ const trackTakenAgo = async ({
 };
 
 describe("a replica booting beside a peer", () => {
-	test("holds the peer's idempotency keys of the last 90 minutes before it reports ready, and none older", async () => {
+	test("holds the peer's idempotency keys of the last 30 minutes before it reports ready: one 29 min old, none 31 min old", async () => {
 		const now = Date.now();
 		// A knows no peer, so B gets nothing by relay: only its catch-up can give it A's keys.
 		const { forwarder, appended } = recordJournals();
@@ -84,8 +84,8 @@ describe("a replica booting beside a peer", () => {
 		await storeOnly({ replica: a, customerId: CUSTOMER, readAt: 1700 });
 		connect({ replicas: [a] });
 		for (const [key, minutesAgo] of [
-			["evt_old", 100],
-			["evt_30", 30],
+			["evt_31", 31],
+			["evt_29", 29],
 			["evt_now", 0],
 		] as const)
 			await trackTakenAgo({ replica: a, appended, key, now, minutesAgo });
@@ -95,16 +95,16 @@ describe("a replica booting beside a peer", () => {
 		await b.sync().catchUp();
 
 		expect(keyRowsOn(b).map(({ appendedAt }) => appendedAt)).toEqual([
-			now - 30 * MINUTE_MS,
+			now - 29 * MINUTE_MS,
 			now,
 		]);
 		b.setReady(true);
-		for (const key of ["evt_30", "evt_now"])
+		for (const key of ["evt_29", "evt_now"])
 			expect(
 				(await b.app.request("/v1/track", keyedTrack({ key }))).status,
 			).toBe(409);
 		expect(
-			(await b.app.request("/v1/track", keyedTrack({ key: "evt_old" }))).status,
+			(await b.app.request("/v1/track", keyedTrack({ key: "evt_31" }))).status,
 		).toBe(202);
 	});
 

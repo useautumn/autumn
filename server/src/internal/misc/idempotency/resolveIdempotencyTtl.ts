@@ -11,7 +11,7 @@ import { isAtomForwardedRequest } from "./atomForwardedRequest.js";
  *  falling back to the 24h default. The config rides on the org row, so
  *  this is a pure read of ctx — no fetch, no cache. A request the Atom
  *  forwarded claims for the Atom's own TTL instead, so both sides hold
- *  the key for the same 90 minutes. */
+ *  the key for the same 30 minutes. */
 export const resolveIdempotencyTtlMs = ({
 	ctx,
 	routeGroup,

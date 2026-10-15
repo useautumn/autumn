@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import {
 	DEFAULT_IDEMPOTENCY_TTL_HOURS,
 	IdempotencyConfigEntrySchema,
@@ -20,7 +21,6 @@ import { Hono } from "hono";
 import { getRouteGroup } from "@/honoMiddlewares/routeGroupRegistry.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import {
 	isAtomForwardedRequest,
 	markAtomForwardedRequest,
@@ -81,7 +81,7 @@ describe("resolveIdempotencyTtlMs", () => {
 
 describe("resolveIdempotencyTtlMs for a request the Atom forwarded", () => {
 	test.concurrent(
-		"claims with the Atom's 90 minutes, whatever TTL the org configured for the route group",
+		"claims with the Atom's 30 minutes, whatever TTL the org configured for the route group",
 		() => {
 			const ctx = ctxWithConfig([
 				{ routeGroup: RouteGroup.Balances, idempotencyTtl: 24 },
@@ -96,7 +96,7 @@ describe("resolveIdempotencyTtlMs for a request the Atom forwarded", () => {
 			expect(
 				resolveIdempotencyTtlMs({ ctx, routeGroup: RouteGroup.Balances }),
 			).toBe(ATOM_IDEMPOTENCY_TTL_MS);
-			expect(ATOM_IDEMPOTENCY_TTL_MS).toBe(ms.minutes(90));
+			expect(ATOM_IDEMPOTENCY_TTL_MS).toBe(ms.minutes(30));
 		},
 	);
 

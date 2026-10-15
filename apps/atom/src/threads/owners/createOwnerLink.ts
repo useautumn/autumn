@@ -62,7 +62,7 @@ export type OwnerLink = {
 		slot: number;
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
-	/** A page of the idempotency keys a slot the other thread owns took in the last 90 min. */
+	/** A page of the idempotency keys a slot the other thread owns took within the key window. */
 	recentKeys(params: {
 		atomId: string | null;
 		slot: number;

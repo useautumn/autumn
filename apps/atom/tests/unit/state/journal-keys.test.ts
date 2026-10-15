@@ -51,7 +51,7 @@ const trackClaiming = ({
 	}),
 	identity: { ...createState().identity, customerId },
 	...(key !== null && {
-		idempotency: { key: `track:${key}`, ttlMs: 24 * 60 * MINUTE_MS },
+		idempotency: { key: `track:${key}`, ttlMs: 30 * MINUTE_MS },
 	}),
 });
 
@@ -109,7 +109,7 @@ describe("journal keys", () => {
 		expect(keyRowsIn({ databasePath })).toEqual([]);
 	});
 
-	test("every minute a row older than 90 min is pruned, a younger one kept", async () => {
+	test("every minute a row older than 30 min is pruned: one 31 min old goes, one 29 min old is kept", async () => {
 		const databasePath = journalPath();
 		let clock = 0;
 		const writing = openJournal({ databasePath, now: () => clock });
@@ -117,7 +117,7 @@ describe("journal keys", () => {
 			customerId: "cus_1",
 			command: trackClaiming({ commandId: "old", key: "k_old" }),
 		});
-		clock = 30 * MINUTE_MS;
+		clock = 2 * MINUTE_MS;
 		await writing.append({
 			customerId: "cus_2",
 			command: trackClaiming({
@@ -128,7 +128,7 @@ describe("journal keys", () => {
 		});
 		writing.close();
 		jest.useFakeTimers();
-		clock = 90 * MINUTE_MS + 1;
+		clock = 31 * MINUTE_MS;
 		open({ databasePath, now: () => clock });
 
 		jest.advanceTimersByTime(MINUTE_MS);
@@ -136,8 +136,26 @@ describe("journal keys", () => {
 		await settleSqliteWrites();
 
 		expect(keyRowsIn({ databasePath })).toEqual([
-			{ customerId: "cus_2", appendedAt: 30 * MINUTE_MS },
+			{ customerId: "cus_2", appendedAt: 2 * MINUTE_MS },
 		]);
+	});
+
+	test("a key is a duplicate for 30 min after its append: still held at 29 min, free at 31", async () => {
+		let clock = 0;
+		const journal = open({ databasePath: journalPath(), now: () => clock });
+		await journal.append({
+			customerId: "cus_1",
+			command: trackClaiming({ commandId: "a", key: "k_a" }),
+		});
+
+		clock = 29 * MINUTE_MS;
+		expect(journal.holdsKey({ customerId: "cus_1", key: "track:k_a" })).toBe(
+			true,
+		);
+		clock = 31 * MINUTE_MS;
+		expect(journal.holdsKey({ customerId: "cus_1", key: "track:k_a" })).toBe(
+			false,
+		);
 	});
 
 	test("a file from before the table gains it on open and keeps its owed entries", async () => {

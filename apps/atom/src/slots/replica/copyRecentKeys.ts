@@ -5,7 +5,7 @@ import type { ReplicaSlotsContext } from "./types/replicaSlotsContext.js";
 /** Key rows asked of a peer per request: the peer reads cap a page here. */
 const KEYS_PAGE = 1_000;
 
-/** Every idempotency key the source took in the last 90 min, page by page, into the journals of the slots this thread owns. */
+/** Every idempotency key the source took within the key window, page by page, into the journals of the slots this thread owns. */
 export const copyRecentKeys = async ({
 	ctx,
 	source,

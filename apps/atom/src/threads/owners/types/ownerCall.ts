@@ -66,7 +66,7 @@ export type OwnerCallBody = { atomId: string | null } & (
 			slot: number;
 			keys: { customerId: string; entityId: string }[];
 	  }
-	/** A page of the slot's idempotency keys of the last 90 min, for a replica copying them as it boots. */
+	/** A page of the slot's idempotency keys taken within the key window, for a replica copying them as it boots. */
 	| {
 			type: "recentKeys";
 			slot: number;

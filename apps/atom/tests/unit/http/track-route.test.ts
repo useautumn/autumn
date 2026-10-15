@@ -230,7 +230,7 @@ describe("a track the Atom leaves to the API", () => {
 		expect(await reply.json()).toEqual({ from: "api" });
 		expect(reply.headers.get("x-atom-forwarded")).toBe("track_denied");
 		expect(autumn.calls).toEqual(["/v1/track"]);
-		// The API reads it to claim the caller's key for the Atom's 90 min, not the org's TTL.
+		// The API reads it to claim the caller's key for the Atom's 30 min, not the org's TTL.
 		expect(autumn.forwardedBy).toEqual(["track_denied"]);
 		expect(appended).toHaveLength(0);
 		expect(await remainingOn(replica)).toBe(100);

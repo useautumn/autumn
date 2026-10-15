@@ -76,11 +76,11 @@ export type Journal = {
 	/** Every customer owing something, with each committed entry and whether Autumn already holds it: what a handoff carries. */
 	handoffs(): Promise<{ customerId: string; entries: HandedEntry[] }[]>;
 	close(): void;
-	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
+	/** Whether the customer's idempotency key (its claim key) was appended within the key window, its commit landed or not. */
 	holdsKey(params: { customerId: string; key: string }): boolean;
 	/** Key rows another replica wrote, held here too; a row already held keeps its own. Resolves to how many were new. */
 	receiveKeys(params: { keys: JournalKeyRow[] }): Promise<number>;
-	/** A page of the rows written within KEY_ROW_TTL_MS, oldest first, past `after` (the last row of the page before). */
+	/** A page of the rows written within the key window, oldest first, past `after` (the last row of the page before). */
 	recentKeys(params: {
 		after: JournalKeyRow | null;
 		limit: number;

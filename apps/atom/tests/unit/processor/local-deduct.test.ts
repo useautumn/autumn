@@ -220,7 +220,7 @@ describe("a track the Atom deducts itself", () => {
 			value: 7,
 			overageBehavior: "cap",
 			usageEvent: { name: "messages", idempotencyKey: "evt_1", id: null },
-			idempotency: { key: "track:evt_1", ttlMs: 90 * 60_000 },
+			idempotency: { key: "track:evt_1", ttlMs: 30 * 60_000 },
 		});
 		expect(entry?.command.enforceOverdueBlock).not.toBe(true);
 	});

@@ -53,7 +53,7 @@ const keyedTrack = ({
 	}),
 	identity: { ...createState().identity, customerId },
 	...(key !== null && {
-		idempotency: { key: `track:${key}`, ttlMs: 24 * 60 * MINUTE_MS },
+		idempotency: { key: `track:${key}`, ttlMs: 30 * MINUTE_MS },
 	}),
 });
 
@@ -179,23 +179,22 @@ describe("idempotency keys another replica relayed", () => {
 		]);
 	});
 
-	test("are pruned like the journal's own once older than 90 min: a younger one is kept", async () => {
+	test("are pruned like the journal's own once older than 30 min: one 31 min old goes, one 29 min old is kept", async () => {
 		const databasePath = journalPath();
-		let clock = 90 * MINUTE_MS;
+		const clock = 31 * MINUTE_MS;
 		const receiving = openJournal({ databasePath, now: () => clock });
 		await receiving.receiveKeys({
 			keys: [
 				relayedKey({ key: "k_old", appendedAt: 0 }),
 				relayedKey({
 					key: "k_young",
-					appendedAt: 30 * MINUTE_MS,
+					appendedAt: 2 * MINUTE_MS,
 					customerId: "cus_2",
 				}),
 			],
 		});
 		receiving.close();
 		jest.useFakeTimers();
-		clock = 90 * MINUTE_MS + 1;
 		open({ databasePath, now: () => clock });
 
 		jest.advanceTimersByTime(MINUTE_MS);
@@ -203,21 +202,21 @@ describe("idempotency keys another replica relayed", () => {
 		await settleSqliteWrites();
 
 		expect(keyRowsIn({ databasePath })).toEqual([
-			{ customerId: "cus_2", appendedAt: 30 * MINUTE_MS },
+			{ customerId: "cus_2", appendedAt: 2 * MINUTE_MS },
 		]);
 	});
 });
 
 describe("a journal's recent idempotency keys, as a booting peer copies them", () => {
-	test("are the rows of the last 90 min, oldest first, a page at a time past the last row read", async () => {
+	test("are the rows of the last 30 min, oldest first, a page at a time past the last row read", async () => {
 		const journal = open({
 			databasePath: journalPath(),
 			now: () => 100 * MINUTE_MS,
 		});
-		const old = relayedKey({ key: "k_old", appendedAt: 9 * MINUTE_MS });
+		const old = relayedKey({ key: "k_old", appendedAt: 69 * MINUTE_MS });
 		const recent = [
-			relayedKey({ key: "k_1", appendedAt: 11 * MINUTE_MS }),
-			relayedKey({ key: "k_2", appendedAt: 50 * MINUTE_MS }),
+			relayedKey({ key: "k_1", appendedAt: 71 * MINUTE_MS }),
+			relayedKey({ key: "k_2", appendedAt: 85 * MINUTE_MS }),
 			relayedKey({ key: "k_3", appendedAt: 99 * MINUTE_MS }),
 		];
 		await journal.receiveKeys({ keys: [old, ...recent] });

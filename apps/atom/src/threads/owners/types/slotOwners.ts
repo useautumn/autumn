@@ -45,7 +45,7 @@ export type SlotOwners = {
 		slot: number;
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
-	/** A page of the idempotency keys a slot another thread owns took in the last 90 min. */
+	/** A page of the idempotency keys a slot another thread owns took within the key window. */
 	recentKeysOn(params: {
 		thread: number;
 		atomId: string | null;
