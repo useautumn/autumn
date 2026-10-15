@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { LockAlreadyExistsError } from "@autumn/balance-engine";
 import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
+import { CustomerMovedError } from "../../../src/processor/ownership/customerMovedError.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { TrackRequest } from "../../../src/processor/types/track.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
@@ -178,6 +179,37 @@ test("a lock_id the owner refuses as open crosses back as the API's 409, never a
 		code: "lock_already_exists",
 		message: "A lock with this ID already exists",
 	});
+
+	link.disconnect();
+	port2.close();
+});
+
+test("a customer the owner refuses as moved crosses back as the same refusal, naming the new owner, never a 500", async () => {
+	const { port1, port2 } = new MessageChannel();
+	const slots = {
+		processorFor: () => ({
+			check: async () => {
+				throw new CustomerMovedError({ owner: "10.0.0.2" });
+			},
+		}),
+	} as unknown as Slots;
+	answerOwnerCalls({
+		ctx: {
+			auth: { slotsFor: () => slots },
+			health: { threadsReady: new Int32Array([1, 1]), thread: 1 },
+		},
+		port: port2,
+	});
+	const link = createOwnerLink({ thread: 1 });
+	link.connect({ port: port1 });
+
+	const refused = await link
+		.processorFor({ atomId: null })
+		.check({ request: checkRequestFor() })
+		.catch((error: Error) => error);
+
+	expect(refused).toBeInstanceOf(CustomerMovedError);
+	expect((refused as CustomerMovedError).owner).toBe("10.0.0.2");
 
 	link.disconnect();
 	port2.close();
