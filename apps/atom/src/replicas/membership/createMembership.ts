@@ -13,7 +13,8 @@ const GRANTED = 3;
 const HANDED_THREADS = 4;
 const ALL_HANDED = -1;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
-export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
+const JOIN_EPOCH_INDEX = SELF_LEAVING_INDEX + 1;
+export const MEMBERSHIP_INTS = JOIN_EPOCH_INDEX + 1;
 
 const STATES: Record<MemberState, number> = { joined: 1, leaving: 2 };
 const STATE_NAMES = Object.fromEntries(
@@ -101,9 +102,15 @@ export const createMembership = ({
 			const before = Atomics.exchange(table, at + BOOT, bootCodeOf(boot));
 			// Back from a new boot: what its old one handed is not what this one holds.
 			if (before !== 0 && before !== bootCodeOf(boot)) expectHandoff(at);
-			return (
-				Atomics.exchange(table, at + STATE, STATES.joined) !== STATES.joined
-			);
+			const flipped =
+				Atomics.exchange(table, at + STATE, STATES.joined) !== STATES.joined;
+			if (flipped) Atomics.add(table, JOIN_EPOCH_INDEX, 1);
+			return flipped;
+		},
+		joinEpoch: () => Atomics.load(table, JOIN_EPOCH_INDEX),
+		bootOf: (address) => {
+			const at = rowOf(address);
+			return at < 0 ? null : Atomics.load(table, at + BOOT);
 		},
 		isBootOf: ({ address, boot }) => {
 			const at = rowOf(address);

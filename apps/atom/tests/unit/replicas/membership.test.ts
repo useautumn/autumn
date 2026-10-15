@@ -248,9 +248,13 @@ describe("a flip on one thread wakes the hand-over on every thread", () => {
 		const onT1 = createMembership({ self: B, table });
 		const handedOff: string[] = [];
 		let probes = 0;
-		const health = (async (input: URL | RequestInfo) => {
-			probes++;
-			return healthOf({ [A]: { status: 200, bootedAt: "boot-1" } })(input);
+		const health = (async (input: URL | RequestInfo, init?: RequestInit) => {
+			const url = new URL(String(input));
+			if (url.pathname === "/health") probes++;
+			return healthOf({ [A]: { status: 200, bootedAt: "boot-1" } })(
+				input,
+				init,
+			);
 		}) as typeof fetch;
 		const t0 = proberOf({
 			membership: onT0,
