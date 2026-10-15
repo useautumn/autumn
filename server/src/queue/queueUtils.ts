@@ -28,6 +28,7 @@ import {
 } from "./utils/sendSqsMessages.js";
 import type {
 	BatchResetCusEntsPayload,
+	ExpireLockReceiptPayload,
 	SendProductsUpdatedPayload,
 } from "./workflows.js";
 
@@ -110,13 +111,7 @@ export interface Payloads {
 		customerId: string;
 		featureId: string;
 	};
-	[JobName.ExpireLockReceipt]: {
-		orgId: string;
-		env: AppEnv;
-		customerId: string;
-		lockId: string;
-		hashedKey: string;
-	};
+	[JobName.ExpireLockReceipt]: ExpireLockReceiptPayload;
 	[JobName.FinalizeLock]: {
 		orgId: string;
 		env: AppEnv;

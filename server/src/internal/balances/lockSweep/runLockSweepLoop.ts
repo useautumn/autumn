@@ -63,7 +63,7 @@ const waitForNextBatch = async ({
 };
 
 /**
- * Settles locks nobody finalized within the 24 hour default. A caller-set expiry is its EventBridge timer's job.
+ * Settles locks nobody finalized: the 24 hour default, and a caller-set expiry whose EventBridge timer is overdue.
  * A loop, not a cron tick: the next batch starts only when the last one has finished, so it cannot overlap itself.
  */
 export const runLockSweepLoop = async ({

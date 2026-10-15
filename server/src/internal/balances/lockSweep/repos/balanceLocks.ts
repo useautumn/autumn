@@ -16,19 +16,18 @@ export type DueBalanceLock = {
 	expires_at: number;
 };
 
-const CONFIRM_ON_EXPIRY = "confirm";
+export type LockExpiryAction = "confirm" | "release";
 
-/**
- * One page of due locks that expire by confirming, oldest first, keyset-paged on (expires_at, id).
- * Locks that release on expiry belong to their EventBridge timer. Bounded by its own statement timeout.
- */
-export async function getDueConfirmLocks({
+/** One page of due locks with this expiry action, oldest first, keyset-paged on (expires_at, id). Bounded by its own statement timeout. */
+export async function getDueLocks({
 	db,
+	expiryAction,
 	dueBefore,
 	after,
 	limit,
 }: {
 	db: DrizzleCli;
+	expiryAction: LockExpiryAction;
 	dueBefore: number;
 	after: DueLockCursor | null;
 	limit: number;
@@ -59,7 +58,7 @@ export async function getDueConfirmLocks({
 			.where(
 				and(
 					lt(balanceLocks.expires_at, dueBefore),
-					eq(balanceLocks.expiry_action, CONFIRM_ON_EXPIRY),
+					eq(balanceLocks.expiry_action, expiryAction),
 					afterCursor,
 				),
 			)
