@@ -34,6 +34,7 @@ export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
 // Customer keys (per-customer JWTs)
 export * from "./api/keys/keysModels";
+export * from "./api/roles/apiRole";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/list/migrationListSummary";
@@ -321,6 +322,9 @@ export * from "./utils/rewardUtils/promoCodeUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
+export * from "./utils/roleUtils/builtInRoles";
+export * from "./utils/roleUtils/roleAccessToScopes";
+export * from "./utils/roleUtils/scopesToRoleAccess";
 // Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
 export * from "./utils/usageWindowUtils/classifyUsageWindow/isSameUsageWindow";
