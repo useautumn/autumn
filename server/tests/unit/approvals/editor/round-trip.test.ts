@@ -213,6 +213,70 @@ describe("groups", () => {
 	});
 });
 
+describe("rows that set the same condition are ANDed, never overwritten", () => {
+	const cap = (value: number): EditorRow => ({
+		field: "discount_percent_off",
+		operator: "lte",
+		value,
+	});
+
+	test.each<{
+		name: string;
+		rows: EditorRow[];
+		when: unknown;
+		readsBack?: EditorRow[];
+	}>([
+		{
+			name: "two Customer rows",
+			rows: [
+				{ field: "customer", operator: "is_not", value: "acme" },
+				{ field: "customer", operator: "is_not", value: "globex" },
+			],
+			when: {
+				customer: { customer_id: { $ne: "acme" } },
+				$and: [{ customer: { customer_id: { $ne: "globex" } } }],
+			},
+		},
+		{
+			name: "three Discount caps, out of board order with another field",
+			rows: [cap(20), sampleRow("paid", "is"), cap(30), cap(40)],
+			readsBack: [sampleRow("paid", "is"), cap(20), cap(30), cap(40)],
+			when: {
+				paid: true,
+				discounts: { $every: { percent_off: { $lte: 20 } } },
+				$and: [
+					{ discounts: { $every: { percent_off: { $lte: 30 } } } },
+					{ discounts: { $every: { percent_off: { $lte: 40 } } } },
+				],
+			},
+		},
+		{
+			name: "two Customer has plan rows stay separate checks",
+			rows: [
+				{
+					field: "customer_plan",
+					operator: "doesnt_have",
+					value: { plan_id: "pro" },
+				},
+				{ field: "customer_plan", operator: "has_none", value: null },
+			],
+			when: {
+				customer: { plan: { $none: { plan_id: "pro" } } },
+				$and: [{ customer: { plan: { $none: {} } } }],
+			},
+		},
+	])("$name", ({ rows, when, readsBack = rows }) => {
+		const area = "billing_change";
+		expect<unknown>(stored({ area, groups: [rows] })).toEqual(when);
+		expect(whenToRows({ area, when })).toEqual({
+			editable: true,
+			pinned: null,
+			groups: [readsBack],
+		});
+		expectValid(area, when);
+	});
+});
+
 describe("stored design cases open in the editor", () => {
 	test.each([
 		["recurring discounts", "billing_change", rules.recurringDiscounts()],
@@ -268,15 +332,6 @@ type IssueCase = {
 describe("rows that can't be stored report an issue", () => {
 	test.each<IssueCase>([
 		{
-			name: "the same matcher twice in one group",
-			area: "billing_change",
-			rows: [
-				sampleRow("customer", "is"),
-				{ ...sampleRow("customer", "is"), value: "b" },
-			],
-			issue: { group: 0, row: 1 },
-		},
-		{
 			name: "a field from another area",
 			area: "invoice",
 			rows: [sampleRow("paid", "is")],
@@ -304,6 +359,7 @@ describe("rows that can't be stored report an issue", () => {
 		...[
 			{ field: "customer_plan", operator: "has", value: null },
 			{ field: "customer", operator: "is", value: null },
+			{ field: "total", operator: "lte", value: undefined },
 			{ field: "total", operator: "lte", value: "lots" },
 			{ field: "starts_at", operator: "is", value: "7" },
 			{ field: "paid", operator: "is", value: null },
@@ -312,6 +368,12 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "outgoing_plan", operator: "is", value: null },
 			{ field: "free_trial", operator: "lt", value: null },
 			{ field: "feature_quantity", operator: "lte", value: null },
+			{
+				field: "feature_quantity",
+				operator: "lte",
+				value: { feature_id: "seats" },
+			},
+			{ field: "feature_quantity", operator: "lte", value: { quantity: 3 } },
 		].map((row) => ({
 			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
 			area: "billing_change" as const,
@@ -333,15 +395,17 @@ describe("rows that can't be stored report an issue", () => {
 	});
 });
 
-describe("a row that collides in the incoming plan element becomes an $and entry", () => {
+describe("incoming plan rows that set the same condition are ANDed", () => {
 	const quantity = (feature_id: string, quantity: number): EditorRow => ({
 		field: "feature_quantity",
 		operator: "lte",
 		value: { feature_id, quantity },
 	});
-	const quantityLimit = (feature_id: string, limit: number) => ({
-		feature_quantities: { $none: { feature_id, quantity: { $gt: limit } } },
-	});
+	const incoming = (plan: unknown) => ({ incoming: { $every: plan } });
+	const quantityLimit = (feature_id: string, limit: number) =>
+		incoming({
+			feature_quantities: { $none: { feature_id, quantity: { $gt: limit } } },
+		});
 	const trialCap = {
 		$or: [
 			{ free_trial: null },
@@ -353,11 +417,12 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 			})),
 		],
 	};
+	const versioned = [{ plan_id: "pro", version: 2 }, { plan_id: "team" }];
 
 	test.each<{
 		name: string;
 		rows: EditorRow[];
-		element: unknown;
+		when: unknown;
 		readsBack?: EditorRow[];
 	}>([
 		{
@@ -366,10 +431,7 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 				sampleRow("incoming_plan", "is_any_of"),
 				sampleRow("free_trial", "lt"),
 			],
-			element: {
-				$or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
-				$and: [trialCap],
-			},
+			when: { ...incoming({ $or: versioned }), $and: [incoming(trialCap)] },
 		},
 		{
 			name: "Incoming plan · is with a version, beside is any of with a version",
@@ -377,11 +439,7 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 				sampleRow("incoming_plan", "is"),
 				sampleRow("incoming_plan", "is_any_of"),
 			],
-			element: {
-				plan_id: "pro",
-				version: 2,
-				$or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
-			},
+			when: incoming({ plan_id: "pro", version: 2, $or: versioned }),
 		},
 		{
 			name: "Incoming plan · is with a version, beside is any of without one",
@@ -393,16 +451,15 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 					value: [{ plan_id: "pro" }, { plan_id: "team" }],
 				},
 			],
-			element: {
-				plan_id: "pro",
-				version: 2,
-				$and: [{ plan_id: { $in: ["pro", "team"] } }],
+			when: {
+				...incoming({ plan_id: "pro", version: 2 }),
+				$and: [incoming({ plan_id: { $in: ["pro", "team"] } })],
 			},
 		},
 		{
 			name: "two Quantity rows",
 			rows: [quantity("seats", 10), quantity("workers", 5)],
-			element: {
+			when: {
 				...quantityLimit("seats", 10),
 				$and: [quantityLimit("workers", 5)],
 			},
@@ -413,10 +470,12 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 				{ ...quantity("seats", 5), operator: "gte" },
 				quantity("seats", 10),
 			],
-			element: {
-				feature_quantities: {
-					$none: { feature_id: "seats", quantity: { $lt: 5 } },
-				},
+			when: {
+				...incoming({
+					feature_quantities: {
+						$none: { feature_id: "seats", quantity: { $lt: 5 } },
+					},
+				}),
 				$and: [quantityLimit("seats", 10)],
 			},
 		},
@@ -428,9 +487,13 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 				quantity("a", 1),
 				quantity("b", 2),
 			],
-			element: {
-				paid: true,
-				...quantityLimit("seats", 10),
+			when: {
+				...incoming({
+					paid: true,
+					feature_quantities: {
+						$none: { feature_id: "seats", quantity: { $gt: 10 } },
+					},
+				}),
 				$and: [quantityLimit("a", 1), quantityLimit("b", 2)],
 			},
 			readsBack: [
@@ -440,9 +503,45 @@ describe("a row that collides in the incoming plan element becomes an $and entry
 				quantity("b", 2),
 			],
 		},
-	])("$name", ({ rows, element, readsBack }) => {
-		const when = stored({ area: "billing_change", groups: [rows] });
-		expect<unknown>(when).toEqual({ incoming: { $every: element } });
+		{
+			name: "Incoming plan · is not and is none of stay separate checks",
+			rows: [
+				{
+					field: "incoming_plan",
+					operator: "is_not",
+					value: { plan_id: "pro" },
+				},
+				{
+					field: "incoming_plan",
+					operator: "is_none_of",
+					value: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+				},
+			],
+			when: {
+				incoming: { $none: { plan_id: "pro" } },
+				$and: [
+					{
+						incoming: {
+							$none: {
+								$or: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+							},
+						},
+					},
+				],
+			},
+		},
+		{
+			name: "Free trial · has none beside < 2 months",
+			rows: [
+				{ field: "free_trial", operator: "has_none", value: null },
+				sampleRow("free_trial", "lt"),
+			],
+			when: incoming({ free_trial: null, ...trialCap }),
+		},
+	])("$name", ({ rows, when, readsBack }) => {
+		expect<unknown>(stored({ area: "billing_change", groups: [rows] })).toEqual(
+			when,
+		);
 		expectRoundTrip("billing_change", rows, readsBack);
 	});
 });
