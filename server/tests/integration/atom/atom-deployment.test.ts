@@ -32,7 +32,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntilAsserted } from "@tests/utils/genUtils.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -234,12 +234,14 @@ test.skipIf(hostedAtom)(
 		const afterDelete = await autumn.post("/byoc.get_atom", {});
 		expect(afterDelete).toMatchObject({ cache: null });
 		// The delete lands on one Atom thread; the others drop the token at their next rescan (TENANTS_REVALIDATE_MS, 1 s).
-		await pollUntilAsserted({
-			fetch: () => checkOnAtom(anyCheck),
-			assert: (checkAfterDelete) => expect(checkAfterDelete.status).toBe(401),
-			timeoutMs: 5_000,
-			intervalMs: 250,
-		});
+		// Sent at once so they open separate connections, which reusePort spreads across the threads.
+		await timeout(1_500);
+		const checksAfterDelete = await Promise.all(
+			Array.from({ length: 12 }, () => checkOnAtom(anyCheck)),
+		);
+		expect(checksAfterDelete.map(({ status }) => status)).toEqual(
+			Array(12).fill(401),
+		);
 	},
 );
 
