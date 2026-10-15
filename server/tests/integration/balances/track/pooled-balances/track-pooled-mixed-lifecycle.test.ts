@@ -1,5 +1,5 @@
 // Contract: pooled entity grants compose with customer prepaid and overage balances.
-// Mid-cycle contribution changes and free-to-Pro replacement preserve aggregate usage.
+// Mid-cycle contribution changes preserve aggregate usage; free-to-Pro pulls the free pool into Pro's pool.
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, TrackResponseV3 } from "@autumn/shared";
@@ -102,7 +102,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pooled mixed lifecycle: free-to-Pro replacement swaps one contribution without losing usage")}`,
+	`${chalk.yellowBright("pooled mixed lifecycle: free-to-Pro replacement merges the free pool into Pro's subscription pool")}`,
 	async () => {
 		const { freeEntityPlan, proEntityPlan } = buildPooledBalanceTestProducts({
 			idPrefix: "pooled-free-to-pro",
@@ -140,9 +140,9 @@ test.concurrent(
 			customer: afterUpgrade,
 			featureId: TestFeature.Messages,
 			granted: 150,
-			remaining: 110,
-			usage: 40,
-			breakdownCount: 2,
+			remaining: 150,
+			usage: 0,
+			breakdownCount: 1,
 		});
 
 		const secondTrack = (await autumnV2_2.track({
@@ -154,8 +154,8 @@ test.concurrent(
 		})) as TrackResponseV3;
 		expect(secondTrack.balance).toMatchObject({
 			granted: 150,
-			remaining: 40,
-			usage: 110,
+			remaining: 80,
+			usage: 70,
 		});
 	},
 );
