@@ -183,4 +183,116 @@ describe("evaluateApprovalRules: combining conditions", () => {
 		expect(verdictFor({ checkout: true })).toBe("allow");
 		expect(verdictFor({ checkout: false })).toBe("deny");
 	});
+
+	test("$and of two $or groups inside one incoming element apply to the same plan", () => {
+		const rule = storedRule({
+			id: "apr_grouped",
+			rule: rules.rule({
+				name: "Pro or Team, short trial",
+				subjects: [sales],
+				when: {
+					incoming: {
+						$every: {
+							$and: [
+								{ $or: [{ plan_id: "pro" }, { plan_id: "team" }] },
+								{
+									$or: [
+										{ free_trial: null },
+										{
+											free_trial: {
+												duration_type: "day",
+												duration_length: { $lt: 31 },
+											},
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+			}),
+		});
+		const verdictFor = (incoming: ReturnType<typeof facts.incomingPlan>) =>
+			evaluateApprovalRules({
+				principal: salesRep,
+				action: "billing.attach",
+				facts: facts.billingChange({ incoming: [incoming] }),
+				rules: [rule],
+				env: AppEnv.Live,
+			}).verdict;
+
+		expect(
+			verdictFor(
+				facts.incomingPlan({
+					planId: "team",
+					freeTrial: facts.trial({ length: 14 }),
+				}),
+			),
+		).toBe("allow");
+		expect(
+			verdictFor(
+				facts.incomingPlan({
+					planId: "team",
+					freeTrial: facts.trial({ length: 45 }),
+				}),
+			),
+		).toBe("deny");
+		expect(verdictFor(facts.incomingPlan({ planId: "enterprise" }))).toBe(
+			"deny",
+		);
+	});
+
+	test("$or rows inside a feature_quantities element cap each feature separately", () => {
+		const rule = storedRule({
+			id: "apr_quantities",
+			rule: rules.rule({
+				name: "Seat and project caps",
+				subjects: [sales],
+				when: {
+					incoming: {
+						$every: {
+							feature_quantities: {
+								$every: {
+									$or: [
+										{ feature_id: "seats", quantity: { $lte: 10 } },
+										{ feature_id: "projects", quantity: { $lte: 3 } },
+									],
+								},
+							},
+						},
+					},
+				},
+			}),
+		});
+		const verdictFor = (
+			quantities: { feature_id: string; quantity: number }[],
+		) =>
+			evaluateApprovalRules({
+				principal: salesRep,
+				action: "billing.attach",
+				facts: facts.billingChange({
+					incoming: [
+						facts.incomingPlan({
+							planId: "pro",
+							featureQuantities: quantities,
+						}),
+					],
+				}),
+				rules: [rule],
+				env: AppEnv.Live,
+			}).verdict;
+
+		expect(
+			verdictFor([
+				{ feature_id: "seats", quantity: 8 },
+				{ feature_id: "projects", quantity: 3 },
+			]),
+		).toBe("allow");
+		expect(
+			verdictFor([
+				{ feature_id: "seats", quantity: 8 },
+				{ feature_id: "projects", quantity: 5 },
+			]),
+		).toBe("deny");
+	});
 });
