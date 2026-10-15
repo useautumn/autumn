@@ -1,13 +1,11 @@
+import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import {
-	type AppEnv,
 	type ApprovalRuleWithSubjects,
 	approvalRuleSubjects,
 	approvalRules,
 	approvalRuleVersions,
-	ErrCode,
-	RecaseError,
 	type UpsertApprovalRule,
-} from "@autumn/shared";
+} from "@autumn/shared/models/approvalModels/index";
 import { and, eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 

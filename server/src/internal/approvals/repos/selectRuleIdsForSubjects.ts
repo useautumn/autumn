@@ -1,7 +1,7 @@
 import {
 	type ApprovalRuleSubjectRow,
 	approvalRuleSubjects,
-} from "@autumn/shared";
+} from "@autumn/shared/models/approvalModels/index";
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 

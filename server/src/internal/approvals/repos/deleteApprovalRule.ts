@@ -1,4 +1,5 @@
-import { type AppEnv, approvalRules } from "@autumn/shared";
+import type { AppEnv } from "@autumn/shared";
+import { approvalRules } from "@autumn/shared/models/approvalModels/index";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 

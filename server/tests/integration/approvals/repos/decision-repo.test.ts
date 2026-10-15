@@ -5,7 +5,8 @@
  */
 
 import { expect, test } from "bun:test";
-import { AppEnv, approvalDecisions } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
+import { approvalDecisions } from "@autumn/shared/models/approvalModels/index";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { approvalDecisionRepo } from "@/internal/approvals/repos/index.js";
