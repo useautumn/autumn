@@ -1,4 +1,4 @@
-import type { ConsumerConfig } from "../../types/kafkaWire.js";
+import type { ConsumerConfig, GroupProtocol } from "../../types/kafkaWire.js";
 
 /**
  * librdkafka heartbeats from its own thread, so a member stuck in a batch stays in the group until this long
@@ -15,10 +15,13 @@ export const MAX_FETCH_WAIT_MS = 500;
 /** librdkafka consumer properties for a kafkajs-shaped consumer config. */
 export function nativeConsumerConfigOf({
 	config,
+	defaultProtocol = "consumer",
 }: {
 	config: ConsumerConfig;
+	/** The client's protocol, for a group that does not name its own. */
+	defaultProtocol?: GroupProtocol;
 }): Record<string, unknown> {
-	const protocol = config.groupProtocol ?? "consumer";
+	const protocol = config.groupProtocol ?? defaultProtocol;
 	const pollInterval = config.rebalanceTimeout ?? DEFAULT_MAX_POLL_INTERVAL_MS;
 	const membership =
 		protocol === "consumer"

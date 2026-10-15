@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createConsumerGroupConfig } from "../../src/client/createConsumerGroupConfig.js";
 import { createLibrdkafkaConsumer } from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
 import type {
 	NativeConsumer,
@@ -12,6 +13,7 @@ import { createKafkaLog } from "../../src/client/librdkafka/kafkaLog.js";
 import {
 	type ConsumerConfig,
 	type EachBatchPayload,
+	type GroupProtocol,
 	KafkaConsumerLeaseLostError,
 } from "../../src/kafka.js";
 
@@ -1059,5 +1061,78 @@ describe("librdkafka consumer runner", () => {
 		expect(fake.calls.indexOf("seeked")).toBeLessThan(
 			fake.calls.indexOf("disconnect"),
 		);
+	});
+});
+
+describe("group protocol", () => {
+	async function nativeGroupConfigOf({
+		groupProtocol,
+		config,
+	}: {
+		groupProtocol?: GroupProtocol;
+		config: ConsumerConfig;
+	}): Promise<Record<string, unknown>> {
+		const fake = createFakeNative();
+		let global: Record<string, unknown> = {};
+		const consumer = createLibrdkafkaConsumer({
+			ctx: {
+				createNative: (native) => {
+					global = native.global;
+					return fake.factory(native);
+				},
+				nativeClientConfig: {},
+				log: createKafkaLog({
+					clientId: "t",
+					sink: {
+						error: () => {},
+						warn: () => {},
+						info: () => {},
+						debug: () => {},
+					},
+				}),
+				groupProtocol,
+			},
+			config,
+		});
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.disconnect();
+		return global;
+	}
+	const groupConfig = createConsumerGroupConfig({
+		groupId: "g",
+		timings: {
+			fetchMaxWaitTimeMs: 250,
+			heartbeatIntervalMs: 3_000,
+			rebalanceTimeoutMs: 60_000,
+			sessionTimeoutMs: 30_000,
+		},
+		remoteAssignor: "range",
+	});
+
+	test("a group speaks KIP-848 with the broker's assignor unless its client says otherwise", async () => {
+		const global = await nativeGroupConfigOf({ config: groupConfig });
+		expect(global["group.protocol"]).toBe("consumer");
+		expect(global["group.remote.assignor"]).toBe("range");
+		expect(global["partition.assignment.strategy"]).toBeUndefined();
+	});
+
+	test("a classic client's groups join the classic way, dealt by librdkafka's own range", async () => {
+		const global = await nativeGroupConfigOf({
+			groupProtocol: "classic",
+			config: groupConfig,
+		});
+		expect(global["group.protocol"]).toBe("classic");
+		expect(global["partition.assignment.strategy"]).toBe("range");
+		expect(global["session.timeout.ms"]).toBe(30_000);
+		expect(global["group.remote.assignor"]).toBeUndefined();
+	});
+
+	test("a consumer that names its own protocol keeps it", async () => {
+		const global = await nativeGroupConfigOf({
+			groupProtocol: "classic",
+			config: { ...groupConfig, groupProtocol: "consumer" },
+		});
+		expect(global["group.protocol"]).toBe("consumer");
 	});
 });

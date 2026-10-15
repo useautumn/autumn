@@ -6,6 +6,7 @@ import type {
 	ConsumerEventName,
 	ConsumerRunConfig,
 	ConsumerSubscribeTopics,
+	GroupProtocol,
 	OffsetsByTopicPartition,
 	TopicPartitionOffset,
 } from "../../types/kafkaWire.js";
@@ -89,6 +90,8 @@ export function createLibrdkafkaConsumer({
 		createNative: NativeConsumerFactory;
 		nativeClientConfig: Record<string, unknown>;
 		log: KafkaLog;
+		/** The client's protocol, for a group that does not name its own. */
+		groupProtocol?: GroupProtocol;
 	};
 	config: ConsumerConfig;
 }): Consumer {
@@ -146,7 +149,10 @@ export function createLibrdkafkaConsumer({
 		native = ctx.createNative({
 			global: {
 				...ctx.nativeClientConfig,
-				...nativeConsumerConfigOf({ config }),
+				...nativeConsumerConfigOf({
+					config,
+					defaultProtocol: ctx.groupProtocol,
+				}),
 				rebalance_cb: onRebalance,
 				event_cb: true,
 			},
