@@ -34,10 +34,13 @@ export const createSlotProcessor = ({
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
-			const response = await check({ ctx, request });
+			const { response, result } = await check({ ctx, request });
 			return {
 				json: checkResponseToJson({ response }),
 				allowed: response.allowed,
+				denial: response.allowed
+					? null
+					: { reason: result.reason, limitType: result.limitType },
 			};
 		},
 		track: async ({ request }) => {

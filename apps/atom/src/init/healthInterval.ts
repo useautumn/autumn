@@ -15,7 +15,9 @@ type IntervalCounter =
 	| "diskExpired"
 	| "tracksAppended"
 	| "appendFailed"
-	| "journalForwardFailed";
+	| "journalForwardFailed"
+	| "viewFoldKept"
+	| "viewFoldRebuilt";
 
 /** Totals since boot at one read, summed over every thread. */
 export type HealthTotals = Record<IntervalCounter, number> & {
@@ -50,6 +52,8 @@ export const bootTotals = ({
 	tracksAppended: 0,
 	appendFailed: 0,
 	journalForwardFailed: 0,
+	viewFoldKept: 0,
+	viewFoldRebuilt: 0,
 });
 
 export const healthTotalsOf = ({
@@ -78,6 +82,8 @@ export const healthTotalsOf = ({
 		tracksAppended: sumOf("tracksAppended"),
 		appendFailed: sumOf("appendFailed"),
 		journalForwardFailed: sumOf("journalForwardFailed"),
+		viewFoldKept: sumOf("viewFoldKept"),
+		viewFoldRebuilt: sumOf("viewFoldRebuilt"),
 	};
 };
 
@@ -108,4 +114,6 @@ export const healthIntervalBetween = ({
 	appendFailed: current.appendFailed - previous.appendFailed,
 	journalForwardFailed:
 		current.journalForwardFailed - previous.journalForwardFailed,
+	viewFoldKept: current.viewFoldKept - previous.viewFoldKept,
+	viewFoldRebuilt: current.viewFoldRebuilt - previous.viewFoldRebuilt,
 });

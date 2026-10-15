@@ -1,3 +1,4 @@
+import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
 import type { Journal } from "../../state/journal/types/journal.js";
@@ -17,7 +18,12 @@ export type SlotProcessorContext = {
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */
-export type CheckAnswer = { json: string; allowed: boolean };
+export type CheckAnswer = {
+	json: string;
+	allowed: boolean;
+	/** Why the engine refused it, for the comparer reading the response's headers; null when allowed. */
+	denial: Pick<CheckResult, "reason" | "limitType"> | null;
+};
 
 /** Everything one slot does: decide checks, deduct tracks, and take in the subjects Autumn sends. Answered here, or on the thread that owns the slot. */
 export type SlotProcessor = {

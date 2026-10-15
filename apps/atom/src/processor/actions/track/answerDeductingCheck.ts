@@ -1,5 +1,4 @@
-import type { CheckResponseV3 } from "@autumn/shared";
-import type { AnswerableCheck } from "../../types/check.js";
+import type { AnswerableCheck, CheckDecided } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { checkToCommand, renderCheck } from "../check/answerCheck.js";
@@ -20,7 +19,7 @@ export const answerDeductingCheck = async ({
 	idempotencyKey: string | null;
 	skipEvent: boolean;
 	subject: CurrentSubject;
-}): Promise<CheckResponseV3> => {
+}): Promise<CheckDecided> => {
 	const command = checkToCommand({ check, subject });
 	const { result, committed } = deductOnSubject({
 		ctx,

@@ -8,6 +8,10 @@ export const IDEMPOTENCY_KEY_HEADER = "idempotency-key";
 export const REQUEST_ID_HEADER = "x-atom-request-id";
 export const OCCURRED_AT_HEADER = "x-atom-occurred-at";
 
+/** On a refused check, the engine's limit and reason, beside x-atom-forwarded, for the comparer against the API. */
+const LIMIT_TYPE_HEADER = "x-atom-limit-type";
+const DENY_REASON_HEADER = "x-atom-deny-reason";
+
 export const newRequestId = () => `atom_req_${crypto.randomUUID()}`;
 
 export const arrivalOf = (context: Context<AtomHttpEnv>) => {
@@ -34,7 +38,11 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 		.get("slots")
 		.processorFor({ customerId: request.params.customer_id });
 	// Already the response's JSON, wherever the owner thread built it; the verdict is for the request line.
-	const { json, allowed } = await processor.check({ request });
+	const { json, allowed, denial } = await processor.check({ request });
 	context.set("allowed", allowed);
-	return context.body(json, 200, { "content-type": "application/json" });
+	return context.body(json, 200, {
+		"content-type": "application/json",
+		...(denial?.limitType && { [LIMIT_TYPE_HEADER]: denial.limitType }),
+		...(denial?.reason && { [DENY_REASON_HEADER]: denial.reason }),
+	});
 }
