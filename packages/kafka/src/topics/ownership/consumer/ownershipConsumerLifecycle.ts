@@ -53,10 +53,8 @@ export async function refreshOwnership({
 	signal.addEventListener("abort", abort, { once: true });
 	try {
 		signal.throwIfAborted();
-		await Promise.race([
-			catchUpOwnership({ ctx, signal }),
-			interrupted.promise,
-		]);
+		state.catchingUp = catchUpOwnership({ ctx, signal });
+		await Promise.race([state.catchingUp, interrupted.promise]);
 	} finally {
 		clearTimeout(timer);
 		signal.removeEventListener("abort", abort);
@@ -129,15 +127,23 @@ function closeOwnershipResources({
 }): Promise<void> {
 	state.removeCrashListener?.();
 	state.removeCrashListener = undefined;
-	state.closing ??= disconnectOwnershipResources({ ctx });
+	state.closing ??= disconnectOwnershipResources({
+		ctx,
+		catchingUp: state.catchingUp,
+	});
 	return state.closing;
 }
 
 async function disconnectOwnershipResources({
 	ctx,
+	catchingUp,
 }: {
 	ctx: OwnershipConsumerContext;
+	catchingUp?: Promise<void>;
 }): Promise<void> {
+	// An abort settles the refresh at once, but its offset read keeps running, and librdkafka's
+	// admin frees a never-assigned result when that read reaches a client already disconnected.
+	await Promise.allSettled([catchingUp]);
 	const failures: unknown[] = [];
 	try {
 		await ctx.topicConsumer.stop();

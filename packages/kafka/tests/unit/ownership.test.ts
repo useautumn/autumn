@@ -710,6 +710,66 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			crash,
 		};
 	}
+	/** The fixture's Kafka with an admin whose next offset read is held until released, logging what touches it. */
+	function holdNextOffsetRead(
+		fixture: ReturnType<typeof createInMemoryOwnership>,
+	) {
+		const events: string[] = [];
+		let hold: { promise: Promise<void> } | undefined;
+		const inner = fixture.kafka.admin();
+		const kafka = {
+			consumer: fixture.kafka.consumer,
+			admin: () => ({
+				connect: inner.connect,
+				async disconnect() {
+					events.push("disconnect");
+					await inner.disconnect();
+				},
+				async fetchTopicOffsets() {
+					const held = hold;
+					hold = undefined;
+					if (held) {
+						events.push("read held");
+						await held.promise;
+						events.push("read settled");
+					}
+					return inner.fetchTopicOffsets();
+				},
+			}),
+		};
+		function holdNext(): () => void {
+			const held = Promise.withResolvers<void>();
+			hold = held;
+			return () => held.resolve();
+		}
+		return { kafka, events, holdNext };
+	}
+
+	async function disconnectsOnlyAfterAnAbandonedOffsetRead(): Promise<void> {
+		for (const interrupt of ["stop", "crash"] as const) {
+			const fixture = createInMemoryOwnership();
+			const held = holdNextOffsetRead(fixture);
+			const consumer = createOwnershipConsumer({
+				ctx: { kafka: held.kafka },
+				config: { topic },
+			});
+			await consumer.start();
+			const release = held.holdNext();
+			fixture.raiseTarget();
+			const refresh = Promise.allSettled([consumer.refresh()]);
+			await Bun.sleep(0);
+			if (interrupt === "crash") fixture.crash();
+			const stopped = consumer.stop();
+			expect((await refresh)[0].status).toBe("rejected");
+			await Bun.sleep(5);
+			// librdkafka's admin frees a never-assigned result when a read runs on a client already disconnected.
+			expect(held.events).toEqual(["read held"]);
+			release();
+			await stopped;
+			expect(held.events).toEqual(["read held", "read settled", "disconnect"]);
+		}
+	}
+
 	function ignoresReadyRecordsInTheOwnerTable(): void {
 		const state: OwnershipConsumerState = {
 			status: "started",
@@ -1003,6 +1063,10 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 	test(
 		"shutdown interrupts refresh and forbids later lookups",
 		interruptsRefreshOnStop,
+	);
+	test(
+		"an offset read abandoned by stop or a crash finishes before the admin disconnects",
+		disconnectsOnlyAfterAnAbandonedOffsetRead,
 	);
 	test(
 		"refresh has a bounded deadline and can be attempted again",

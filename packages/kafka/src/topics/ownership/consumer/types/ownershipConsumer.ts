@@ -53,6 +53,8 @@ export type OwnershipConsumerState = {
 	lifetime: AbortController;
 	starting?: Promise<void>;
 	refreshing?: Promise<void>;
+	/** The latest catch-up, which outlives a refresh its abort rejected: the admin waits for it before disconnecting. */
+	catchingUp?: Promise<void>;
 	stopping?: Promise<void>;
 	closing?: Promise<void>;
 	removeCrashListener?: () => void;
