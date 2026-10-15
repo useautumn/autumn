@@ -4,39 +4,35 @@ import type {
 	PlanFilter,
 	StringMatcher,
 } from "@autumn/shared";
-import { Button } from "@autumn/ui";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { useMemo, useRef, useState } from "react";
+import { FilterGroups } from "@/components/filters/FilterGroups";
+import { rowsToFilter } from "@/components/filters/fieldRegistry";
+import type { FilterValueInputs } from "@/components/filters/types";
 import { ActionCard } from "../shared/ActionCard";
-import { AddButton } from "../shared/AddButton";
-import { FilterGroup } from "./FilterGroup";
+import { PlanVersionPicker } from "../shared/PlanVersionPicker";
+import { CustomerValuePicker } from "./CustomerValuePicker";
 import {
-	customerIdToStrings,
 	type FilterField,
 	type FilterGroupData,
 	type FilterOperator,
 	type FilterRule,
+	MIGRATION_FILTER_REGISTRY,
 	planFilterToGroups,
 	planKeysToFilter,
-	stringsToCustomerId,
 } from "./filterRowTypes";
 
 const DEFAULT_PLAN_FILTER: PlanFilter = { plan_id: "" };
 
+const VALUE_INPUTS: FilterValueInputs = {
+	customer: ({ values, ...props }) => (
+		<CustomerValuePicker selectedValues={values} {...props} />
+	),
+	plan: PlanVersionPicker,
+};
+
 const hasStringValue = (rule: FilterRule) =>
 	rule.values.some((value) => value.trim().length > 0);
-
-function inferCustomerIdOperator(
-	matcher: StringMatcher | undefined,
-	count: number,
-): FilterOperator {
-	if (matcher && typeof matcher === "object") {
-		if ("$nin" in matcher) return "not_in";
-		if ("$ne" in matcher) return "is_not";
-		if ("$in" in matcher) return "in";
-	}
-	return count > 1 ? "in" : "is";
-}
 
 /** `customer.plan` is `{ $none: {} }` — "has no active plans at all". */
 function planRawIsNone(plan: unknown): boolean {
@@ -116,23 +112,6 @@ function planIdQuantifier(rule: FilterRule): CustomerFilter | null {
 		: { plan: planFilter };
 }
 
-function ruleToPlanProperty(rule: FilterRule): PlanFilter | null {
-	switch (rule.field) {
-		case "custom":
-			return { custom: rule.values[0] === "true" };
-		case "paid":
-			return { paid: rule.values[0] === "true" };
-		case "recurring":
-			return { recurring: rule.values[0] === "true" };
-		case "price":
-			return {
-				price: rule.operator === "exists" ? { $ne: null } : null,
-			};
-		default:
-			return null;
-	}
-}
-
 function isPositivePlanRule(rule: FilterRule): boolean {
 	return (
 		rule.field === "plan_id" &&
@@ -143,14 +122,14 @@ function isPositivePlanRule(rule: FilterRule): boolean {
 }
 
 function mergePlanProperties(rules: FilterRule[]): PlanFilter | null {
-	let planFilter: PlanFilter | null = null;
-	for (const rule of rules) {
-		if (!PLAN_PROPERTY_FIELDS.has(rule.field)) continue;
-		const propertyFilter = ruleToPlanProperty(rule);
-		if (propertyFilter)
-			planFilter = { ...(planFilter ?? {}), ...propertyFilter };
-	}
-	return planFilter;
+	const propertyRules = rules.filter((rule) =>
+		PLAN_PROPERTY_FIELDS.has(rule.field),
+	);
+	if (propertyRules.length === 0) return null;
+	return rowsToFilter({
+		registry: MIGRATION_FILTER_REGISTRY,
+		rows: propertyRules,
+	});
 }
 
 // DECODE — reverse a single `plan` quantifier back into its UI row(s).
@@ -172,14 +151,9 @@ function branchToRules(branch: CustomerFilter): FilterRule[] {
 }
 
 function customerIdRuleFromValue(value: MigrationFilter): FilterRule | null {
-	const matcher = value.customer?.customer_id as StringMatcher | undefined;
-	const ids = customerIdToStrings(matcher);
-	if (ids.length === 0) return null;
-	return {
-		field: "customer_id",
-		operator: inferCustomerIdOperator(matcher, ids.length),
-		values: ids,
-	};
+	return MIGRATION_FILTER_REGISTRY.getField("customer_id").fromFilter({
+		customer_id: value.customer?.customer_id as StringMatcher | undefined,
+	});
 }
 
 function prependCustomerId(
@@ -235,22 +209,6 @@ export function buildGroups(value: MigrationFilter): FilterGroupData[] {
 	return prependCustomerId(planFilterToGroups(planFilter), customerIdRule);
 }
 
-function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
-	if (rule.values.length === 0) return undefined;
-	switch (rule.operator) {
-		case "is":
-			return rule.values[0];
-		case "is_not":
-			return { $ne: rule.values[0] };
-		case "in":
-			return { $in: rule.values };
-		case "not_in":
-			return { $nin: rule.values };
-		default:
-			return stringsToCustomerId(rule.values);
-	}
-}
-
 /**
  * One group → its customer-level node: the lone quantifier when a single row
  * carries a condition, otherwise `{ $and: [...] }` over each row's quantifier.
@@ -267,7 +225,10 @@ function groupToNode(group: FilterGroupData): {
 
 	for (const rule of group.rules) {
 		if (rule.field === "customer_id") {
-			const matcher = ruleToCustomerIdMatcher(rule);
+			const matcher =
+				MIGRATION_FILTER_REGISTRY.getField("customer_id").toFilter(
+					rule,
+				)?.customer_id;
 			if (matcher !== undefined) customerId = matcher;
 			continue;
 		}
@@ -323,7 +284,11 @@ export function groupsToMigrationFilter(
 }
 
 const EMPTY_GROUP: FilterGroupData = {
-	rules: [{ field: "plan_id", operator: "is", values: [] }],
+	rules: [
+		MIGRATION_FILTER_REGISTRY.createRow({
+			path: MIGRATION_FILTER_REGISTRY.defaultPath,
+		}),
+	],
 };
 
 function isEmptyFilter(groups: FilterGroupData[]): boolean {
@@ -366,30 +331,10 @@ export function FilterForm({
 	const groups = groupsRef.current;
 	const isEmpty = isEmptyFilter(groups) && !autoOpenField;
 
-	const updateGroup = (index: number, group: FilterGroupData) => {
-		const next = [...groups];
-		next[index] = group;
-		setGroups(next);
-	};
-
-	const deleteGroup = (index: number) => {
-		const next = groups.filter((_, i) => i !== index);
-		if (next.length === 0) {
-			setAutoOpenField(false);
-			setGroups([EMPTY_GROUP]);
-		} else {
-			setGroups(next);
-		}
-	};
-
-	const addGroup = () => setGroups([...groups, EMPTY_GROUP]);
-
 	const clearAll = () => {
 		setAutoOpenField(false);
 		setGroups([EMPTY_GROUP]);
 	};
-
-	const hasConditions = groups.some((g) => g.rules.length > 0);
 
 	if (isEmpty) {
 		return (
@@ -410,37 +355,13 @@ export function FilterForm({
 	}
 
 	return (
-		<div className="flex flex-col">
-			{groups.map((group, index) => (
-				<div key={`group-${index}`} className="flex flex-col">
-					{index > 0 && <div className="border-t my-3" />}
-					<FilterGroup
-						group={group}
-						groupIndex={index}
-						onChange={(updated) => updateGroup(index, updated)}
-						onDelete={() => deleteGroup(index)}
-						showDelete={groups.length > 1}
-						autoOpenField={index === 0 && autoOpenField}
-					/>
-				</div>
-			))}
-			{hasConditions && (
-				<div className="flex items-center gap-2 mt-3">
-					<AddButton
-						label="OR condition"
-						onClick={addGroup}
-						className="flex-1"
-					/>
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={clearAll}
-						className="text-tertiary-foreground hover:text-destructive shrink-0"
-					>
-						Clear all
-					</Button>
-				</div>
-			)}
-		</div>
+		<FilterGroups
+			registry={MIGRATION_FILTER_REGISTRY}
+			valueInputs={VALUE_INPUTS}
+			groups={groups}
+			onChange={setGroups}
+			onClear={clearAll}
+			autoOpenField={autoOpenField}
+		/>
 	);
 }
