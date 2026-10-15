@@ -63,6 +63,7 @@ export const createAtomServer = ({
 	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
 	const handoverContext = {
 		ring,
+		boot: ctx.health.bootedAt,
 		membership,
 		folders: ctx.folders,
 		replication: ctx.replication,

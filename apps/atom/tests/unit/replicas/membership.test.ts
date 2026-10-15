@@ -50,6 +50,7 @@ const proberContextOf = ({
 			membership,
 		},
 	}),
+	boot: "boot-b",
 	membership,
 	replication: { peers: async () => listed },
 	folders: {
@@ -202,35 +203,49 @@ describe("a peer that counts this replica as an owner", () => {
 		const membership = createMembership({ self: B });
 		expect(membership.isGrantedBy(A)).toBe(false);
 
+		membership.noteBoot({ address: A, boot: "boot-1" });
 		membership.grantedBy(A);
 
 		expect(membership.isGrantedBy(A)).toBe(true);
 		expect(membership.isHanding(A)).toBe(true);
 		expect(membership.isHandoffComplete(A)).toBe(false);
-		expect(
-			membership.handoffCompleted({ address: A, thread: 1, threads: 2 }),
-		).toBe(false);
+		const handed = (thread: number) =>
+			membership.handoffCompleted({
+				address: A,
+				boot: "boot-1",
+				thread,
+				threads: 2,
+			});
+		expect(handed(1)).toBe(false);
 		// Told twice by one thread, as a retried announcement is: still one thread.
-		expect(
-			membership.handoffCompleted({ address: A, thread: 1, threads: 2 }),
-		).toBe(false);
+		expect(handed(1)).toBe(false);
 		expect(membership.isHanding(A)).toBe(true);
-		expect(
-			membership.handoffCompleted({ address: A, thread: 0, threads: 2 }),
-		).toBe(true);
+		expect(handed(0)).toBe(true);
 		expect(membership.isHanding(A)).toBe(false);
 		expect(membership.isHandoffComplete(A)).toBe(true);
 	});
 
-	test("keeps the grant when the peer leaves and comes back: its new boot hands over again before it counts", () => {
+	test("keeps the grant when the peer leaves and comes back: its new boot hands over again before it counts, and its old boot's word no longer counts", () => {
 		const membership = createMembership({ self: B });
+		membership.noteBoot({ address: A, boot: "boot-1" });
 		membership.grantedBy(A);
-		membership.handoffCompleted({ address: A, thread: 0, threads: 1 });
+		membership.handoffCompleted({
+			address: A,
+			boot: "boot-1",
+			thread: 0,
+			threads: 1,
+		});
 		membership.markJoined({ address: A, boot: "boot-1" });
 		membership.markLeaving(A);
 		expect(membership.isHandoffComplete(A)).toBe(false);
-		membership.handoffCompleted({ address: A, thread: 0, threads: 1 });
+		membership.handoffCompleted({
+			address: A,
+			boot: "boot-1",
+			thread: 0,
+			threads: 1,
+		});
 
+		membership.noteBoot({ address: A, boot: "boot-2" });
 		membership.grantedBy(A);
 		membership.markJoined({ address: A, boot: "boot-2" });
 
@@ -238,9 +253,18 @@ describe("a peer that counts this replica as an owner", () => {
 		expect(membership.isHanding(A)).toBe(true);
 		expect(membership.isHandoffComplete(A)).toBe(false);
 		expect(membership.isBootOf({ address: A, boot: "boot-2" })).toBe(true);
+		// A straggling word from the boot that left changes nothing.
+		expect(
+			membership.handoffCompleted({
+				address: A,
+				boot: "boot-1",
+				thread: 0,
+				threads: 1,
+			}),
+		).toBe(false);
+		expect(membership.isHanding(A)).toBe(true);
 	});
 });
-
 describe("a flip on one thread wakes the hand-over on every thread", () => {
 	test("a thread that has not probed the peer hands over to it on its next tick, without a probe of its own", async () => {
 		const table = new Int32Array(MEMBERSHIP_INTS);

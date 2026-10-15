@@ -92,16 +92,21 @@ export const createMembership = ({
 		return at >= 0 && Atomics.load(table, at + GRANTED) === 1;
 	};
 
+	/** Back from a new boot: what its old one handed is not what this one holds. */
+	const noteBoot = ({ address, boot }: { address: string; boot: string }) => {
+		const at = rowFor(address);
+		const before = Atomics.exchange(table, at + BOOT, bootCodeOf(boot));
+		if (before !== 0 && before !== bootCodeOf(boot)) expectHandoff(at);
+		return at;
+	};
+
 	return {
 		self,
 		stateOf,
 		isMember: (address) => stateOf(address) === "joined",
 		isLeaving: (address) => stateOf(address) === "leaving",
 		markJoined: ({ address, boot }) => {
-			const at = rowFor(address);
-			const before = Atomics.exchange(table, at + BOOT, bootCodeOf(boot));
-			// Back from a new boot: what its old one handed is not what this one holds.
-			if (before !== 0 && before !== bootCodeOf(boot)) expectHandoff(at);
+			const at = noteBoot({ address, boot });
 			const flipped =
 				Atomics.exchange(table, at + STATE, STATES.joined) !== STATES.joined;
 			if (flipped) Atomics.add(table, JOIN_EPOCH_INDEX, 1);
@@ -116,6 +121,9 @@ export const createMembership = ({
 			const at = rowOf(address);
 			return at >= 0 && Atomics.load(table, at + BOOT) === bootCodeOf(boot);
 		},
+		noteBoot: ({ address, boot }) => {
+			noteBoot({ address, boot });
+		},
 		markLeaving: (address) => {
 			const at = rowFor(address);
 			if (
@@ -128,8 +136,9 @@ export const createMembership = ({
 		},
 		isGrantedBy,
 		isHanding: (address) => isGrantedBy(address) && !isHandoffComplete(address),
-		handoffCompleted: ({ address, thread, threads }) => {
+		handoffCompleted: ({ address, boot, thread, threads }) => {
 			const at = rowFor(address);
+			if (Atomics.load(table, at + BOOT) !== bootCodeOf(boot)) return false;
 			const handed =
 				Atomics.or(table, at + HANDED_THREADS, 1 << thread) | (1 << thread);
 			if (handed !== allThreads(threads)) return false;
