@@ -14,6 +14,7 @@ import {
 	type ApprovalVerdict,
 	type BillingChangeFacts,
 	evaluateApprovalRules,
+	WHEN_FIELD_LABELS,
 } from "@autumn/shared";
 import { rules } from "@tests/utils/fixtures/rules.js";
 import { facts } from "./utils/facts.js";
@@ -93,5 +94,26 @@ describe("evaluateApprovalRules: groups", () => {
 			billingFacts: proAttach,
 		});
 		expect(verdict.verdict).toBe("deny");
+	});
+
+	test("violation labels come from WHEN_FIELD_LABELS", () => {
+		const verdict = evaluate({
+			when: { plan_schedule: "end_of_cycle", paid: false },
+			billingFacts: facts.billingChange({
+				plan_schedule: "immediate",
+				paid: true,
+			}),
+		});
+		expect(verdict).toMatchObject({
+			verdict: "deny",
+			violations: [
+				{
+					field: "plan_schedule",
+					label: WHEN_FIELD_LABELS.billing_change.plan_schedule,
+				},
+				{ field: "paid", label: WHEN_FIELD_LABELS.billing_change.paid },
+			],
+		});
+		expect(WHEN_FIELD_LABELS.billing_change.plan_schedule).toBe("Timing");
 	});
 });

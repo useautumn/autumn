@@ -1,4 +1,4 @@
-import type { ArrayQuantifierFilter } from "@api/common/filters/match/arrayFilterMatches";
+import type { ArrayQuantifierFilter } from "../../../../common/filters/match/arrayFilterMatches";
 import { describeWhenLimit } from "../describeWhenLimit";
 import { findWhenFailures } from "../findWhenFailures";
 import type {

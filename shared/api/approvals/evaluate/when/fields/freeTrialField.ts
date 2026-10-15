@@ -1,6 +1,6 @@
-import { nullableFieldMatches } from "@api/common/filters/match/nullableFieldMatches";
-import { numberMatcherMatches } from "@api/common/filters/match/numberMatcherMatches";
-import { stringMatcherMatches } from "@api/common/filters/match/stringMatcherMatches";
+import { nullableFieldMatches } from "../../../../common/filters/match/nullableFieldMatches";
+import { numberMatcherMatches } from "../../../../common/filters/match/numberMatcherMatches";
+import { stringMatcherMatches } from "../../../../common/filters/match/stringMatcherMatches";
 import { isPlainObject } from "../../../schemas/isPlainObject";
 import type { PlanChangeFilter } from "../../../schemas/when/planChangeFilter";
 import type { FreeTrialFacts } from "../../facts/billingFacts";
@@ -69,12 +69,14 @@ const describeTrialLimit = ({ filter }: { filter: unknown }) => {
  * `$or` of day and month branches shows only the largest-unit branch.
  */
 export const freeTrialField = <Parent>({
+	label,
 	read,
 }: {
+	label: string;
 	read: (parent: Parent) => FreeTrialFacts | null;
 }) =>
 	leafField<Parent>({
-		label: "Free trial",
+		label,
 		matches: ({ filter, parent }) =>
 			nullableFieldMatches<FreeTrialFilter>({
 				filter: filter as PlanChangeFilter["free_trial"],

@@ -1,6 +1,6 @@
-import type { FullCustomer } from "@models/cusModels/fullCusModel";
-import type { FullCusProduct } from "@models/cusProductModels/cusProductModels";
-import type { FullProduct } from "@models/productModels/productModels";
+import type { FullCustomer } from "../../../../models/cusModels/fullCusModel";
+import type { FullCusProduct } from "../../../../models/cusProductModels/cusProductModels";
+import type { FullProduct } from "../../../../models/productModels/productModels";
 
 export type FreeTrialFacts = {
 	duration_length: number;

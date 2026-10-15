@@ -1,5 +1,5 @@
-import type { FullCustomer } from "@models/cusModels/fullCusModel";
-import type { ResetInterval } from "@models/productModels/intervals/resetInterval";
+import type { FullCustomer } from "../../../../models/cusModels/fullCusModel";
+import type { ResetInterval } from "../../../../models/productModels/intervals/resetInterval";
 
 /** Grant credits. Amounts are in the feature's unit. */
 export type BalanceCreateFacts = {

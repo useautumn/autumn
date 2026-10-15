@@ -1,4 +1,4 @@
-import type { NumberMatcher } from "@api/common/filters/matcher";
+import type { NumberMatcher } from "../../../../common/filters/matcher";
 
 const OPERATOR_SYMBOLS = {
 	$gt: ">",

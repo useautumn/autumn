@@ -1,4 +1,4 @@
-import { AppEnv } from "@models/genModels/genEnums";
+import { AppEnv } from "../../../models/genModels/genEnums";
 import type { ApprovalAction } from "../actions/approvalActions";
 import type { ApprovalRule } from "../schemas/approvalRule";
 import { buildDenyMessage } from "./buildDenyMessage";

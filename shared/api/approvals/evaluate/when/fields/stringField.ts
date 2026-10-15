@@ -1,5 +1,5 @@
-import { stringMatcherMatches } from "@api/common/filters/match/stringMatcherMatches";
-import type { StringMatcher } from "@api/common/filters/matcher";
+import { stringMatcherMatches } from "../../../../common/filters/match/stringMatcherMatches";
+import type { StringMatcher } from "../../../../common/filters/matcher";
 import { describeStringMatcher } from "../format/describeStringMatcher";
 import { leafField } from "./leafField";
 
