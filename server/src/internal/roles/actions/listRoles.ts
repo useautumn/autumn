@@ -1,4 +1,5 @@
-import { type ApiRole, BUILT_IN_ROLES } from "@autumn/shared";
+import type { ApiRole } from "@autumn/shared/api/roles/apiRole";
+import { BUILT_IN_ROLES } from "@autumn/shared/utils/roleUtils/builtInRoles";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { roleRepo } from "../repos/index.js";
 import { builtInRoleToApiRole } from "../utils/builtInRoleToApiRole.js";

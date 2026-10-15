@@ -1,4 +1,4 @@
-import { isBuiltInRole } from "@autumn/shared";
+import { isBuiltInRole } from "@autumn/shared/utils/roleUtils/builtInRoles";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { roleRepo } from "../repos/index.js";
 import { buildRoleExistsError } from "./buildRoleExistsError.js";

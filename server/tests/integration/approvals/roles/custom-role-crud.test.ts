@@ -11,17 +11,10 @@
  */
 
 import { expect, test } from "bun:test";
-import {
-	type ApiRole,
-	AppEnv,
-	BUILT_IN_ROLES,
-	ErrCode,
-	invitation,
-	member,
-	RESOURCES,
-	type RoleAccessMap,
-} from "@autumn/shared";
+import { AppEnv, ErrCode, invitation, member, RESOURCES } from "@autumn/shared";
+import type { ApiRole, RoleAccessMap } from "@autumn/shared/api/roles/apiRole";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
+import { BUILT_IN_ROLES } from "@autumn/shared/utils/roleUtils/builtInRoles";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { autumnAs } from "@tests/utils/testInitUtils/autumnAs.js";
 import { dashboardFetch } from "@tests/utils/testInitUtils/dashboardSession.js";

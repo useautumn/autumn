@@ -1,4 +1,7 @@
-import type { ApiRole, CreateRoleParams } from "@autumn/shared";
+import type {
+	ApiRole,
+	CreateRoleParams,
+} from "@autumn/shared/api/roles/apiRole";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleRoleNameTakenErrors } from "../errors/handleRoleNameTakenErrors.js";
 import { withRoleNameConflictAsRoleExists } from "../errors/withRoleNameConflictAsRoleExists.js";

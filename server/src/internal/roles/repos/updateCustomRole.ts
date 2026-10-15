@@ -1,10 +1,6 @@
-import {
-	approvalRuleSubjects,
-	invitation,
-	member,
-	organizationRole,
-	type UpdateRoleParams,
-} from "@autumn/shared";
+import { invitation, member, organizationRole } from "@autumn/shared";
+import type { UpdateRoleParams } from "@autumn/shared/api/roles/apiRole";
+import { approvalRuleSubjects } from "@autumn/shared/models/approvalModels/index";
 import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 

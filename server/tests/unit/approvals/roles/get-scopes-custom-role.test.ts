@@ -10,15 +10,14 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { RESOURCES, ROLE_SCOPES } from "@autumn/shared";
 import {
-	RESOURCES,
-	ROLE_SCOPES,
 	type RoleAccessMap,
 	RoleAccessMapSchema,
-	roleAccessToScopes,
-	scopesToRoleAccess,
-} from "@autumn/shared";
+} from "@autumn/shared/api/roles/apiRole";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
+import { roleAccessToScopes } from "@autumn/shared/utils/roleUtils/roleAccessToScopes";
+import { scopesToRoleAccess } from "@autumn/shared/utils/roleUtils/scopesToRoleAccess";
 import { fakeMemberRoleDb } from "@tests/utils/fakeMemberRoleDb.js";
 
 type ResolverDb = Parameters<typeof getScopesForUserInOrg>[0]["db"];

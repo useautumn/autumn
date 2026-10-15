@@ -1,4 +1,4 @@
-import type { RoleAccessMap } from "@autumn/shared";
+import type { RoleAccessMap } from "@autumn/shared/api/roles/apiRole";
 
 type MemberRoleRow = { role: string; customAccess?: RoleAccessMap | null };
 

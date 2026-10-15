@@ -1,4 +1,5 @@
-import { CreateRoleParamsSchema, Scopes } from "@autumn/shared";
+import { Scopes } from "@autumn/shared";
+import { CreateRoleParamsSchema } from "@autumn/shared/api/roles/apiRole";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { createRole } from "../actions/createRole.js";
 

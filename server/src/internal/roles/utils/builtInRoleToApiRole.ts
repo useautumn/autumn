@@ -1,9 +1,7 @@
-import {
-	type ApiRole,
-	type BUILT_IN_ROLES,
-	ROLE_SCOPES,
-	scopesToRoleAccess,
-} from "@autumn/shared";
+import { ROLE_SCOPES } from "@autumn/shared";
+import type { ApiRole } from "@autumn/shared/api/roles/apiRole";
+import type { BUILT_IN_ROLES } from "@autumn/shared/utils/roleUtils/builtInRoles";
+import { scopesToRoleAccess } from "@autumn/shared/utils/roleUtils/scopesToRoleAccess";
 import type { RoleUsage } from "../repos/getRoleUsage.js";
 
 export const builtInRoleToApiRole = ({
