@@ -11,6 +11,7 @@ import { billingPlanRaisesNextCycle } from "./billingPlanRaisesNextCycle";
 import { billingPlanToChangedCustomerProducts } from "./billingPlanToChangedCustomerProducts";
 import type { BillingPreviewTotals } from "./billingPreviewTotals";
 import { changeAddsPayPerUsePrice } from "./changeAddsPayPerUsePrice";
+import { changeRaisesRecurringPrice } from "./changeRaisesRecurringPrice";
 import { changeToIncomingPlanFacts } from "./changeToIncomingPlanFacts";
 import { findChangeCustomerProduct } from "./findChangeCustomerProduct";
 import { isBillingChangePaid } from "./isBillingChangePaid";
@@ -48,6 +49,7 @@ export const buildBillingChangeFacts = ({
 		}),
 	);
 
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const checkout =
 		billingContext.checkoutMode === "stripe_checkout" ||
 		billingContext.checkoutMode === "autumn_checkout";
@@ -67,6 +69,11 @@ export const buildBillingChangeFacts = ({
 				billingPlan,
 				currentDiscounts,
 			}),
+			raisesRecurringPrice: changeRaisesRecurringPrice({
+				incoming: incomingCustomerProducts,
+				outgoing,
+				currency,
+			}),
 			addsPayPerUsePrice: changeAddsPayPerUsePrice({
 				incoming: incomingCustomerProducts,
 				outgoing,
@@ -78,7 +85,7 @@ export const buildBillingChangeFacts = ({
 		discounts: stripeDiscountsToDiscountFacts({
 			stripeDiscounts: billingContext.stripeDiscounts,
 			currentDiscounts,
-			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
+			currency,
 		}),
 		plan_schedule:
 			(billingContext as Partial<AttachBillingContext>).planTiming ?? null,

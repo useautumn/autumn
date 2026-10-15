@@ -6,6 +6,7 @@ export * from "./billingParamsBase/billingParamsBaseV0";
 export * from "./billingParamsBase/billingParamsBaseV1";
 export * from "./billingPreviewChange";
 export * from "./billingPreviewResponse";
+export * from "./previewPermission";
 export * from "./billingResponse";
 export * from "./cancelAction";
 export * from "./carryOverUsages";
