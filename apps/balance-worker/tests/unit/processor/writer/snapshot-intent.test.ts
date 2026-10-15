@@ -309,7 +309,7 @@ describe("the writer's snapshot intent", () => {
 		applyGate.held = held.promise;
 		const before = track("t1");
 		await before.waitForCommit();
-		const evicted = writer.evict({ customerKey });
+		const evicted = writer.evict({ customerKey, reason: "evict" });
 		expect(writer.readFreshestState({ identity })).toBeNull();
 		held.resolve();
 		await before.waitForStore();

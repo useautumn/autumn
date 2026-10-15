@@ -1,4 +1,5 @@
 import { allStored } from "../pendingMutations.js";
+import type { SubjectEvictReason } from "../subjectMap/types/subjectDropReason.js";
 import type { PartitionWriterScope } from "../types/partitionWriter.js";
 
 /** Hides the customer's resident rows at once, so no command decides on them again, and drops them once the store holds the
@@ -6,12 +7,14 @@ import type { PartitionWriterScope } from "../types/partitionWriter.js";
 export async function evict({
 	scope,
 	customerKey,
+	reason,
 }: {
 	scope: PartitionWriterScope;
 	customerKey: string;
+	reason: SubjectEvictReason;
 }): Promise<void> {
 	const { subjects } = scope.state;
 	subjects.hideCustomer({ customerKey });
 	await allStored({ state: scope.state });
-	subjects.evictCustomer({ customerKey });
+	subjects.evictCustomer({ customerKey, reason });
 }
