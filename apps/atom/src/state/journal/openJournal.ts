@@ -22,6 +22,26 @@ export const MAX_UNSENT_PER_THREAD = 50_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
 let unsentOnThread = 0;
+/** Each open journal's unsent entries, oldest commit first, so the thread's oldest is the first of one of them. */
+const unsentByJournal = new Set<Set<JournalEntry>>();
+let appendedOnThread = 0;
+let appendFailedOnThread = 0;
+
+/** What this thread's journals hold that Autumn does not, and what they took and failed to take since boot. */
+export const readJournalThreadStats = ({ now }: { now: number }) => {
+	let oldestAppendedAt = now;
+	for (const unsent of unsentByJournal) {
+		const [oldest] = unsent;
+		if (oldest && oldest.appendedAt < oldestAppendedAt)
+			oldestAppendedAt = oldest.appendedAt;
+	}
+	return {
+		journalUnsent: unsentOnThread,
+		journalOldestUnsentMs: now - oldestAppendedAt,
+		tracksAppended: appendedOnThread,
+		appendFailed: appendFailedOnThread,
+	};
+};
 
 /**
  * One slot's journal, opened by the slot's owner thread only, so what it holds in memory is the file plus the appends
@@ -40,6 +60,7 @@ export const openJournal = ({
 	const lastSeqs = readLastJournalSeqs({ ctx });
 	const owedByCustomer = new Map<string, readonly JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
+	unsentByJournal.add(unsent);
 	let notifyCommitted = () => {};
 
 	function holdUnsent(entry: JournalEntry): void {
@@ -54,6 +75,7 @@ export const openJournal = ({
 	const groupCommit = createGroupCommit({
 		commit: (entries: JournalEntry[]) => {
 			insertJournalEntries({ ctx, entries });
+			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
 		},
@@ -99,6 +121,7 @@ export const openJournal = ({
 			await groupCommit.add(entry);
 			return entry;
 		} catch (error) {
+			appendFailedOnThread++;
 			setOwed({
 				customerId,
 				entries: owed({ customerId }).filter((held) => held !== entry),
@@ -156,6 +179,7 @@ export const openJournal = ({
 
 	function close(): void {
 		for (const entry of [...unsent]) releaseUnsent(entry);
+		unsentByJournal.delete(unsent);
 		ctx.sqliteDb.close();
 	}
 

@@ -118,6 +118,8 @@ describe("a track the balance covers", () => {
 		]);
 		expect(await remainingOn(replica)).toBe(90);
 		expect(autumn.calls).toEqual([]);
+		// /health counts a track with the checks: the track, then the check that read 90.
+		expect(replica.stats()).toMatchObject({ checks: 2, requests: 2 });
 		// The API's own track command: what fits, no overdue block, the event keyed by the body's key.
 		expect(commands[0]).toMatchObject({
 			overageBehavior: "cap",
