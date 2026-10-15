@@ -209,6 +209,7 @@ describe("a listed peer becomes an owner", () => {
 		expect(onT0.isMember(A)).toBe(false);
 		locksOnT0.hold(lockOf("lock_meanwhile"));
 		await probing;
+		await until(() => handedLockIds.length === 3);
 
 		expect(onT0.isMember(A)).toBe(true);
 		expect(handedLockIds).toEqual([
@@ -216,6 +217,8 @@ describe("a listed peer becomes an owner", () => {
 			"lock_meanwhile",
 			"lock_on_t1",
 		]);
+		t0.stop();
+		t1.stop();
 	});
 
 	test("a leaving peer that still answers from its old boot is not counted again by a thread that never marked it ready: the boot is read from the shared table", async () => {
