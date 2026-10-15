@@ -1200,13 +1200,28 @@ async function reconcile() {
 		postgresNextOffset: string | null;
 	}[] = [];
 	const offsets = await admin.fetchTopicOffsets(topics.metering);
+	const revisionBreakSamples: unknown[] = [];
 	for (const [partition, customer] of customers) {
 		const mine = log.filter(
 			(r) => r.customerId === customer.identity.customerId,
 		);
 		let revisionBreaks = 0;
 		for (let i = 1; i < mine.length; i++)
-			if (mine[i]?.before !== mine[i - 1]?.after) revisionBreaks++;
+			if (mine[i]?.before !== mine[i - 1]?.after) {
+				revisionBreaks++;
+				if (revisionBreakSamples.length < 40)
+					revisionBreakSamples.push({
+						partition,
+						previous: mine[i - 1],
+						next: mine[i],
+						previousOutcome: outcomes.find(
+							(o) => o.commandId === mine[i - 1]?.commandId,
+						),
+						nextOutcome: outcomes.find(
+							(o) => o.commandId === mine[i]?.commandId,
+						),
+					});
+			}
 		perCustomer.push({
 			partition,
 			logDeducted: mine.reduce((s, r) => s + r.deducted, 0),
@@ -1245,6 +1260,7 @@ async function reconcile() {
 			(c) => c.logDeducted === c.postgresDeducted,
 		),
 		revisionBreaks: perCustomer.reduce((s, c) => s + c.revisionBreaks, 0),
+		revisionBreakSamples,
 		logEnd: offsets.map((o) => `${o.partition}:${o.high}`),
 		perCustomer,
 	};
@@ -1307,6 +1323,8 @@ function claimAudit() {
 		handoff: 0,
 		afterRelease: 0,
 		takeoverFromDead: 0,
+		afterWithdrawWithoutHandoff: 0,
+		handoffToDeadSuccessor: 0,
 		first: 0,
 		same: 0,
 	};
@@ -1315,10 +1333,12 @@ function claimAudit() {
 		list.sort((a, b) => Number(a.offset) - Number(b.offset));
 		let owner: string | undefined;
 		let released = false;
+		let lastClaimAt = 0;
 		const drainingTo = new Set<string>();
 		for (const e of list) {
 			const author = e.endpoint ? workerByEndpoint.get(e.endpoint) : undefined;
 			if (
+				e.type !== "claimed" &&
 				author?.endedAt &&
 				e.at > author.endedAt + 50 &&
 				author.killedBy === "SIGKILL"
@@ -1339,8 +1359,11 @@ function claimAudit() {
 			if (e.type !== "claimed") continue;
 			if (!owner) counts.first++;
 			else if (owner === e.endpoint) counts.same++;
-			else if (e.endpoint && drainingTo.has(e.endpoint)) counts.handoff++;
-			else if (released) counts.afterRelease++;
+			else if (e.endpoint && drainingTo.has(e.endpoint)) {
+				if (author?.endedAt && author.endedAt <= e.at)
+					counts.handoffToDeadSuccessor++;
+				else counts.handoff++;
+			} else if (released) counts.afterRelease++;
 			else {
 				const previous = workerByEndpoint.get(owner);
 				if (previous?.endedAt && previous.endedAt <= e.at)
@@ -1355,6 +1378,7 @@ function claimAudit() {
 					});
 			}
 			owner = e.endpoint;
+			lastClaimAt = e.at;
 			released = false;
 			drainingTo.clear();
 		}
