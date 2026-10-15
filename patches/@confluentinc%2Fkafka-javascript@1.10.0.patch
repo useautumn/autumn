@@ -52,7 +52,7 @@ index f5b7e40eb2b01629c0bb6a04ed290e32a0c6bfb6..373cb766a01f491ff7239a167d4db2ff
                      "/usr/local/include/librdkafka",
                      "/opt/include/librdkafka",
 diff --git a/deps/librdkafka/src/rdkafka_partition.c b/deps/librdkafka/src/rdkafka_partition.c
-index f7e5906a4a0a2213b3059af59c928277cf076931..3dff42824726a4981df70b152d148f07d307b238 100644
+index f7e5906a4a0a2213b3059af59c928277cf076931..e4f51ca8d438f5c45edb72aef521ca6fd7814e65 100644
 --- a/deps/librdkafka/src/rdkafka_partition.c
 +++ b/deps/librdkafka/src/rdkafka_partition.c
 @@ -1989,6 +1989,12 @@ void rd_kafka_toppar_seek(rd_kafka_toppar_t *rktp,
@@ -84,6 +84,20 @@ index f7e5906a4a0a2213b3059af59c928277cf076931..3dff42824726a4981df70b152d148f07
                  } else
                          rd_kafka_dbg(
                              rk, TOPIC, pause ? "PAUSE" : "RESUME",
+@@ -4209,9 +4224,10 @@ void rd_kafka_topic_partition_list_query_leaders_async(
+             rd_kafka_partition_leader_query_eonce_timeout_cb,
+             rko->rko_u.leaders.eonce);
+ 
+-        if (rd_kafka_topic_partition_list_query_leaders_async_worker(rko) ==
+-            RD_KAFKA_OP_RES_HANDLED)
+-                rd_kafka_op_destroy(rko); /* Reply queue already disabled */
++        /* Run the first pass on the main thread too. Run inline, it races a
++         * metadata cache update that triggers the eonce it just registered:
++         * both threads reply and both destroy the rko. */
++        rd_kafka_q_enq(rk->rk_ops, rko);
+ }
+ 
+ 
 diff --git a/src/admin.cc b/src/admin.cc
 index 84603c279e7802d32c09b9ee96cb2446d28052bf..6d372c8db33d4c4ec0aa17a2bfb39798eb8788c5 100644
 --- a/src/admin.cc

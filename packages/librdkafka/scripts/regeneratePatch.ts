@@ -22,6 +22,7 @@ for (const patch of [
 	"fatalErrorCause.patch",
 	"lockPoolThreadCalls.patch",
 	"adminEventInit.patch",
+	"leaderQueryOnMainThread.patch",
 ]) {
 	await $`patch -p1 --forward --silent -i ${join(patches, patch)}`.cwd(target);
 }

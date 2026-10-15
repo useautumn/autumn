@@ -18,7 +18,7 @@ Needs a C/C++ toolchain, Python 3 and Perl (macOS: Xcode command line tools).
 ## The patch
 
 `patches/@confluentinc%2Fkafka-javascript@1.10.0.patch` at the repo root is applied by `bun install`.
-It is seven patches, kept here for provenance:
+It is eight patches, kept here for provenance:
 
 - `patches/pr471.patch`: upstream PR #471 (NAN → N-API) at `47334c9`, verbatim.
 - `patches/bunUvToNapi.patch`: ours. Bun implements only `uv_mutex_*` of libuv; the addon's rwlocks,
@@ -40,6 +40,10 @@ It is seven patches, kept here for provenance:
 - `patches/adminEventInit.patch`: ours. The admin workers left their result event pointer uninitialized and
   destroyed it in their destructor, so an admin call that failed before polling (a client not connected)
   freed a garbage pointer: `double free or corruption` under a broker kill.
+- `patches/leaderQueryOnMainThread.patch`: ours, in librdkafka. `query_leaders_async` ran its first pass on
+  the caller's thread; with a partition leaderless it registered a metadata-cache observer and then replied,
+  while a cache update on the main thread could fire that observer and reply too. Both destroyed the op: a
+  double free in `rd_kafka_ListOffsets` under repeated broker kills. The first pass now runs on the main thread.
 
 After editing any, `bun run --cwd packages/librdkafka patch:regenerate` rebuilds the root patch.
 Drop ours once #471 (or its successor) lands upstream without libuv.
