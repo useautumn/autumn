@@ -115,22 +115,21 @@ const featureAmount: Format = ({ value, ctx }) =>
 const timing: Format = ({ value }) =>
 	TIMING_LABELS[String(value)] ?? String(value);
 
-/** One condition from a matcher: a bare value means "is", else its single operator. */
+/** Conditions from a matcher: a bare value means "is", else one condition per operator, so ranges keep both limits. */
 const field =
 	(label: string, format: Format): FieldReader =>
 	({ value, ctx }) => {
 		if (!isFilter(value)) {
 			return [{ field: label, operator: "is", value: format({ value, ctx }) }];
 		}
-		const [operator, operand] = Object.entries(value)[0] ?? [];
-		const operands = Array.isArray(operand) ? operand : [operand];
-		return [
-			{
+		return Object.entries(value).map(([operator, operand]) => {
+			const operands = Array.isArray(operand) ? operand : [operand];
+			return {
 				field: label,
 				operator: OPERATORS[operator] ?? operator,
 				value: operands.map((item) => format({ value: item, ctx })).join(", "),
-			},
-		];
+			};
+		});
 	};
 
 const filterConditions = ({

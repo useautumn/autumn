@@ -250,6 +250,18 @@ describe("rule sentence: when clauses from the boards", () => {
 			"John Doe can Grant credits when Feature is AI credits and Amount ≤ 50 credits",
 		],
 		[
+			"a range keeps both limits",
+			{
+				subjects: [{ type: "everyone" }],
+				actions: ["balances.create"],
+				when: {
+					feature_id: "messages",
+					included_grant: { $gte: 10, $lte: 100 },
+				},
+			},
+			"Everyone can Grant credits when Feature is Messages and Amount ≥ 10 messages and Amount ≤ 100 messages",
+		],
+		[
 			"sends a checkout link",
 			{ when: { checkout: true } },
 			"Sales can Attach when Sends a checkout link",
