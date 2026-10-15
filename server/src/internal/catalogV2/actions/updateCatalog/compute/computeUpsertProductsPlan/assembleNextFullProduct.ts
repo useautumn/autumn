@@ -19,12 +19,18 @@ export const assembleNextFullProduct = ({
 	const prices = entitlementPricesPlan
 		? entitlementPricesPlan.projected.prices
 		: (currentFullProduct?.prices ?? []);
-	const entitlements = getEntsWithFeature({
-		ents: entitlementPricesPlan
-			? entitlementPricesPlan.projected.entitlements
-			: (currentFullProduct?.entitlements ?? []),
-		features,
-	});
+	const entitlements = entitlementPricesPlan
+		? getEntsWithFeature({
+				ents: entitlementPricesPlan.projected.entitlements,
+				features,
+			})
+		: (currentFullProduct?.entitlements ?? []).map((ent) => ({
+				...ent,
+				feature:
+					features.find(
+						(feature) => feature.internal_id === ent.internal_feature_id,
+					) ?? ent.feature,
+			}));
 
 	return {
 		...product,

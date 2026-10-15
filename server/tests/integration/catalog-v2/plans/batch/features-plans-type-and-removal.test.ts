@@ -328,3 +328,52 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 interplay: remove feature + name-only plan edit → OK")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const featureId = uniqueTestId("cv2_int_rm_name");
+		const planId = uniqueTestId("cv2_int_rm_name_plan");
+		await deleteDbFeatures({ ctx, featureIds: [featureId] });
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					{
+						feature_id: featureId,
+						name: "Remove Me",
+						type: FeatureType.Metered,
+						consumable: true,
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: "Before",
+						items: [
+							{
+								feature_id: featureId,
+								included: 10,
+								reset: { interval: ResetInterval.Month },
+							},
+						],
+					},
+				],
+			});
+
+			await autumnV2_3.catalogV2.update({
+				remove_features: [{ feature_id: featureId }],
+				plans: [{ plan_id: planId, name: "After" }],
+			});
+
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [{ id: planId, name: "After", featureIds: [featureId] }],
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds: [featureId] });
+		}
+	},
+);
