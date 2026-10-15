@@ -128,7 +128,7 @@ describe("a track the balance covers", () => {
 		expect(commands[0]?.enforceOverdueBlock).not.toBe(true);
 	});
 
-	test("without an idempotency_key in the body is keyed by the Atom's request id, whatever Idempotency-Key header it carries", async () => {
+	test("without an idempotency_key in the body claims no key at Autumn, whatever Idempotency-Key header it carries", async () => {
 		const { replica, appended } = await replicaAt100();
 
 		await replica.app.request(
@@ -142,7 +142,7 @@ describe("a track the balance covers", () => {
 
 		const [entry] = appended;
 		expect(entry?.owner).toStartWith("atom_req_");
-		expect(entry?.key).toBe(`track:${entry?.owner}`);
+		expect(entry?.key).toBeUndefined();
 	});
 
 	test("on a replica that does not own the customer is answered by the owner", async () => {

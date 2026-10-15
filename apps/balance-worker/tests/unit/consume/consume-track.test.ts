@@ -222,6 +222,25 @@ describe("consumeTrack", () => {
 		expect(decided[1]).toMatchObject(seqOnly(atomCommand));
 		expect(keys.released).toEqual([storageKey]);
 	});
+
+	test("an Atom's keyless track carries no idempotency and claims nothing; one under its caller's key still claims", async () => {
+		const { ctx, decided, keys } = createFixture();
+		const keyless = parseTrackCommand({
+			input: {
+				...sourced({ commandId: "atom_req_1", requestId: "atom_req_1" }),
+				idempotency: undefined,
+			},
+		});
+		await consumeTrack({ ctx, command: keyless });
+		expect(keys.owners.size).toBe(0);
+		expect(decided[0]).toMatchObject({ commandId: "atom_req_1", value: 1 });
+
+		await consumeTrack({
+			ctx,
+			command: sourced({ commandId: "atom_req_2", requestId: "atom_req_2" }),
+		});
+		expect(keys.owners.get(storageKey)).toBe("atom_req_2");
+	});
 });
 
 describe("consumeTrack: an Atom's lock that lands after its expiry", () => {

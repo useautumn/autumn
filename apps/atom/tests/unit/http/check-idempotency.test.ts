@@ -73,7 +73,7 @@ describe("a deducting check's idempotency key at Autumn", () => {
 		]);
 	});
 
-	test("is the Atom's own request id when the client sent none, or sent an empty one", async () => {
+	test("is none when the client sent none, or sent an empty one: the worker claims nothing and the seq refuses a resend", async () => {
 		const { replica, appended } = await loneReplica();
 
 		for (const check of [
@@ -85,7 +85,7 @@ describe("a deducting check's idempotency key at Autumn", () => {
 
 		for (const { owner, key } of appended) {
 			expect(owner).toStartWith("atom_req_");
-			expect(key).toBe(`track:${owner}`);
+			expect(key).toBeUndefined();
 		}
 	});
 

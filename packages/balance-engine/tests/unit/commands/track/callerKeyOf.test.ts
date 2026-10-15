@@ -17,10 +17,7 @@ describe("callerKeyOf", () => {
 		);
 	});
 
-	test("a track claiming its own request id, or nothing, has no caller key", () => {
-		expect(
-			callerKeyOf({ command: trackClaiming({ key: "track:req_1" }) }),
-		).toBeNull();
+	test("a track claiming nothing has no caller key", () => {
 		expect(callerKeyOf({ command: trackClaiming({ key: null }) })).toBeNull();
 	});
 });

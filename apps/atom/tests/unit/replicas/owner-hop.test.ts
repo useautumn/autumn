@@ -100,7 +100,7 @@ describe("a check on a replica that does not own the customer", () => {
 		expect(a.stats().checksProxied).toBe(0);
 	});
 
-	test("carries its request id to the owner, so the deduction's idempotency key is the same wherever it is answered", async () => {
+	test("carries its request id to the owner, so the deduction is journaled under the same id wherever it is answered", async () => {
 		const { a, b, appended } = await agreeingPair();
 		connect({ replicas: [a, b] });
 
@@ -119,7 +119,7 @@ describe("a check on a replica that does not own the customer", () => {
 			{
 				writer: expect.any(String),
 				owner: String(requestId),
-				key: `track:${requestId}`,
+				key: undefined,
 				value: 1,
 			},
 		]);

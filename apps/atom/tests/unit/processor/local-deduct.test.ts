@@ -107,8 +107,9 @@ describe("a send_event check the Atom deducts itself", () => {
 			enforceOverdueBlock: true,
 			properties: null,
 			usageEvent: { name: "messages", idempotencyKey: null, id: null },
-			idempotency: { key: "track:atom_req_1", ttlMs: 86_400_000 },
 		});
+		// The caller sent no key, so the worker's track claims none: the seq is what refuses a resend.
+		expect(entry?.command).not.toHaveProperty("idempotency");
 		expect(journal.unsent({ limit: 10 })).toEqual([entry]);
 	});
 
@@ -224,7 +225,7 @@ describe("a track the Atom deducts itself", () => {
 		expect(entry?.command.enforceOverdueBlock).not.toBe(true);
 	});
 
-	test("without a body key is claimed by the Atom's request id", async () => {
+	test("without a body key claims nothing at Autumn: the seq is what refuses a resend", async () => {
 		const { processor, journal } = await openWritingSlot();
 
 		await processor.track({ request: trackRequestFor() });
@@ -232,8 +233,10 @@ describe("a track the Atom deducts itself", () => {
 		expect(journal.owed({ customerId: "cus_1" })[0]?.command).toMatchObject({
 			value: 1,
 			usageEvent: { idempotencyKey: null },
-			idempotency: { key: "track:atom_req_1" },
 		});
+		expect(
+			journal.owed({ customerId: "cus_1" })[0]?.command,
+		).not.toHaveProperty("idempotency");
 	});
 
 	test("past the balance is the API's, which decides whether it caps, overflows or is refused; nothing is journaled", async () => {

@@ -492,7 +492,7 @@ describe("a finalize the Atom settled", () => {
 });
 
 describe("a deduction sent again after a restart", () => {
-	test("is the very command sent before: same request id, idempotency key, writer and seq", async () => {
+	test("is the very command sent before: same request id, writer and seq, and no key of its own", async () => {
 		const folder = createSlotFolder();
 		cleanups.push(folder.remove);
 		const handedIn: unknown[][] = [];
@@ -541,12 +541,12 @@ describe("a deduction sent again after a restart", () => {
 		await until(() => second.sent.length === 1);
 
 		expect(second.sent).toEqual(first.sent);
+		expect(first.sent[0]).not.toHaveProperty("command.idempotency");
 		expect(first.sent[0]).toMatchObject({
 			seq: 1,
 			command: {
 				requestId: expect.stringMatching(/^atom_req_/),
 				commandId: expect.stringMatching(/^atom_req_/),
-				idempotency: { key: expect.stringMatching(/^track:atom_req_/) },
 			},
 		});
 	});

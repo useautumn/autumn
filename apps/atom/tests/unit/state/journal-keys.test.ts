@@ -34,7 +34,7 @@ afterEach(() => {
 		rmSync(folder, { recursive: true, force: true });
 });
 
-/** A track as the Atom journals one: claiming the caller's `track:<key>`, or its own request id when `key` is null. */
+/** A track as the Atom journals one: claiming the caller's `track:<key>`, or nothing when `key` is null. */
 const trackClaiming = ({
 	commandId,
 	key,
@@ -50,10 +50,9 @@ const trackClaiming = ({
 		overageBehavior: "overflow",
 	}),
 	identity: { ...createState().identity, customerId },
-	idempotency: {
-		key: `track:${key ?? `req_${commandId}`}`,
-		ttlMs: 24 * 60 * MINUTE_MS,
-	},
+	...(key !== null && {
+		idempotency: { key: `track:${key}`, ttlMs: 24 * 60 * MINUTE_MS },
+	}),
 });
 
 const keyRowsIn = ({ databasePath }: { databasePath: string }) => {
@@ -93,7 +92,7 @@ describe("journal keys", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 	});
 
-	test("an Atom-own key and a finalize store no row", async () => {
+	test("a keyless track and a finalize store no row", async () => {
 		const databasePath = journalPath();
 		const journal = open({ databasePath });
 		const finalize = {
