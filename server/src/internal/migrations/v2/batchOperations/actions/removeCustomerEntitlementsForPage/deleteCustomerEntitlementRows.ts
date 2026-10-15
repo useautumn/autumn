@@ -11,14 +11,23 @@ import {
  * candidate selection's snapshot. One DELETE for the whole page of row ids. */
 export const deleteCustomerEntitlementRows = async ({
 	db,
-	customerEntitlementIds,
+	rows,
 	scope,
 }: {
 	db: DrizzleCli;
-	customerEntitlementIds: string[];
+	rows: { customerEntitlementId: string; entitlementId: string }[];
 	scope: OperationScope;
 }): Promise<string[]> => {
-	if (customerEntitlementIds.length === 0) return [];
+	if (rows.length === 0) return [];
+
+	const selectedEntitlements = JSON.stringify(
+		Object.fromEntries(
+			rows.map(({ customerEntitlementId, entitlementId }) => [
+				customerEntitlementId,
+				entitlementId,
+			]),
+		),
+	);
 
 	const deleted = await db.execute<{ id: string }>(sql`
 		WITH dropped AS (
@@ -27,7 +36,8 @@ export const deleteCustomerEntitlementRows = async ({
 			WHERE cp.id = target.customer_product_id
 				AND definition.id = target.entitlement_id
 				AND ${operationScopeSql({ scope })}
-				AND target.id IN (${sqlList({ values: customerEntitlementIds })})
+				AND target.id IN (${sqlList({ values: rows.map(({ customerEntitlementId }) => customerEntitlementId) })})
+				AND target.entitlement_id = (${selectedEntitlements}::jsonb ->> target.id)
 				AND definition.pooled IS NOT TRUE
 				AND NOT target.is_pooled_balance
 				AND target.pooled_contribution_id IS NULL

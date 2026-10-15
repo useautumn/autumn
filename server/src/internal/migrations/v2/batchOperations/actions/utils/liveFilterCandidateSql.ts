@@ -7,7 +7,9 @@ import {
 import { enrichEntitlementsWithFeatures } from "@autumn/shared/utils/productUtils/entUtils/enrichEntitlement.js";
 import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod/v4";
+import { customerPriceIdsSql } from "@/internal/migrations/v2/batchOperations/actions/utils/customerPriceIdsSql.js";
 import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
+import { productLoadedByWorkerSql } from "@/internal/migrations/v2/batchOperations/actions/utils/productLoadedByWorkerSql.js";
 import { entitlementPriceFilterSql } from "@/internal/migrations/v2/batchOperations/actions/utils/resolveFilterEntitlementIds.js";
 import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
@@ -28,12 +30,19 @@ export const LiveFilterCandidateCoreSchema = z.object({
 	internalCustomerId: z.string(),
 	entityId: z.string().nullable(),
 	status: z.enum(CusProductStatus),
+	productLoadedByWorker: z.boolean(),
 	startsAt: nullableNumeric,
 	canceledAt: nullableNumeric,
 	endedAt: nullableNumeric,
 	trialEndsAt: nullableNumeric,
 	liveBalance: nullableNumeric,
 	liveNextResetAt: nullableNumeric,
+	entitlementId: z.string(),
+	ownerInternalEntityId: z.string().nullable(),
+	ownerEntityId: z.string().nullable(),
+	internalProductId: z.string(),
+	productIsCustom: z.boolean(),
+	customerPriceIds: z.array(z.string()),
 	definition: EntitlementSchema,
 });
 
@@ -54,12 +63,19 @@ const liveFilterCandidateCoreSelectSql = sql`
 	cp.internal_customer_id AS "internalCustomerId",
 	entity.id AS "entityId",
 	cp.status AS "status",
+	${productLoadedByWorkerSql} AS "productLoadedByWorker",
 	cp.starts_at AS "startsAt",
 	cp.canceled_at AS "canceledAt",
 	cp.ended_at AS "endedAt",
 	cp.trial_ends_at AS "trialEndsAt",
 	live.balance AS "liveBalance",
 	live.next_reset_at AS "liveNextResetAt",
+	live.entitlement_id AS "entitlementId",
+	COALESCE(live.internal_entity_id, cp.internal_entity_id) AS "ownerInternalEntityId",
+	grant_owner.id AS "ownerEntityId",
+	cp.internal_product_id AS "internalProductId",
+	cp.is_custom AS "productIsCustom",
+	${customerPriceIdsSql} AS "customerPriceIds",
 	TO_JSONB(definition) AS definition
 `;
 
@@ -73,6 +89,8 @@ const liveFilterCandidateFromSql = sql`
 		ON definition.id = live.entitlement_id
 	LEFT JOIN entities AS entity
 		ON entity.internal_id = cp.internal_entity_id
+	LEFT JOIN entities AS grant_owner
+		ON grant_owner.internal_id = COALESCE(live.internal_entity_id, cp.internal_entity_id)
 `;
 
 const liveFilterCandidateWhereSql = ({
