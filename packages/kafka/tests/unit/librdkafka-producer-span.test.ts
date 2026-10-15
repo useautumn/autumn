@@ -3,6 +3,7 @@ import { createKafkaLog } from "../../src/client/librdkafka/kafkaLog.js";
 import {
 	createLibrdkafkaProducer,
 	spanOf,
+	withheldDeliveryOf,
 } from "../../src/client/librdkafka/producer/createLibrdkafkaProducer.js";
 import {
 	isKafkaProtocolError,
@@ -194,4 +195,67 @@ test("a send whose delivery is still unheard when the producer closes ends with 
 	await expect(sending).rejects.toBeInstanceOf(
 		KafkaTransactionStateUnknownError,
 	);
+});
+
+// A delivery report lost between librdkafka and JS left a send pending forever and its partition wedged.
+test("a send whose delivery report never reaches JS ends fate-unknown at the message timeout plus the margin", async () => {
+	const errors: string[] = [];
+	const fakeProducer = {
+		connect: async () => {},
+		disconnect: async () => {},
+		send: () => new Promise<never>(() => {}),
+		transaction: async () => {
+			throw new Error("unused");
+		},
+	};
+	const producer = createLibrdkafkaProducer({
+		ctx: {
+			kafka: { producer: () => fakeProducer } as never,
+			nativeClientConfig: {},
+			defaults: {
+				requestTimeout: 100,
+				retry: { retries: 1, initialRetryTime: 10, maxRetryTime: 10 },
+			},
+			log: createKafkaLog({
+				clientId: "t",
+				sink: {
+					error: (line: string) => errors.push(line),
+					warn() {},
+					info() {},
+					debug() {},
+				},
+			}),
+		},
+		config: { idempotent: true },
+	});
+	await producer.connect();
+	const startedAt = performance.now();
+	await expect(
+		sendIdempotentBatch({
+			sender: producer,
+			topic: "t",
+			partition: 0,
+			messages,
+		}),
+	).rejects.toBeInstanceOf(KafkaTransactionStateUnknownError);
+	const elapsedMs = performance.now() - startedAt;
+	expect(elapsedMs).toBeGreaterThanOrEqual(5_100);
+	expect(elapsedMs).toBeLessThan(6_500);
+	expect(errors.some((line) => line.includes("delivery report overdue"))).toBe(
+		true,
+	);
+}, 10_000);
+
+test("the withheld-delivery fault is honoured only under NODE_ENV=test", () => {
+	const spec = "events:3:5";
+	expect(
+		withheldDeliveryOf({
+			env: { LIBRDKAFKA_TEST_WITHHOLD_DELIVERY: spec, NODE_ENV: "test" },
+		}),
+	).toEqual({ topic: "events", partition: 3, fromSend: 5 });
+	expect(
+		withheldDeliveryOf({
+			env: { LIBRDKAFKA_TEST_WITHHOLD_DELIVERY: spec, NODE_ENV: "production" },
+		}),
+	).toBeNull();
 });
