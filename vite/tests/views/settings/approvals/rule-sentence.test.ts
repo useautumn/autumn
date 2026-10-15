@@ -318,6 +318,27 @@ describe("rule sentence: when clauses from the boards", () => {
 			"Sales can Attach when Custom condition",
 		],
 		[
+			"$some reads differently from $every, so it stays custom",
+			{ when: { incoming: { $some: { plan_id: "pro" } } } },
+			"Sales can Attach when Custom condition",
+		],
+		[
+			"a matcher on the trial unit stays custom",
+			{
+				when: {
+					incoming: {
+						$every: {
+							free_trial: {
+								duration_type: { $eq: "month" },
+								duration_length: { $lte: 2 },
+							},
+						},
+					},
+				},
+			},
+			"Sales can Attach when Custom condition",
+		],
+		[
 			"a shape the list can't word yet",
 			{ when: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",

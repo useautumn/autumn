@@ -153,10 +153,10 @@ const fieldConditions = ({
 	const path = ctx.path ? `${ctx.path}.${key}` : key;
 	if (!field) return [CUSTOM];
 	if (field.kind === "each") {
-		const quantifiers = isFilter(value) ? Object.keys(value) : [];
-		const element = isFilter(value) ? (value.$every ?? value.$some) : null;
-		if (quantifiers.length !== 1 || !isFilter(element)) return [CUSTOM];
-		return filterConditions({ filter: element, ctx: { ...ctx, path } });
+		// Only `$every` is worded: "Incoming plan is Pro" must mean every incoming plan.
+		const isEvery = isFilter(value) && Object.keys(value).join() === "$every";
+		if (!isEvery || !isFilter(value.$every)) return [CUSTOM];
+		return filterConditions({ filter: value.$every, ctx: { ...ctx, path } });
 	}
 	const [matcherKey] = field.nested ?? [];
 	const label = ctx.fieldLabels[matcherKey ? `${path}.${matcherKey}` : path];
@@ -171,7 +171,9 @@ const fieldConditions = ({
 	}
 	const nestedKeys = new Set(field.nested);
 	const readsWholeObject =
-		isFilter(value) && Object.keys(value).every((key) => nestedKeys.has(key));
+		isFilter(value) &&
+		Object.keys(value).every((key) => nestedKeys.has(key)) &&
+		field.nested?.slice(1).every((key) => !isFilter(value[key]));
 	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
 		label,
