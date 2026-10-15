@@ -1,8 +1,8 @@
+import type { RuleSubject } from "@autumn/shared";
 import {
 	type ApprovalRuleSubjectRow,
 	EVERYONE_SUBJECT_ID,
-	type RuleSubject,
-} from "@autumn/shared";
+} from "@autumn/shared/models/approvalModels/index";
 
 export const ruleSubjectToRow = ({
 	subject,

@@ -2,8 +2,8 @@ import type {
 	ApprovalAction,
 	ApprovalRule,
 	ApprovalRuleWhen,
-	ApprovalRuleWithSubjects,
 } from "@autumn/shared";
+import type { ApprovalRuleWithSubjects } from "@autumn/shared/models/approvalModels/index";
 import { rowToRuleSubject } from "./rowToRuleSubject.js";
 
 /** Rows were validated with the rule schema on write, so their jsonb and text[] narrow safely. */
