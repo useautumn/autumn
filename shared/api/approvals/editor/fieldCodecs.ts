@@ -116,10 +116,8 @@ const plansAt = (path: string[]): FieldCodec => ({
 	toFilter: (row) => {
 		const isNegative =
 			row.operator === "is_not" || row.operator === "is_none_of";
-		return at(
-			[...path, isNegative ? "$none" : "$every"],
-			toPlanFilter(row.value),
-		);
+		const plans = toPlanFilter(row.value);
+		return plans && at([...path, isNegative ? "$none" : "$every"], plans);
 	},
 	fromFilter: (group) => [
 		...planReads({ filter: get(group, [...path, "$every"]), negative: false }),
@@ -163,7 +161,8 @@ const freeTrial: FieldCodec = {
 	toFilter: (row) => {
 		if (row.operator === "has_none")
 			return at([...INCOMING_PLAN, "free_trial"], null);
-		const duration = row.value as TrialDuration;
+		const duration = row.value as TrialDuration | null;
+		if (!isPlainObject(duration)) return null;
 		const branches = toTrialBranches({ operator: row.operator, duration });
 		// "< 1 day" leaves only the no-trial branch, which is "has none".
 		if (branches.length === 1)
@@ -183,6 +182,7 @@ const freeTrial: FieldCodec = {
 // Stored as "no quantity breaks the limit", so plans without the feature pass.
 const featureQuantity: FieldCodec = {
 	toFilter: (row) => {
+		if (!isPlainObject(row.value)) return null;
 		const { feature_id, quantity } = row.value as FeatureQuantity;
 		const operator = NEGATED_NUMBER_OPERATORS[row.operator];
 		return at(QUANTITY_LIMIT, {

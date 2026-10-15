@@ -42,7 +42,9 @@ const splitPinned = ({ area, when }: { area: WhenKey; when: Filter }) => {
 	const field = PINNED_FIELDS[area];
 	const [pinned] = field ? readRows({ field, filter: when }) : [];
 	if (!pinned) return { pinned: null, rest: when };
-	const pinnedKeys = Object.keys(FIELD_CODECS[pinned.field].toFilter(pinned));
+	const pinnedKeys = Object.keys(
+		FIELD_CODECS[pinned.field].toFilter(pinned) ?? {},
+	);
 	const rest = Object.fromEntries(
 		Object.entries(when).filter(([key]) => !pinnedKeys.includes(key)),
 	);

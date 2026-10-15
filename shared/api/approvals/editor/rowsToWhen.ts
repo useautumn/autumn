@@ -1,4 +1,9 @@
-import type { ApprovalRuleWhen, WhenKey } from "../schemas/when/whenSchemas";
+import { buildWhenSchema } from "../schemas/when/buildWhenSchema";
+import {
+	type ApprovalRuleWhen,
+	WHEN_SHAPES,
+	type WhenKey,
+} from "../schemas/when/whenSchemas";
 import {
 	EDITOR_FIELDS,
 	type EditorGroup,
@@ -43,6 +48,14 @@ const rowIssue = ({
 	return null;
 };
 
+/** The row's filter, or null when its value is missing or doesn't fit the field. */
+const encodeRow = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
+	if (row.value === null && row.operator !== "has_none") return null;
+	const filter = FIELD_CODECS[row.field].toFilter(row);
+	const schema = buildWhenSchema({ shape: WHEN_SHAPES[area] });
+	return filter && schema.safeParse(filter).success ? filter : null;
+};
+
 const groupToFilter = ({
 	area,
 	rows,
@@ -60,8 +73,10 @@ const groupToFilter = ({
 		.map((row, index) => ({ row, index }))
 		.sort((a, b) => order.indexOf(a.row.field) - order.indexOf(b.row.field));
 	for (const { row, index } of inBoardOrder) {
-		const message = rowIssue({ area, row, pinned: false });
-		const addition = message ? null : FIELD_CODECS[row.field].toFilter(row);
+		const fieldIssue = rowIssue({ area, row, pinned: false });
+		const addition = fieldIssue ? null : encodeRow({ area, row });
+		const message =
+			fieldIssue ?? (addition ? null : "Choose a value for this condition.");
 		const merged =
 			addition &&
 			mergeFilters({ base: filter, addition, andPath: INCOMING_PLAN });
@@ -92,7 +107,11 @@ export const rowsToWhen = ({
 	pinned?: EditorRow | null;
 	groups: EditorGroup[];
 }): RowsToWhenResult => {
-	const pinnedIssue = pinned && rowIssue({ area, row: pinned, pinned: true });
+	const pinnedFilter = pinned && encodeRow({ area, row: pinned });
+	const pinnedIssue =
+		pinned &&
+		(rowIssue({ area, row: pinned, pinned: true }) ??
+			(pinnedFilter ? null : "Choose a value for this condition."));
 	const encoded = groups
 		.map((rows, group) => groupToFilter({ area, rows, group }))
 		.filter((_, group) => groups[group].length > 0);
@@ -107,9 +126,7 @@ export const rowsToWhen = ({
 	const filters = encoded.map((group) => group.filter);
 	const conditions = filters.length > 1 ? { $or: filters } : (filters[0] ?? {});
 	// Groups never hold the pinned field, so its keys can't collide with theirs.
-	const when = pinned
-		? { ...FIELD_CODECS[pinned.field].toFilter(pinned), ...conditions }
-		: conditions;
+	const when = { ...pinnedFilter, ...conditions };
 	return {
 		ok: true,
 		when: isEmptyObject(when) ? null : (when as ApprovalRuleWhen),

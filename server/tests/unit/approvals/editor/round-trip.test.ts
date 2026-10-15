@@ -302,6 +302,29 @@ describe("rows that can't be stored report an issue", () => {
 			rows: [],
 			issue: { group: "pinned", row: 0 },
 		},
+		...[
+			{ field: "customer_plan", operator: "has", value: null },
+			{ field: "total", operator: "lte", value: "lots" },
+			{ field: "starts_at", operator: "is", value: "7" },
+			{ field: "paid", operator: "is", value: null },
+			{ field: "customer", operator: "is_any_of", value: [1, 2] },
+			{ field: "incoming_plan", operator: "is_any_of", value: [] },
+			{ field: "outgoing_plan", operator: "is", value: null },
+			{ field: "free_trial", operator: "lt", value: null },
+			{ field: "feature_quantity", operator: "lte", value: null },
+		].map((row) => ({
+			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
+			area: "billing_change" as const,
+			rows: [row as EditorRow],
+			issue: { group: 0, row: 0 },
+		})),
+		{
+			name: "an unfinished pinned Feature",
+			area: "balance_create",
+			pinned: { field: "feature", operator: "is", value: null },
+			rows: [],
+			issue: { group: "pinned", row: 0 },
+		},
 	])("$name", ({ area, pinned, rows, issue }) => {
 		expect(rowsToWhen({ area, pinned, groups: [rows] })).toEqual({
 			ok: false,

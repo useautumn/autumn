@@ -69,9 +69,20 @@ export const isEmptyObject = (value: unknown) =>
 const toSelection = ({ plan_id, version }: PlanSelection): PlanSelection =>
 	version === undefined ? { plan_id } : { plan_id, version };
 
-/** Version-less choices fit one `$in`; a pinned version needs a branch per choice. */
+const isPlanSelection = (value: unknown): value is PlanSelection =>
+	isPlainObject(value) &&
+	typeof value.plan_id === "string" &&
+	(value.version === undefined || typeof value.version === "number");
+
+/**
+ * Version-less choices fit one `$in`; a pinned version needs a branch per choice.
+ * Null when the picker has no valid choice yet.
+ */
 export const toPlanFilter = (value: unknown) => {
-	if (!Array.isArray(value)) return toSelection(value as PlanSelection);
+	if (!Array.isArray(value)) {
+		return isPlanSelection(value) ? toSelection(value) : null;
+	}
+	if (value.length === 0 || !value.every(isPlanSelection)) return null;
 	if (value.every((selection) => selection.version === undefined)) {
 		return { plan_id: { $in: value.map((selection) => selection.plan_id) } };
 	}
