@@ -144,11 +144,15 @@ const liveTimeline = ({
 			to: newEndMs,
 			over: [changeAtMs, newEndMs],
 		});
-		const resetCents = billsNow
-			? sumCents(kept, extension) +
-				sumCents(added) -
-				sumCents(removed, unusedRatio)
-			: sumCents(added);
+		// bill_difference on a reset bills the full new cycle with no unused-time credit.
+		const resetCents =
+			proration === "bill_difference"
+				? sumCents(after)
+				: billsNow
+					? sumCents(kept, extension) +
+						sumCents(added) -
+						sumCents(removed, unusedRatio)
+					: sumCents(added);
 		return {
 			executeCents: resetCents + usageCents,
 			executeUsage: true,

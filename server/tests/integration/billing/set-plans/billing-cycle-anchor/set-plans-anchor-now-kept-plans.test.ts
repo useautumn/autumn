@@ -1,6 +1,6 @@
 /**
  * Resetting the cycle now restarts every plan on the subscription, so plans the request keeps are
- * billed like changed ones: unused time credited, a full new period charged, balances re-anchored.
+ * billed like changed ones: a full new period charged (unused time credited unless bill_difference), balances re-anchored.
  */
 
 import { expect, test } from "bun:test";
@@ -422,7 +422,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans anchor now kept: bill_difference on the same plan still bills the days already used")}`,
+	`${chalk.yellowBright("set-plans anchor now kept: bill_difference on the same plan bills the full new cycle with no credit")}`,
 	async () => {
 		const pro = products.pro({
 			items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -440,12 +440,6 @@ test.concurrent(
 		});
 
 		const renewalAt = addMonths(advancedTo, 1).getTime();
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
-			customerId,
-			advancedTo,
-			oldAmount: 20,
-			newAmount: 20,
-		});
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
 			phases: [
@@ -457,20 +451,71 @@ test.concurrent(
 		};
 
 		const preview = await autumnV2_4.billing.previewSetPlans(params);
-		expect(preview.total).toBe(expectedTotal);
+		expect(preview.total).toBe(20);
 
 		await autumnV2_4.billing.setPlans(params);
 
 		await expectCustomerInvoiceCorrect({
 			customerId,
 			count: 2,
-			latestTotal: expectedTotal,
+			latestTotal: 20,
 		});
 		await expectStripeCycleCorrect({
 			ctx,
 			customerId,
 			anchorMs: advancedTo,
 			periodEndMs: renewalAt,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("set-plans anchor now kept: bill_difference on a kept yearly plan bills the full new year with no credit")}`,
+	async () => {
+		const proAnnual = products.base({
+			id: "pro-annual",
+			items: [
+				items.annualPrice({ price: 2400 }),
+				items.monthlyMessages({ includedUsage: 100 }),
+			],
+		});
+		const { customerId, autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId: "set-plans-anchor-now-kept-bill-difference-yearly",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proAnnual] }),
+			],
+			actions: [
+				s.billing.attach({ productId: proAnnual.id }),
+				s.advanceTestClock({ days: 45 }),
+			],
+		});
+
+		const params: SetPlansParamsV0Input = {
+			customer_id: customerId,
+			phases: [
+				resetNowPhase({
+					planIds: [proAnnual.id],
+					prorationBehavior: "bill_difference",
+				}),
+			],
+		};
+
+		const preview = await autumnV2_4.billing.previewSetPlans(params);
+		expect(preview.total).toBe(2400);
+
+		await autumnV2_4.billing.setPlans(params);
+
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: 2400,
+		});
+		await expectStripeItemPeriodEnd({
+			ctx,
+			customerId,
+			interval: "year",
+			periodEndMs: addYears(advancedTo, 1).getTime(),
 		});
 	},
 );
