@@ -53,5 +53,8 @@ export function nativeConsumerConfigOf({
 			MAX_FETCH_WAIT_MS,
 		),
 		"allow.auto.create.topics": config.allowAutoTopicCreation ?? false,
+		...(config.statisticsIntervalMs && {
+			"statistics.interval.ms": config.statisticsIntervalMs,
+		}),
 	};
 }

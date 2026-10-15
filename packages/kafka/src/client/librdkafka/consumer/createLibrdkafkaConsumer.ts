@@ -1,3 +1,4 @@
+import { LIBRDKAFKA_ERROR_CODES } from "@autumn/librdkafka";
 import type {
 	Consumer,
 	ConsumerConfig,
@@ -13,11 +14,14 @@ import type { KafkaLog } from "../kafkaLog.js";
 import { type NativeDone, settleNative } from "../settleNative.js";
 import { commitTopicOffsets } from "./batchRun.js";
 import {
+	everyPartitionFetched,
 	failTerminally,
 	IDLE_POLL_MS,
 	runConsumeLoop,
 	seekNative,
 } from "./consumeLoop.js";
+import { emitConsumerEvent } from "./consumerEvents.js";
+import { createFetchLiveness } from "./fetchLiveness.js";
 import { handleRebalance } from "./handleRebalance.js";
 import { nativeConsumerConfigOf } from "./nativeConsumerConfig.js";
 import { registerNativeConsumer } from "./nativeConsumerRegistry.js";
@@ -38,6 +42,8 @@ import {
 
 /** How long `stop()` serves the group's revocation after leaving before it gives up waiting. */
 const LEAVE_TIMEOUT_MS = 5_000;
+/** How long a restart waits for a given-up client to close before abandoning it. */
+const RETIRE_TIMEOUT_MS = 10_000;
 /** A poll never waits natively: a blocking one holds a native pool thread, and idle consumers starve every commit. */
 const CONSUME_POLL_MS = 0;
 
@@ -104,6 +110,7 @@ export function createLibrdkafkaConsumer({
 		assigning: new Set(),
 		resolved: new Map(),
 		committed: new Map(),
+		gaveUp: false,
 		restartPending: null,
 		collector: null,
 		listeners: emptyListeners(),
@@ -127,7 +134,10 @@ export function createLibrdkafkaConsumer({
 			error: NativeKafkaError,
 			partitions: NativeTopicPartition[],
 		): void {
-			if (native) handleRebalance({ scope, native, error, partitions });
+			if (!native) return;
+			if (state.native === native)
+				handleRebalance({ scope, native, error, partitions });
+			else releaseClosing({ native, error, partitions });
 		}
 		native = ctx.createNative({
 			global: {
@@ -156,7 +166,7 @@ export function createLibrdkafkaConsumer({
 			ctx.log.writeNative(entry);
 		}
 		function onError(error: NativeKafkaError): void {
-			if (error.isFatal) {
+			if (error.isFatal && state.native === native) {
 				failTerminally({ scope, cause: error });
 				return;
 			}
@@ -169,7 +179,59 @@ export function createLibrdkafkaConsumer({
 		native.on("partition.eof", onEof);
 		native.on("event.log", onLog);
 		native.on("event.error", onError);
+		const intervalMs = config.statisticsIntervalMs;
+		if (intervalMs) {
+			const liveness = createFetchLiveness({ intervalMs });
+			function onStatistics({ message }: { message: string }): void {
+				if (state.native !== native || !state.running || state.restartPending)
+					return;
+				try {
+					if (
+						!everyPartitionFetched({ scope }) ||
+						!liveness.answeredSince({ state, statistics: message })
+					)
+						return;
+				} catch (cause) {
+					log("warn", "Kafka consumer statistics could not be read", {
+						error: String(cause),
+					});
+					return;
+				}
+				emitConsumerEvent({
+					scope,
+					type: "consumer.fetch",
+					payload: { numberOfBatches: 0 },
+				});
+			}
+			native.on("event.stats", onStatistics);
+		}
 		return native;
+	}
+
+	/** A client being closed gives its partitions back so the close can finish; the runner's state is not its. */
+	function releaseClosing({
+		native,
+		error,
+		partitions,
+	}: {
+		native: NativeConsumer;
+		error: NativeKafkaError;
+		partitions: NativeTopicPartition[];
+	}): void {
+		if (error.code === LIBRDKAFKA_ERROR_CODES.ERR__ASSIGN_PARTITIONS) return;
+		try {
+			if (native.rebalanceProtocol() === "COOPERATIVE")
+				native.incrementalUnassign(partitions);
+			else native.unassign();
+		} catch (cause) {
+			log(
+				"warn",
+				"Kafka consumer could not release a closing client's partitions",
+				{
+					error: String(cause),
+				},
+			);
+		}
 	}
 
 	async function connect(): Promise<void> {
@@ -180,6 +242,7 @@ export function createLibrdkafkaConsumer({
 		topics,
 		fromBeginning = false,
 	}: ConsumerSubscribeTopics): Promise<void> {
+		if (state.gaveUp) await retireNative();
 		if (!state.native) {
 			state.fromBeginning = fromBeginning;
 			const native = createNative({ fromBeginning });
@@ -214,6 +277,53 @@ export function createLibrdkafkaConsumer({
 		} catch (cause) {
 			state.running = false;
 			log("error", "Kafka consumer loop failed", { error: String(cause) });
+		}
+	}
+
+	/** Closes the client a given-up loop left behind and forgets its group state; the subscription is rebuilt. */
+	async function retireNative(): Promise<void> {
+		await state.loop;
+		state.loop = null;
+		const native = state.native;
+		state.native = null;
+		state.gaveUp = false;
+		state.topics = [];
+		if (native) await closeNative(native);
+		state.restartPending = null;
+		for (const key of state.assigned.keys())
+			state.generation.set(key, (state.generation.get(key) ?? 0) + 1);
+		for (const partitionState of [
+			state.assigned,
+			state.paused,
+			state.skippedFrom,
+			state.pendingSeeks,
+			state.fetched,
+			state.deliveredNext,
+			state.assigning,
+			state.resolved,
+			state.committed,
+		])
+			partitionState.clear();
+	}
+
+	/** A dead client may never answer its close; the restart goes ahead on a new one regardless. */
+	async function closeNative(native: NativeConsumer): Promise<void> {
+		function disconnectNative(done: NativeDone): void {
+			native.disconnect(done);
+		}
+		async function giveUpWaiting(): Promise<"timed out"> {
+			await Bun.sleep(RETIRE_TIMEOUT_MS);
+			return "timed out";
+		}
+		try {
+			const outcome = await Promise.race([
+				settleNative(disconnectNative),
+				giveUpWaiting(),
+			]);
+			if (outcome === "timed out")
+				log("warn", "Kafka consumer close timed out; abandoning the client");
+		} catch (cause) {
+			log("warn", "Kafka consumer close failed", { error: String(cause) });
 		}
 	}
 
@@ -296,7 +406,7 @@ export function createLibrdkafkaConsumer({
 		await state.loop;
 		state.loop = null;
 		const native = state.native;
-		if (native && !state.leaving) await leaveGroup(native);
+		if (native && !state.leaving && !state.gaveUp) await leaveGroup(native);
 	}
 
 	async function disconnect(): Promise<void> {

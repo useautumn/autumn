@@ -40,6 +40,8 @@ export type ConsumerRunnerState = {
 	/** Next offset to commit, per partition, as resolved by the handler. */
 	resolved: Map<string, string>;
 	committed: Map<string, string>;
+	/** The loop ended on a failure it would not restart from; the next subscribe builds a fresh native client. */
+	gaveUp: boolean;
 	/** A failure the loop acts on after the batches in flight: rewind and rejoin, or end when terminal. */
 	restartPending: { cause: Error; terminal: boolean } | null;
 	/** Where the native consumer's records and partition ends go during one `consume()`. */
