@@ -4,24 +4,28 @@ import {
 	type ApprovalRuleIssue,
 	validateApprovalRule,
 } from "@autumn/shared";
-import { clearApprovalRulesCache } from "@/external/redis/actions/approvalRulesCache/approvalRulesCache.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleRuleAuthorErrors } from "../errors/handleRuleAuthorErrors.js";
 import { approvalRuleRepo } from "../repos/index.js";
 import { ruleSubjectToRow } from "../utils/ruleSubjectToRow.js";
-import { getApprovalRule } from "./getApprovalRule.js";
+import { uniqueSubjectRows } from "../utils/uniqueSubjectRows.js";
+import { toApprovalRules } from "./toApprovalRules.js";
 
 export type SaveApprovalRuleResult =
 	| { ok: true; rule: ApprovalRule }
 	| { ok: false; issues: ApprovalRuleIssue[] };
 
-/** Validates and saves a whole rule as the caller, then drops the org's cached rules. */
+/** Validates and saves a whole rule as the caller; returns the row this save wrote. */
 export const saveApprovalRule = async ({
 	ctx,
+	db = ctx.db,
 	ruleId,
 	params,
 }: {
 	ctx: AutumnContext;
+	/** The caller's transaction, when it holds a lock on the rule. */
+	db?: DrizzleCli;
 	ruleId: string;
 	params: unknown;
 }): Promise<SaveApprovalRuleResult> => {
@@ -30,18 +34,20 @@ export const saveApprovalRule = async ({
 	if (!validation.ok) return validation;
 
 	const { subjects, ...fields } = validation.rule;
-	await approvalRuleRepo.upsert({
-		db: ctx.db,
+	const saved = await approvalRuleRepo.upsert({
+		db,
 		orgId: ctx.org.id,
 		env: AppEnv.Live,
 		userId,
 		rule: {
 			...fields,
 			id: ruleId,
-			subjects: subjects.map((subject) => ruleSubjectToRow({ subject })),
+			subjects: uniqueSubjectRows({
+				rows: subjects.map((subject) => ruleSubjectToRow({ subject })),
+			}),
 		},
 	});
-	await clearApprovalRulesCache({ orgId: ctx.org.id, env: AppEnv.Live });
 
-	return { ok: true, rule: await getApprovalRule({ ctx, ruleId }) };
+	const [rule] = await toApprovalRules({ db, rows: [saved] });
+	return { ok: true, rule };
 };

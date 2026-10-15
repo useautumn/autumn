@@ -6,7 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { listApprovalRules } from "./listApprovalRules.js";
 
-/** The org's enabled live rules, read through a cache that every rule write clears. */
+/** The org's enabled live rules, read through a cache that every rule write invalidates. */
 export const getOrgApprovalRules = async ({
 	ctx,
 }: {
@@ -18,9 +18,13 @@ export const getOrgApprovalRules = async ({
 		requestId: ctx.id,
 	};
 	const cached = await getCachedApprovalRules<ApprovalRule[]>(cacheParams);
-	if (cached) return cached;
+	if (cached.value) return cached.value;
 
 	const rules = await listApprovalRules({ ctx, enabled: true });
-	await setCachedApprovalRules({ ...cacheParams, value: rules });
+	await setCachedApprovalRules({
+		...cacheParams,
+		generation: cached.generation,
+		value: rules,
+	});
 	return rules;
 };

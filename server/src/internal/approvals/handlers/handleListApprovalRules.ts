@@ -9,12 +9,21 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { listApprovalRules } from "../actions/listApprovalRules.js";
 
-const ListApprovalRulesQuerySchema = z.object({
-	subject_type: z.enum(["everyone", "role", "user"]).optional(),
-	subject_id: z.string().optional(),
-	action: ApprovalActionSchema.optional(),
-	enabled: queryBoolean().optional(),
-});
+const ListApprovalRulesQuerySchema = z
+	.object({
+		subject_type: z.enum(["everyone", "role", "user"]).optional(),
+		subject_id: z.string().min(1).optional(),
+		action: ApprovalActionSchema.optional(),
+		enabled: queryBoolean().optional(),
+	})
+	.refine(
+		({ subject_type, subject_id }) =>
+			subject_type === undefined || subject_type === "everyone" || subject_id,
+		{
+			message: "subject_id is required for role and user subjects.",
+			path: ["subject_id"],
+		},
+	);
 
 const querySubject = ({
 	subject_type,
