@@ -259,6 +259,15 @@ class FinalizeTests(unittest.TestCase):
                     )
                     self.assertEqual(hosts.keys("autumn"), ["caller_key_1"])
 
+    def test_falls_back_after_a_connect_timeout(self):
+        for fail_open in (True, False):
+            with self.subTest(fail_open=fail_open):
+                hosts = Hosts(edge=raises(httpx.ConnectTimeout), autumn=lambda _: finalized())
+                client_for(hosts, fail_open=fail_open).balances.finalize(
+                    **FINALIZE, http_headers={"Idempotency-Key": "caller_key_1"}
+                )
+                self.assertEqual(hosts.keys("autumn"), ["caller_key_1"])
+
     def test_falls_back_on_the_edges_own_404(self):
         for fail_open in (True, False):
             with self.subTest(fail_open=fail_open):
