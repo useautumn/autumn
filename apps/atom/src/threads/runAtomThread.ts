@@ -203,6 +203,8 @@ export const runAtomThread = (): void => {
 			thread?.leave({ peer: control.index });
 		else {
 			await thread?.stop();
+			// The main thread terminates this worker on "stopped": what the stop logged must be out first.
+			await getAtomLogger().flush?.();
 			report({ type: "stopped" });
 		}
 	}

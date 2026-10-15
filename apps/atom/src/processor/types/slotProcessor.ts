@@ -1,7 +1,10 @@
 import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
-import type { Journal } from "../../state/journal/types/journal.js";
+import type {
+	HandedEntry,
+	Journal,
+} from "../../state/journal/types/journal.js";
 import type { OpenLocks } from "../../state/openLocks/createOpenLocks.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
@@ -48,6 +51,10 @@ export type SlotProcessor = {
 		customerId: string;
 		body: string;
 	}): Promise<PushedSubject>;
+	/** Customers' owed entries another replica handed over with them: held in this slot's journal, in one transaction, under their own writers. */
+	receiveHandoff(params: {
+		handoffs: { customerId: string; entries: HandedEntry[] }[];
+	}): Promise<{ held: number }>;
 	/** A `subjects.delete` body as JSON text, routed and refused the same way. False when a newer read is already held. */
 	deleteSubject(params: { customerId: string; body: string }): Promise<boolean>;
 };

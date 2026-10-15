@@ -216,6 +216,7 @@ export const openSlots = ({
 		...serveReplicaReads({ ctx }),
 		ownedStores: () =>
 			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
+		ownedJournals: () => [...journals],
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

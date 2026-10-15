@@ -3,6 +3,7 @@ import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import {
 	encodeJournalEntries,
+	encodeJournalEntryKeys,
 	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
@@ -11,6 +12,7 @@ import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
+	HandedEntry,
 	Journal,
 	JournalEntry,
 	JournaledCommand,
@@ -110,6 +112,8 @@ export const openJournal = ({
 	let notifyCommitted = () => {};
 	/** By customer, the caller keys appended whose commit has not settled: their rows are not in the file yet. */
 	const inFlightKeys = new Map<string, Set<string>>();
+	/** Entries appended whose commit has not settled, with that commit: a handoff waits for them, so none crosses half-written. */
+	const committing = new Map<JournalEntry, Promise<void>>();
 
 	function holdUnsent(entry: JournalEntry): void {
 		unsent.add(entry);
@@ -209,8 +213,13 @@ export const openJournal = ({
 		owe({ entry });
 		const key = command.type === "track" ? callerKeyOf({ command }) : null;
 		if (key) holdInFlight({ customerId, key });
+		const commit = groupCommit.add(entry);
+		committing.set(
+			entry,
+			commit.catch(() => {}),
+		);
 		try {
-			await groupCommit.add(entry);
+			await commit;
 			return entry;
 		} catch (error) {
 			appendFailedOnThread++;
@@ -220,8 +229,89 @@ export const openJournal = ({
 			});
 			throw error;
 		} finally {
+			committing.delete(entry);
 			if (key) releaseInFlight({ customerId, key });
 		}
+	}
+
+	const isHeld = (entry: JournalEntry): boolean =>
+		owed({ customerId: entry.customerId }).some(
+			(held) => held.writerId === entry.writerId && held.seq === entry.seq,
+		);
+
+	/** Merged into each customer's owed entries by when they were granted: a new array, so a view replays it. */
+	async function appendForeign({
+		entries,
+	}: {
+		entries: HandedEntry[];
+	}): Promise<number> {
+		const fresh = entries.filter((entry) => !isHeld(entry));
+		if (fresh.length === 0) return 0;
+		const plain = fresh.map(({ sent: _, ...entry }) => entry);
+		await file.write(
+			"insertJournalEntries",
+			encodeJournalEntries({ entries: plain }),
+		);
+		for (const customerId of new Set(plain.map((entry) => entry.customerId)))
+			setOwed({
+				customerId,
+				entries: [
+					...owed({ customerId }),
+					...plain.filter((entry) => entry.customerId === customerId),
+				].sort((left, right) => left.appendedAt - right.appendedAt),
+			});
+		fresh.forEach((entry, index) => {
+			if (!entry.sent) holdUnsent(plain[index] as JournalEntry);
+		});
+		notifyCommitted();
+		return fresh.length;
+	}
+
+	async function handoffs(): Promise<
+		{ customerId: string; entries: HandedEntry[] }[]
+	> {
+		await Promise.all([...committing.values()]);
+		// Appended since: still committing, and the caller keeps them.
+		return [...owedByCustomer]
+			.map(([customerId, entries]) => ({
+				customerId,
+				entries: entries
+					.filter((entry) => !committing.has(entry))
+					.map((entry) => ({ ...entry, sent: !unsent.has(entry) })),
+			}))
+			.filter(({ entries }) => entries.length > 0);
+	}
+
+	/** The handed copies name entries by writer and seq; what leaves are the entries held here under those. */
+	function dropHandedOff({
+		entries,
+	}: {
+		entries: JournalEntry[];
+	}): Promise<void> {
+		const keyOf = ({ writerId: writer, seq }: JournalEntry) =>
+			`${writer}/${seq}`;
+		const handed = new Set(entries.map(keyOf));
+		const dropped: JournalEntry[] = [];
+		for (const customerId of new Set(
+			entries.map((entry) => entry.customerId),
+		)) {
+			const held = owed({ customerId });
+			dropped.push(...held.filter((entry) => handed.has(keyOf(entry))));
+			setOwed({
+				customerId,
+				entries: held.filter((entry) => !handed.has(keyOf(entry))),
+			});
+		}
+		for (const entry of dropped) releaseUnsent(entry);
+		for (const customerId of new Set(dropped.map((entry) => entry.customerId)))
+			oldestUnsent({ customerId });
+		if (dropped.length === 0) return Promise.resolve();
+		return file
+			.write(
+				"deleteJournalEntries",
+				encodeJournalEntryKeys({ entries: dropped }),
+			)
+			.then(() => {});
 	}
 
 	function takeUnsent({ limit }: { limit: number }): JournalEntry[] {
@@ -393,5 +483,8 @@ export const openJournal = ({
 		forget,
 		close,
 		holdsKey,
+		appendForeign,
+		handoffs,
+		dropHandedOff,
 	};
 };

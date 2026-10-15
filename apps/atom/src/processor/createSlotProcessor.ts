@@ -80,6 +80,11 @@ export const createSlotProcessor = ({
 				throw error;
 			}
 		},
+		receiveHandoff: async ({ handoffs }) => ({
+			held: await ctx.journal.appendForeign({
+				entries: handoffs.flatMap(({ entries }) => entries),
+			}),
+		}),
 		deleteSubject: async (params) =>
 			deleteSubject({ ctx, subject: deletePushToDeletedSubject(params) }),
 	};

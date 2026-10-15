@@ -42,6 +42,13 @@ const runOwnerCall = async ({
 	const slots = ctx.auth.slotsFor({ atomId: call.atomId });
 	if (!slots) throw new Error(`This Atom holds no folder ${call.atomId}`);
 	if (call.type === "setCatalog") return slots.setCatalog(call.catalog);
+	if (call.type === "receiveHandoff") {
+		const [first] = call.handoffs;
+		if (!first) return { held: 0 };
+		return slots
+			.processorFor({ customerId: first.customerId })
+			.receiveHandoff({ handoffs: call.handoffs });
+	}
 	if (call.type === "installCatalog") return slots.installCatalog(call.catalog);
 	if (call.type === "setSubject")
 		return slots

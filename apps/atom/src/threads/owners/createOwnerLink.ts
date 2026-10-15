@@ -95,6 +95,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		| boolean
 		| AppliedSubjectOnWire[]
 		| SubjectDigestOnWire[]
+		| { held: number }
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
@@ -142,6 +143,10 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					customerId,
 					body,
 				})) as PushedSubject,
+			receiveHandoff: async ({ handoffs }) =>
+				(await call({ type: "receiveHandoff", atomId, handoffs })) as {
+					held: number;
+				},
 			deleteSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "deleteSubject",

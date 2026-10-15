@@ -160,6 +160,7 @@ export const createReplica = ({
 				ctx: {
 					ring,
 					membership,
+					folders: createDeployedFolders({ slots: auth.slots }),
 					peer: { port: PEER_PORT, secret },
 					logger: quiet,
 				},
@@ -191,11 +192,18 @@ export const connect = ({
 	replicas,
 	autumn,
 	replyFrom = async (_replica, reply) => reply,
+	beforeDispatch = async () => {},
 }: {
 	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
+	/** Runs before a request reaches its replica: a test can hold one on the way, as a slow link does. */
+	beforeDispatch?: (request: Request) => Promise<void>;
 	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
-	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
+	replyFrom?: (
+		replica: Reachable,
+		reply: Response,
+		request: Request,
+	) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),
@@ -213,11 +221,12 @@ export const connect = ({
 				{ code: "ECONNREFUSED" },
 			);
 		const app = Number(url.port) === PEER_PORT ? replica.peerApp : replica.app;
+		await beforeDispatch(new Request(url, init));
 		const reply = await app.request(`${url.pathname}${url.search}`, {
 			...init,
 			signal: undefined,
 		});
-		return replyFrom(replica, reply);
+		return replyFrom(replica, reply, new Request(url, init));
 	};
 	spyOn(globalThis, "fetch").mockImplementation(((
 		input: URL | RequestInfo,
