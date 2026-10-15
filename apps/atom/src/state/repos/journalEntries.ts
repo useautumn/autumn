@@ -1,21 +1,14 @@
 import type { Database } from "bun:sqlite";
-import type { JournalEntry, JournalStatus } from "../journal/types/journal.js";
+import type { JournalEntry } from "../journal/types/journal.js";
 
 type JournalContext = { sqliteDb: Database };
 
 type JournalEntryRow = {
 	customerId: string;
 	seq: bigint;
-	status: "pending" | "sent";
+	appendedAt: bigint;
 	commandJson: string;
 };
-
-const statusToColumns = (
-	status: JournalStatus,
-): { status: JournalStatus["kind"]; rejectCode: string | null } => ({
-	status: status.kind,
-	rejectCode: status.kind === "rejected" ? status.code : null,
-});
 
 /** Every entry or none, with each customer's highest seq raised in the same transaction. */
 export const insertJournalEntries = ({
@@ -26,19 +19,19 @@ export const insertJournalEntries = ({
 	entries: JournalEntry[];
 }): void => {
 	const insertEntry = ctx.sqliteDb.query(
-		`INSERT INTO journal_entries (customer_id, seq, status, reject_code, command_json)
-		VALUES ($customerId, $seq, $status, $rejectCode, $commandJson)`,
+		`INSERT INTO journal_entries (customer_id, seq, appended_at, command_json)
+		VALUES ($customerId, $seq, $appendedAt, $commandJson)`,
 	);
 	const raiseLastSeq = ctx.sqliteDb.query(
 		`INSERT INTO journal_seqs (customer_id, last_seq) VALUES ($customerId, $seq)
 		ON CONFLICT (customer_id) DO UPDATE SET last_seq = max(last_seq, excluded.last_seq)`,
 	);
 	ctx.sqliteDb.transaction(() => {
-		for (const { customerId, seq, status, command } of entries) {
+		for (const { customerId, seq, appendedAt, command } of entries) {
 			insertEntry.run({
 				customerId,
 				seq,
-				...statusToColumns(status),
+				appendedAt,
 				commandJson: JSON.stringify(command),
 			});
 			raiseLastSeq.run({ customerId, seq });
@@ -54,14 +47,14 @@ export const readOwedJournalEntries = ({
 }): JournalEntry[] =>
 	ctx.sqliteDb
 		.query<JournalEntryRow, []>(
-			`SELECT customer_id AS customerId, seq, status, command_json AS commandJson
-			FROM journal_entries WHERE status != 'rejected' ORDER BY customer_id, seq`,
+			`SELECT customer_id AS customerId, seq, appended_at AS appendedAt, command_json AS commandJson
+			FROM journal_entries ORDER BY customer_id, seq`,
 		)
 		.all()
 		.map((row) => ({
 			customerId: row.customerId,
 			seq: Number(row.seq),
-			status: { kind: row.status },
+			appendedAt: Number(row.appendedAt),
 			command: JSON.parse(row.commandJson),
 		}));
 
@@ -79,38 +72,44 @@ export const readLastJournalSeqs = ({
 			.map(({ customerId, lastSeq }) => [customerId, Number(lastSeq)]),
 	);
 
-export const updateJournalStatus = ({
+export const readJournalWriterId = ({
+	ctx,
+}: {
+	ctx: JournalContext;
+}): string => {
+	const row = ctx.sqliteDb
+		.query<{ writerId: string }, []>(
+			"SELECT writer_id AS writerId FROM journal_meta WHERE id = 1",
+		)
+		.get();
+	if (!row) throw new Error("A journal file holds no writer id");
+	return row.writerId;
+};
+
+export const deleteJournalEntriesUpTo = ({
 	ctx,
 	customerId,
 	seq,
-	status,
 }: {
 	ctx: JournalContext;
 	customerId: string;
 	seq: number;
-	status: JournalStatus;
 }): void => {
 	ctx.sqliteDb
 		.query(
-			`UPDATE journal_entries SET status = $status, reject_code = $rejectCode
-			WHERE customer_id = $customerId AND seq = $seq`,
+			"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq <= $seq",
 		)
-		.run({ customerId, seq, ...statusToColumns(status) });
+		.run({ customerId, seq });
 };
 
-export const deleteJournalEntries = ({
+export const deleteCustomerJournalEntries = ({
 	ctx,
 	customerId,
-	seqs,
 }: {
 	ctx: JournalContext;
 	customerId: string;
-	seqs: number[];
 }): void => {
-	const deleteEntry = ctx.sqliteDb.query(
-		"DELETE FROM journal_entries WHERE customer_id = $customerId AND seq = $seq",
-	);
-	ctx.sqliteDb.transaction(() => {
-		for (const seq of seqs) deleteEntry.run({ customerId, seq });
-	})();
+	ctx.sqliteDb
+		.query("DELETE FROM journal_entries WHERE customer_id = $customerId")
+		.run({ customerId });
 };

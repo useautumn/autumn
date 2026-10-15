@@ -24,7 +24,7 @@ export const setSubject = ({
 	if (isStored)
 		ctx.journal.reconcile({
 			customerId: subject.state.identity.customerId,
-			subject,
+			atomSeqs: subject.atomSeqs ?? null,
 		});
 	return isStored;
 };

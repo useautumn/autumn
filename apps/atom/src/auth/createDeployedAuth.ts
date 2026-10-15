@@ -1,3 +1,4 @@
+import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -18,6 +19,7 @@ export const createDeployedAuth = ({
 	held,
 	now,
 	subjectPulls,
+	journalForwarder,
 }: {
 	dataDir: string;
 	tokenHash: string;
@@ -26,6 +28,7 @@ export const createDeployedAuth = ({
 	held: HeldSubjects;
 	now?: () => number;
 	subjectPulls: SubjectPulls;
+	journalForwarder: JournalForwarder;
 }): DeployedAuth => {
 	const slots = openSlots({
 		folder: dataDir,
@@ -34,6 +37,7 @@ export const createDeployedAuth = ({
 		held,
 		now,
 		pulls: { subjectPulls, tokenHash: () => tokenHash },
+		journalForwarder,
 	});
 
 	function authorize({ token }: { token: string }) {

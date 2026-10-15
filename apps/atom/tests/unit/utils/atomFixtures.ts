@@ -16,6 +16,7 @@ import {
 	identity,
 	occurredAt,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import {
 	CannotAnswerError,
 	type ForwardReason,
@@ -226,3 +227,11 @@ export const noSubjectPulls: SubjectPulls = {
 	forFolder: () => noFolderPulls,
 	stop() {},
 };
+
+/** A thread's forwarder to an Autumn that never answers, for tests not about the journal; one holding nothing retires at once. */
+export const forwardingNowhere = createJournalForwarder({
+	ctx: {
+		autumnClient: { appendTracks: () => new Promise(() => {}) },
+		logger: { warn() {} },
+	},
+});

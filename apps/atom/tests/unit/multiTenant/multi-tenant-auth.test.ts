@@ -13,6 +13,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	freshHeld,
 	noSubjectPulls,
@@ -29,6 +30,7 @@ const newDataDir = () => {
 };
 const open = ({ dataDir }: { dataDir: string }) => {
 	const auth = createMultiTenantAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
@@ -183,6 +185,7 @@ const openTwoProcesses = () => {
 	const clock = () => now;
 	const openProcess = () => {
 		const auth = createMultiTenantAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,

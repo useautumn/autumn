@@ -52,6 +52,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -170,6 +171,7 @@ const openFolder = ({ heldBudgetBytes = 64 * 1024 * 1024 } = {}) => {
 		now: () => at,
 	});
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
@@ -413,6 +415,7 @@ describe("a multi-tenant Atom", () => {
 		folders.push(dataDir);
 		const { counters, stats } = threadCounters();
 		const auth = createMultiTenantAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,

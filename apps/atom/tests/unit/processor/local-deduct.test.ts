@@ -108,7 +108,7 @@ describe("a send_event check the Atom deducts itself", () => {
 			usageEvent: { name: "messages", idempotencyKey: null, id: null },
 			idempotency: { key: "track:atom_req_1", ttlMs: 86_400_000 },
 		});
-		expect(entry?.status).toEqual({ kind: "pending" });
+		expect(journal.unsent({ limit: 10 })).toEqual([entry]);
 	});
 
 	test("skip_event journals the deduction without a usage event", async () => {

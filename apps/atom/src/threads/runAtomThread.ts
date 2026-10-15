@@ -3,6 +3,7 @@ import { openAuth } from "../auth/openAuth.js";
 import type { Auth } from "../auth/types/auth.js";
 import { getAutumnClient } from "../autumnClient/getAutumnClient.js";
 import { createAtomServer } from "../init/createAtomServer.js";
+import { createJournalForwarder } from "../journalForwarder/createJournalForwarder.js";
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
 import {
@@ -45,7 +46,16 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			logger,
 		},
 	});
-	const { auth, multiTenant, held } = openAuth({ env, owners, subjectPulls });
+	// Per thread too: a journal belongs to its slot's owner thread.
+	const journalForwarder = createJournalForwarder({
+		ctx: { autumnClient: getAutumnClient({ env }), logger },
+	});
+	const { auth, multiTenant, held } = openAuth({
+		env,
+		owners,
+		subjectPulls,
+		journalForwarder,
+	});
 	const health = {
 		bootedAt: init.bootedAt,
 		restarts: new Int32Array(init.restarts),

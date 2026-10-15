@@ -1,7 +1,9 @@
 import {
 	ATOM_KEYS_PATH,
 	ATOM_SUBJECT_READ_PATH,
+	ATOM_TRACKS_APPEND_PATH,
 	AtomKeysResponseSchema,
+	type AtomTracksAppendRequest,
 } from "@autumn/byoc";
 import { postToAutumn } from "./postToAutumn.js";
 import type { AutumnClient } from "./types/autumnClient.js";
@@ -46,6 +48,22 @@ const readSubject = async ({
 	return reply.text();
 };
 
+const appendTracks = async ({
+	ctx,
+	tokenHash,
+	...request
+}: {
+	ctx: AutumnClientContext;
+	tokenHash: string;
+} & AtomTracksAppendRequest): Promise<void> => {
+	await postToAutumn({
+		ctx,
+		path: ATOM_TRACKS_APPEND_PATH,
+		tokenHash,
+		body: request,
+	});
+};
+
 export const createAutumnClient = ({
 	autumnApiUrl,
 }: {
@@ -55,5 +73,6 @@ export const createAutumnClient = ({
 	return {
 		findInvalidKeys: (params) => findInvalidKeys({ ctx, ...params }),
 		readSubject: (params) => readSubject({ ctx, ...params }),
+		appendTracks: (params) => appendTracks({ ctx, ...params }),
 	};
 };

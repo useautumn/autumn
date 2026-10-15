@@ -7,6 +7,7 @@ import { hashToken } from "../../../src/auth/hashToken.js";
 import type { Auth } from "../../../src/auth/types/auth.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	noSubjectPulls,
 } from "../utils/atomFixtures.js";
@@ -17,6 +18,7 @@ const createAuth = () => {
 	const dataDir = mkdtempSync(join(tmpdir(), "atom-data-"));
 	directories.push(dataDir);
 	const auth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		tokenHash: hashToken({ token: "token_deployed" }),
 		slotCount: 2,

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import * as engine from "@autumn/balance-engine";
 import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
 import * as replay from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
-import { commandsSeenBy } from "../../../src/state/journal/commandsSeenBy.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
 import {
@@ -23,14 +22,10 @@ afterEach(() => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-const openSlot = ({
-	seenBy = commandsSeenBy,
-}: {
-	seenBy?: typeof commandsSeenBy;
-} = {}) => {
+const openSlot = () => {
 	const folder = createSlotFolder();
 	const open = () => {
-		const journal = openJournal({ databasePath: folder.journalPath, seenBy });
+		const journal = openJournal({ databasePath: folder.journalPath });
 		const slot = openSlotProcessor({
 			subjectsPath: folder.subjectsPath,
 			journal,
@@ -52,18 +47,26 @@ const openSlot = ({
 	};
 };
 
+/** A push of `cus_1` holding `balance`, having seen this Atom's journals up to `atomSeqs` (by writer id). */
 const pushBalance = async ({
 	processor,
 	balance,
 	readAt = 1000,
+	atomSeqs = null,
 }: {
 	processor: ReturnType<typeof openSlotProcessor>["processor"];
 	balance: number;
 	readAt?: number;
-}) =>
-	processor.setSubject(
-		subjectPushOf({ subject: storedSubjectWith({ balance, readAt }) }),
-	);
+	atomSeqs?: Record<string, number> | null;
+}) => {
+	const push = subjectPushOf({
+		subject: storedSubjectWith({ balance, readAt }),
+	});
+	return processor.setSubject({
+		customerId: push.customerId,
+		body: JSON.stringify({ ...JSON.parse(push.body), atom_seqs: atomSeqs }),
+	});
+};
 
 const remainingOf = async ({
 	processor,
@@ -92,29 +95,35 @@ describe("the derived view: Autumn's snapshot with what the Atom owes replayed o
 		expect(await remainingOf({ processor })).toBe(890);
 	});
 
-	test("view: a push that carries the entry as seen gives 890 with pending empty (reconcile seam, stubbed until PR 2)", async () => {
-		const { processor, journal } = openSlot({
-			seenBy: ({ owed }) => owed.map(({ seq }) => seq),
-		});
+	test("view: a push that carries the entry as seen gives 890 with pending empty", async () => {
+		const { processor, journal } = openSlot();
 		await pushBalance({ processor, balance: 900 });
 		await owe({ journal, value: 10 });
 
-		await pushBalance({ processor, balance: 890, readAt: 2000 });
+		await pushBalance({
+			processor,
+			balance: 890,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 1 },
+		});
 
 		expect(await remainingOf({ processor })).toBe(890);
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 	});
 
 	test("a push older than the held one is refused and pending untouched", async () => {
-		const { processor, journal } = openSlot({
-			seenBy: ({ owed }) => owed.map(({ seq }) => seq),
-		});
+		const { processor, journal } = openSlot();
 		await pushBalance({ processor, balance: 900, readAt: 2000 });
 		await owe({ journal, value: 10 });
 
-		expect(await pushBalance({ processor, balance: 500, readAt: 1000 })).toBe(
-			false,
-		);
+		expect(
+			await pushBalance({
+				processor,
+				balance: 500,
+				readAt: 1000,
+				atomSeqs: { [journal.writerId]: 1 },
+			}),
+		).toBe(false);
 
 		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
 		expect(await remainingOf({ processor })).toBe(890);
@@ -130,31 +139,12 @@ describe("the derived view: Autumn's snapshot with what the Atom owes replayed o
 		expect(await remainingOf({ processor })).toBe(890);
 	});
 
-	test("a rejected entry disappears from the view", async () => {
-		const { processor, journal } = openSlot();
-		await pushBalance({ processor, balance: 900 });
-		const entry = await owe({ journal, value: 10 });
-		expect(await remainingOf({ processor })).toBe(890);
-
-		journal.setStatus({
-			customerId: "cus_1",
-			seq: entry.seq,
-			status: { kind: "rejected", code: "insufficient_balance" },
-		});
-
-		expect(await remainingOf({ processor })).toBe(900);
-	});
-
 	test("a sent entry stays in the view until a push shows it applied", async () => {
 		const { processor, journal } = openSlot();
 		await pushBalance({ processor, balance: 900 });
 		const entry = await owe({ journal, value: 10 });
 
-		journal.setStatus({
-			customerId: "cus_1",
-			seq: entry.seq,
-			status: { kind: "sent" },
-		});
+		journal.markSent({ entries: [entry] });
 
 		expect(await remainingOf({ processor })).toBe(890);
 	});
@@ -270,7 +260,7 @@ describe("the view is incremental between pushes", () => {
 		expect(balanceOf({ ctx })).toBe(800);
 	});
 
-	test("a push in the middle folds the still-owed entries over the new copy; a rejected entry forces a full fold", async () => {
+	test("a push in the middle folds the still-owed entries over the new copy; marking them sent costs nothing", async () => {
 		const { processor, ctx, journal } = openSlot();
 		await pushBalance({ processor, balance: 1000 });
 		read({ ctx });
@@ -289,38 +279,90 @@ describe("the view is incremental between pushes", () => {
 		});
 		expect([pushed.computeTrack, balanceOf({ ctx })]).toEqual([3, 440]);
 
-		const [first] = journal.owed({ customerId: "cus_1" });
-		const rejected = await countEngineSteps(() => {
-			journal.setStatus({
-				customerId: "cus_1",
-				seq: first?.seq ?? 0,
-				status: { kind: "rejected", code: "insufficient_balance" },
-			});
+		const sent = await countEngineSteps(() => {
+			journal.markSent({ entries: [...journal.owed({ customerId: "cus_1" })] });
 			read({ ctx });
 		});
-		expect([rejected.computeTrack, balanceOf({ ctx })]).toEqual([2, 450]);
+		expect([sent.computeTrack, balanceOf({ ctx })]).toEqual([0, 440]);
 
 		const next = await countEngineSteps(async () => {
 			await owe({ journal, value: 5 });
 			read({ ctx });
 		});
-		expect([next.computeTrack, balanceOf({ ctx })]).toEqual([1, 445]);
+		expect([next.computeTrack, balanceOf({ ctx })]).toEqual([1, 435]);
 	});
 
 	test("a reconciled entry forces a full fold over what is still owed", async () => {
-		const { processor, ctx, journal } = openSlot({
-			seenBy: ({ owed }) => owed.slice(0, 1).map(({ seq }) => seq),
-		});
+		const { processor, ctx, journal } = openSlot();
 		await pushBalance({ processor, balance: 1000 });
 		await owe({ journal, value: 10 });
 		await owe({ journal, value: 20 });
 		read({ ctx });
 
 		const steps = await countEngineSteps(async () => {
-			await pushBalance({ processor, balance: 990, readAt: 2000 });
+			await pushBalance({
+				processor,
+				balance: 990,
+				readAt: 2000,
+				atomSeqs: { [journal.writerId]: 1 },
+			});
 			read({ ctx });
 		});
 
 		expect([steps.computeTrack, balanceOf({ ctx })]).toEqual([1, 970]);
+	});
+});
+
+describe("reconciling on push: a push says how far it has seen this Atom's journal", () => {
+	test("a push that has seen seq from this journal's writer drops the entry, and the view equals the push", async () => {
+		const { processor, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+		await owe({ journal, value: 20 });
+
+		await pushBalance({
+			processor,
+			balance: 970,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 2 },
+		});
+
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
+		expect(await remainingOf({ processor })).toBe(970);
+	});
+
+	test("a push before the reply: the view is the push plus the entries it has not seen", async () => {
+		const { processor, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+		await owe({ journal, value: 20 });
+
+		await pushBalance({
+			processor,
+			balance: 990,
+			readAt: 2000,
+			atomSeqs: { [journal.writerId]: 1 },
+		});
+
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[2],
+		);
+		expect(await remainingOf({ processor })).toBe(970);
+	});
+
+	test("a push that has seen none of this Atom's tracks drops nothing", async () => {
+		const { processor, journal } = openSlot();
+		await pushBalance({ processor, balance: 1000 });
+		await owe({ journal, value: 10 });
+
+		await pushBalance({
+			processor,
+			balance: 1000,
+			readAt: 2000,
+			atomSeqs: null,
+		});
+
+		expect(journal.owed({ customerId: "cus_1" })).toHaveLength(1);
+		expect(await remainingOf({ processor })).toBe(990);
 	});
 });

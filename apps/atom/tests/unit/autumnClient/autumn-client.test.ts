@@ -8,10 +8,13 @@ import {
 	ATOM_KEYS_PATH,
 	ATOM_SUBJECT_READ_PATH,
 	ATOM_TOKEN_HASH_HEADER,
+	ATOM_TRACKS_APPEND_PATH,
 } from "@autumn/byoc";
+import { createTrackCommand } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { AutumnClientError } from "../../../src/autumnClient/autumnClientError.js";
 import { createAutumnClient } from "../../../src/autumnClient/createAutumnClient.js";
 
+const appended: unknown[] = [];
 const autumn = Bun.serve({
 	hostname: "127.0.0.1",
 	port: 0,
@@ -20,6 +23,10 @@ const autumn = Bun.serve({
 		if (request.headers.get(ATOM_TOKEN_HASH_HEADER) !== "hash_folder")
 			return Response.json({ code: "atom_unknown" }, { status: 401 });
 		const body = await request.json();
+		if (path === ATOM_TRACKS_APPEND_PATH) {
+			appended.push(body);
+			return new Response(null, { status: 204 });
+		}
 		if (path === ATOM_KEYS_PATH)
 			return Response.json({ invalid_key_hashes: body.key_hashes.slice(1) });
 		if (path !== ATOM_SUBJECT_READ_PATH)
@@ -51,6 +58,20 @@ test("readSubject returns Autumn's body as text, for the entity it names", async
 			entityId: "ent_1",
 		}),
 	).toBe('{"entity_id":"ent_1"}');
+});
+
+test("appendTracks posts the journal's writer id and tracks, and resolves on Autumn's 204", async () => {
+	const tracks = [
+		{ seq: 1, command: createTrackCommand({ commandId: "atom_req_1" }) },
+	];
+
+	await client.appendTracks({
+		tokenHash: "hash_folder",
+		writer: "w_1",
+		tracks,
+	});
+
+	expect(appended).toEqual([{ writer: "w_1", tracks }]);
 });
 
 test("findInvalidKeys returns the hashes Autumn names invalid", async () => {

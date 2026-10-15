@@ -23,6 +23,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noSubjectPulls,
@@ -67,6 +68,7 @@ export const createReplica = ({
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const auth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		tokenHash: TOKEN_HASH,
 		slotCount: SLOT_COUNT,
