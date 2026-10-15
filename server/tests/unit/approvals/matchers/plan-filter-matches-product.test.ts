@@ -34,4 +34,17 @@ describe("planFilterMatchesProduct: price and item", () => {
 			}),
 		).not.toThrow();
 	});
+
+	test("item feature_id reads the joined feature, not the optional copied id", () => {
+		const { feature_id: _, ...messagesWithoutCopiedId } =
+			plans.free.entitlements[0];
+		const product = { ...plans.free, entitlements: [messagesWithoutCopiedId] };
+
+		expect(
+			planFilterMatchesProduct({
+				filter: { item: { $some: { feature_id: "messages" } } },
+				product,
+			}),
+		).toBe(true);
+	});
 });
