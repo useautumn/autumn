@@ -5,7 +5,8 @@ import {
 import { and, eq, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Ids of rules naming any of `subjects`; served by `idx_approval_rule_subjects_lookup`. */
+/** Ids of rules naming any of `subjects`; served by `idx_approval_rule_subjects_lookup`.
+ * No DISTINCT: it's an IN subquery, and DISTINCT steers the planner to the primary key. */
 export const selectRuleIdsForSubjects = ({
 	db,
 	orgId,
@@ -16,7 +17,7 @@ export const selectRuleIdsForSubjects = ({
 	subjects: ApprovalRuleSubjectRow[];
 }) =>
 	db
-		.selectDistinct({ rule_id: approvalRuleSubjects.rule_id })
+		.select({ rule_id: approvalRuleSubjects.rule_id })
 		.from(approvalRuleSubjects)
 		.where(
 			and(
