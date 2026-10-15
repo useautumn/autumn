@@ -15,7 +15,10 @@ export const CustomerEntitlementFiltersSchema = z.object({
 });
 
 export const EntityBalanceSchema = z.object({
-	id: z.string(),
+	id: z.preprocess(
+		(val) => (typeof val === "number" ? String(val) : val),
+		z.string(),
+	),
 	// Legacy unlimited rows stored null: the balance tracks nothing, so it reads as 0.
 	balance: z
 		.number()

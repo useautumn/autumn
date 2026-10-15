@@ -7,6 +7,10 @@ import type {
 import { isAiCreditSystem } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import {
+	effectiveSchemaToOverride,
+	overrideToEffectiveSchema,
+} from "../utils/creditOverrideSchema";
 
 export const useFeatureOverride = () => {
 	const { item, setItem } = useProductItemContext();
@@ -35,18 +39,22 @@ export const useFeatureOverride = () => {
 		override,
 		isAi: isAiCreditSystem(creditSystem?.type),
 		hasOverride: override != null,
-		schema: override?.schema ?? [],
+		schema: overrideToEffectiveSchema({
+			override: override?.schema ?? [],
+			creditSystem,
+		}),
 		markups: override?.markups,
 
-		setSchema: (schema: CreditSchemaItem[] | null) =>
-			setOverride(schema === null ? null : { schema }),
+		setSchema: (schema: CreditSchemaItem[]) => {
+			const rows = effectiveSchemaToOverride({
+				schema,
+				catalog: creditSystem?.config?.schema ?? [],
+			});
+			setOverride(rows.length > 0 ? { schema: rows } : null);
+		},
 		setMarkups: (markups: FeatureMarkupsOverride | null) =>
 			setOverride(markups === null ? null : { markups }),
 
-		seedSchema: () =>
-			setOverride({
-				schema: structuredClone(creditSystem?.config?.schema ?? []),
-			}),
 		seedMarkups: () =>
 			setOverride({
 				markups: {

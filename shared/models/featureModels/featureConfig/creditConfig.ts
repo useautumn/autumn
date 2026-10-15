@@ -87,6 +87,18 @@ export const CreditSchemaItemSchema = z.union([
 	GraduatedCreditSchemaItemSchema,
 ]);
 
+/** Plan-item override row that removes a feature from the credit system. */
+export const ExcludedCreditSchemaItemSchema = z.object({
+	metered_feature_id: z.string(),
+	excluded: z.literal(true),
+});
+
+export const CreditSchemaOverrideItemSchema = z.union([
+	FlatCreditSchemaItemSchema,
+	GraduatedCreditSchemaItemSchema,
+	ExcludedCreditSchemaItemSchema,
+]);
+
 const MarkupEntrySchema = z.object({
 	markup: z.number().min(-100), // percentage markup, e.g. 20 for 20%, -100 for free
 });
@@ -139,7 +151,7 @@ export const FeatureMarkupsOverrideSchema = z.strictObject({
 });
 
 export const FeatureConfigOverrideSchema = z.strictObject({
-	schema: z.array(CreditSchemaItemSchema).optional(),
+	schema: z.array(CreditSchemaOverrideItemSchema).optional(),
 	markups: FeatureMarkupsOverrideSchema.optional(),
 });
 
@@ -149,6 +161,18 @@ export type FeatureMarkupsOverride = z.infer<
 >;
 export type FeatureConfigOverride = z.infer<typeof FeatureConfigOverrideSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
+export type ExcludedCreditSchemaItem = z.infer<
+	typeof ExcludedCreditSchemaItemSchema
+>;
+export type CreditSchemaOverrideItem = z.infer<
+	typeof CreditSchemaOverrideItemSchema
+>;
+
+/** Works on API and DB override rows: an excluded row has the same shape in both. */
+export const isExcludedCreditSchemaItem = <Row extends object>(
+	item: Row | ExcludedCreditSchemaItem,
+): item is ExcludedCreditSchemaItem =>
+	"excluded" in item && item.excluded === true;
 export type CreditDimension = z.infer<typeof CreditDimensionSchema>;
 export type CreditMultiplier = z.infer<typeof CreditMultiplierSchema>;
 export type CreditTier = z.infer<typeof CreditTierSchema>;
