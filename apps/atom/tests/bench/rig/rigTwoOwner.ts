@@ -20,6 +20,8 @@ export type SwapWindow = {
 	from: number;
 	to: number;
 	startedAt: number | null;
+	/** The join (peer → this replica) stays legal until this replica's next swap: a sparse customer's first request after the restart can come after `to`. */
+	joinUntil: number;
 };
 
 const WINDOW_TAIL_MS = 15_000;
@@ -64,7 +66,15 @@ export const swapWindowsOf = ({ marks }: { marks: Mark[] }): SwapWindow[] =>
 					: [],
 			),
 		)
-		.sort((x, y) => x.from - y.from);
+		.sort((x, y) => x.from - y.from)
+		.map((window, index, sorted) => ({
+			...window,
+			joinUntil: Math.max(
+				window.to,
+				sorted.slice(index + 1).find((next) => next.replica === window.replica)
+					?.from ?? Number.POSITIVE_INFINITY,
+			),
+		}));
 
 type Switch = {
 	customerId: string;
@@ -126,7 +136,7 @@ export const detectTwoOwner = ({
 			const sw = { customerId, at, from, to, fromWriter, toWriter };
 			const inside = windows
 				.map((window, index) => ({ window, index }))
-				.filter(({ window }) => at >= window.from && at <= window.to);
+				.filter(({ window }) => at >= window.from && at <= window.joinUntil);
 			if (inside.length === 0) {
 				outside.events++;
 				outside.customers.add(customerId);
@@ -137,7 +147,12 @@ export const detectTwoOwner = ({
 				(perWindow[index] as { switches: number }).switches++;
 			const legal = inside.find(({ window, index }) => {
 				const peer = window.replica === "a" ? "b" : "a";
-				if (expect[index] === 0 && from === window.replica && to === peer) {
+				if (
+					expect[index] === 0 &&
+					at <= window.to &&
+					from === window.replica &&
+					to === peer
+				) {
 					expect[index] = 1;
 					return true;
 				}

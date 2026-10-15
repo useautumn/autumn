@@ -21,7 +21,8 @@
 		"rig:report": "bun tests/bench/rig/rigReport.ts",
 		"rig:roll": "bun tests/bench/rig/rigRoll.ts",
 		"rig:rollload": "bun tests/bench/rig/rigRollLoad.ts",
-		"rig:rollreport": "bun tests/bench/rig/rigRollReport.ts"
+		"rig:rollreport": "bun tests/bench/rig/rigRollReport.ts",
+		"rig:twoowner": "bun tests/bench/rig/rigTwoOwnerRecompute.ts"
 	},
 	"dependencies": {
 		"@alienplatform/bindings": "3.3.28",
