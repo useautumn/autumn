@@ -213,7 +213,11 @@ const reported = new Map<
 	number,
 	{ counts: Record<OwnerClass, RollCounts>; from: number }
 >();
-const keys = { allowed: [] as string[], ambiguous: [] as string[] };
+const keys = {
+	allowed: [] as string[],
+	ambiguous: [] as string[],
+	forwarded: [] as string[],
+};
 const receive = (line: {
 	type: string;
 	second?: number;
@@ -221,10 +225,12 @@ const receive = (line: {
 	b?: RollCounts;
 	allowed?: string[];
 	ambiguous?: string[];
+	forwarded?: string[];
 }) => {
 	if (line.type === "keys") {
 		keys.allowed.push(...(line.allowed ?? []));
 		keys.ambiguous.push(...(line.ambiguous ?? []));
+		keys.forwarded.push(...(line.forwarded ?? []));
 		return;
 	}
 	if (line.type !== "second" || line.second === undefined) return;
@@ -291,6 +297,13 @@ const unexpected = [...appliedCount.keys()].filter(
 	(key) => !allowed.has(key) && !ambiguous.has(key),
 );
 const ambiguousApplied = keys.ambiguous.filter((key) => appliedCount.has(key));
+const forwarded = new Set(keys.forwarded);
+/** A doubled key one send of which the API took: the stub has no worker claim, so the Atom's hand-in applies it again. */
+const doubledAfterForward = doubled.filter((key) => forwarded.has(key));
+writeFileSync(
+	join(outDir, "doubled-keys.json"),
+	JSON.stringify({ doubled, afterForward: doubledAfterForward }),
+);
 const summary = {
 	marks,
 	p1: {
@@ -298,6 +311,7 @@ const summary = {
 		applied: appliedCount.size,
 		lost: lost.length,
 		doubled: doubled.length,
+		doubledAfterForward: doubledAfterForward.length,
 		unexpected: unexpected.length,
 		ambiguous: ambiguous.size,
 		ambiguousApplied: ambiguousApplied.length,

@@ -63,6 +63,8 @@ const lastKeyOf = new Map<string, string>();
 /** How each key's first send ended, so a replay deducted twice names its cause (bench diagnosis). */
 const firstOutcomeOf = new Map<string, Record<string, unknown>>();
 const doublesFile = process.env.RIG_REPLAY_DOUBLES_FILE;
+/** Keys any send of which the Atom left to the API: the stub claims nothing, so a later Atom hand-in applies them again. */
+const forwardedKeys = new Set<string>();
 
 const send = async ({
 	customerId,
@@ -108,7 +110,8 @@ const send = async ({
 		if (isReplay) {
 			const first = firstOutcomeOf.get(key as string);
 			// A first send shed or refused never deducted, so its replay is the caller's first deduction.
-			const firstDeducted = first === undefined || first.allowed === true;
+			// A first send that timed out or never answered may or may not have deducted: not counted as twice.
+			const firstDeducted = first?.allowed === true;
 			const doubled = reply.ok && body?.allowed && firstDeducted;
 			add(
 				into.failedStatus,
@@ -147,6 +150,7 @@ const send = async ({
 		const proxied = reply.headers.get("x-atom-proxied");
 		if (proxied) add(into.proxied, proxied);
 		const forwarded = reply.headers.get("x-atom-forwarded");
+		if (forwarded && key) forwardedKeys.add(key);
 		if (forwarded) {
 			into.forwarded++;
 			add(into.forwardReasons, forwarded);
@@ -243,6 +247,8 @@ for (const second of [...seconds.keys()].sort((x, y) => x - y)) {
 	const held = seconds.get(second);
 	if (held) console.log(JSON.stringify({ type: "second", second, ...held }));
 }
-console.log(JSON.stringify({ type: "keys", ...keys }));
+console.log(
+	JSON.stringify({ type: "keys", ...keys, forwarded: [...forwardedKeys] }),
+);
 console.log(JSON.stringify({ type: "done" }));
 process.exit(0);
