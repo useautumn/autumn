@@ -279,6 +279,7 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 
 describe("stored design cases open in the editor", () => {
 	test.each([
+		["enterprise trials", "billing_change", rules.enterpriseTrials()],
 		["recurring discounts", "billing_change", rules.recurringDiscounts()],
 		["support cancellations", "billing_cancel", rules.supportCancellations()],
 		[
