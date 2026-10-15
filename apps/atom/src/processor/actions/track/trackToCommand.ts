@@ -3,6 +3,7 @@ import {
 	lockParamsToTrackLock,
 	type TrackCommand,
 } from "@autumn/balance-engine";
+import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import {
 	type CheckLockParams,
 	FeatureType,
@@ -12,12 +13,9 @@ import {
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 
-/** As long as the API holds a track's body key, so a command sent again inside it is applied once. */
-const TRACK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
-
-/** The worker's claim on the caller's key; a keyless caller claims nothing, and the seq alone refuses a resend. */
+/** The worker's claim on the caller's key, for as long as the Atom holds it; a keyless caller claims nothing, and the seq alone refuses a resend. */
 const claimOf = ({ key }: { key: string | null }) =>
-	key ? { idempotency: { key, ttlMs: TRACK_IDEMPOTENCY_TTL_MS } } : {};
+	key ? { idempotency: { key, ttlMs: ATOM_IDEMPOTENCY_TTL_MS } } : {};
 
 /**
  * The API's own track of the engine's check, as the balance worker applies it: what fits (`cap`), its usage event and its

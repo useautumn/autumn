@@ -1,4 +1,8 @@
 export {
+	ATOM_FORWARDED_REQUEST_HEADER,
+	ATOM_IDEMPOTENCY_TTL_MS,
+} from "./atomIdempotency/atomIdempotencyContract.js";
+export {
 	ATOM_KEYS_PATH,
 	ATOM_TOKEN_HASH_HEADER,
 	AtomKeysRequestSchema,

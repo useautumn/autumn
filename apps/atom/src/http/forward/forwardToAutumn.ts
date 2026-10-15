@@ -1,3 +1,4 @@
+import { ATOM_FORWARDED_REQUEST_HEADER } from "@autumn/byoc";
 import type { Context } from "hono";
 import type { ForwardReason } from "../../lib/forward/cannotAnswerError.js";
 import { ATOM_TOKEN_HEADER } from "../middlewares/atomTokenMiddleware.js";
@@ -36,6 +37,8 @@ export const forwardToAutumn = async ({
 		return await forwardRequest({
 			context,
 			target,
+			// Named to the API, which then holds the caller's key for the Atom's TTL rather than the org's.
+			headers: { [ATOM_FORWARDED_REQUEST_HEADER]: reason },
 			// The Atom token is Atom's alone and never travels on.
 			heldBack: [ATOM_TOKEN_HEADER],
 			replyHeaders: { [FORWARDED_HEADER]: reason },

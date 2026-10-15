@@ -1,3 +1,4 @@
+import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import {
 	encodeJournalEntries,
@@ -23,7 +24,7 @@ export const MAX_UNSENT_AGE_MS = 5 * 60_000;
 export const MAX_UNSENT_PER_THREAD = 50_000;
 
 /** A caller's key is held this long after its append; past it the row is only waiting for the prune. */
-export const KEY_ROW_TTL_MS = 90 * 60_000;
+export const KEY_ROW_TTL_MS = ATOM_IDEMPOTENCY_TTL_MS;
 const PRUNE_EVERY_MS = 60_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
