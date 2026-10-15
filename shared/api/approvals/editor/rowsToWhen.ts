@@ -34,7 +34,7 @@ const rowIssue = ({
 	pinned: boolean;
 }) => {
 	const fields: Record<string, readonly string[]> = EDITOR_FIELDS[area];
-	if (!Object.hasOwn(fields, row.field)) {
+	if (!Object.keys(fields).includes(row.field)) {
 		return "This condition isn't available for these actions.";
 	}
 	if (!fields[row.field].includes(row.operator)) {
