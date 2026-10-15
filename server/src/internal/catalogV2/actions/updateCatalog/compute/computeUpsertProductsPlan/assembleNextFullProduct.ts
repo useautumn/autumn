@@ -19,12 +19,12 @@ export const assembleNextFullProduct = ({
 	const prices = entitlementPricesPlan
 		? entitlementPricesPlan.projected.prices
 		: (currentFullProduct?.prices ?? []);
-	const entitlements = entitlementPricesPlan
-		? getEntsWithFeature({
-				ents: entitlementPricesPlan.projected.entitlements,
-				features,
-			})
-		: (currentFullProduct?.entitlements ?? []);
+	const entitlements = getEntsWithFeature({
+		ents: entitlementPricesPlan
+			? entitlementPricesPlan.projected.entitlements
+			: (currentFullProduct?.entitlements ?? []),
+		features,
+	});
 
 	return {
 		...product,
