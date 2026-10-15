@@ -22,6 +22,7 @@ const CASES: {
 	name: string;
 	params: CreateApprovalRuleParams;
 	rows: RuleRow[][];
+	pinned?: string[];
 }[] = [
 	{
 		name: "1 · Free trials only on Enterprise, under 2 months",
@@ -138,6 +139,7 @@ const CASES: {
 			enabled: true,
 		},
 		rows: [[{ field: "included_grant", operator: "lte", values: ["50"] }]],
+		pinned: ["ai_credits"],
 	},
 	{
 		name: "Checkout links on Pro or Team",
@@ -194,26 +196,17 @@ const storedRule = (params: CreateApprovalRuleParams): ApprovalRule => ({
 });
 
 describe("complex rules round-trip through the editor", () => {
-	test.each(CASES)("$name", ({ params, rows }) => {
+	test.each(CASES)("$name", ({ params, rows, pinned }) => {
 		const opened = ruleToEditorValues({ rule: storedRule(params) });
 		expect(opened.editable).toBe(true);
 		const shown = opened.values.groups.map((group) =>
 			group.rules.map(({ id: _id, ...row }) => row),
 		);
 		expect(shown).toEqual(rows);
+		expect(opened.values.pinned?.values ?? null).toEqual(pinned ?? null);
 		expect(editorValuesToParams({ values: opened.values })).toEqual({
 			ok: true,
 			params,
-		});
-	});
-
-	test("case 4 pins the Feature row above the groups", () => {
-		const [, , , john] = CASES;
-		const { values } = ruleToEditorValues({ rule: storedRule(john.params) });
-		expect(values.pinned).toEqual({
-			field: "feature",
-			operator: "is",
-			values: ["ai_credits"],
 		});
 	});
 });

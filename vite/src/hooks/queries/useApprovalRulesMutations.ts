@@ -1,11 +1,23 @@
-import type { CreateApprovalRuleParams } from "@autumn/shared";
+import type {
+	ApprovalRuleIssue,
+	CreateApprovalRuleParams,
+} from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { getBackendErr } from "@/utils/genUtils";
-import { invalidRuleIssues } from "@/views/settings/sections/approvals/editor/invalidRuleIssues";
 import { useApprovalRulesApi } from "./useApprovalRulesApi";
 import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
+
+/** The server's 400 `invalid_approval_rule` issues, or null for any other error. */
+export const invalidRuleIssues = ({ error }: { error: unknown }) => {
+	if (!(error instanceof AxiosError)) return null;
+	const body = error.response?.data as
+		| { code?: string; issues?: ApprovalRuleIssue[] }
+		| undefined;
+	return body?.code === "invalid_approval_rule" ? (body.issues ?? []) : null;
+};
 
 const useInvalidateApprovalRules = () => {
 	const queryClient = useQueryClient();
