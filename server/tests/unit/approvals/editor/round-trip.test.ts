@@ -145,10 +145,24 @@ describe("groups", () => {
 			[],
 			[{ field: "total", operator: "lte", value: 0 }],
 		];
-		expect(stored({ area: "billing_change", groups })).toEqual({
-			$or: [{ paid: true }, { total: { $lte: 0 } }],
+		const when = stored({ area: "billing_change", groups });
+		expect(when).toEqual({ $or: [{ paid: true }, { total: { $lte: 0 } }] });
+		expectValid("billing_change", when);
+	});
+
+	test("one non-empty group is stored without an $or", () => {
+		const groups: EditorGroup[] = [[], [sampleRow("paid", "is")], []];
+		expect(stored({ area: "billing_change", groups })).toEqual({ paid: true });
+		expect(stored({ area: "billing_change", groups: [[], []] })).toBeNull();
+	});
+
+	test("Custom pricing stores `customized`, never the plan filter's `custom`", () => {
+		const when = stored({
+			area: "billing_change",
+			groups: [[sampleRow("customized", "is")]],
 		});
-		expect(stored({ area: "billing_change", groups: [[]] })).toBeNull();
+		expect(when).toEqual({ incoming: { $every: { customized: true } } });
+		expectValid("billing_change", when);
 	});
 });
 
