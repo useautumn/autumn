@@ -79,10 +79,17 @@ const lockSql = ({ document }: { document: string }): SQL => sql`
 	),
 	runs_locked AS (
 		SELECT r.item_id FROM migration_item_runs r
-		WHERE r.item_kind = 'customer' AND r.dry_run = false
-			AND (r.migration_internal_id, r.migration_run_id, r.item_id) IN (
-				SELECT migration_internal_id, migration_run_id, internal_customer_id FROM ops
-			)
+		WHERE r.migration_item_run_id IN (
+			SELECT run.migration_item_run_id FROM ops o
+			CROSS JOIN LATERAL (
+				SELECT r2.migration_item_run_id FROM migration_item_runs r2
+				WHERE r2.migration_internal_id = o.migration_internal_id
+					AND r2.item_kind = 'customer'
+					AND r2.item_id = o.internal_customer_id
+					AND r2.dry_run = false
+					AND r2.migration_run_id = o.migration_run_id
+			) AS run
+		)
 		ORDER BY r.item_id
 		FOR UPDATE
 	)
@@ -125,11 +132,16 @@ const applySql = ({ document }: { document: string }): SQL => sql`
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 	),
 	runs_open AS (
-		SELECT r.item_id FROM migration_item_runs r
-		WHERE r.item_kind = 'customer' AND r.dry_run = false AND r.status = 'running'
-			AND (r.migration_internal_id, r.migration_run_id, r.item_id) IN (
-				SELECT migration_internal_id, migration_run_id, internal_customer_id FROM ops
-			)
+		SELECT run.item_id, run.migration_item_run_id FROM ops o
+		CROSS JOIN LATERAL (
+			SELECT r.item_id, r.migration_item_run_id FROM migration_item_runs r
+			WHERE r.migration_internal_id = o.migration_internal_id
+				AND r.item_kind = 'customer'
+				AND r.item_id = o.internal_customer_id
+				AND r.dry_run = false
+				AND r.migration_run_id = o.migration_run_id
+				AND r.status = 'running'
+		) AS run
 	),
 	passing AS (
 		SELECT internal_customer_id FROM checked
@@ -199,14 +211,11 @@ const applySql = ({ document }: { document: string }): SQL => sql`
 			status = 'succeeded',
 			skip_reason = NULL,
 			updated_at = floor(extract(epoch from clock_timestamp()) * 1000)
-		FROM (
-			SELECT DISTINCT migration_internal_id, migration_run_id, internal_customer_id FROM ops
-			WHERE internal_customer_id IN (SELECT internal_customer_id FROM applying)
-		) AS a
-		WHERE r.migration_internal_id = a.migration_internal_id
-			AND r.migration_run_id = a.migration_run_id
-			AND r.item_kind = 'customer' AND r.dry_run = false AND r.status = 'running'
-			AND r.item_id = a.internal_customer_id
+		WHERE r.migration_item_run_id IN (
+			SELECT migration_item_run_id FROM runs_open
+			WHERE item_id IN (SELECT internal_customer_id FROM applying)
+		)
+			AND r.status = 'running'
 		RETURNING r.item_id
 	)
 	SELECT
@@ -340,11 +349,19 @@ export const markMigrationItemRunsSucceeded = async ({
 				status = 'succeeded',
 				skip_reason = NULL,
 				updated_at = floor(extract(epoch from clock_timestamp()) * 1000)
-			FROM jsonb_to_recordset(${document}::text::jsonb) AS a(migration_internal_id text, migration_run_id text, item_id text)
-			WHERE r.migration_internal_id = a.migration_internal_id
-				AND r.migration_run_id = a.migration_run_id
-				AND r.item_kind = 'customer' AND r.dry_run = false AND r.status = 'running'
-				AND r.item_id = a.item_id
+			WHERE r.migration_item_run_id IN (
+				SELECT run.migration_item_run_id
+				FROM jsonb_to_recordset(${document}::text::jsonb) AS a(migration_internal_id text, migration_run_id text, item_id text)
+				CROSS JOIN LATERAL (
+					SELECT r2.migration_item_run_id FROM migration_item_runs r2
+					WHERE r2.migration_internal_id = a.migration_internal_id
+						AND r2.item_kind = 'customer'
+						AND r2.item_id = a.item_id
+						AND r2.dry_run = false
+						AND r2.migration_run_id = a.migration_run_id
+				) AS run
+			)
+				AND r.status = 'running'
 			RETURNING 1
 		)
 		SELECT count(*) AS marked FROM marked
@@ -373,13 +390,17 @@ export const readOpenMigrationItemRuns = async ({
 		})),
 	);
 	const { rows } = await ctx.db.execute(sql`
-		SELECT r.migration_internal_id, r.migration_run_id, r.item_id
-		FROM migration_item_runs r
-		JOIN jsonb_to_recordset(${document}::text::jsonb) AS a(migration_internal_id text, migration_run_id text, item_id text)
-			ON r.migration_internal_id = a.migration_internal_id
-			AND r.migration_run_id = a.migration_run_id
-			AND r.item_id = a.item_id
-		WHERE r.item_kind = 'customer' AND r.dry_run = false AND r.status = 'running'
+		SELECT run.migration_internal_id, run.migration_run_id, run.item_id
+		FROM jsonb_to_recordset(${document}::text::jsonb) AS a(migration_internal_id text, migration_run_id text, item_id text)
+		CROSS JOIN LATERAL (
+			SELECT r.migration_internal_id, r.migration_run_id, r.item_id FROM migration_item_runs r
+			WHERE r.migration_internal_id = a.migration_internal_id
+				AND r.item_kind = 'customer'
+				AND r.item_id = a.item_id
+				AND r.dry_run = false
+				AND r.migration_run_id = a.migration_run_id
+				AND r.status = 'running'
+		) AS run
 	`);
 	return new Set(
 		(
