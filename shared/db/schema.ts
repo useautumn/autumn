@@ -139,6 +139,7 @@ import {
 	invitation,
 	jwks,
 	member,
+	organizationRole,
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
@@ -207,6 +208,7 @@ export {
 	// OAuth Provider
 	jwks,
 	member,
+	organizationRole,
 	memberRelations,
 	metadata,
 	migrationErrorRelations,

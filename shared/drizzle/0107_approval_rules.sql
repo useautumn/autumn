@@ -50,10 +50,24 @@ CREATE TABLE "approval_rules" (
 	CONSTRAINT "approval_rules_live_only" CHECK ("approval_rules"."env" = 'live')
 );
 --> statement-breakpoint
+CREATE TABLE "organization_role" (
+	"id" text PRIMARY KEY NOT NULL,
+	"organization_id" text NOT NULL,
+	"role" text NOT NULL,
+	"permission" text NOT NULL,
+	"label" text NOT NULL,
+	"access" jsonb NOT NULL,
+	"created_at" timestamp with time zone NOT NULL,
+	"updated_at" timestamp with time zone,
+	CONSTRAINT "organization_role_org_role_key" UNIQUE("organization_id","role")
+);
+--> statement-breakpoint
+ALTER TABLE "organization_role" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "approval_decisions" ADD CONSTRAINT "approval_decisions_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "approval_rule_subjects" ADD CONSTRAINT "approval_rule_subjects_rule_id_fkey" FOREIGN KEY ("rule_id") REFERENCES "public"."approval_rules"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "approval_rule_versions" ADD CONSTRAINT "approval_rule_versions_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "approval_rules" ADD CONSTRAINT "approval_rules_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "organization_role" ADD CONSTRAINT "organization_role_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_approval_decisions_org_env_created" ON "approval_decisions" USING btree ("org_id","env","created_at");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_approval_rule_subjects_lookup" ON "approval_rule_subjects" USING btree ("org_id","subject_type","subject_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_approval_rules_org_env" ON "approval_rules" USING btree ("org_id","env");
