@@ -88,6 +88,7 @@ const valueInputFor = (field: EditorField) => {
 	const input = INPUTS[field];
 	if (input) return input;
 	const kind = kindOf(field);
+	if (kind === "boolean") return "yes_no";
 	return kind === "id" ? field : kind;
 };
 

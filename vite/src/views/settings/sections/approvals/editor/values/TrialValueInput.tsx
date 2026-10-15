@@ -24,9 +24,9 @@ export const TrialValueInput = ({
 }: FilterValueInputProps) => {
 	const [length = "", unit = DEFAULT_TRIAL_UNIT] = values;
 	return (
-		<div className={cn("flex gap-2", className)}>
+		<div className={cn("flex min-w-0 gap-2", className)}>
 			<NumberValueInput
-				className="w-20"
+				className="w-14 shrink-0"
 				values={length ? [length] : []}
 				onChange={([next = ""]) => onChange([next, unit])}
 			/>
@@ -35,7 +35,7 @@ export const TrialValueInput = ({
 				onValueChange={(next) => onChange([length, String(next)])}
 				items={UNITS}
 			>
-				<SelectTrigger className="h-8 flex-1 px-3 text-sm">
+				<SelectTrigger className="h-8 min-w-0 flex-1 px-3 text-sm">
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>

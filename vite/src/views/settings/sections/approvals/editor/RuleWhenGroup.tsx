@@ -1,8 +1,9 @@
 import type { EditorRowIssue } from "@autumn/shared";
 import { FilterRow } from "@/components/filters/FilterRow";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
+import type { RuleRowItem } from "./ruleEditorValues";
 import type { RuleFieldRegistry } from "./ruleFieldRegistry";
-import { fitOperatorToValues, type RuleRow } from "./ruleRowCodec";
+import { fitOperatorToValues } from "./ruleRowCodec";
 import { RULE_VALUE_INPUTS } from "./values/ruleValueInputs";
 
 import { WhenHeader } from "./WhenHeader";
@@ -15,13 +16,16 @@ export const RuleWhenGroup = ({
 	issues,
 	onChange,
 	onRemove,
+	followsPinned = false,
 }: {
 	registry: RuleFieldRegistry;
 	label?: string;
-	rows: RuleRow[];
+	rows: RuleRowItem[];
 	issues: EditorRowIssue[];
-	onChange: (rows: RuleRow[]) => void;
+	onChange: (rows: RuleRowItem[]) => void;
 	onRemove?: () => void;
+	/** The pinned Feature row sits above, so the first row also reads "And". */
+	followsPinned?: boolean;
 }) => (
 	<div className="flex flex-col gap-2">
 		{label && (
@@ -31,12 +35,12 @@ export const RuleWhenGroup = ({
 			</div>
 		)}
 		{rows.map((row, index) => (
-			<div key={`${index}-${row.field}`} className="flex flex-col gap-1">
+			<div key={row.id} className="flex flex-col gap-1">
 				<FilterRow
 					registry={registry}
 					valueInputs={RULE_VALUE_INPUTS}
 					rule={row}
-					connector={index > 0 ? "And" : undefined}
+					connector={index > 0 || followsPinned ? "And" : undefined}
 					onChange={(next) => {
 						const operators = registry
 							.getField(next.field)

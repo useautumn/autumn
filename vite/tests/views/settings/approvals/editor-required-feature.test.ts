@@ -68,8 +68,14 @@ describe("editor required Feature", () => {
 			pinned: { field: "feature", operator: "is", values: ["messages"] },
 			groups: [
 				{
+					id: "g1",
 					rules: [
-						{ field: "included_grant", operator: "lte", values: ["100"] },
+						{
+							id: "r1",
+							field: "included_grant",
+							operator: "lte",
+							values: ["100"],
+						},
 					],
 				},
 			],
@@ -87,14 +93,21 @@ describe("editor required Feature", () => {
 			pinned: { field: "feature", operator: "is", values: ["messages"] },
 			groups: [
 				{
+					id: "g2",
 					rules: [
-						{ field: "included_grant", operator: "lte", values: ["100"] },
+						{
+							id: "r2",
+							field: "included_grant",
+							operator: "lte",
+							values: ["100"],
+						},
 					],
 				},
 				{
+					id: "g3",
 					rules: [
-						{ field: "unlimited", operator: "is", values: ["true"] },
-						{ field: "included_grant", operator: "lte", values: [] },
+						{ id: "r3", field: "unlimited", operator: "is", values: ["true"] },
+						{ id: "r4", field: "included_grant", operator: "lte", values: [] },
 					],
 				},
 			],

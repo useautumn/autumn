@@ -181,7 +181,10 @@ describe("complex rules round-trip through the editor", () => {
 	test.each(CASES)("$name", ({ params, rows }) => {
 		const opened = ruleToEditorValues({ rule: storedRule(params) });
 		expect(opened.editable).toBe(true);
-		expect(opened.values.groups.map((group) => group.rules)).toEqual(rows);
+		const shown = opened.values.groups.map((group) =>
+			group.rules.map(({ id: _id, ...row }) => row),
+		);
+		expect(shown).toEqual(rows);
 		expect(editorValuesToParams({ values: opened.values })).toEqual({
 			ok: true,
 			params,

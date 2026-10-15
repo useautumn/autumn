@@ -6,6 +6,7 @@ import { OptionsValueInput } from "./OptionsValueInput";
 import { QuantityValueInput } from "./QuantityValueInput";
 import { TrialValueInput } from "./TrialValueInput";
 import { OPTION_SOURCES } from "./useValueOptions";
+import { YesNoValueInput } from "./YesNoValueInput";
 
 // Module-level so each input keeps its identity across renders (and its focus).
 const OPTION_INPUTS: FilterValueInputs = Object.fromEntries(
@@ -26,5 +27,6 @@ export const RULE_VALUE_INPUTS: FilterValueInputs = {
 	percent: (props) => <NumberValueInput {...props} suffix="%" />,
 	days: (props) => <NumberValueInput {...props} suffix="days" />,
 	trial: TrialValueInput,
+	yes_no: YesNoValueInput,
 	quantity: QuantityValueInput,
 };

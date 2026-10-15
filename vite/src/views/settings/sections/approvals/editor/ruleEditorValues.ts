@@ -9,9 +9,17 @@ import {
 	type WhenKey,
 	whenToRows,
 } from "@autumn/shared";
-import type { FilterRowGroup } from "@/components/filters/types";
 import { ruleWhenArea } from "./ruleActions";
 import { decodeRow, encodeRow, type RuleRow } from "./ruleRowCodec";
+
+/** Rows and groups carry an id so React keeps each one's inputs as others are removed. */
+export type RuleRowItem = RuleRow & { id: string };
+export type RuleGroup = { id: string; rules: RuleRowItem[] };
+
+export const withId = <Item extends object>(item: Item) => ({
+	...item,
+	id: crypto.randomUUID(),
+});
 
 export type RuleEditorValues = {
 	name: string;
@@ -19,7 +27,7 @@ export type RuleEditorValues = {
 	actions: ApprovalAction[];
 	/** Balances' Feature, set once above the groups. */
 	pinned: RuleRow | null;
-	groups: FilterRowGroup<RuleRow["field"], RuleRow["operator"]>[];
+	groups: RuleGroup[];
 	note: string;
 	enabled: boolean;
 };
@@ -69,7 +77,9 @@ export const ruleToEditorValues = ({ rule }: { rule: ApprovalRule }) => {
 		values: {
 			...values,
 			pinned: rows.pinned ? encodeRow(rows.pinned) : emptyPinned(area),
-			groups: rows.groups.map((group) => ({ rules: group.map(encodeRow) })),
+			groups: rows.groups.map((group) =>
+				withId({ rules: group.map((row) => withId(encodeRow(row))) }),
+			),
 		},
 	};
 };

@@ -1,4 +1,8 @@
-import { APPROVAL_AREAS, type ApprovalRule } from "@autumn/shared";
+import {
+	APPROVAL_AREAS,
+	type ApprovalAction,
+	type ApprovalRule,
+} from "@autumn/shared";
 import {
 	Button,
 	Input,
@@ -55,12 +59,18 @@ export const ApprovalRuleSheet = ({
 		onSaved: () => onOpenChange(false),
 	});
 	const subjectGroups = useRuleSubjectGroups();
+	// With no When section to show it on, a `when` issue reads under Can.
+	const whenIssueWithoutSection = ({
+		actions,
+	}: {
+		actions: ApprovalAction[];
+	}) => (ruleWhenArea({ actions }) ? undefined : serverIssue("when"));
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
 				side="right"
-				className="!w-[30rem] !max-w-[30rem] sm:!w-[30rem] sm:!max-w-[30rem]"
+				className="!w-[34rem] !max-w-[34rem] sm:!w-[34rem] sm:!max-w-[34rem]"
 			>
 				<SheetHeader>
 					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
@@ -130,7 +140,11 @@ export const ApprovalRuleSheet = ({
 								<RuleField
 									label="Can"
 									hint={area ? APPROVAL_AREAS[area] : undefined}
-									error={field.state.meta.errors[0] ?? serverIssue("actions")}
+									error={
+										field.state.meta.errors[0] ??
+										serverIssue("actions") ??
+										whenIssueWithoutSection({ actions: field.state.value })
+									}
 								>
 									<RuleActionsPicker
 										actions={field.state.value}

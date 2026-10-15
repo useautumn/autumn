@@ -3,12 +3,12 @@ import { cn } from "@/lib/utils";
 import { AddButton } from "@/views/migrations/migration/shared/AddButton";
 import { PinnedFeatureRow } from "./PinnedFeatureRow";
 import { RuleWhenGroup } from "./RuleWhenGroup";
-import type { RuleEditorValues } from "./ruleEditorValues";
+import { type RuleGroup, type RuleRowItem, withId } from "./ruleEditorValues";
 import { fieldLabel, ruleFieldRegistry } from "./ruleFieldRegistry";
 import type { RuleRow } from "./ruleRowCodec";
 import { WhenHeader } from "./WhenHeader";
 
-type Groups = RuleEditorValues["groups"];
+type Groups = RuleGroup[];
 
 const groupLabel = (index: number) => (index === 0 ? "When" : "Or");
 
@@ -32,24 +32,22 @@ export const RuleWhenSection = ({
 }) => {
 	const registry = ruleFieldRegistry({ area });
 	const isSplit = groups.length > 1;
-	const setRows = (index: number, rules: RuleRow[]) =>
-		onGroupsChange(groups.map((group, i) => (i === index ? { rules } : group)));
+	const newRow = () =>
+		withId(registry.createRow({ path: registry.defaultPath }));
+	const setRows = (index: number, rules: RuleRowItem[]) =>
+		onGroupsChange(
+			groups.map((group, i) => (i === index ? { ...group, rules } : group)),
+		);
 	const addRow = () => {
 		const last = groups.at(-1);
-		if (!last)
-			return onGroupsChange([
-				{ rules: [registry.createRow({ path: registry.defaultPath })] },
-			]);
+		if (!last) return onGroupsChange([withId({ rules: [newRow()] })]);
 		setRows(groups.length - 1, [
 			...last.rules,
-			registry.nextRow({ rows: last.rules }),
+			withId(registry.nextRow({ rows: last.rules })),
 		]);
 	};
 	const addGroup = () =>
-		onGroupsChange([
-			...groups,
-			{ rules: [registry.createRow({ path: registry.defaultPath })] },
-		]);
+		onGroupsChange([...groups, withId({ rules: [newRow()] })]);
 	const pinnedIssue = issues.find((issue) => issue.group === "pinned");
 
 	return (
@@ -69,13 +67,11 @@ export const RuleWhenSection = ({
 				/>
 			)}
 			{groups.map((group, index) => (
-				<div
-					key={`group-${index}`}
-					className={cn(isSplit && "rounded-xl border p-3")}
-				>
+				<div key={group.id} className={cn(isSplit && "rounded-xl border p-3")}>
 					<RuleWhenGroup
 						registry={registry}
 						label={isSplit ? groupLabel(index) : undefined}
+						followsPinned={Boolean(pinned) && !isSplit}
 						rows={group.rules}
 						issues={issues.filter((issue) => issue.group === index)}
 						onChange={(rules) => setRows(index, rules)}
