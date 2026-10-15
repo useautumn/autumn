@@ -15,11 +15,9 @@ import type { CurrentSubject } from "../../types/currentSubject.js";
 /** As long as the API holds a track's body key, so a command sent again inside it is applied once. */
 const TRACK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** The worker's claim. Never on the caller's key as the request id: that is the claim's owner, and an owner claiming again is resumed. */
-const claimOf = ({ key }: { key: string }) => ({
-	key,
-	ttlMs: TRACK_IDEMPOTENCY_TTL_MS,
-});
+/** The worker's claim on the caller's key; a keyless caller claims nothing, and the seq alone refuses a resend. */
+const claimOf = ({ key }: { key: string | null }) =>
+	key ? { idempotency: { key, ttlMs: TRACK_IDEMPOTENCY_TTL_MS } } : {};
 
 /**
  * The API's own track of the engine's check, as the balance worker applies it: what fits (`cap`), its usage event and its
@@ -53,9 +51,7 @@ export const trackToCommand = ({
 		usageEvent: skipEvent
 			? null
 			: { name: command.featureId, idempotencyKey, id: null },
-		idempotency: claimOf({
-			key: `track:${idempotencyKey ?? command.requestId}`,
-		}),
+		...claimOf({ key: idempotencyKey && `track:${idempotencyKey}` }),
 	};
 };
 
@@ -102,6 +98,6 @@ export const checkToTrackCommand = ({
 	...trackToCommand({ command, subject, skipEvent, idempotencyKey: null }),
 	overageBehavior: "overflow",
 	enforceOverdueBlock: true,
-	idempotency: claimOf({ key: idempotencyKey ?? `track:${command.requestId}` }),
+	...claimOf({ key: idempotencyKey }),
 	...(lock && lockedTrackOf({ lock, command, subject })),
 });
