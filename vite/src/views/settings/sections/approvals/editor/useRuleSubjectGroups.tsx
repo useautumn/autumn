@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
-import { SUBJECT_ICONS } from "../RuleSentencePart";
+import { SUBJECT_ICONS } from "../subjectIcons";
 import type { ChipOption, ChipOptionGroup } from "./ChipMultiSelect";
 
 // Swap for `ApiRole` from `@autumn/shared/api/roles/apiRole` and U2's `useRolesQuery` once D4 (#4992) and U2 (#4988) merge.

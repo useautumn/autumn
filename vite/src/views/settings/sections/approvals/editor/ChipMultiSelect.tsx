@@ -39,13 +39,14 @@ export const ChipMultiSelect = ({
 	disabled?: boolean;
 	ariaLabel: string;
 }) => {
-	const options = groups.flatMap((group) => group.options);
+	const options = new Map(
+		groups
+			.flatMap((group) => group.options)
+			.map((option) => [option.value, option]),
+	);
+	const picked = new Set(value);
 	const selected = value.map(
-		(key) =>
-			options.find((option) => option.value === key) ?? {
-				value: key,
-				label: key,
-			},
+		(key) => options.get(key) ?? { value: key, label: key },
 	);
 	const locked = groups.filter((group) => group.locked);
 
@@ -81,7 +82,7 @@ export const ChipMultiSelect = ({
 							{group.options.map((option) => (
 								<DropdownMenuCheckboxItem
 									key={option.value}
-									checked={value.includes(option.value)}
+									checked={picked.has(option.value)}
 									onCheckedChange={() => onToggle(option.value)}
 								>
 									{option.icon}
