@@ -72,6 +72,37 @@ const stateOf = (customerId: string): SubjectState => {
 	};
 };
 
+/** As the worker lands a finalize: once per (writer, seq), so a journal re-sent lands no settle twice (isLandedSeq). */
+const applyFinalize = ({
+	finalize,
+	writerId,
+	seq,
+}: {
+	finalize: { customer_id: string; lock_id: string };
+	writerId: string;
+	seq: number;
+}) => {
+	const state = stateOf(finalize.customer_id);
+	const atomSeqs = state.customer.atom_seqs ?? {};
+	const held = atomSeqs[tenant.atomId]?.[writerId] ?? 0;
+	if (seq <= held) {
+		counts.replays++;
+		return;
+	}
+	states.set(finalize.customer_id, {
+		...state,
+		customer: {
+			...state.customer,
+			atom_seqs: {
+				...atomSeqs,
+				[tenant.atomId]: { ...atomSeqs[tenant.atomId], [writerId]: seq },
+			},
+		},
+	});
+	counts.finalizes++;
+	recordSettled({ lockId: finalize.lock_id });
+};
+
 const applyTrack = ({
 	command,
 	writerId,
@@ -209,9 +240,12 @@ const appendTracks = async (request: Request) => {
 	const touched = new Set<string>();
 	for (const track of parsed.data.tracks) {
 		if (!("command" in track)) {
-			counts.finalizes++;
 			if ("finalize" in track)
-				recordSettled({ lockId: track.finalize.lock_id });
+				applyFinalize({
+					finalize: track.finalize,
+					writerId: track.writerId,
+					seq: track.seq,
+				});
 			continue;
 		}
 		applyTrack({
