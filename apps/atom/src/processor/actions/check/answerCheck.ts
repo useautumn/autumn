@@ -1,29 +1,35 @@
-import { type CheckCommand, computeCheck } from "@autumn/balance-engine";
+import {
+	type CheckCommand,
+	type CheckResult,
+	computeCheck,
+} from "@autumn/balance-engine";
 import { checkResultToApiResponse } from "@autumn/balance-engine/api-renderer";
 import {
 	AffectedResource,
 	ApiVersionClass,
 	AppEnv,
 	applyRequestVersionChanges,
-	type CheckResponseV3,
 	findFeatureById,
 	LATEST_VERSION,
 	type SharedContext,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
-import type { AnswerableCheck } from "../../types/check.js";
+import type { AnswerableCheck, CheckDecided } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 
 const appEnvSchema = z.enum(AppEnv);
 
 /** The engine's check command. A feature Atom has never been sent may still exist, so the API answers for it. */
-const checkToCommand = ({
+export const checkToCommand = ({
 	check,
 	subject,
 }: {
-	check: AnswerableCheck;
+	check: Pick<
+		AnswerableCheck,
+		"requestId" | "occurredAt" | "featureId" | "requiredBalance" | "properties"
+	>;
 	subject: CurrentSubject;
 }): CheckCommand => {
 	const feature = findFeatureById({
@@ -73,6 +79,33 @@ const toRenderContext = ({
 	return { ...renderContext, expand: query.expand ?? [] };
 };
 
+/** A decision as the API's check response, on the subject it reports. */
+export const renderCheck = ({
+	ctx,
+	check,
+	command,
+	result,
+	subject,
+	isDeductingCheck = false,
+}: {
+	ctx: SlotProcessorContext;
+	check: AnswerableCheck;
+	command: CheckCommand;
+	result: CheckResult;
+	subject: CurrentSubject;
+	isDeductingCheck?: boolean;
+}): CheckDecided => {
+	const { response } = checkResultToApiResponse({
+		ctx: toRenderContext({ ctx, check, subject }),
+		apiVersion: check.apiVersion,
+		command,
+		result,
+		fullSubject: subject.fullSubject,
+		isDeductingCheck,
+	});
+	return { response, result };
+};
+
 /** The engine's own check on the subject, as the API's check response: the same decision, renderer and version changes the API uses. */
 export const answerCheck = ({
 	ctx,
@@ -82,15 +115,8 @@ export const answerCheck = ({
 	ctx: SlotProcessorContext;
 	check: AnswerableCheck;
 	subject: CurrentSubject;
-}): CheckResponseV3 => {
+}): CheckDecided => {
 	const command = checkToCommand({ check, subject });
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });
-	const { response } = checkResultToApiResponse({
-		ctx: toRenderContext({ ctx, check, subject }),
-		apiVersion: check.apiVersion,
-		command,
-		result,
-		fullSubject: subject.fullSubject,
-	});
-	return response;
+	return renderCheck({ ctx, check, command, result, subject });
 };

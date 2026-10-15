@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import type { ForwardReason } from "../../../src/lib/forward/cannotAnswerError.js";
 import {
 	checkForwardReason,
@@ -18,10 +19,25 @@ const forwardedRequests: [ForwardReason, CheckRequest][] = [
 		"product_check",
 		checkRequestFor({ params: { feature_id: undefined, product_id: "pro" } }),
 	],
-	["send_event", checkRequestFor({ params: { send_event: true } })],
+	[
+		"send_event",
+		checkRequestFor({ params: { send_event: true, entity_id: "seat_1" } }),
+	],
+	[
+		"lock_version",
+		checkRequestFor({
+			params: { lock: { enabled: true, lock_id: "lock_1" } },
+			apiVersion: new ApiVersionClass(ApiVersion.V2_5),
+		}),
+	],
 	[
 		"lock",
-		checkRequestFor({ params: { lock: { enabled: true, lock_id: "lock_1" } } }),
+		checkRequestFor({
+			params: {
+				lock: { enabled: true, lock_id: "lock_1" },
+				entity_id: "seat_1",
+			},
+		}),
 	],
 	["with_preview", checkRequestFor({ params: { with_preview: true } })],
 	[
@@ -60,9 +76,29 @@ describe("which checks Atom answers itself", () => {
 			entityId: null,
 			requiredBalance: 1,
 			properties: null,
+			lock: null,
 			query: {},
 			apiVersion: latestApiVersion,
 		});
+	});
+
+	test("a customer's own lock at 2.6 is Atom's, and carries the lock it asked for", () => {
+		const lock = {
+			enabled: true as const,
+			lock_id: "lock_1",
+			expires_at: 1_800_000_000_000,
+		};
+		const request = checkRequestFor({ params: { lock } });
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request }).lock).toEqual(lock);
+	});
+
+	test("a customer's own send_event is Atom's", () => {
+		const request = checkRequestFor({ params: { send_event: true } });
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request }).customerId).toBe("cus_1");
 	});
 
 	test("a check on an entity is Atom's too", () => {

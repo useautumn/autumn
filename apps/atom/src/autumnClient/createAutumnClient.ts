@@ -1,8 +1,11 @@
 import {
 	ATOM_KEYS_PATH,
 	ATOM_SUBJECT_READ_PATH,
+	ATOM_TRACKS_APPEND_PATH,
 	AtomKeysResponseSchema,
+	type AtomTracksAppendRequest,
 } from "@autumn/byoc";
+import { setLogOrg } from "../lib/logging/getAtomLogger.js";
 import { postToAutumn } from "./postToAutumn.js";
 import type { AutumnClient } from "./types/autumnClient.js";
 
@@ -23,7 +26,11 @@ const findInvalidKeys = async ({
 		tokenHash,
 		body: { key_hashes: keyHashes },
 	});
-	return AtomKeysResponseSchema.parse(await reply.json()).invalid_key_hashes;
+	const { invalid_key_hashes, org } = AtomKeysResponseSchema.parse(
+		await reply.json(),
+	);
+	if (org) setLogOrg({ org_id: org.id, org_slug: org.slug });
+	return invalid_key_hashes;
 };
 
 const readSubject = async ({
@@ -46,6 +53,22 @@ const readSubject = async ({
 	return reply.text();
 };
 
+const appendTracks = async ({
+	ctx,
+	tokenHash,
+	...request
+}: {
+	ctx: AutumnClientContext;
+	tokenHash: string;
+} & AtomTracksAppendRequest): Promise<void> => {
+	await postToAutumn({
+		ctx,
+		path: ATOM_TRACKS_APPEND_PATH,
+		tokenHash,
+		body: request,
+	});
+};
+
 export const createAutumnClient = ({
 	autumnApiUrl,
 }: {
@@ -55,5 +78,6 @@ export const createAutumnClient = ({
 	return {
 		findInvalidKeys: (params) => findInvalidKeys({ ctx, ...params }),
 		readSubject: (params) => readSubject({ ctx, ...params }),
+		appendTracks: (params) => appendTracks({ ctx, ...params }),
 	};
 };

@@ -1,4 +1,5 @@
 import type { LockParams } from "@autumn/shared";
+import { ConflictException } from "@aws-sdk/client-scheduler";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { workflows } from "@/queue/workflows.js";
 import { buildLockScheduleName } from "../utils/lock/buildLockScheduleName.js";
@@ -12,14 +13,17 @@ export async function scheduleLockExpiry({
 	ctx,
 	customerId,
 	lock,
+	lockRowId,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	lock: Pick<LockParams, "lock_id" | "expires_at">;
+	/** Names the timer for this lock row, so a lock id taken again gets its own timer. */
+	lockRowId?: string;
 }): Promise<void> {
 	if (lock.expires_at === undefined) return;
-	// The same key the legacy path derives, so either path can cancel the other's timer.
-	const hashedKey = Bun.hash(lock.lock_id).toString();
+	// Without a row, the same key the legacy path derives, so either path can cancel the other's timer.
+	const hashedKey = Bun.hash(lockRowId ?? lock.lock_id).toString();
 	try {
 		await workflows.triggerExpireLockReceipt(
 			{
@@ -28,6 +32,7 @@ export async function scheduleLockExpiry({
 				customerId,
 				lockId: lock.lock_id,
 				hashedKey,
+				...(lockRowId && { lockRowId }),
 			},
 			{
 				scheduleAt: new Date(lock.expires_at),
@@ -39,6 +44,8 @@ export async function scheduleLockExpiry({
 			},
 		);
 	} catch (error) {
+		// A resent hand-in finds its lock row's timer already armed.
+		if (lockRowId && error instanceof ConflictException) return;
 		ctx.logger.error("[balance-worker] failed to schedule lock expiry", {
 			error,
 			data: { lockId: lock.lock_id },

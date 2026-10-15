@@ -113,3 +113,23 @@ export const openSqliteDatabase = ({
 		throw error;
 	}
 };
+
+/** A serving thread's connection to a file its writer thread opened: it reads, and SQLite refuses it any write. */
+export const openSqliteReader = ({
+	databasePath,
+}: {
+	databasePath: string;
+}): Database => {
+	const database = newSqliteConnection({
+		path: databasePath,
+		options: { readonly: true, safeIntegers: true, strict: true },
+	});
+	try {
+		database.run(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
+		database.run(`PRAGMA cache_size = -${SQLITE_PAGE_CACHE_BYTES / 1024}`);
+		return database;
+	} catch (error) {
+		database.close();
+		throw error;
+	}
+};

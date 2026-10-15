@@ -318,19 +318,82 @@ export type SubjectWriteResult = {
 	customerVersion: bigint | null;
 };
 
-/** Subjects that came from one read are written together. */
-export const upsertSubjects = ({
-	ctx,
+/** A batch as the writer thread takes it, and each write's state JSON, kept to count what it stored. */
+export type EncodedSubjectWrites = { payload: string; stateJsons: string[] };
+
+/** Each write's fields after the batch's `appliedAt`; the slice's JSON is sent only when its row is to be rewritten. */
+const FIELDS_PER_WRITE = 9;
+
+/** Serialized once, on the serving thread, into one NUL-separated string (JSON escapes any NUL it holds). */
+export const encodeSubjectWrites = ({
 	writes,
 	appliedAt,
 }: {
-	ctx: SlotContext;
 	writes: SubjectWrite[];
 	appliedAt: number;
-}): SubjectWriteResult[] =>
-	ctx.sqliteDb.transaction(() =>
-		writes.map((write) => upsertSubject({ ctx, write, appliedAt })),
-	)();
+}): EncodedSubjectWrites => {
+	const stateJsons = writes.map(({ subject }) => JSON.stringify(subject.state));
+	const fields: (string | number | bigint)[] = [appliedAt];
+	writes.forEach(({ subject, slice, sliceStored }, index) => {
+		const { customerId, entityId } = subject.state.identity;
+		fields.push(
+			customerId,
+			entityId ?? CUSTOMER_ENTITY_ID,
+			subject.logOffset,
+			subject.readAt,
+			stateJsons[index] as string,
+			slice.hash,
+			subject.customerVersion,
+			sliceStored ? "" : slice.catalogJson,
+			sliceStored ? "" : slice.orgJson,
+		);
+	});
+	return { payload: fields.join("\u0000"), stateJsons };
+};
+
+/** The writer's answer, one result per write in order. */
+export const decodeSubjectWriteResults = ({
+	writes,
+	stateJsons,
+	results,
+}: EncodedSubjectWrites & {
+	writes: SubjectWrite[];
+	results: string;
+}): SubjectWriteResult[] => {
+	const fields = results.split("\u0000");
+	return writes.map(({ slice }, index) => {
+		const customerVersion = fields[index * 2 + 1];
+		return {
+			bytes:
+				fields[index * 2] === "1"
+					? textBytes([
+							stateJsons[index] as string,
+							slice.catalogJson,
+							slice.orgJson,
+						])
+					: null,
+			customerVersion: customerVersion ? BigInt(customerVersion) : null,
+		};
+	});
+};
+
+/** Subjects that came from one read are written together. Runs where the file's writes run: one answer per write. */
+export const upsertSubjects = ({
+	ctx,
+	payload,
+}: {
+	ctx: SlotContext;
+	payload: string;
+}): string => {
+	const fields = payload.split("\u0000");
+	const appliedAt = Number(fields[0]);
+	return ctx.sqliteDb.transaction(() => {
+		const results: string[] = [];
+		for (let at = 1; at < fields.length; at += FIELDS_PER_WRITE)
+			results.push(upsertSubject({ ctx, fields, at, appliedAt }));
+		return results.join("\u0000");
+	})();
+};
 
 /** The push is read later than the row held, or at the same instant for a later change. */
 const IS_NEWER = `(excluded.read_at > subject_states.read_at
@@ -342,16 +405,23 @@ const IS_NEWER = `(excluded.read_at > subject_states.read_at
  */
 const upsertSubject = ({
 	ctx,
-	write: { subject, slice, sliceStored },
+	fields,
+	at,
 	appliedAt,
 }: {
 	ctx: SlotContext;
-	write: SubjectWrite;
+	fields: string[];
+	at: number;
 	appliedAt: number;
-}): SubjectWriteResult => {
-	const { customerId, entityId } = subject.state.identity;
-	const key = { customerId, entityId: entityId ?? CUSTOMER_ENTITY_ID };
-	const stateJson = JSON.stringify(subject.state);
+}): string => {
+	const key = {
+		customerId: fields[at] as string,
+		entityId: fields[at + 1] as string,
+	};
+	const logOffset = BigInt(fields[at + 2] as string);
+	const readAt = Number(fields[at + 3]);
+	const sliceHash = fields[at + 5] as string;
+	const catalogJson = fields[at + 7] as string;
 	const written = ctx.sqliteDb
 		.query<
 			{ readAt: bigint; logOffset: bigint; customerVersion: bigint },
@@ -373,20 +443,18 @@ const upsertSubject = ({
 		`)
 		.get({
 			...key,
-			logOffset: subject.logOffset,
-			readAt: subject.readAt,
+			logOffset,
+			readAt,
 			appliedAt,
-			stateJson,
-			sliceHash: slice.hash,
-			customerVersion: subject.customerVersion,
+			stateJson: fields[at + 4] as string,
+			sliceHash,
+			customerVersion: BigInt(fields[at + 6] as string),
 		});
-	if (!written) return { bytes: null, customerVersion: null };
+	if (!written) return "\u0000";
 	const isStored =
-		written.readAt === BigInt(subject.readAt) &&
-		written.logOffset === subject.logOffset;
-	if (!isStored)
-		return { bytes: null, customerVersion: written.customerVersion };
-	if (!sliceStored)
+		written.readAt === BigInt(readAt) && written.logOffset === logOffset;
+	if (!isStored) return `\u0000${written.customerVersion}`;
+	if (catalogJson !== "")
 		ctx.sqliteDb
 			.query(`
 				INSERT INTO subject_slices (customer_id, entity_id, slice_hash, catalog_json, org_json)
@@ -399,14 +467,11 @@ const upsertSubject = ({
 			`)
 			.run({
 				...key,
-				sliceHash: slice.hash,
-				catalogJson: slice.catalogJson,
-				orgJson: slice.orgJson,
+				sliceHash,
+				catalogJson,
+				orgJson: fields[at + 8] as string,
 			});
-	return {
-		bytes: textBytes([stateJson, slice.catalogJson, slice.orgJson]),
-		customerVersion: written.customerVersion,
-	};
+	return `1\u0000${written.customerVersion}`;
 };
 
 /** The pages the file holds, dropped pages already given back: its size once its log is checkpointed. */
@@ -430,14 +495,13 @@ export type DroppedRows = { customerId: string; entityId: string }[];
  */
 export const deleteCustomersWrittenBefore = ({
 	ctx,
-	before,
-	limit,
+	payload,
 }: {
 	ctx: SlotContext;
-	before: number;
-	limit: number;
-}): DroppedRows =>
-	ctx.sqliteDb.transaction((): DroppedRows => {
+	payload: string;
+}): string => {
+	const [before, limit] = payload.split("\u0000").map(Number);
+	return ctx.sqliteDb.transaction((): string => {
 		const customers = ctx.sqliteDb
 			.query<{ customerId: string }, { before: number; limit: number }>(`
 				SELECT own.customer_id AS customerId FROM subject_states AS own
@@ -446,11 +510,11 @@ export const deleteCustomersWrittenBefore = ({
 						WHERE fresh.customer_id = own.customer_id AND fresh.applied_at >= $before)
 				ORDER BY own.applied_at ASC LIMIT $limit
 			`)
-			.all({ before, limit });
-		if (customers.length === 0) return [];
+			.all({ before: before as number, limit: limit as number });
+		if (customers.length === 0) return "[]";
 		const ids = JSON.stringify(customers.map(({ customerId }) => customerId));
 		const inCustomers = "customer_id IN (SELECT value FROM json_each($ids))";
-		const dropped = ctx.sqliteDb
+		const dropped: DroppedRows = ctx.sqliteDb
 			.query<{ customerId: string; entityId: string }, { ids: string }>(
 				`DELETE FROM subject_states WHERE ${inCustomers} RETURNING customer_id AS customerId, entity_id AS entityId`,
 			)
@@ -460,5 +524,6 @@ export const deleteCustomersWrittenBefore = ({
 			.run({ ids });
 		// Freed pages go back to the volume once the main thread checkpoints the file.
 		ctx.sqliteDb.run("PRAGMA incremental_vacuum");
-		return dropped;
+		return JSON.stringify(dropped);
 	})();
+};

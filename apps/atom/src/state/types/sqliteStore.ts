@@ -19,10 +19,16 @@ export type SqliteStore = {
 	}): { readAt: number; logOffset: bigint } | null;
 	/** The entities of the customer the file holds rows for. */
 	entityIdsOf(params: { customerId: string }): string[];
-	/** False when the subject was read before the one held, and so ignored. */
-	setSubject(params: { subject: SubjectRow }): boolean;
-	/** All in one write, so a reader never sees one without the others. One answer per subject, in order. */
-	setSubjects(params: { subjects: SubjectRow[] }): boolean[];
+	/** False when the subject was read before the one held, and so ignored. Resolves once the write has committed. */
+	setSubject(params: { subject: SubjectRow }): Promise<boolean>;
+	/**
+	 * All in one write, so a reader never sees one without the others. One answer per subject, in order, once committed;
+	 * `onStored` gets them in the same turn the held copies change.
+	 */
+	setSubjects(params: {
+		subjects: SubjectRow[];
+		onStored?: (stored: boolean[]) => void;
+	}): Promise<boolean[]>;
 	countSubjects(): number;
 	/** Subjects this file wrote at or after `after` (null: all), oldest write first, from `cursor` on, at most `limit`. */
 	listAppliedAfter(params: {
@@ -43,10 +49,13 @@ export type SqliteStore = {
 	/** The newest write held by this replica's clock, 0 when empty. */
 	maxAppliedAt(): number;
 	/** Drops up to `limit` customers none of whose rows was written since `before`, oldest first, whole, held copies included. */
-	dropCustomersWrittenBefore(params: { before: number; limit: number }): {
+	dropCustomersWrittenBefore(params: {
+		before: number;
+		limit: number;
+	}): Promise<{
 		customers: number;
 		rows: number;
-	};
+	}>;
 	/** The pages the file holds: what it takes on the volume once the main thread has checkpointed its log. */
 	dataBytes(): number;
 	close(): void;

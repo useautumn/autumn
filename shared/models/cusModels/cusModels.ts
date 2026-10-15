@@ -29,6 +29,8 @@ export const CustomerSchema = z.object({
 			disable_overage_billing: z.boolean().optional(),
 		})
 		.nullish(),
+	/** Per Atom, per journal (writer id), the highest seq of its tracks the balance worker has applied. */
+	atom_seqs: z.record(z.string(), z.record(z.string(), z.number())).nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;

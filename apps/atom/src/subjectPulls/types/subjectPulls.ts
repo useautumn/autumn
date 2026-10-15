@@ -8,6 +8,8 @@ export type ApplyPulled = (params: {
 export type FolderSubjectPulls = {
 	/** Counts the miss, and pulls the subject unless it is held or the thread is at its in-flight cap. */
 	request(params: { customerId: string; entityId: string | null }): void;
+	/** Pulls the customer so its journal can settle: waits for a slot past the cap, never dropped and never a miss. */
+	settle(params: { customerId: string }): Promise<void>;
 };
 
 /** One per thread: every folder it opens shares its in-flight cap, since each subject has one owner thread. */

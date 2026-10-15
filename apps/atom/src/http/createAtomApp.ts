@@ -3,13 +3,15 @@ import { mountMultiTenantRoutes } from "../multiTenant/mountMultiTenantRoutes.js
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
+import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveHealth } from "./handlers/receiveHealth.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { receiveTrack } from "./handlers/receiveTrack.js";
 import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
 import { atomTokenMiddleware } from "./middlewares/atomTokenMiddleware.js";
+import { checkHopMiddleware } from "./middlewares/checkHopMiddleware.js";
 import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
-import { notReadyCheckMiddleware } from "./middlewares/notReadyCheckMiddleware.js";
 import { requestBodyMiddleware } from "./middlewares/requestBodyMiddleware.js";
 import { requestLogMiddleware } from "./middlewares/requestLog/requestLogMiddleware.js";
 import type { AtomHttpContext, AtomHttpEnv } from "./types/atomHttp.js";
@@ -21,6 +23,12 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	app.onError(handleError);
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
 	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
+	app.use("/v1/track", admissionMiddleware({ ctx }));
+	// A finalize the API cannot settle before its lock's hand-in lands: its caller retries the Atom instead.
+	app.use(
+		"/v1/balances.finalize",
+		admissionMiddleware({ ctx, retriedAtAtom: true }),
+	);
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
@@ -32,12 +40,11 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
 	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
-	authorized.post(
-		"/balances.check",
-		notReadyCheckMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveCheck,
-	);
+	const toOwner = checkHopMiddleware({ ctx });
+	const authed = clientAuthMiddleware({ ctx });
+	authorized.post("/balances.check", toOwner, authed, receiveCheck);
+	authorized.post("/track", toOwner, authed, receiveTrack);
+	authorized.post("/balances.finalize", toOwner, authed, receiveFinalize);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/subjects.delete", pushAuth, receiveDeleteSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));

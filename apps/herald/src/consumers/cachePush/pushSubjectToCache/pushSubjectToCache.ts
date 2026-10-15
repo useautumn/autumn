@@ -1,4 +1,5 @@
 import {
+	atomSubjectBodyFor,
 	isWorkerSubjectNotFound,
 	readAtomSubjectBody,
 } from "@autumn/byoc/subjects";
@@ -37,7 +38,12 @@ export const pushSubjectToCache = async ({
 			customerVersion,
 		});
 		if (!body) return null;
-		send = (atomConnection) => sendSubjectToAtom({ ctx, atomConnection, body });
+		send = (atomConnection) =>
+			sendSubjectToAtom({
+				ctx,
+				atomConnection,
+				body: atomSubjectBodyFor({ body, atomId: atomConnection.id }),
+			});
 	} catch (error) {
 		if (!isWorkerSubjectNotFound({ error })) throw error;
 		const body = {

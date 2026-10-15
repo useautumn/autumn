@@ -1,5 +1,6 @@
 import type {
 	ApplyBillingPlanRequest,
+	AtomFinalizeCommand,
 	CheckCommand,
 	ConfirmExpiredLockCommand,
 	DeleteBalanceCommand,
@@ -13,6 +14,7 @@ import type {
 	ResetCommand,
 	TrackCommand,
 	UpdateBalanceCommand,
+	WorkerLock,
 } from "@autumn/balance-engine";
 import type {
 	ApplyBillingPlanReply,
@@ -37,6 +39,7 @@ import type {
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
 import type { AutumnLogger } from "@autumn/logging";
+import type { LockRowKey } from "@autumn/postgres";
 import type { StateStore } from "../../state/types/stateStore.js";
 import type { WorkerDb } from "../../types/workerDb.js";
 import type { InlineCheckDecision } from "../commands/checkInline.js";
@@ -82,6 +85,10 @@ export type PartitionProcessor = {
 	readSubjectState(params: {
 		command: ReadSubjectStateCommand;
 	}): Promise<ReadSubjectStateReply>;
+	/** A lock decided here that the store has yet to apply; see `PartitionWriter.pendingLockRow`. */
+	pendingLockRow: PartitionWriter["pendingLockRow"];
+	/** The open lock rows under these keys, from Postgres in one read; a key with no row is absent. */
+	readLockRows(params: { keys: readonly LockRowKey[] }): Promise<WorkerLock[]>;
 	initialize(params: { request: InitializeRequest }): Promise<InitializeReply>;
 	applyBillingPlan(params: {
 		request: ApplyBillingPlanRequest;
@@ -97,6 +104,11 @@ export type PartitionProcessor = {
 	finalize(params: { command: FinalizeCommand }): Promise<FinalizeReply>;
 	decideFinalize(params: {
 		command: FinalizeCommand;
+	}): Promise<DecidedMutation<never>>;
+	/** An Atom's queued finalize, settled from `lock`, Autumn's own row, when it is still open and the one named. */
+	decideAtomFinalize(params: {
+		command: AtomFinalizeCommand;
+		lock: WorkerLock | null;
 	}): Promise<DecidedMutation<never>>;
 	confirmExpiredLock(params: {
 		command: ConfirmExpiredLockCommand;

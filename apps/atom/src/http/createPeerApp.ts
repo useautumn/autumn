@@ -3,23 +3,37 @@ import { receiveDeleteAtom } from "../multiTenant/receiveDeleteAtom.js";
 import { receiveListAtoms } from "../multiTenant/receiveListAtoms.js";
 import { receivePutAtom } from "../multiTenant/receivePutAtom.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
+import { PEER_ANNOUNCEMENT_PATH } from "../replicas/handover/announcementContract.js";
+import { PEER_HANDOFF_PATH } from "../replicas/handover/handoffContract.js";
 import {
 	PEER_ATOMS_LIST_PATH,
 	PEER_CATALOG_SINCE_PATH,
+	PEER_KEYS_RECENT_PATH,
 	PEER_SUBJECTS_DIGEST_PATH,
 	PEER_SUBJECTS_FETCH_PATH,
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
+import { KEYS_RELAY } from "../replication/keys/createKeyRelay.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
+import { receiveAnnouncement } from "./handlers/receiveAnnouncement.js";
+import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
+import { receiveFinalize } from "./handlers/receiveFinalize.js";
+import { receiveJournalHandoff } from "./handlers/receiveJournalHandoff.js";
 import {
 	receiveCatalogSince,
+	receiveRecentKeys,
 	receiveSubjectsDigest,
 	receiveSubjectsFetch,
 	receiveSubjectsSince,
 } from "./handlers/receivePeerReads.js";
+import { receiveRelayedKeys } from "./handlers/receiveRelayedKeys.js";
 import { receiveSetCatalog } from "./handlers/receiveSetCatalog.js";
 import { receiveSetSubject } from "./handlers/receiveSetSubject.js";
+import { receiveTrack } from "./handlers/receiveTrack.js";
+import { admissionMiddleware } from "./middlewares/admissionMiddleware.js";
+import { clientAuthMiddleware } from "./middlewares/clientAuthMiddleware.js";
+import { peerReadyMiddleware } from "./middlewares/peerReadyMiddleware.js";
 import {
 	peerFolderMiddleware,
 	peerRequestMiddleware,
@@ -43,12 +57,22 @@ export function createPeerApp({
 	const app = new Hono<AtomHttpEnv>();
 	const handleError = createAtomErrorHandler({ ctx });
 	app.onError(handleError);
+	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
+	app.use("/v1/track", admissionMiddleware({ ctx }));
+	app.use("/v1/balances.finalize", admissionMiddleware({ ctx }));
 	app.use(
 		requestLogMiddleware({ ctx, handleError }),
 		requestBodyMiddleware,
 		peerRequestMiddleware({ secret }),
 	);
+	// A request another replica handed on is answered here, unless its customer moved on since: then one hop more (the error handler).
+	const ready = peerReadyMiddleware({ ctx });
+	const authed = clientAuthMiddleware({ ctx });
+	app.post("/v1/balances.check", ready, authed, receiveCheck);
+	app.post("/v1/track", ready, authed, receiveTrack);
+	app.post("/v1/balances.finalize", ready, authed, receiveFinalize);
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
+	app.post(PEER_ANNOUNCEMENT_PATH, receiveAnnouncement({ ctx }));
 	if (ctx.multiTenant) {
 		const tenants = { ...ctx.multiTenant, replication: ctx.replication };
 		app.post(ATOM_PUT.path, receivePutAtom({ ctx: tenants }));
@@ -63,6 +87,9 @@ export function createPeerApp({
 	folder.post(PEER_SUBJECTS_DIGEST_PATH, receiveSubjectsDigest({ ctx }));
 	folder.post(PEER_SUBJECTS_FETCH_PATH, receiveSubjectsFetch({ ctx }));
 	folder.post(PEER_CATALOG_SINCE_PATH, receiveCatalogSince({ ctx }));
+	folder.post(KEYS_RELAY.path, receiveRelayedKeys);
+	folder.post(PEER_KEYS_RECENT_PATH, receiveRecentKeys({ ctx }));
+	folder.post(PEER_HANDOFF_PATH, receiveJournalHandoff({ ctx }));
 	app.route("/", folder);
 	return app;
 }

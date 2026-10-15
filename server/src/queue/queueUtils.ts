@@ -2,7 +2,7 @@ import type {
 	ApiVersion,
 	AppEnv,
 	EventInsert,
-	FinalizeLockParamsV0,
+	FinalizeLockParamsV1,
 	Price,
 	TrackParams,
 	UpdateBalanceParamsV0,
@@ -124,7 +124,7 @@ export interface Payloads {
 		env: AppEnv;
 		customerId?: string;
 		requestId: string;
-		params: FinalizeLockParamsV0;
+		params: FinalizeLockParamsV1;
 	};
 	[key: string]: unknown;
 }

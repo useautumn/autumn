@@ -1,4 +1,5 @@
 import type { SlotProcessor } from "../../../processor/types/slotProcessor.js";
+import type { JournalKeyRow } from "../../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -44,4 +45,12 @@ export type SlotOwners = {
 		slot: number;
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
+	/** A page of the idempotency keys a slot another thread owns took within the key window. */
+	recentKeysOn(params: {
+		thread: number;
+		atomId: string | null;
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]>;
 };

@@ -17,6 +17,7 @@ import {
 	DELETE_PUSH,
 	SUBJECT_PUSH,
 } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createPeerResolver } from "../../../src/replication/discovery/createPeerResolver.js";
@@ -34,6 +35,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	noSubjectPulls,
 } from "../../unit/utils/atomFixtures.js";
 import type { Endpoint, SimNetwork } from "./simNetwork.js";
@@ -112,6 +114,7 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		now,
 	});
 	const auth: DeployedAuth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir: ctx.volume.folder,
 		tokenHash: ctx.tokenHash,
 		slotCount: SIM_SLOT_COUNT,
@@ -181,7 +184,14 @@ export const createSimReplica = ({ ctx }: { ctx: SimReplicaContext }) => {
 		// The sim runs on a virtual clock; a busy test process must never read as a loop behind.
 		loop: { lagMs: () => 0 },
 		replication,
-		peer: { port: SIM_PORT, fetch },
+		peer: {
+			port: SIM_PEER_PORT,
+			secret: ctx.secret,
+			ring: createReplicaRing({
+				ctx: { resolver: replication, own: () => [ctx.address] },
+			}),
+			fetch,
+		},
 		now,
 	};
 	const app: Hono<AtomHttpEnv> = createAtomApp({ ctx: httpContext });

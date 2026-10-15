@@ -1,7 +1,8 @@
-import type {
-	Catalog,
-	CheckResult,
-	SubjectState,
+import {
+	type Catalog,
+	type CheckResult,
+	type SubjectState,
+	trackResultToCheckResult,
 } from "@autumn/balance-engine";
 import {
 	type BalanceWorkerClient,
@@ -16,7 +17,6 @@ import {
 	type ParsedCheckParams,
 	RecaseError,
 } from "@autumn/shared";
-import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
@@ -76,24 +76,14 @@ const trackReplyToCheckAnswer = ({
 }: {
 	reply: TrackReply;
 	body: ParsedCheckParams;
-}): WorkerCheckAnswer => {
-	const allowed = reply.result.status === "applied";
-	return {
-		result: {
-			allowed,
-			reason: allowed ? null : "insufficient_balance",
-			// A refused track does not say which limit refused it; only a plain check does.
-			limitType: null,
-			requiredBalance: new Decimal(requiredBalanceOf({ body }))
-				.mul(reply.result.fundingCreditCost)
-				.toNumber(),
-			fundingFeatureId: reply.result.fundingFeatureId,
-			isFlag: false,
-		},
-		state: reply.state,
-		catalog: reply.catalog,
-	};
-};
+}): WorkerCheckAnswer => ({
+	result: trackResultToCheckResult({
+		result: reply.result,
+		requiredBalance: requiredBalanceOf({ body }),
+	}),
+	state: reply.state,
+	catalog: reply.catalog,
+});
 
 /** Nothing funds the feature: only a requirement of nothing is met, and there is no balance to report. */
 const nothingAttachedAnswer = ({

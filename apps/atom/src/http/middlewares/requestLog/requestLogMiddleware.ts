@@ -1,5 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
+import { logOrg } from "../../../lib/logging/getAtomLogger.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -7,6 +8,7 @@ import {
 	isAtomsOwnFault,
 	loggedErrorOf,
 	loggedResponseOf,
+	requestContextOf,
 	requestFieldsOf,
 } from "./requestLogLine.js";
 
@@ -58,16 +60,22 @@ export function requestLogMiddleware({
 
 		const durationMs = Date.now() - startedAt;
 		const failure = context.get("failure");
+		const idempotencyKey = context.get("idempotencyKey");
+		const fields = requestFieldsOf({
+			body: context.get("body"),
+			routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
+		});
 		const line = {
 			statusCode,
 			durationMs,
+			context: requestContextOf({ context, org: logOrg(), fields }),
 			req: {
+				id: context.get("requestId"),
 				method: context.req.method,
 				path: context.req.path,
-				...requestFieldsOf({
-					body: context.get("body"),
-					routedCustomerId: context.req.header(ATOM_CUSTOMER_ID_HEADER),
-				}),
+				...fields,
+				// A deduction's key at Autumn is this when present, the request id otherwise.
+				...(idempotencyKey && { idempotencyKey }),
 			},
 			res: await loggedResponseOf({ context }),
 			...(sampled && { sample_rate: ALLOWED_CHECK_SAMPLE_RATE }),

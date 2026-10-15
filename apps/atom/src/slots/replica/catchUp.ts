@@ -16,13 +16,13 @@ const isNewer = (a: Version, b: Version) =>
 	a.readAt > b.readAt || (a.readAt === b.readAt && a.logOffset > b.logOffset);
 
 /** Only what is newer than the row held is written, so a pass over what is already held rewrites nothing. */
-const writeNewer = ({
+const writeNewer = async ({
 	store,
 	page,
 }: {
 	store: SqliteStore;
 	page: AppliedSubject[];
-}): number => {
+}): Promise<number> => {
 	const subjects = page
 		.map(({ subject }) => subject)
 		.filter((subject) => {
@@ -34,7 +34,7 @@ const writeNewer = ({
 			return !held || isNewer(subject, held);
 		});
 	if (subjects.length === 0) return 0;
-	return store.setSubjects({ subjects }).filter(Boolean).length;
+	return (await store.setSubjects({ subjects })).filter(Boolean).length;
 };
 
 type SlotCopy = {
@@ -67,7 +67,7 @@ const copyRows = async ({
 		});
 		first = false;
 		after = page.after;
-		written += writeNewer({ store, page: page.subjects });
+		written += await writeNewer({ store, page: page.subjects });
 		const last = page.subjects.at(-1);
 		if (!last || page.subjects.length < CATCH_UP_PAGE) break;
 		cursor = {
@@ -113,7 +113,7 @@ const copyNewerRows = async ({
 			const keys = wanted
 				.slice(i, i + FETCH_BATCH)
 				.map(({ customerId, entityId }) => ({ customerId, entityId }));
-			written += writeNewer({
+			written += await writeNewer({
 				store,
 				page: await source.fetch({ slot, slotCount, keys }),
 			});

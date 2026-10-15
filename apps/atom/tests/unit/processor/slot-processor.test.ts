@@ -1,14 +1,29 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import type { CatalogRow } from "@autumn/balance-engine";
+import {
+	applyMutation,
+	type Catalog,
+	computeTrack,
+	type SubjectState,
+	subjectStateToFullSubject,
+} from "@autumn/balance-engine";
 import { CheckExpand } from "@autumn/shared";
 import {
 	createCatalogRowsFor,
 	createState,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
+import {
+	readCurrentSubject,
+	readViewFoldThreadStats,
+} from "../../../src/processor/actions/readCurrentSubject/readCurrentSubject.js";
+import * as replay from "../../../src/processor/actions/readCurrentSubject/replayOwed.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
+import type { JournalEntry } from "../../../src/state/journal/types/journal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
@@ -21,6 +36,7 @@ import {
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { openSlotProcessor, owedCommand } from "../utils/journalFixtures.js";
 
 const stores: { close(): void }[] = [];
 const createProcessor = () => {
@@ -29,13 +45,16 @@ const createProcessor = () => {
 		held: freshHeld(),
 	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
-	stores.push(sqliteStore, catalogStore);
+	const journal = openJournal({ databasePath: ":memory:" });
+	stores.push(sqliteStore, catalogStore, journal);
 	const processor = createSlotProcessor({
 		ctx: {
 			sqliteStore,
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
+			journal,
+			openLocks: createOpenLocks(),
 		},
 	});
 	return {
@@ -384,7 +403,8 @@ describe("a push the slot could not store", () => {
 			held: freshHeld(),
 		});
 		const catalogStore = openCatalogStore({ databasePath: ":memory:" });
-		stores.push(sqliteStore, catalogStore);
+		const journal = openJournal({ databasePath: ":memory:" });
+		stores.push(sqliteStore, catalogStore, journal);
 		let failing = false;
 		const pulled: string[] = [];
 		const processor = createSlotProcessor({
@@ -400,7 +420,10 @@ describe("a push the slot could not store", () => {
 				logger: getAtomLogger(),
 				subjectPulls: {
 					request: ({ customerId }) => void pulled.push(customerId),
+					settle: async () => {},
 				},
+				journal,
+				openLocks: createOpenLocks(),
 			},
 		});
 		const request = checkBalance({ requiredBalance: 5 });
@@ -425,4 +448,212 @@ describe("a push the slot could not store", () => {
 		);
 		expect((await checkResponseOf({ processor, request })).allowed).toBe(false);
 	});
+});
+
+describe("a push that only acknowledges this Atom's own deductions keeps the cached view", () => {
+	const ATOM_ID = "atom_1";
+
+	/** The balance worker's state after it applied `entries`, each stamped with its source as the server stamps it. */
+	const workerApplied = ({
+		state,
+		catalog,
+		writerId,
+		entries,
+	}: {
+		state: SubjectState;
+		catalog: Catalog;
+		writerId: string;
+		entries: readonly JournalEntry[];
+	}): SubjectState =>
+		entries.reduce((current, { seq, command }) => {
+			if (command.type !== "track")
+				throw new Error("these slots journal tracks only");
+			return applyMutation({
+				state: current,
+				mutation: computeTrack({
+					fullSubject: subjectStateToFullSubject({ state: current, catalog }),
+					command: { ...command, source: { atomId: ATOM_ID, writerId, seq } },
+				}),
+			});
+		}, state);
+
+	/** `cus_1` holding 1,000 messages, then `deductions` journaled and its view read after each, as checks do. */
+	const openDeducting = async ({ deductions }: { deductions: number }) => {
+		const slot = openSlotProcessor();
+		stores.push(slot);
+		const stored = storedSubjectWith({ balance: 1000 });
+		await slot.processor.setSubject(subjectPushOf({ subject: stored }));
+		const read = () =>
+			readCurrentSubject({
+				ctx: slot.ctx,
+				customerId: "cus_1",
+				entityId: null,
+			});
+		read();
+		for (let index = 0; index < deductions; index++) {
+			await slot.journal.append({
+				customerId: "cus_1",
+				command: owedCommand({ commandId: `deduct_${index}`, value: 10 }),
+			});
+			read();
+		}
+		/** Autumn's push after it applied the first `acknowledged`, carrying `edit` on top when it applied something else too. */
+		const push = async ({
+			acknowledged,
+			edit = (state) => state,
+		}: {
+			acknowledged: number;
+			edit?: (state: SubjectState) => SubjectState;
+		}) => {
+			const entries = slot.journal
+				.owed({ customerId: "cus_1" })
+				.slice(0, acknowledged);
+			const state = edit(
+				workerApplied({
+					state: stored.state,
+					catalog: stored.catalog,
+					writerId: slot.journal.writerId,
+					entries,
+				}),
+			);
+			const body = subjectPushOf({
+				subject: { ...stored, state, readAt: 2000 },
+			});
+			await slot.processor.setSubject({
+				customerId: body.customerId,
+				body: JSON.stringify({
+					...JSON.parse(body.body),
+					atom_seqs: { [slot.journal.writerId]: acknowledged },
+				}),
+			});
+			return state;
+		};
+		return { ...slot, read, push };
+	};
+
+	/** Today's view: the pushed state with every entry still owed replayed on top, joined. */
+	const rebuiltView = ({
+		journal,
+		state,
+		catalog,
+	}: {
+		journal: ReturnType<typeof openSlotProcessor>["journal"];
+		state: SubjectState;
+		catalog: Catalog;
+	}) =>
+		subjectStateToFullSubject({
+			state: replay.replayOwed({
+				owed: journal.owed({ customerId: "cus_1" }),
+				state,
+				catalog,
+			}),
+			catalog,
+		});
+
+	const foldStatsDelta = (
+		before: ReturnType<typeof readViewFoldThreadStats>,
+	) => {
+		const after = readViewFoldThreadStats();
+		const grew = (Object.keys(after) as (keyof typeof after)[]).filter(
+			(field) => after[field] > before[field],
+		);
+		return Object.fromEntries(
+			grew.map((field) => [field, after[field] - before[field]]),
+		);
+	};
+
+	test("a push acknowledging the deductions it was read after keeps the fold: the view is byte-identical to a rebuild, and nothing is replayed", async () => {
+		const slot = await openDeducting({ deductions: 5 });
+		const before = readViewFoldThreadStats();
+		const state = await slot.push({ acknowledged: 3 });
+		const replayed = spyOn(replay, "replayOwed");
+
+		const view = slot.read();
+		replayed.mockRestore();
+
+		expect(replayed).not.toHaveBeenCalled();
+		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(JSON.stringify(view.fullSubject)).toBe(
+			JSON.stringify(
+				rebuiltView({ journal: slot.journal, state, catalog: view.catalog }),
+			),
+		);
+	});
+
+	test("a push acknowledging only some of a burst keeps the fold, and the deductions it has not seen stay in the view", async () => {
+		const slot = await openDeducting({ deductions: 5 });
+		const before = readViewFoldThreadStats();
+
+		await slot.push({ acknowledged: 2 });
+		await slot.journal.append({
+			customerId: "cus_1",
+			command: owedCommand({ commandId: "deduct_after_push", value: 10 }),
+		});
+
+		expect(slot.journal.owed({ customerId: "cus_1" })).toHaveLength(4);
+		expect(
+			(
+				await checkResponseOf({
+					processor: slot.processor,
+					request: checkRequestFor(),
+				})
+			).balance?.remaining,
+		).toBe(940);
+		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+	});
+
+	test("a push with the rows the deductions leave but another revision keeps the fold, counting on from Autumn's revision", async () => {
+		const slot = await openDeducting({ deductions: 5 });
+		const before = readViewFoldThreadStats();
+
+		const state = await slot.push({
+			acknowledged: 3,
+			edit: (pushed) => ({ ...pushed, revision: 0 }),
+		});
+		const view = slot.read();
+
+		expect(foldStatsDelta(before)).toEqual({ viewFoldKept: 1 });
+		expect(JSON.stringify(view.fullSubject)).toBe(
+			JSON.stringify(
+				rebuiltView({ journal: slot.journal, state, catalog: view.catalog }),
+			),
+		);
+		expect(view.fullSubject.revision).toBe(2);
+	});
+
+	test.each([
+		[
+			"a changed balance",
+			(state: SubjectState): SubjectState => ({
+				...state,
+				customerEntitlements: state.customerEntitlements.map((row) => ({
+					...row,
+					balance: row.balance + 100,
+				})),
+			}),
+			1050,
+			"viewFoldRebuiltState",
+		],
+	])(
+		"a push acknowledging the deductions that also carries %s rebuilds the view from the push, counted by the guard it failed",
+		async (_change, edit, remaining, reason) => {
+			const slot = await openDeducting({ deductions: 5 });
+			const before = readViewFoldThreadStats();
+
+			await slot.push({ acknowledged: 3, edit });
+
+			expect(
+				(
+					await checkResponseOf({
+						processor: slot.processor,
+						request: checkRequestFor(),
+					})
+				).balance?.remaining,
+			).toBe(remaining);
+			expect(foldStatsDelta(before)).toEqual({
+				viewFoldRebuilt: 1,
+				[reason]: 1,
+			});
+		},
+	);
 });

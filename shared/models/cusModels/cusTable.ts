@@ -50,6 +50,9 @@ export const customers = pgTable(
 			"balance_allocations",
 		).$type<BalanceAllocations>(),
 		config: jsonb().$type<CustomerConfig>().default({}),
+		/** Per Atom, per journal (writer id), the highest seq of its tracks the balance worker has applied. */
+		atom_seqs:
+			jsonb("atom_seqs").$type<Record<string, Record<string, number>>>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),

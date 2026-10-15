@@ -4,7 +4,11 @@ import type {
 	Feature,
 	FullCustomer,
 } from "@autumn/shared";
-import { FeatureType, LATEST_VERSION } from "@autumn/shared";
+import {
+	FeatureType,
+	type FinalizeLockParamsV1,
+	LATEST_VERSION,
+} from "@autumn/shared";
 import {
 	Button,
 	FormLabel,
@@ -106,6 +110,7 @@ export function RecordUsageSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const { customer } = useCusQuery();
+	const customerId = customer?.id || customer?.internal_id;
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);
@@ -182,12 +187,14 @@ export function RecordUsageSheet() {
 
 	const handleFinalize = async () => {
 		const lockId = finalize.lockId.trim();
+		if (!customerId) return;
 		if (!lockId) {
 			toast.error("Please enter a lock ID");
 			return;
 		}
 
-		const params: Record<string, unknown> = {
+		const params: FinalizeLockParamsV1 = {
+			customer_id: customerId,
 			lock_id: lockId,
 			action: finalize.action,
 		};
@@ -225,7 +232,6 @@ export function RecordUsageSheet() {
 	const handleSubmit = async () => {
 		if (finalize.enabled) return handleFinalize();
 
-		const customerId = customer?.id || customer?.internal_id;
 		if (!customerId || !trackingFeatureId) return;
 
 		const parsedValue = value.trim() === "" ? 1 : Number.parseFloat(value);
