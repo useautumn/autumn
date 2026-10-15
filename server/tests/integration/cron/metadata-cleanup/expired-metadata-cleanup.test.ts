@@ -62,3 +62,24 @@ test(`${chalk.yellowBright("expired metadata cleanup: deletes only checkout_sess
 		await ctx.db.delete(metadata).where(inArray(metadata.id, ids));
 	}
 });
+
+test(`${chalk.yellowBright("expired metadata cleanup: deletes at most 1,000 rows per call")}`, async () => {
+	const rows: MetadataInsert[] = Array.from({ length: 1_001 }, () => ({
+		id: generateId("meta"),
+		created_at: 0,
+		expires_at: 500,
+		type: MetadataType.CheckoutSessionCompleted,
+	}));
+	const ids = rows.map((row) => row.id as string);
+	await ctx.db.insert(metadata).values(rows);
+
+	try {
+		const first = await deleteExpiredCheckoutMetadata({ ctx, now: NOW });
+		expect(first.deleted).toBe(1_000);
+
+		const second = await deleteExpiredCheckoutMetadata({ ctx, now: NOW });
+		expect(second.deleted).toBe(1);
+	} finally {
+		await ctx.db.delete(metadata).where(inArray(metadata.id, ids));
+	}
+});

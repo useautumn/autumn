@@ -28,17 +28,31 @@ export const deleteExpiredCheckoutMetadata = async ({
 	);
 
 	const deletedRows = await withStatementTimeout(ctx.db, (tx) => {
+		// A locking CTE runs once; as an IN subquery a semi-join can rescan it and pick past the limit.
 		const expiredIds = tx
-			.select({ id: metadata.id })
-			.from(metadata)
-			.where(isPurgeable)
-			.orderBy(asc(metadata.expires_at))
-			.limit(DELETE_BATCH_SIZE)
-			.for("update", { skipLocked: true });
+			.$with("expired_ids")
+			.as(
+				tx
+					.select({ id: metadata.id })
+					.from(metadata)
+					.where(isPurgeable)
+					.orderBy(asc(metadata.expires_at), asc(metadata.id))
+					.limit(DELETE_BATCH_SIZE)
+					.for("update", { skipLocked: true }),
+			);
 
 		return tx
+			.with(expiredIds)
 			.delete(metadata)
-			.where(and(inArray(metadata.id, expiredIds), isPurgeable))
+			.where(
+				and(
+					inArray(
+						metadata.id,
+						tx.select({ id: expiredIds.id }).from(expiredIds),
+					),
+					isPurgeable,
+				),
+			)
 			.returning({ id: metadata.id });
 	});
 
