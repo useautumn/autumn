@@ -1,5 +1,6 @@
 export * from "./base/InternalError.js";
 export * from "./base/RecaseError.js";
+export * from "./classes/approvalErrClasses.js";
 export * from "./classes/balancesErrClasses.js";
 export * from "./classes/checkoutErrClasses.js";
 export * from "./classes/cusErrClasses.js";

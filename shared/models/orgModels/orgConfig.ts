@@ -87,6 +87,8 @@ export const OrgConfigSchema = z.object({
 
 	// Unset/null = downstream 30-day fallback applies; never add a default.
 	default_invoice_net_terms_days: z.number().int().positive().nullish(),
+	/** Approval rules block denied requests; off means shadow mode (decisions are only logged). */
+	approvals_enforced: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
