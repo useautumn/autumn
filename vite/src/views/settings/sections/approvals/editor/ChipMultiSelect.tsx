@@ -49,6 +49,12 @@ export const ChipMultiSelect = ({
 		(key) => options.get(key) ?? { value: key, label: key },
 	);
 	const locked = groups.filter((group) => group.locked);
+	// A saved choice missing from the loaded options still needs a row to uncheck it.
+	const unknown = selected.filter((option) => !options.has(option.value));
+	const menuGroups = [
+		...(unknown.length > 0 ? [{ label: "Selected", options: unknown }] : []),
+		...groups.filter((group) => !group.locked && group.options.length > 0),
+	];
 
 	return (
 		<DropdownMenu>
@@ -74,23 +80,21 @@ export const ChipMultiSelect = ({
 				align="start"
 				className="max-h-96 w-(--anchor-width)"
 			>
-				{groups
-					.filter((group) => !group.locked && group.options.length > 0)
-					.map((group) => (
-						<DropdownMenuGroup key={group.label}>
-							<DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-							{group.options.map((option) => (
-								<DropdownMenuCheckboxItem
-									key={option.value}
-									checked={picked.has(option.value)}
-									onCheckedChange={() => onToggle(option.value)}
-								>
-									{option.icon}
-									{option.label}
-								</DropdownMenuCheckboxItem>
-							))}
-						</DropdownMenuGroup>
-					))}
+				{menuGroups.map((group) => (
+					<DropdownMenuGroup key={group.label}>
+						<DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+						{group.options.map((option) => (
+							<DropdownMenuCheckboxItem
+								key={option.value}
+								checked={picked.has(option.value)}
+								onCheckedChange={() => onToggle(option.value)}
+							>
+								{option.icon}
+								{option.label}
+							</DropdownMenuCheckboxItem>
+						))}
+					</DropdownMenuGroup>
+				))}
 				{locked.length > 0 && (
 					<>
 						<DropdownMenuSeparator />
