@@ -89,6 +89,20 @@ else
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${APT_NEEDED[@]}"
   fi
 
+  # Stripe CLI forwards test-mode webhooks to the local server (`stripe listen`).
+  # GitHub release downloads are blocked on cloud VMs; Stripe's apt repo is not.
+  if ! command -v stripe >/dev/null 2>&1; then
+    log "Installing Stripe CLI from Stripe's apt repo"
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public -o /tmp/stripe-cli.asc
+    sudo gpg --batch --yes -o /etc/apt/keyrings/stripe.gpg --dearmor /tmp/stripe-cli.asc
+    rm -f /tmp/stripe-cli.asc
+    echo 'deb [signed-by=/etc/apt/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main' \
+      | sudo tee /etc/apt/sources.list.d/stripe.list >/dev/null
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq stripe
+  fi
+
   if ! command -v clickhouse-server >/dev/null 2>&1; then
     log "Installing ClickHouse from official apt repo"
     sudo mkdir -p /etc/apt/keyrings

@@ -208,7 +208,11 @@ token in ~/.cache/autumn-infisical-token; the Stripe sandbox key lands in
 - 2. App: `bun dw` hard-requires the Neon CLI; skip it. Start (or restart after
   any checkout/edit, neither hot-reloads) the API on :8080 and the workers:
     bash scripts/setup/claude-cloud/restart-app.sh
-  Logs: ~/.autumn-agent/server.log and ~/.autumn-agent/workers.log.
+  It also starts `stripe listen` so Stripe test-clock webhooks reach :8080.
+  Logs: ~/.autumn-agent/{server,workers,stripe-listen}.log.
+  dw sets BALANCE_WORKER_ROLLOUT_ENABLED=false in server/.env.local: there is
+  no Kafka here, so balance calls take the in-process path. If every call
+  fails with "Signature is invalid", that line is missing.
 - 3. Tests: `bash scripts/setup/claude-cloud/with-env.sh server -- bun test --timeout 0 <file>`
   Unit tests (tests/unit) need the wrapper too: the test preload builds a context.
 - TDD red run: `git stash push -- server/src`, restart-app.sh, run the test
