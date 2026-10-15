@@ -214,7 +214,13 @@ describe("the request line of a check hopped to its owner", () => {
 	/** Every sampled line falls inside the 1-in-100 sample, or none does. */
 	const sampleEvery = ({ sampled }: { sampled: boolean }) =>
 		spyOn(Math, "random").mockReturnValue(sampled ? 0 : 0.99);
-	const loggingReplica = ({ address, peer }: { address: string; peer: string }) => {
+	const loggingReplica = ({
+		address,
+		peer,
+	}: {
+		address: string;
+		peer: string;
+	}) => {
 		const logged: Line[] = [];
 		const record = (fields: unknown) => void logged.push({ fields } as Line);
 		const replica = createReplica({
@@ -252,9 +258,14 @@ describe("the request line of a check hopped to its owner", () => {
 			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
 		connect({ replicas: [a, b] });
 
-		await b.app.request("/v1/balances.check", checkFor({ customerId: CUSTOMER }));
+		await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
 
-		expect(logged.map(({ fields }) => [fields.statusCode, fields.sample_rate])).toEqual([[200, 0.01]]);
+		expect(
+			logged.map(({ fields }) => [fields.statusCode, fields.sample_rate]),
+		).toEqual([[200, 0.01]]);
 	});
 });
 
