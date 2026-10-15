@@ -1,3 +1,4 @@
+import type { FullCusProduct } from "@autumn/shared";
 import type {
 	BalanceCreateFacts,
 	BalanceUpdateFacts,
@@ -7,11 +8,10 @@ import type {
 	CatalogPlanFacts,
 	CustomerFacts,
 	FreeTrialFacts,
-	FullCusProduct,
 	IncomingPlanFacts,
 	InvoiceFacts,
 	RewardApplyFacts,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/evaluate/index.js";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { customers } from "@tests/utils/fixtures/db/customers.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
