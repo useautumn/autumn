@@ -143,10 +143,16 @@ export type UpdatePlanItemPriceTierRequestBody = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const UpdatePlanItemTierBehaviorRequestBody = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type UpdatePlanItemTierBehaviorRequestBody = ClosedEnum<
   typeof UpdatePlanItemTierBehaviorRequestBody
 >;
@@ -201,6 +207,9 @@ export type UpdatePlanItemPriceRequestBody = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<UpdatePlanItemPriceTierRequestBody> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: UpdatePlanItemTierBehaviorRequestBody | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -804,10 +813,16 @@ export type UpdatePlanLicensePriceTierRequestBody = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const UpdatePlanLicenseTierBehaviorRequestBody = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type UpdatePlanLicenseTierBehaviorRequestBody = ClosedEnum<
   typeof UpdatePlanLicenseTierBehaviorRequestBody
 >;
@@ -862,6 +877,9 @@ export type UpdatePlanLicensePriceRequestBody = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<UpdatePlanLicensePriceTierRequestBody> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: UpdatePlanLicenseTierBehaviorRequestBody | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1911,10 +1929,16 @@ export type UpdatePlanVariantPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const UpdatePlanVariantTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type UpdatePlanVariantTierBehavior = ClosedEnum<
   typeof UpdatePlanVariantTierBehavior
 >;
@@ -1969,6 +1993,9 @@ export type UpdatePlanVariantPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<UpdatePlanVariantPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: UpdatePlanVariantTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.

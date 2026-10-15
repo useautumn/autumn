@@ -1,12 +1,15 @@
 import "scraps-ui/scraps.css";
 import "@autumn/ui/styles.css";
 import * as Sentry from "@sentry/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PostHogProvider } from "posthog-js/react";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { routeChunkForPath } from "./app/routeChunks";
 import { ThemeProvider } from "./contexts/ThemeProvider";
+import { queryPersistOptions } from "./lib/queryPersistence";
+import { reloadOnStaleChunk } from "./utils/staleChunkReload";
 
 declare const __APP_ENV__: string;
 
@@ -38,15 +41,22 @@ if (__APP_ENV__ === "prod") {
 	document.title = `Autumn (wt${__WORKTREE_NUM__})`;
 }
 
+window.addEventListener("vite:preloadError", reloadOnStaleChunk);
+
+// The dashboard used AutumnProvider's client until it shared this one, so keep its defaults.
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
+			staleTime: 1000 * 60,
+			retry: false,
 			refetchOnWindowFocus: false,
+			refetchOnReconnect: false,
 		},
 	},
 });
 
-const shouldInitializePostHog = process.env.NODE_ENV === "production";
+// Fetch the landing page's chunk alongside the session check rather than after it.
+routeChunkForPath(window.location.pathname)?.preload();
 
 /** React 19 routes render errors through these root hooks, not window.onerror, so the error reporter must hear them here. */
 const reportRenderError = Sentry.reactErrorHandler((error, errorInfo) => {
@@ -58,26 +68,14 @@ createRoot(document.getElementById("root")!, {
 	onCaughtError: reportRenderError,
 }).render(
 	<StrictMode>
-		<QueryClientProvider client={queryClient}>
+		<PersistQueryClientProvider
+			client={queryClient}
+			persistOptions={queryPersistOptions}
+		>
 			<ThemeProvider>
-				{/* <App /> */}
-				{shouldInitializePostHog ? (
-					<PostHogProvider
-						apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-						options={{
-							api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-							autocapture: false,
-							capture_pageview: false,
-							capture_pageleave: false,
-						}}
-					>
-						<App />
-					</PostHogProvider>
-				) : (
-					<App />
-				)}
+				<App />
 				{/* <ReactQueryDevtools initialIsOpen={false} /> */}
 			</ThemeProvider>
-		</QueryClientProvider>
+		</PersistQueryClientProvider>
 	</StrictMode>,
 );

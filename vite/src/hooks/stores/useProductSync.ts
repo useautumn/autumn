@@ -4,7 +4,7 @@ import {
 	productV2ToFrontendProduct,
 	sortPlanItems,
 } from "@autumn/shared";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductStore } from "./useProductStore";
 
@@ -23,7 +23,8 @@ export const useProductSync = ({
 	const hasInitialized = useRef(false);
 	const lastProductRef = useRef<ProductV2 | null>(null);
 
-	useEffect(() => {
+	// Layout effect: the editor renders from the store, so it must sync before the first paint.
+	useLayoutEffect(() => {
 		if (!product) return;
 
 		// Check if this is a new product (ID changed) or if product data changed

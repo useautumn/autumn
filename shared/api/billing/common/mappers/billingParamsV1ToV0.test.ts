@@ -90,6 +90,45 @@ describe("billingParamsV1ToV0", () => {
 		expect(request.items).toBeUndefined();
 	});
 
+	test("invoice_mode.issue_method wins over finalize", () => {
+		const finalizeInvoiceFor = ({
+			issueMethod,
+			finalize,
+		}: {
+			issueMethod: "draft" | "send";
+			finalize: boolean;
+		}) =>
+			billingParamsV1ToV0({
+				ctx,
+				fullProduct,
+				params: {
+					customer_id: "cus_1",
+					invoice_mode: { enabled: true, finalize, issue_method: issueMethod },
+					plan_id: "scale",
+				},
+			}).request.finalize_invoice;
+
+		expect(finalizeInvoiceFor({ issueMethod: "draft", finalize: true })).toBe(
+			false,
+		);
+		expect(finalizeInvoiceFor({ issueMethod: "send", finalize: false })).toBe(
+			true,
+		);
+	});
+
+	test("reports a silent finalize as unrepresentable in V0", () => {
+		const { unrepresentable } = billingParamsV1ToV0({
+			ctx,
+			fullProduct,
+			params: {
+				customer_id: "cus_1",
+				invoice_mode: { enabled: true, issue_method: "finalize" },
+				plan_id: "scale",
+			},
+		});
+		expect(unrepresentable).toEqual(["invoice_mode.issue_method"]);
+	});
+
 	test("reports unrepresentable keys and skips item resolution for them", () => {
 		const { request, unrepresentable } = billingParamsV1ToV0({
 			ctx,

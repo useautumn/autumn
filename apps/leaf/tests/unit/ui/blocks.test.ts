@@ -23,6 +23,34 @@ const attachArgs = {
 };
 
 describe("approval card", () => {
+	test("labels the invoice by issue_method, which wins over finalize", () => {
+		const cardFor = (invoiceMode: Record<string, unknown>) =>
+			JSON.stringify(
+				approvalCard({
+					id: "approval_1",
+					env: AppEnv.Sandbox,
+					toolName: "attach",
+					toolArgs: {
+						request: {
+							...attachArgs.request,
+							invoice_mode: { enabled: true, ...invoiceMode },
+						},
+					},
+					preview: wrapMcpResult({
+						pending: true,
+						preview: { total: 400, currency: "usd" },
+					}),
+				}),
+			);
+
+		expect(cardFor({ finalize: true, issue_method: "draft" })).toContain(
+			"Draft invoice",
+		);
+		expect(cardFor({ finalize: false, issue_method: "send" })).not.toContain(
+			"Draft invoice",
+		);
+	});
+
 	test("leads with the linked action inline", () => {
 		const card = approvalCard({
 			id: "approval_1",

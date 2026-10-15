@@ -1,34 +1,28 @@
+import type { SetPlansPreviewReview } from "@autumn/shared";
 import { Accordion } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
 import { useCreateScheduleFormContext } from "../../context/CreateScheduleFormProvider";
 import { useSetPlansReviewSections } from "../../hooks/useSetPlansReviewSections";
 import { formPhasesToSkeletonPhases } from "../../utils/review/formPhasesToSkeletonPhases";
 import type {
-	ReviewChangeLayout,
-	ReviewChangeSystem,
-} from "../../utils/review/types/reviewChange";
+	ReviewGroupLayout,
+	ReviewGroupSystem,
+} from "../../utils/review/types/reviewGroup";
 import { ReviewChangeGroup } from "./ReviewChangeGroup";
 import { ReviewWarnings } from "./ReviewWarnings";
 
 const REVIEW_GROUPS: {
-	value: string;
-	system: ReviewChangeSystem;
+	value: keyof SetPlansPreviewReview;
+	system: ReviewGroupSystem;
 	title: string;
-	sectionKey: "plans" | "balances" | "processor";
-	layout?: ReviewChangeLayout;
+	layout?: ReviewGroupLayout;
 }[] = [
-	{ value: "plans", system: "autumn", title: "Plans", sectionKey: "plans" },
-	{
-		value: "balances",
-		system: "autumn",
-		title: "Balances",
-		sectionKey: "balances",
-	},
+	{ value: "plans", system: "autumn", title: "Plans" },
+	{ value: "balances", system: "autumn", title: "Balances" },
 	{
 		value: "subscription",
 		system: "stripe",
 		title: "Subscription",
-		sectionKey: "processor",
 		layout: "pricing_table",
 	},
 ];
@@ -54,18 +48,24 @@ export function SetPlansReviewChanges() {
 			)}
 		>
 			{sections && <ReviewWarnings warnings={sections.warnings} />}
-			<Accordion type="multiple" className="px-4 pt-1">
-				{REVIEW_GROUPS.map(({ sectionKey, ...group }) => (
-					<ReviewChangeGroup
-						key={group.value}
-						{...group}
-						section={sections?.[sectionKey]}
-						placeholderPhases={
-							sectionKey === "balances" ? undefined : placeholderPhases
-						}
-					/>
-				))}
-			</Accordion>
+			{sections && !sections.review ? (
+				<p className="px-4 py-3 text-xs text-tertiary-foreground">
+					The plan changes can't be shown yet. Refresh the page to load them.
+				</p>
+			) : (
+				<Accordion type="multiple" className="px-4 pt-1">
+					{REVIEW_GROUPS.map((group) => (
+						<ReviewChangeGroup
+							key={group.value}
+							{...group}
+							section={sections?.review?.[group.value]}
+							placeholderPhases={
+								group.value === "balances" ? undefined : placeholderPhases
+							}
+						/>
+					))}
+				</Accordion>
+			)}
 		</div>
 	);
 }

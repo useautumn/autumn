@@ -1184,6 +1184,7 @@ export async function planPooledEntities({
 							stripe_subscription_id: null,
 							customer_license_link_id: null,
 							rollover_signature: "",
+							feature_override_signature: "none",
 							customer_entitlement_id: poolCustomerEntitlementId,
 							last_applied_reset_at: null,
 							expires_at: null,

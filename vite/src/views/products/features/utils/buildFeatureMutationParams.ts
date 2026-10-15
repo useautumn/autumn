@@ -79,6 +79,7 @@ export const featureToCatalogFeatureParams = ({
 		type: feature.type,
 		consumable: feature.config?.usage_type === FeatureUsageType.Single,
 		event_names: feature.event_names,
+		combine: feature.config?.combine,
 		...buildFeatureMarkupParams({
 			type: feature.type,
 			modelMarkups: feature.model_markups ?? undefined,

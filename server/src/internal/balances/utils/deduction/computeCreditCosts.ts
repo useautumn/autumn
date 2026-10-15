@@ -108,11 +108,13 @@ export const computeCreditCosts = ({
 			});
 		} catch (error) {
 			// A configured rate that cannot be evaluated must fail closed. An item
-			// override rides the same cached row as the balance, so the staleness
-			// fallback below never applies to it — the override is authoritative.
+			// override's own rows ride the cached balance row, so the staleness
+			// fallback only covers rates inherited from the catalog.
 			if (
 				rateCard ||
-				ce.entitlement.feature_override?.schema ||
+				ce.entitlement.feature_override?.schema?.some(
+					(row) => row.metered_feature_id === deduction.feature.id,
+				) ||
 				creditSystemContainsFeature({
 					creditSystem,
 					meteredFeatureId: deduction.feature.id,

@@ -1,13 +1,28 @@
-import type { CreditSchemaItem } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	findFeatureById,
+	getFeatureName,
+	hasCreditDimensionRules,
+	isAiCreditSystem,
+} from "@autumn/shared";
 import { isGraduated } from "./creditSchemaUtils";
 
-export const formatCredits = (amount: number) =>
+const formatCredits = (amount: number) =>
 	`${amount} ${amount === 1 ? "credit" : "credits"}`;
 
-const dimensionCountSuffix = (item: CreditSchemaItem): string => {
-	const count = Object.keys(item.dimensions ?? {}).length;
-	if (count === 0) return "";
-	return ` · ${count} ${count === 1 ? "dimension" : "dimensions"}`;
+const countLabel = (count: number, noun: string) =>
+	`${count} ${noun}${count === 1 ? "" : "s"}`;
+
+/** " · varies by event · 2 dimensions, 1 multiplier", so a rule-based rate never reads as fixed. */
+const variesSuffix = (item: CreditSchemaItem): string => {
+	if (!hasCreditDimensionRules(item)) return "";
+	const counts = [
+		[Object.keys(item.dimensions ?? {}).length, "dimension"],
+		[Object.keys(item.multipliers ?? {}).length, "multiplier"],
+	] as const;
+	const parts = counts.flatMap(([n, noun]) => (n ? [countLabel(n, noun)] : []));
+	return ` · varies by event · ${parts.join(", ")}`;
 };
 
 export const creditRateSummary = ({
@@ -32,5 +47,40 @@ export const creditRateSummary = ({
 			? `${formatCredits(item.tiers[0].credit_amount)}${per}`
 			: `${item.tiers.length} tiers · from ${formatCredits(item.tiers[0].credit_amount)}`;
 
-	return `${rate}${dimensionCountSuffix(item)}`;
+	return `${rate}${variesSuffix(item)}`;
 };
+
+/** The unit a feature's rate is counted in: "web searches", or "of AI usage" for AI children. */
+export const rateUnit = ({
+	feature,
+	billingUnits = 1,
+}: {
+	feature?: Feature;
+	billingUnits?: number;
+}) => {
+	const isAiChild = isAiCreditSystem(feature?.type);
+	const unitName = isAiChild
+		? "of AI usage"
+		: getFeatureName({ feature, plural: billingUnits !== 1 }) || "units";
+	return { unitName, isAiChild };
+};
+
+/** creditRateSummary with the unit taken from the rate's feature. */
+export const rateText = ({
+	rate,
+	features,
+}: {
+	rate: CreditSchemaItem;
+	features: Feature[];
+}) =>
+	creditRateSummary({
+		item: rate,
+		...rateUnit({
+			feature: findFeatureById({
+				features,
+				featureId: rate.metered_feature_id,
+				errorOnNotFound: false,
+			}),
+			billingUnits: rate.feature_amount,
+		}),
+	});

@@ -18,6 +18,8 @@ export const PooledBalanceSchema = z.object({
 	stripe_subscription_id: z.string().nullable(),
 	customer_license_link_id: z.string().nullable(),
 	rollover_signature: z.string(),
+	// Worker states stored before the column existed carry no signature.
+	feature_override_signature: z.string().optional(),
 	customer_entitlement_id: z.string(),
 	last_applied_reset_at: z.number().nullable(),
 	expires_at: z.number().nullable(),

@@ -20,17 +20,6 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
-import {
-	childItemOp,
-	dashboardAddCustomize,
-	dashboardRemoveCustomize,
-	expectLicenseDraftCase,
-	messagesItemDelta,
-	orVersionPinnedFilter,
-	parentLicenseOp,
-	versionPinnedFilter,
-} from "../licenses/utils/expectLicenseMigrationDrafts.js";
 import {
 	dashboardItem,
 	messagesItem,
@@ -41,6 +30,17 @@ import {
 	seedBaseWithTwoVariants,
 	seedBaseWithVariant,
 } from "../../variants/utils/seedVariantPlans.js";
+import {
+	childItemOp,
+	dashboardAddCustomize,
+	dashboardRemoveCustomize,
+	expectLicenseDraftCase,
+	messagesItemDelta,
+	orVersionPinnedFilter,
+	parentLicenseOp,
+	versionPinnedFilter,
+} from "../licenses/utils/expectLicenseMigrationDrafts.js";
+import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants drafts: propagated items + customers → two ops")}`,

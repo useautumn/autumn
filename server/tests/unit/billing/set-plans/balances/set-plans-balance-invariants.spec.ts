@@ -764,6 +764,7 @@ describe(
 				const phaseChanges = await setPlansPhaseBalanceChanges({
 					ctx,
 					originalFullCustomer: fullCustomer,
+					phaseStarts: phases.map(({ startsAt }) => startsAt),
 					phaseCustomers,
 					savedComparisonCustomers: savedComparisonCustomers({
 						ctx,

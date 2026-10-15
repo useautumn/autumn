@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { pendingPlanToReattachCustomize } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanToReattachCustomize";
+import { invoiceModeToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 
 export const buildPendingReattachParams = ({
 	ctx,
@@ -42,7 +43,7 @@ export const buildPendingReattachParams = ({
 		invoice_mode: invoiceMode && {
 			enabled: true,
 			enable_plan_immediately: invoiceMode.enableProductImmediately,
-			finalize: invoiceMode.finalizeInvoice,
+			issue_method: invoiceModeToIssueMethod({ invoiceMode }),
 			net_terms_days: invoiceMode.daysUntilDue,
 		},
 	} as AttachParamsV1;

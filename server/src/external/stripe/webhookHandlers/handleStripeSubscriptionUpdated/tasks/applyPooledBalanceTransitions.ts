@@ -13,10 +13,17 @@ export const applyPooledBalanceTransitions = async ({
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
 }) => {
+	const { pooledTransitionedCustomerProductIds } = eventContext;
 	const { outgoingCustomerProducts, incomingCustomerProducts } =
 		classifyPooledBalanceTransitionProducts({
-			updatedCustomerProducts: eventContext.updatedCustomerProducts,
-			insertedCustomerProducts: eventContext.insertedCustomerProducts,
+			updatedCustomerProducts: eventContext.updatedCustomerProducts.filter(
+				({ customerProduct }) =>
+					!pooledTransitionedCustomerProductIds.has(customerProduct.id),
+			),
+			insertedCustomerProducts: eventContext.insertedCustomerProducts.filter(
+				(customerProduct) =>
+					!pooledTransitionedCustomerProductIds.has(customerProduct.id),
+			),
 		});
 
 	const hasPools =

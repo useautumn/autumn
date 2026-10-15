@@ -9,6 +9,8 @@ export const PooledBalanceUpdateSchema = z.object({
 	pooledCustomerEntitlement: z.custom<FullCustomerEntitlement>(),
 	balanceDelta: z.number(),
 	grantedDelta: z.number(),
+	/** Set when a max / min pool's unlimited flag flips with its competing shares. */
+	unlimited: z.boolean().optional(),
 });
 
 /** License pools expire when their grant is removed; other pools expire only

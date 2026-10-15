@@ -21,6 +21,13 @@ export const ApiPooledBalanceContributionV0Schema = z.object({
 	next_cycle_contribution: z.number().meta({
 		description: "Amount this source will contribute next cycle.",
 	}),
+	competes: z.boolean().meta({
+		description:
+			"True when this source competes under a 'max' / 'min' feature: only the winning competing share counts, instead of adding up.",
+	}),
+	unlimited: z.boolean().meta({
+		description: "True when this competing source grants unlimited usage.",
+	}),
 	created_at: z.number(),
 });
 

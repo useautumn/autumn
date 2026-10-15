@@ -9,10 +9,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
+import { billDifferenceOrProration } from "@/internal/billing/v2/compute/finalize/billDifferenceOrProration";
 import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
 import { applyInvoiceLineEdits } from "@/internal/billing/v2/compute/finalize/invoiceLineEdits/applyInvoiceLineEdits";
 import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
-import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
@@ -102,7 +102,7 @@ export const finalizeLineItems = ({
 		lineItems: finalizedLineItems,
 	});
 
-	finalizedLineItems = prorateBillDifferenceCredits({
+	finalizedLineItems = billDifferenceOrProration({
 		lineItems: finalizedLineItems,
 		billingContext,
 	});

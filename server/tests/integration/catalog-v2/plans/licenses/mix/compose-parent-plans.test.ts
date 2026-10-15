@@ -159,7 +159,8 @@ test.concurrent(
 						{
 							plan_id: parentId,
 							name: "Renamed",
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 						},
 					],
 				});

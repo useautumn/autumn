@@ -64,12 +64,12 @@ export const expireAndActivateCustomerProducts = async ({
 				customerProduct,
 			});
 
-		outgoingCustomerProducts.push(customerProduct);
+		// Inserting the default already moved both products' pools.
+		if (!insertedCustomerProduct) {
+			outgoingCustomerProducts.push(customerProduct);
+		}
 		if (activation) {
 			incomingCustomerProducts.push(activation.after);
-		}
-		if (insertedCustomerProduct) {
-			incomingCustomerProducts.push(insertedCustomerProduct);
 		}
 
 		// 3. Delete paid scheduled customer product for this group if it exists...

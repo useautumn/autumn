@@ -79,7 +79,7 @@ export type AttachFreeTrialParams = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const AttachPriceInterval = {
+export const AttachPriceCustomizeInterval = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -90,7 +90,9 @@ export const AttachPriceInterval = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type AttachPriceInterval = ClosedEnum<typeof AttachPriceInterval>;
+export type AttachPriceCustomizeInterval = ClosedEnum<
+  typeof AttachPriceCustomizeInterval
+>;
 
 export type AttachAdditionalCurrency = {
   /**
@@ -114,7 +116,7 @@ export type AttachBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: AttachPriceInterval;
+  interval: AttachPriceCustomizeInterval;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -202,10 +204,16 @@ export type AttachItemPriceTier = {
   additionalCurrencies?: Array<AttachItemTierAdditionalCurrency> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const AttachItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type AttachItemTierBehavior = ClosedEnum<typeof AttachItemTierBehavior>;
 
 /**
@@ -256,6 +264,9 @@ export type AttachItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<AttachItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: AttachItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -773,10 +784,16 @@ export type AttachAddItemPriceTier = {
   additionalCurrencies?: Array<AttachAddItemTierAdditionalCurrency> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const AttachAddItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type AttachAddItemTierBehavior = ClosedEnum<
   typeof AttachAddItemTierBehavior
 >;
@@ -829,6 +846,9 @@ export type AttachAddItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<AttachAddItemPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: AttachAddItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1804,10 +1824,16 @@ export type AttachUpsertLicensePriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const AttachUpsertLicenseTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type AttachUpsertLicenseTierBehavior = ClosedEnum<
   typeof AttachUpsertLicenseTierBehavior
 >;
@@ -1862,6 +1888,9 @@ export type AttachUpsertLicensePrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<AttachUpsertLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: AttachUpsertLicenseTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -2047,9 +2076,9 @@ export function attachFreeTrialParamsToJSON(
 }
 
 /** @internal */
-export const AttachPriceInterval$outboundSchema: z.ZodMiniEnum<
-  typeof AttachPriceInterval
-> = z.enum(AttachPriceInterval);
+export const AttachPriceCustomizeInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachPriceCustomizeInterval
+> = z.enum(AttachPriceCustomizeInterval);
 
 /** @internal */
 export type AttachAdditionalCurrency$Outbound = {
@@ -2089,7 +2118,7 @@ export const AttachBasePrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: AttachPriceInterval$outboundSchema,
+    interval: AttachPriceCustomizeInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     additionalCurrencies: z.optional(
       z.array(z.lazy(() => AttachAdditionalCurrency$outboundSchema)),

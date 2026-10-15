@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
+	Badge,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -25,16 +26,17 @@ import {
 	StackIcon,
 	TicketIcon,
 } from "@phosphor-icons/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationMutations } from "@/hooks/queries/useMigrationMutations";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -43,6 +45,9 @@ import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
+import { RateCardRow } from "@/views/products/features/credit-systems/components/rate-card/RateCardRow";
+import { rateCardItemChanges } from "@/views/products/features/credit-systems/utils/rateCardRows";
 import {
 	useProductQuery,
 	useProductQueryState,
@@ -293,7 +298,7 @@ export default function PlanChangeDialog({
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { products, invalidate: invalidateProducts } = useProductsQuery();
-	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
+	const queryClient = useQueryClient();
 	const { invalidate: invalidateMigrations } = useMigrationMutations();
 	const { org } = useOrg();
 
@@ -376,6 +381,10 @@ export default function PlanChangeDialog({
 	);
 
 	const planPreview = createConfirm?.preview ?? preview;
+	const { rateCardChanges, otherChanges } = rateCardItemChanges({
+		itemChanges: preview?.plan_change?.item_changes ?? [],
+		features,
+	});
 	const aliasReplacements = catalogPreviewAliasReplacements({
 		preview: planPreview,
 	});
@@ -478,7 +487,7 @@ export default function PlanChangeDialog({
 			});
 			if (licenses) {
 				commitLicenseChanges();
-				void invalidateLicenseProducts();
+				void queryClient.invalidateQueries({ queryKey: ["license_products"] });
 			}
 			markSaved();
 			toast.success(
@@ -650,9 +659,43 @@ export default function PlanChangeDialog({
 													currency={currency}
 												/>
 											)}
-											<ItemChangeList
-												itemChanges={preview?.plan_change?.item_changes ?? []}
-											/>
+											{rateCardChanges.map(({ change, rows }) => {
+												const item = planItemV1ToProductItem({
+													item: change.item,
+													features,
+												});
+												return (
+													item && (
+														<div
+															key={change.feature_id}
+															className="flex flex-col"
+														>
+															<div className="flex items-center gap-2 py-1">
+																<div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+																	<PlanItemLabel item={item} />
+																</div>
+																<Badge
+																	variant="muted"
+																	className="shrink-0 font-medium text-foreground"
+																>
+																	Rate card changed
+																</Badge>
+															</div>
+															<ul>
+																{rows.map((row) => (
+																	<RateCardRow
+																		key={row.featureId}
+																		row={row}
+																		features={features}
+																		dense
+																	/>
+																))}
+															</ul>
+														</div>
+													)
+												);
+											})}
+											<ItemChangeList itemChanges={otherChanges} />
 											<PlanSettingsChanges changes={settingsChanges} />
 											<LicenseChangeList
 												changes={preview?.plan_change?.license_changes ?? []}
