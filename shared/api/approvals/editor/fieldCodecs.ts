@@ -143,10 +143,13 @@ const freeTrial: FieldCodec = {
 	fromFilter: (group) => {
 		const plan = get(group, INCOMING_PLAN);
 		if (!isPlainObject(plan)) return [];
-		if (plan.free_trial === null)
-			return [{ operator: "has_none", value: null }];
 		const trial = isPlanBranches(plan.$or) ? null : fromTrialBranches(plan.$or);
-		return trial ? [{ operator: trial.operator, value: trial.duration }] : [];
+		return [
+			...(plan.free_trial === null
+				? [{ operator: "has_none", value: null }]
+				: []),
+			...(trial ? [{ operator: trial.operator, value: trial.duration }] : []),
+		];
 	},
 };
 

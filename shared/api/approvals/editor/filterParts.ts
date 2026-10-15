@@ -129,6 +129,9 @@ export const get = (value: unknown, path: string[]) =>
 		value,
 	);
 
+// "Some plan is X" and "some plan is Y" aren't one plan that's both, and the same goes for none.
+const EXISTENTIAL_QUANTIFIERS = ["$some", "$none"];
+
 const deepMerge = ({
 	base,
 	addition,
@@ -141,7 +144,11 @@ const deepMerge = ({
 		const current = merged[key];
 		if (!(key in merged)) {
 			merged[key] = value;
-		} else if (isMergeable(current) && isMergeable(value)) {
+		} else if (
+			isMergeable(current) &&
+			isMergeable(value) &&
+			!EXISTENTIAL_QUANTIFIERS.includes(key)
+		) {
 			const inner = deepMerge({ base: current, addition: value });
 			if (!inner) return null;
 			merged[key] = inner;

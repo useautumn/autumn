@@ -250,6 +250,21 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 				],
 			},
 		},
+		{
+			name: "two Customer has plan rows stay separate checks",
+			rows: [
+				{
+					field: "customer_plan",
+					operator: "doesnt_have",
+					value: { plan_id: "pro" },
+				},
+				{ field: "customer_plan", operator: "has_none", value: null },
+			],
+			when: {
+				customer: { plan: { $none: { plan_id: "pro" } } },
+				$and: [{ customer: { plan: { $none: {} } } }],
+			},
+		},
 	])("$name", ({ rows, when, readsBack = rows }) => {
 		const area = "billing_change";
 		expect<unknown>(stored({ area, groups: [rows] })).toEqual(when);
@@ -480,6 +495,41 @@ describe("incoming plan rows that set the same condition are ANDed", () => {
 				quantity("a", 1),
 				quantity("b", 2),
 			],
+		},
+		{
+			name: "Incoming plan · is not and is none of stay separate checks",
+			rows: [
+				{
+					field: "incoming_plan",
+					operator: "is_not",
+					value: { plan_id: "pro" },
+				},
+				{
+					field: "incoming_plan",
+					operator: "is_none_of",
+					value: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+				},
+			],
+			when: {
+				incoming: { $none: { plan_id: "pro" } },
+				$and: [
+					{
+						incoming: {
+							$none: {
+								$or: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+							},
+						},
+					},
+				],
+			},
+		},
+		{
+			name: "Free trial · has none beside < 2 months",
+			rows: [
+				{ field: "free_trial", operator: "has_none", value: null },
+				sampleRow("free_trial", "lt"),
+			],
+			when: incoming({ free_trial: null, ...trialCap }),
 		},
 	])("$name", ({ rows, when, readsBack }) => {
 		expect<unknown>(stored({ area: "billing_change", groups: [rows] })).toEqual(
