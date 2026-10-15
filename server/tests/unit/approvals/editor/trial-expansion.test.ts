@@ -87,6 +87,16 @@ const CASES: {
 		when: inIncoming({ $or: [noTrial, ...units("$lt", 1)] }),
 	},
 	{
+		name: "< 1.5 days has no whole threshold, so it reads back in days",
+		rows: [trial("lt", 1.5, "day")],
+		when: inIncoming({ $or: [noTrial, ...units("$lt", 1.5)] }),
+	},
+	{
+		name: "> 0 days",
+		rows: [trial("gt", 0, "day")],
+		when: inIncoming({ $or: units("$gt", 0) }),
+	},
+	{
 		name: "has none stores a null trial",
 		rows: [{ field: "free_trial", operator: "has_none", value: null }],
 		when: inIncoming(noTrial),

@@ -29,7 +29,10 @@ export const toTrialBranches = ({
 		: unitBranches;
 };
 
-/** Reads the largest unit whose threshold is whole; the caller re-expands to confirm. */
+/**
+ * Reads the largest unit whose threshold is a whole, non-zero number, else days.
+ * The caller re-expands to confirm.
+ */
 export const fromTrialBranches = (
 	branches: unknown,
 ): { operator: string; duration: TrialDuration } | null => {
@@ -43,10 +46,14 @@ export const fromTrialBranches = (
 			length,
 		}));
 	});
-	const whole = limits.reverse().find(({ length }) => Number.isInteger(length));
-	if (!whole) return null;
+	const limit =
+		[...limits]
+			.reverse()
+			.find(({ length }) => Number.isInteger(length) && length !== 0) ??
+		limits.find(({ unit }) => unit === "day");
+	if (!limit) return null;
 	return {
-		operator: whole.key.slice(1),
-		duration: { length: whole.length as number, unit: whole.unit },
+		operator: limit.key.slice(1),
+		duration: { length: limit.length as number, unit: limit.unit },
 	};
 };
