@@ -76,7 +76,11 @@ export function nativeProducerConfigOf({
 	};
 }
 
-/** Per-broker request latency out of one librdkafka statistics document. */
+/**
+ * Per-broker request latency out of one librdkafka statistics document: the window's p99, so a broker
+ * that held its requests for a second or two shows up, where the window's average (a 10s window of
+ * mostly fast requests) hid it.
+ */
 export function requestTimingsOf({
 	statistics,
 }: {
@@ -87,19 +91,19 @@ export function requestTimingsOf({
 			string,
 			{
 				nodeid?: number;
-				rtt?: { avg?: number };
-				outbuf_latency?: { avg?: number };
+				rtt?: { cnt?: number; p99?: number };
+				outbuf_latency?: { p99?: number };
 			}
 		>;
 	};
 	const timings: KafkaRequestTiming[] = [];
 	for (const [name, broker] of Object.entries(parsed.brokers ?? {})) {
-		if ((broker.nodeid ?? -1) < 0 || !broker.rtt?.avg) continue;
+		if ((broker.nodeid ?? -1) < 0 || !broker.rtt?.cnt) continue;
 		timings.push({
 			apiName: "Produce",
 			broker: name,
-			durationMs: broker.rtt.avg / 1000,
-			pendingMs: (broker.outbuf_latency?.avg ?? 0) / 1000,
+			durationMs: (broker.rtt.p99 ?? 0) / 1000,
+			pendingMs: (broker.outbuf_latency?.p99 ?? 0) / 1000,
 		});
 	}
 	return timings;
