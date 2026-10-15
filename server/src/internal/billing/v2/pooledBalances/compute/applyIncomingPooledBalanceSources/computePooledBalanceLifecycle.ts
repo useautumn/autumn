@@ -15,6 +15,7 @@ import type {
 	PooledBalanceLifecycle,
 } from "../types/pooledBalanceComputeTypes";
 import { resolvePooledBalanceResetCycleAnchor } from "../utils/resolvePooledBalanceResetCycleAnchor";
+import { findSubscriptionPoolHost } from "../utils/subscriptionPoolHost";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
 
 const getResetMode = ({
@@ -188,6 +189,24 @@ export const computePooledBalanceLifecycle = ({
 	});
 
 	const resetMode = getResetMode({ customerProduct, interval });
+
+	const subscriptionPoolHost =
+		resetMode === PooledBalanceResetMode.Lazy &&
+		!customerProduct.customer_license_link_id &&
+		!competes
+			? findSubscriptionPoolHost({ computeContext, customerEntitlement })
+			: undefined;
+	if (subscriptionPoolHost) {
+		const { pooled_balance: hostPool } = subscriptionPoolHost;
+		return {
+			resetMode: PooledBalanceResetMode.Subscription,
+			resetCycleAnchor: hostPool.reset_cycle_anchor,
+			stripeSubscriptionId: hostPool.stripe_subscription_id,
+			customerLicenseLinkId: null,
+			nextResetAt: subscriptionPoolHost.next_reset_at,
+		};
+	}
+
 	const { stripeSubscriptionId, customerLicenseLinkId } =
 		getPooledBalanceLifecycleIds({
 			customerProduct,

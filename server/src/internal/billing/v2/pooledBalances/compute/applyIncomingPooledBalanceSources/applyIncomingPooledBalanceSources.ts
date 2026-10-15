@@ -7,6 +7,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementCompetes } from "../competing/customerEntitlementCompetes";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
 import { addToInsertPoolContributions } from "../utils/pooledBalancePlanUtils";
+import {
+	addPaidCustomerProductToPool,
+	isPaidSubscriptionPoolHost,
+} from "../utils/subscriptionPoolHost";
 import { computePooledBalanceContributionAmounts } from "./computePooledBalanceContributionAmounts";
 import { computePooledBalanceLifecycle } from "./computePooledBalanceLifecycle";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
@@ -85,6 +89,16 @@ export const applyIncomingPooledBalanceSources = ({
 			competes,
 			now,
 		});
+		if (isPaidSubscriptionPoolHost({ customerProduct })) {
+			addPaidCustomerProductToPool({
+				paidCustomerProductIdsByPoolId:
+					computeContext.paidCustomerProductIdsByPoolId,
+				poolId: pooledCustomerEntitlement.pooled_balance.id,
+				customerProductId: customerProduct.id,
+			});
+			// A plan that leaves and comes straight back (an update, an anchor reset) still holds its pool open.
+			computeContext.outgoingCustomerProductIds.delete(customerProduct.id);
+		}
 
 		const contribution = initPooledBalanceContribution({
 			pooledCustomerEntitlement,
