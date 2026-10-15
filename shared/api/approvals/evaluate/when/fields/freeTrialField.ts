@@ -5,6 +5,7 @@ import { isPlainObject } from "../../../schemas/isPlainObject";
 import type { PlanChangeFilter } from "../../../schemas/when/planChangeFilter";
 import type { FreeTrialFacts } from "../../facts/billingFacts";
 import { describeNumberMatcher } from "../format/describeNumberMatcher";
+import { describeStringMatcher } from "../format/describeStringMatcher";
 import { pluralizeUnit } from "../format/pluralizeUnit";
 import { leafField } from "./leafField";
 
@@ -56,10 +57,15 @@ const describeTrialLimit = ({ filter }: { filter: unknown }) => {
 				format: (count) =>
 					unit ? pluralizeUnit({ count, unit }) : String(count),
 			}),
-		trialFilter.duration_length === undefined && unit && `in ${unit}s`,
+		trialFilter.duration_length === undefined &&
+			trialFilter.duration_type !== undefined &&
+			(unit
+				? `in ${unit}s`
+				: `in ${describeStringMatcher({ matcher: trialFilter.duration_type })}`),
 		trialFilter.card_required === true && "card required",
 		trialFilter.card_required === false && "no card",
-		trialFilter.on_end && `on end: ${String(trialFilter.on_end)}`,
+		trialFilter.on_end !== undefined &&
+			`on end: ${describeStringMatcher({ matcher: trialFilter.on_end })}`,
 	];
 	return parts.filter(Boolean).join(", ");
 };
