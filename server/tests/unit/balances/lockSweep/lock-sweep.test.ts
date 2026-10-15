@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv, ms } from "@autumn/shared";
 import { dueLockToConfirmExpiredLockCommand } from "@/internal/balances/lockSweep/actions/confirmExpiredLocks.js";
+import { dueLockToExpireLockPayload } from "@/internal/balances/lockSweep/actions/releaseExpiredLocks.js";
 import type { DueBalanceLock } from "@/internal/balances/lockSweep/repos/balanceLocks.js";
+import {
+	lockSweepPassesAt,
+	RELEASE_TIMER_GRACE_MS,
+} from "@/internal/balances/lockSweep/runLockSweepBatch.js";
 import { lockSweepResultToDelayMs } from "@/internal/balances/lockSweep/runLockSweepLoop.js";
 
 const dueLock = ({
@@ -35,6 +40,29 @@ describe("lock sweep", () => {
 				entityId: null,
 			},
 			lock: { id: "lck_1", lock_id: "L_lck_1" },
+		});
+	});
+
+	test("a lock that releases on expiry is the sweep's too once its timer is overdue, not only confirm locks", () => {
+		const passes = lockSweepPassesAt({ now: 1_000_000 }).map(
+			({ expiryAction, dueBefore }) => ({ expiryAction, dueBefore }),
+		);
+		expect(passes).toEqual([
+			{ expiryAction: "confirm", dueBefore: 1_000_000 },
+			{ expiryAction: "release", dueBefore: 1_000_000 - RELEASE_TIMER_GRACE_MS },
+		]);
+	});
+
+	test("an overdue release lock is queued as the job its timer would have sent, for that lock row", () => {
+		const lock = dueLock({ id: "lck_2", customerId: "cus_b" });
+		expect(dueLockToExpireLockPayload({ lock })).toEqual({
+			orgId: "org",
+			env: AppEnv.Sandbox,
+			customerId: "cus_b",
+			lockId: "L_lck_2",
+			// scheduleLockExpiry names a row's timer by Bun.hash(lockRowId): the same key either way.
+			hashedKey: Bun.hash("lck_2").toString(),
+			lockRowId: "lck_2",
 		});
 	});
 
