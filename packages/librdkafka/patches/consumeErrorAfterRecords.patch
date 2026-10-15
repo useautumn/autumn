@@ -1,0 +1,86 @@
+diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
+--- a/src/kafka-consumer.cc
++++ b/src/kafka-consumer.cc
+@@ -501,6 +501,17 @@
+   return Baton(RdKafka::ERR_NO_ERROR);
+ }
+ 
++void KafkaConsumer::DeferConsumeError(RdKafka::ErrorCode code) {
++  int none = RdKafka::ERR_NO_ERROR;
++  // The first error wins: a fatal error is never overwritten by what followed it.
++  m_deferred_consume_error.compare_exchange_strong(none, static_cast<int>(code));
++}
++
++RdKafka::ErrorCode KafkaConsumer::TakeDeferredConsumeError() {
++  return static_cast<RdKafka::ErrorCode>(
++      m_deferred_consume_error.exchange(RdKafka::ERR_NO_ERROR));
++}
++
+ Baton KafkaConsumer::Consume(int timeout_ms) {
+   if (IsConnected()) {
+     scoped_shared_read_lock lock(m_connection_lock);
+diff --git a/src/kafka-consumer.h b/src/kafka-consumer.h
+--- a/src/kafka-consumer.h
++++ b/src/kafka-consumer.h
+@@ -16,6 +16,7 @@
+ #include <iostream>
+ #include <string>
+ #include <vector>
++#include <atomic>
+ 
+ #include "rdkafkacpp.h" // NOLINT
+ 
+@@ -86,6 +87,10 @@
+   Baton Subscribe(std::vector<std::string>);
+   Baton Consume(int timeout_ms);
+ 
++  // An error a batch consume read after it already held records; the next consume returns it.
++  void DeferConsumeError(RdKafka::ErrorCode code);
++  RdKafka::ErrorCode TakeDeferredConsumeError();
++
+   void ActivateDispatchers() override;
+   void DeactivateDispatchers() override;
+ 
+@@ -106,6 +111,7 @@
+   std::vector<RdKafka::TopicPartition*> m_partitions;
+   int m_partition_cnt;
+   bool m_is_subscribed = false;
++  std::atomic<int> m_deferred_consume_error{RdKafka::ERR_NO_ERROR};
+ 
+   void* m_consume_loop = nullptr;
+   Callbacks::QueueNotEmpty m_queue_not_empty_cb;
+diff --git a/src/workers.cc b/src/workers.cc
+--- a/src/workers.cc
++++ b/src/workers.cc
+@@ -870,6 +870,13 @@
+   int timeout_ms = m_timeout_ms;
+   std::size_t eof_event_count = 0;
+ 
++  // librdkafka hands a consumer error (a fatal one included) out exactly once.
++  RdKafka::ErrorCode deferred = m_consumer->TakeDeferredConsumeError();
++  if (deferred != RdKafka::ERR_NO_ERROR) {
++    SetErrorBaton(Baton(deferred));
++    return;
++  }
++
+   while (m_messages.size() - eof_event_count < max && looping) {
+     // Get a message
+     Baton b = m_consumer->Consume(timeout_ms);
+@@ -913,6 +920,8 @@
+           delete message;
+           if (m_messages.size() == eof_event_count) {
+             SetErrorBaton(Baton(errorCode));
++          } else {
++            m_consumer->DeferConsumeError(errorCode);
+           }
+           looping = false;
+           break;
+@@ -920,6 +929,8 @@
+     } else {
+       if (m_messages.size() == eof_event_count) {
+         SetErrorBaton(b);
++      } else {
++        m_consumer->DeferConsumeError(b.err());
+       }
+       looping = false;
+     }
