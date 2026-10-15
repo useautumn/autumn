@@ -203,6 +203,21 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 				],
 			},
 		},
+		{
+			name: "two Customer has plan rows stay separate checks",
+			rows: [
+				{
+					field: "customer_plan",
+					operator: "doesnt_have",
+					value: { plan_id: "pro" },
+				},
+				{ field: "customer_plan", operator: "has_none", value: null },
+			],
+			when: {
+				customer: { plan: { $none: { plan_id: "pro" } } },
+				$and: [{ customer: { plan: { $none: {} } } }],
+			},
+		},
 	])("$name", ({ rows, when, readsBack = rows }) => {
 		const area = "billing_change";
 		expect<unknown>(stored({ area, groups: [rows] })).toEqual(when);
