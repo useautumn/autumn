@@ -1,7 +1,4 @@
-import type {
-	ApprovalRule,
-	CreateApprovalRuleParams,
-} from "./approvalRuleTypes";
+import type { ApprovalRule, CreateApprovalRuleParams } from "@autumn/shared";
 
 export type ApprovalRulesApi = {
 	list: () => Promise<{ list: ApprovalRule[] }>;

@@ -1,5 +1,5 @@
+import type { RuleSubject } from "@autumn/shared";
 import { GlobeIcon, UserIcon, UsersIcon } from "@phosphor-icons/react";
-import type { RuleSubject } from "./approvalRuleTypes";
 import type { SentencePart } from "./buildRuleSentence";
 import { SentenceChip } from "./SentenceChip";
 

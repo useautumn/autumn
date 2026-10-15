@@ -1,9 +1,11 @@
-import type {
-	ActionFilter,
-	ApprovalAction,
-	ApprovalRule,
-	RuleSubject,
-} from "./approvalRuleTypes";
+import {
+	ACTIONS,
+	APPROVAL_AREAS,
+	type ApprovalAction,
+	type ApprovalArea,
+	type ApprovalRule,
+	type RuleSubject,
+} from "@autumn/shared";
 
 export type RuleLabels = {
 	member: (userId: string) => string;
@@ -22,35 +24,37 @@ export type SentencePart = { key: string } & (
 	| ({ kind: "condition" } & RuleCondition)
 );
 
-export const ACTION_LABELS: Record<ApprovalAction, string> = {
-	"billing.attach": "Attach",
-	"billing.update_subscription": "Update subscription",
-	"billing.set_plans": "Set plans",
-	"billing.schedule": "Schedule",
-	"billing.cancel": "Cancel",
-	"billing.uncancel": "Uncancel",
-	"invoices.create": "Create invoice",
-	"invoices.finalize": "Finalize invoice",
-	"invoices.pay": "Pay invoice",
-	"invoices.void": "Void invoice",
-	"invoices.update": "Update invoice",
-	"invoices.reissue": "Reissue invoice",
-	"invoices.credit_note": "Create credit note",
-	"balances.create": "Grant credits",
-	"balances.update": "Set balance",
-	"rewards.create": "Create reward",
-	"rewards.apply": "Apply reward",
-	"customers.create": "Create customer",
-	"customers.update": "Update customer",
-	"customers.delete": "Delete customer",
-	"catalog.edit_plans": "Edit plans",
-	"catalog.edit_features": "Edit features",
-	"api_keys.create": "Create API key",
-	"migrations.create": "Create migration",
-	"migrations.run": "Run migration",
-	"members.invite": "Invite member",
-	"members.change_role": "Change member role",
+type Filter = Record<string, unknown>;
+
+type Ctx = {
+	labels: RuleLabels;
+	isCancel: boolean;
+	/** The object the field sits in, e.g. the grant for `included_grant`'s unit. */
+	parent: Filter;
+	/** The array element being described, e.g. "Incoming plan". */
+	scope: string;
 };
+
+type Format = (params: { value: unknown; ctx: Ctx }) => string;
+
+type Field =
+	| {
+			kind: "match";
+			label: (ctx: Ctx) => string;
+			format: Format;
+			path?: string;
+	  }
+	| { kind: "each"; scope: (ctx: Ctx) => string }
+	| { kind: "phrase"; phrase: (value: unknown) => string };
+
+/** Areas whose action labels are bare verbs in S3's catalog, so the list prefixes the area. */
+const VERB_ONLY_AREAS = new Set<ApprovalArea>([
+	"invoices",
+	"customers",
+	"api_keys",
+	"migrations",
+	"members",
+]);
 
 const OPERATORS: Record<string, string> = {
 	$eq: "is",
@@ -63,177 +67,178 @@ const OPERATORS: Record<string, string> = {
 	$gte: "≥",
 };
 
-const TIMING_LABELS: Record<string, string> = {
+const TIMINGS: Record<string, string> = {
 	cancel_end_of_cycle: "End of cycle",
 	cancel_immediately: "Immediately",
 };
 
-const CANCEL_ACTIONS = new Set<ApprovalAction>([
-	"billing.cancel",
-	"billing.uncancel",
-]);
-
-const CUSTOM_CONDITION: RuleCondition = {
+const CUSTOM: RuleCondition = {
 	field: "",
 	operator: "",
 	value: "Custom condition",
 };
 
-type ReaderContext = {
-	labels: RuleLabels;
-	isCancel: boolean;
-	filter: ActionFilter;
-};
-
-type Format = (params: { value: unknown; ctx: ReaderContext }) => string;
-
-type FieldReader = (params: {
-	value: unknown;
-	ctx: ReaderContext;
-}) => RuleCondition[];
-
-type Readers = Record<string, FieldReader>;
-
-const isFilter = (value: unknown): value is ActionFilter =>
+const isFilter = (value: unknown): value is Filter =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-const hasNullField = (filter: ActionFilter) =>
+const hasNullField = (filter: Filter) =>
 	Object.values(filter).some((value) => value === null);
 
-const capitalize = (text: string) =>
-	text.charAt(0).toUpperCase() + text.slice(1);
-
+const fixed = (label: string) => () => label;
 const yesNo: Format = ({ value }) => (value ? "Yes" : "No");
 const money: Format = ({ value, ctx }) => ctx.labels.money(Number(value));
-const planName: Format = ({ value, ctx }) => ctx.labels.plan(String(value));
-const featureName: Format = ({ value, ctx }) =>
-	ctx.labels.feature(String(value)).name;
-const featureAmount: Format = ({ value, ctx }) =>
-	[value, ctx.labels.feature(String(ctx.filter.feature_id)).unit]
-		.filter(Boolean)
-		.join(" ");
-const timing: Format = ({ value }) =>
-	TIMING_LABELS[String(value)] ?? String(value);
 
-/** Conditions from a matcher: a bare value means "is", else one condition per operator, so ranges keep both limits. */
-const field =
-	(label: string, format: Format): FieldReader =>
-	({ value, ctx }) => {
-		if (!isFilter(value)) {
-			return [{ field: label, operator: "is", value: format({ value, ctx }) }];
-		}
-		return Object.entries(value).map(([operator, operand]) => {
-			const operands = Array.isArray(operand) ? operand : [operand];
-			return {
-				field: label,
-				operator: OPERATORS[operator] ?? operator,
-				value: operands.map((item) => format({ value: item, ctx })).join(", "),
-			};
+const match = (
+	label: (ctx: Ctx) => string,
+	format: Format,
+	path?: string,
+): Field => ({ kind: "match", label, format, path });
+
+const FIELDS: Record<string, Field> = {
+	paid: match(fixed("Charges customer"), yesNo),
+	checkout: {
+		kind: "phrase",
+		phrase: (value) =>
+			value ? "Sends a checkout link" : "Doesn't send a checkout link",
+	},
+	incoming: { kind: "each", scope: fixed("Incoming plan") },
+	outgoing: {
+		kind: "each",
+		scope: ({ isCancel }) => (isCancel ? "Plan" : "Outgoing plan"),
+	},
+	discounts: { kind: "each", scope: fixed("Discount") },
+	plan_id: match(
+		({ scope }) => scope,
+		({ value, ctx }) => ctx.labels.plan(String(value)),
+	),
+	recurring: match(({ scope }) => `${scope} is recurring`, yesNo),
+	percent_off: match(fixed("Discount percent off"), ({ value }) => `${value}%`),
+	free_trial: match(
+		fixed("Free trial"),
+		({ value, ctx }) =>
+			`${value} ${ctx.parent.duration_type}${Number(value) === 1 ? "" : "s"}`,
+		"duration_length",
+	),
+	cancel_action: match(fixed("Timing"), ({ value }) =>
+		String(TIMINGS[String(value)] ?? value),
+	),
+	refund: match(fixed("Refund"), money, "amount"),
+	feature_id: match(
+		fixed("Feature"),
+		({ value, ctx }) => ctx.labels.feature(String(value)).name,
+	),
+	included_grant: match(fixed("Amount"), ({ value, ctx }) =>
+		[value, ctx.labels.feature(String(ctx.parent.feature_id)).unit]
+			.filter(Boolean)
+			.join(" "),
+	),
+};
+
+/** A bare value reads as "is"; a matcher gives one condition per operator, so ranges keep both limits. */
+const matcherConditions = ({
+	label,
+	matcher,
+	format,
+	ctx,
+}: {
+	label: string;
+	matcher: unknown;
+	format: Format;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	if (!isFilter(matcher)) {
+		return [
+			{ field: label, operator: "is", value: format({ value: matcher, ctx }) },
+		];
+	}
+	return Object.entries(matcher).map(([operator, operand]) => ({
+		field: label,
+		operator: OPERATORS[operator] ?? operator,
+		value: [operand]
+			.flat()
+			.map((value) => format({ value, ctx }))
+			.join(", "),
+	}));
+};
+
+const fieldConditions = ({
+	key,
+	value,
+	ctx,
+}: {
+	key: string;
+	value: unknown;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	const field = FIELDS[key];
+	if (!field) return [CUSTOM];
+	if (field.kind === "phrase") {
+		return [{ field: "", operator: "", value: field.phrase(value) }];
+	}
+	if (field.kind === "each") {
+		const element = isFilter(value) ? (value.$every ?? value.$some) : null;
+		if (!isFilter(element)) return [CUSTOM];
+		return filterConditions({
+			filter: element,
+			ctx: { ...ctx, scope: field.scope(ctx) },
 		});
-	};
+	}
+	if (field.path && !isFilter(value)) return [CUSTOM];
+	const nested = isFilter(value) && field.path;
+	return matcherConditions({
+		label: field.label(ctx),
+		matcher: nested ? value[field.path ?? ""] : value,
+		format: field.format,
+		ctx: nested ? { ...ctx, parent: value } : ctx,
+	});
+};
 
 const filterConditions = ({
 	filter,
-	readers,
 	ctx,
 }: {
-	filter: ActionFilter;
-	readers: Readers;
-	ctx: ReaderContext;
+	filter: Filter;
+	ctx: Ctx;
 }): RuleCondition[] =>
 	Object.entries(filter).flatMap(([key, value]) => {
-		const nextCtx = { ...ctx, filter };
-		if (key === "$or") {
-			return cappedConditions({ branches: value, readers, ctx: nextCtx });
-		}
-		const read = readers[key];
-		return read ? read({ value, ctx: nextCtx }) : [CUSTOM_CONDITION];
+		const inFilter = { ...ctx, parent: filter };
+		if (key === "$or")
+			return cappedConditions({ branches: value, ctx: inFilter });
+		return fieldConditions({ key, value, ctx: inFilter });
 	});
 
 /** `$or: [{ x: null }, { x: … }]` is a cap that lets "no x" through; the editor shows its widest branch, stored last. */
 const cappedConditions = ({
 	branches,
-	readers,
 	ctx,
 }: {
 	branches: unknown;
-	readers: Readers;
-	ctx: ReaderContext;
+	ctx: Ctx;
 }): RuleCondition[] => {
-	if (!Array.isArray(branches)) return [CUSTOM_CONDITION];
+	if (!Array.isArray(branches)) return [CUSTOM];
 	const caps = branches.filter(
 		(branch) => isFilter(branch) && !hasNullField(branch),
 	);
 	const widest = caps.at(-1);
-	if (!widest || caps.length === branches.length) return [CUSTOM_CONDITION];
-	return filterConditions({ filter: widest, readers, ctx });
-};
-
-/** Array filters read the same for `$every` and `$some`; `$none` isn't worded yet. */
-const elements =
-	(readers: (ctx: ReaderContext) => Readers): FieldReader =>
-	({ value, ctx }) => {
-		const element = isFilter(value) ? (value.$every ?? value.$some) : null;
-		if (!isFilter(element)) return [CUSTOM_CONDITION];
-		return filterConditions({ filter: element, readers: readers(ctx), ctx });
-	};
-
-const freeTrial: FieldReader = ({ value, ctx }) => {
-	if (!isFilter(value)) return [CUSTOM_CONDITION];
-	const unit = String(value.duration_type);
-	const duration: Format = ({ value: length }) =>
-		`${length} ${unit}${Number(length) === 1 ? "" : "s"}`;
-	return field("Free trial", duration)({ value: value.duration_length, ctx });
-};
-
-const planReaders = (plan: string): Readers => ({
-	plan_id: field(plan, planName),
-	recurring: field(`${plan} is recurring`, yesNo),
-	free_trial: freeTrial,
-});
-
-const WHEN_READERS: Readers = {
-	paid: field("Charges customer", yesNo),
-	checkout: ({ value }) => [
-		{
-			field: "",
-			operator: "",
-			value: value ? "Sends a checkout link" : "Doesn't send a checkout link",
-		},
-	],
-	incoming: elements(() => planReaders("Incoming plan")),
-	outgoing: elements(({ isCancel }) =>
-		planReaders(isCancel ? "Plan" : "Outgoing plan"),
-	),
-	discounts: elements(() => ({
-		percent_off: field("Discount percent off", ({ value }) => `${value}%`),
-	})),
-	cancel_action: field("Timing", timing),
-	refund: ({ value, ctx }) =>
-		isFilter(value)
-			? field("Refund", money)({ value: value.amount, ctx })
-			: [CUSTOM_CONDITION],
-	feature_id: field("Feature", featureName),
-	included_grant: field("Amount", featureAmount),
+	if (!widest || caps.length === branches.length) return [CUSTOM];
+	return filterConditions({ filter: widest, ctx });
 };
 
 /** Top-level `$or` branches are the editor's OR groups, unless they're a single capped field. */
-const whenGroups = ({
-	when,
-	ctx,
-}: {
-	when: ActionFilter;
-	ctx: ReaderContext;
-}): RuleCondition[][] => {
+const whenGroups = ({ when, ctx }: { when: Filter; ctx: Ctx }) => {
 	const { $or: branches, ...rest } = when;
 	const isGroups =
 		Array.isArray(branches) &&
 		Object.keys(rest).length === 0 &&
 		branches.every((branch) => isFilter(branch) && !hasNullField(branch));
-	const groups = isGroups ? branches : [when];
-	return groups.map((group) =>
-		filterConditions({ filter: group, readers: WHEN_READERS, ctx }),
-	);
+	const groups: Filter[] = isGroups ? branches : [when];
+	return groups.map((filter) => filterConditions({ filter, ctx }));
+};
+
+const actionText = (action: ApprovalAction) => {
+	const { area, label } = ACTIONS[action];
+	if (!VERB_ONLY_AREAS.has(area)) return label;
+	return `${APPROVAL_AREAS[area]} · ${label}`;
 };
 
 const subjectText = ({
@@ -244,7 +249,9 @@ const subjectText = ({
 	labels: RuleLabels;
 }) => {
 	if (subject.type === "everyone") return "Everyone";
-	if (subject.type === "role") return capitalize(subject.role);
+	if (subject.type === "role") {
+		return subject.role.charAt(0).toUpperCase() + subject.role.slice(1);
+	}
 	return labels.member(subject.user_id);
 };
 
@@ -254,22 +261,6 @@ const word = (text: string, key = text): SentencePart => ({
 	text,
 });
 
-const groupParts = ({
-	conditions,
-	group,
-}: {
-	conditions: RuleCondition[];
-	group: number;
-}): SentencePart[] =>
-	conditions.flatMap((condition, i) => [
-		...(i > 0 ? [word("and", `and-${group}-${i}`)] : []),
-		{
-			kind: "condition" as const,
-			key: `condition-${group}-${i}`,
-			...condition,
-		},
-	]);
-
 const whenParts = ({
 	rule,
 	labels,
@@ -277,17 +268,23 @@ const whenParts = ({
 	rule: ApprovalRule;
 	labels: RuleLabels;
 }): SentencePart[] => {
-	if (!rule.when || Object.keys(rule.when).length === 0) return [];
-	const isCancel = rule.actions.every((action) => CANCEL_ACTIONS.has(action));
+	const when: Filter | null = rule.when;
+	if (!when || Object.keys(when).length === 0) return [];
+	const isCancel = rule.actions.every(
+		(action) => ACTIONS[action].when === "billing_cancel",
+	);
 	const groups = whenGroups({
-		when: rule.when,
-		ctx: { labels, isCancel, filter: rule.when },
+		when,
+		ctx: { labels, isCancel, parent: when, scope: "" },
 	});
 	return [
 		word("when"),
 		...groups.flatMap((conditions, group) => [
 			...(group > 0 ? [word("or", `or-${group}`)] : []),
-			...groupParts({ conditions, group }),
+			...conditions.flatMap((condition, i): SentencePart[] => [
+				...(i > 0 ? [word("and", `and-${group}-${i}`)] : []),
+				{ kind: "condition", key: `condition-${group}-${i}`, ...condition },
+			]),
 		]),
 	];
 };
@@ -312,16 +309,17 @@ export const buildRuleSentence = ({
 		(action): SentencePart => ({
 			kind: "action",
 			key: action,
-			text: ACTION_LABELS[action],
+			text: actionText(action),
 		}),
 	),
 	...whenParts({ rule, labels }),
 ];
 
-const partText = (part: SentencePart) =>
-	part.kind === "condition"
-		? [part.field, part.operator, part.value].filter(Boolean).join(" ")
-		: part.text;
-
 export const sentenceText = (parts: SentencePart[]) =>
-	parts.map(partText).join(" ");
+	parts
+		.map((part) =>
+			part.kind === "condition"
+				? [part.field, part.operator, part.value].filter(Boolean).join(" ")
+				: part.text,
+		)
+		.join(" ");

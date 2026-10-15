@@ -5,52 +5,64 @@
 
 import { describe, expect, test } from "bun:test";
 import type {
-	ActionFilter,
 	ApprovalAction,
 	ApprovalRule,
+	ApprovalRuleWhen,
 	RuleSubject,
-} from "@/views/settings/sections/approvals/approvalRuleTypes";
+} from "@autumn/shared";
 import {
 	buildRuleSentence,
 	type RuleLabels,
 	sentenceText,
 } from "@/views/settings/sections/approvals/buildRuleSentence";
 
+const NAMES: Record<string, string> = {
+	usr_john: "John Doe",
+	enterprise: "Enterprise",
+	pro: "Pro",
+	team: "Team",
+	starter: "Starter",
+	messages: "Messages",
+	ai_credits: "AI credits",
+};
+const UNITS: Record<string, string> = {
+	messages: "messages",
+	ai_credits: "credits",
+};
+
 const labels: RuleLabels = {
-	member: (userId) =>
-		({ usr_john: "John Doe", usr_jack: "Jack Lee" })[userId] ?? userId,
-	plan: (planId) =>
-		({
-			enterprise: "Enterprise",
-			pro: "Pro",
-			team: "Team",
-			starter: "Starter",
-		})[planId] ?? planId,
-	feature: (featureId) =>
-		({
-			messages: { name: "Messages", unit: "messages" },
-			ai_credits: { name: "AI credits", unit: "credits" },
-		})[featureId] ?? { name: featureId, unit: "" },
+	member: (id) => NAMES[id] ?? id,
+	plan: (id) => NAMES[id] ?? id,
+	feature: (id) => ({ name: NAMES[id] ?? id, unit: UNITS[id] ?? "" }),
 	money: (amount) => `$${amount}`,
 };
 
 const sales: RuleSubject = { type: "role", role: "sales" };
+const support: RuleSubject = { type: "role", role: "support" };
+const everyone: RuleSubject = { type: "everyone" };
+const john: RuleSubject = { type: "user", user_id: "usr_john" };
+const attachUpdate: ApprovalAction[] = [
+	"billing.attach",
+	"billing.update_subscription",
+];
+
+type Input = {
+	subjects?: RuleSubject[];
+	actions?: ApprovalAction[];
+	when?: Record<string, unknown> | null;
+};
 
 const textOf = ({
 	subjects = [sales],
 	actions = ["billing.attach"],
 	when = null,
-}: {
-	subjects?: RuleSubject[];
-	actions?: ApprovalAction[];
-	when?: ActionFilter | null;
-}) => {
+}: Input) => {
 	const rule: ApprovalRule = {
 		id: "apr_test",
 		name: "Test",
 		subjects,
 		actions,
-		when,
+		when: when as ApprovalRuleWhen | null,
 		note: null,
 		enabled: true,
 		version: 1,
@@ -61,31 +73,24 @@ const textOf = ({
 	return sentenceText(buildRuleSentence({ rule, labels }));
 };
 
-const trialUnder = ({ days, months }: { days: number; months: number }) => ({
+const trialUnder2Months = {
 	$or: [
 		{ free_trial: null },
-		{ free_trial: { duration_type: "day", duration_length: { $lt: days } } },
-		{
-			free_trial: { duration_type: "month", duration_length: { $lt: months } },
-		},
+		{ free_trial: { duration_type: "day", duration_length: { $lt: 60 } } },
+		{ free_trial: { duration_type: "month", duration_length: { $lt: 2 } } },
 	],
-});
+};
 
 describe("rule sentence: subjects", () => {
-	test.each<[string, RuleSubject[], string]>([
-		["everyone", [{ type: "everyone" }], "Everyone can Attach"],
-		["role", [sales], "Sales can Attach"],
-		["user", [{ type: "user", user_id: "usr_john" }], "John Doe can Attach"],
+	test.each<[RuleSubject[], string]>([
+		[[everyone], "Everyone can Attach"],
+		[[sales], "Sales can Attach"],
+		[[john], "John Doe can Attach"],
 		[
-			"several of each type",
-			[
-				sales,
-				{ type: "role", role: "engineering" },
-				{ type: "user", user_id: "usr_john" },
-			],
+			[sales, { type: "role", role: "engineering" }, john],
 			"Sales Engineering John Doe can Attach",
 		],
-	])("%s", (_name, subjects, expected) => {
+	])("%j", (subjects, expected) => {
 		expect(textOf({ subjects })).toBe(expected);
 	});
 });
@@ -98,72 +103,55 @@ describe("rule sentence: actions", () => {
 		["billing.schedule", "Schedule"],
 		["billing.cancel", "Cancel"],
 		["billing.uncancel", "Uncancel"],
-		["invoices.create", "Create invoice"],
-		["invoices.finalize", "Finalize invoice"],
-		["invoices.pay", "Pay invoice"],
-		["invoices.void", "Void invoice"],
-		["invoices.update", "Update invoice"],
-		["invoices.reissue", "Reissue invoice"],
-		["invoices.credit_note", "Create credit note"],
+		["invoices.create", "Invoices · Create"],
+		["invoices.finalize", "Invoices · Finalize"],
+		["invoices.pay", "Invoices · Pay"],
+		["invoices.void", "Invoices · Void"],
+		["invoices.update", "Invoices · Update"],
+		["invoices.reissue", "Invoices · Reissue"],
+		["invoices.credit_note", "Invoices · Credit note"],
 		["balances.create", "Grant credits"],
 		["balances.update", "Set balance"],
 		["rewards.create", "Create reward"],
 		["rewards.apply", "Apply reward"],
-		["customers.create", "Create customer"],
-		["customers.update", "Update customer"],
-		["customers.delete", "Delete customer"],
+		["customers.create", "Customers · Create"],
+		["customers.update", "Customers · Update"],
+		["customers.delete", "Customers · Delete"],
 		["catalog.edit_plans", "Edit plans"],
 		["catalog.edit_features", "Edit features"],
-		["api_keys.create", "Create API key"],
-		["migrations.create", "Create migration"],
-		["migrations.run", "Run migration"],
-		["members.invite", "Invite member"],
-		["members.change_role", "Change member role"],
+		["api_keys.create", "API keys · Create"],
+		["migrations.create", "Migrations · Create"],
+		["migrations.run", "Migrations · Run"],
+		["members.invite", "Members · Invite"],
+		["members.change_role", "Members · Change role"],
 	])("%s", (action, label) => {
-		expect(
-			textOf({ subjects: [{ type: "everyone" }], actions: [action] }),
-		).toBe(`Everyone can ${label}`);
+		expect(textOf({ subjects: [everyone], actions: [action] })).toBe(
+			`Everyone can ${label}`,
+		);
 	});
 
 	test("several actions read in order", () => {
-		expect(
-			textOf({
-				actions: [
-					"billing.attach",
-					"billing.update_subscription",
-					"billing.set_plans",
-				],
-			}),
-		).toBe("Sales can Attach Update subscription Set plans");
+		expect(textOf({ actions: [...attachUpdate, "billing.set_plans"] })).toBe(
+			"Sales can Attach Update subscription Set plans",
+		);
 	});
 });
 
 describe("rule sentence: when clauses from the boards", () => {
-	test.each<[string, Parameters<typeof textOf>[0], string]>([
+	test.each<[string, Input, string]>([
 		[
 			"trial cap stored as day/month branches reads as one row",
 			{
-				subjects: [
-					sales,
-					{ type: "role", role: "engineering" },
-					{ type: "user", user_id: "usr_john" },
-				],
-				actions: [
-					"billing.attach",
-					"billing.update_subscription",
-					"billing.set_plans",
-				],
-				when: {
-					incoming: { $every: trialUnder({ days: 60, months: 2 }) },
-					paid: false,
-				},
+				subjects: [sales, { type: "role", role: "engineering" }, john],
+				actions: [...attachUpdate, "billing.set_plans"],
+				when: { incoming: { $every: trialUnder2Months }, paid: false },
 			},
 			"Sales Engineering John Doe can Attach Update subscription Set plans when Free trial < 2 months and Charges customer is No",
 		],
 		[
 			"cancel timing",
 			{
-				subjects: [{ type: "role", role: "support" }],
+				subjects: [support],
 				actions: ["billing.cancel"],
 				when: { cancel_action: "cancel_end_of_cycle" },
 			},
@@ -189,22 +177,31 @@ describe("rule sentence: when clauses from the boards", () => {
 		[
 			"grant credits with feature unit",
 			{
-				subjects: [{ type: "everyone" }],
+				subjects: [everyone],
 				actions: ["balances.create"],
 				when: { feature_id: "messages", included_grant: { $lte: 100 } },
 			},
 			"Everyone can Grant credits when Feature is Messages and Amount ≤ 100 messages",
 		],
 		[
+			"a range keeps both limits",
+			{
+				subjects: [everyone],
+				actions: ["balances.create"],
+				when: {
+					feature_id: "messages",
+					included_grant: { $gte: 10, $lte: 100 },
+				},
+			},
+			"Everyone can Grant credits when Feature is Messages and Amount ≥ 10 messages and Amount ≤ 100 messages",
+		],
+		[
 			"case 1: enterprise trials",
 			{
-				actions: ["billing.attach", "billing.update_subscription"],
+				actions: attachUpdate,
 				when: {
 					incoming: {
-						$every: {
-							plan_id: "enterprise",
-							...trialUnder({ days: 60, months: 2 }),
-						},
+						$every: { plan_id: "enterprise", ...trialUnder2Months },
 					},
 					paid: false,
 				},
@@ -214,7 +211,7 @@ describe("rule sentence: when clauses from the boards", () => {
 		[
 			"case 2: recurring discounts",
 			{
-				actions: ["billing.attach", "billing.update_subscription"],
+				actions: attachUpdate,
 				when: {
 					discounts: { $every: { percent_off: { $lte: 20 } } },
 					incoming: { $every: { recurring: true } },
@@ -225,7 +222,7 @@ describe("rule sentence: when clauses from the boards", () => {
 		[
 			"case 3: OR groups on cancel, outgoing reads as Plan, refund cap",
 			{
-				subjects: [{ type: "role", role: "support" }],
+				subjects: [support],
 				actions: ["billing.cancel"],
 				when: {
 					$or: [
@@ -243,23 +240,11 @@ describe("rule sentence: when clauses from the boards", () => {
 		[
 			"case 4: one person's tighter limit",
 			{
-				subjects: [{ type: "user", user_id: "usr_john" }],
+				subjects: [john],
 				actions: ["balances.create"],
 				when: { feature_id: "ai_credits", included_grant: { $lte: 50 } },
 			},
 			"John Doe can Grant credits when Feature is AI credits and Amount ≤ 50 credits",
-		],
-		[
-			"a range keeps both limits",
-			{
-				subjects: [{ type: "everyone" }],
-				actions: ["balances.create"],
-				when: {
-					feature_id: "messages",
-					included_grant: { $gte: 10, $lte: 100 },
-				},
-			},
-			"Everyone can Grant credits when Feature is Messages and Amount ≥ 10 messages and Amount ≤ 100 messages",
 		],
 		[
 			"sends a checkout link",

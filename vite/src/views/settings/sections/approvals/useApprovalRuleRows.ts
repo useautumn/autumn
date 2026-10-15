@@ -1,4 +1,4 @@
-import type { ApprovalRule } from "./approvalRuleTypes";
+import type { ApprovalRule } from "@autumn/shared";
 import { buildRuleSentence } from "./buildRuleSentence";
 import { useApprovalRuleLabels } from "./useApprovalRuleLabels";
 
