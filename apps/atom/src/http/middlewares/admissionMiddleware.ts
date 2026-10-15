@@ -5,15 +5,23 @@ import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 export const MAX_LOOP_LAG_MS = 100;
 
 /**
- * Outermost on checks: while the thread's loop is behind, a check is refused at once, before its body is read or a line
- * logged. Its 503 carries no x-atom-forwarded, so the SDK and Autumn's shadow both ask the Autumn API instead.
+ * Outermost on checks: while the thread's loop is behind, or once it is stopping, a check is refused at once, before its
+ * body is read or a line logged. Its 503 carries no x-atom-forwarded, so the SDK, Autumn's shadow and a peer ask the API.
  */
 export function admissionMiddleware({
 	ctx,
 }: {
-	ctx: Pick<AtomHttpContext, "counters" | "loop">;
+	ctx: Pick<AtomHttpContext, "counters" | "loop" | "stopping">;
 }): MiddlewareHandler<AtomHttpEnv> {
 	async function admit(context: Context<AtomHttpEnv>, next: Next) {
+		if (ctx.stopping?.())
+			return context.json(
+				{
+					message: "Atom is stopping; ask the Autumn API",
+					code: "atom_stopping",
+				},
+				503,
+			);
 		if (ctx.loop.lagMs() <= MAX_LOOP_LAG_MS) return next();
 		ctx.counters.add("shed");
 		return context.json(

@@ -31,6 +31,8 @@ export type AtomHttpContext = {
 		ring: ReplicaRing;
 		fetch?: typeof fetch;
 	};
+	/** True once this thread stops taking checks: one a peer hands on is refused, and so goes to the API. */
+	stopping?: () => boolean;
 	/** This replica's clock; a test runs it. */
 	now?: () => number;
 };

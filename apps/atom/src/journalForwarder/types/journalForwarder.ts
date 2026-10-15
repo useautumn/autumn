@@ -17,4 +17,6 @@ export type JournalForwarder = {
 	forward(params: ForwardedJournal): Forwarding;
 	/** Hands Autumn what a journal no slot appends to any more holds, then calls `retired`. */
 	retire(params: ForwardedJournal & { retired: () => void }): Forwarding;
+	/** Resolves once Autumn holds everything the journals being handed to it hold, or once `deadlineMs` passes. */
+	drainAll(params: { deadlineMs: number }): Promise<void>;
 };

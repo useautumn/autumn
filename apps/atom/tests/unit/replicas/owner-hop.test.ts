@@ -230,6 +230,32 @@ describe("a check on a replica that does not own the customer", () => {
 	});
 });
 
+describe("a check handed to an owner that is stopping", () => {
+	test("is refused there, so the replica that handed it on leaves it to the API: owner_unavailable, never a 504", async () => {
+		const autumn = countingAutumn();
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			stopping: () => true,
+		});
+		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b], autumn: autumn.autumn });
+
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
+		expect(autumn.calls).toEqual(["/v1/balances.check"]);
+		expect(b.stats().ownerUnavailable).toBe(1);
+	});
+});
+
 describe("a check that reached the owner from another replica", () => {
 	test("is answered there even when that replica's ring names someone else: one hop, never a loop", async () => {
 		const autumn = countingAutumn();
