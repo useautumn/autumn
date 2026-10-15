@@ -72,9 +72,16 @@ function isCoordinatorNotReady(error: object): boolean {
 	);
 }
 
+function isRefusedByPolicy(error: object): boolean {
+	return (
+		error instanceof KafkaJSProtocolError && error.type === "POLICY_VIOLATION"
+	);
+}
+
 function isRestartableError(error: object): boolean {
 	return (
 		isCoordinatorNotReady(error) ||
+		isRefusedByPolicy(error) ||
 		error instanceof MutationBatchNotCommittedError ||
 		error instanceof KafkaBatchNotCommittedError ||
 		error instanceof KafkaTransactionStateUnknownError ||
