@@ -9,12 +9,25 @@ export const runExpiredMetadataCleanup = async ({
 }) => {
 	if (!isExpiredMetadataCleanupEnabled()) return;
 
+	const startedAt = performance.now();
 	try {
 		const { deleted } = await deleteExpiredCheckoutMetadata({ ctx });
-		if (deleted > 0) {
-			ctx.logger.info(`Deleted ${deleted} expired checkout metadata rows`);
-		}
+		ctx.logger.info(
+			{
+				type: "expired_metadata_cleanup",
+				deleted,
+				durationMs: Math.round(performance.now() - startedAt),
+			},
+			`[Expired Metadata Cleanup] Deleted ${deleted} rows`,
+		);
 	} catch (error) {
-		ctx.logger.error("[Expired Metadata Cleanup] Error", { error });
+		ctx.logger.error(
+			{
+				type: "expired_metadata_cleanup",
+				durationMs: Math.round(performance.now() - startedAt),
+				error,
+			},
+			"[Expired Metadata Cleanup] Error",
+		);
 	}
 };
