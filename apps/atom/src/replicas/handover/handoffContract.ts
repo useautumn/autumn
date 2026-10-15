@@ -25,10 +25,7 @@ const HandedLockSchema = z.object({
 	row: z.record(z.string(), z.unknown()),
 });
 
-/**
- * One customer's owed entries and open locks, handed to the replica that owns the customer now; entries are
- * idempotent on (writerId, seq), locks on lock_id.
- */
+/** One customer's owed entries and open locks for the replica that owns it now; idempotent on (writerId, seq) and lock_id. */
 export const HandoffSchema = z.object({
 	customerId: z.string().min(1),
 	entries: z.array(HandedEntrySchema),
