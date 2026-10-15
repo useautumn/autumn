@@ -8,6 +8,8 @@ export type FinalizeRequest = {
 	/** At 2.6 on, so it names its lock's customer, which routes it. */
 	params: FinalizeLockParamsV1;
 	apiVersion: ApiVersionClass;
+	/** The replica the lock's customer just moved from, when its handoff (the lock's row among it) may still be on the way. */
+	movedFrom: string | null;
 };
 
 /** A finalize the Atom settles itself: of a lock on one customer, at the value its action names. */

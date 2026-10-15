@@ -7,12 +7,16 @@ import type {
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import type { CustomerHandoff } from "../replicas/handover/types/customerHandoff.js";
 import type { ReplicaRing } from "../replicas/types/replicaRing.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
-import { createOpenLocks } from "../state/openLocks/createOpenLocks.js";
+import {
+	createOpenLocks,
+	type OpenLocks,
+} from "../state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../state/openSqliteStore.js";
 import type { SubjectPulls } from "../subjectPulls/types/subjectPulls.js";
 import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
@@ -97,6 +101,8 @@ export const openSlots = ({
 				.stored,
 	});
 	const journals: Journal[] = [];
+	/** The locks each live slot took, beside its journal: handed over together, customer by customer. */
+	const openLocksOf = new Map<Journal, OpenLocks>();
 	const forwardings: Forwarding[] = [];
 	const forwardedOf = ({ journal }: { journal: Journal }) => ({
 		journal,
@@ -118,7 +124,9 @@ export const openSlots = ({
 		const journal = openJournal({
 			databasePath: journalFilePath({ folder, slot, slotCount }),
 		});
+		const openLocks = createOpenLocks();
 		journals.push(journal);
+		openLocksOf.set(journal, openLocks);
 		forwardings.push(journalForwarder.forward(forwardedOf({ journal })));
 		return {
 			sqliteStore,
@@ -129,13 +137,36 @@ export const openSlots = ({
 					logger,
 					subjectPulls,
 					journal,
-					openLocks: createOpenLocks(),
+					openLocks,
 					barrier,
 					ring,
 				},
 			}),
 		};
 	});
+
+	/** Per slot, each customer's owed entries and open locks as one handoff: a lock whose track Autumn applied travels too. */
+	const ownedHandoffs = async (): Promise<CustomerHandoff[]> =>
+		(
+			await Promise.all(
+				journals.map(async (journal) => {
+					const byCustomer = new Map<string, CustomerHandoff>();
+					for (const { customerId, entries } of await journal.handoffs())
+						byCustomer.set(customerId, { customerId, entries, locks: [] });
+					for (const { customerId, locks } of openLocksOf.get(journal)?.all() ??
+						[]) {
+						const handoff = byCustomer.get(customerId) ?? {
+							customerId,
+							entries: [],
+							locks: [],
+						};
+						handoff.locks.push(...locks);
+						byCustomer.set(customerId, handoff);
+					}
+					return [...byCustomer.values()];
+				}),
+			)
+		).flat();
 
 	// Another split's journal is retired by the thread that owned its slot, once Autumn holds what it owes.
 	for (const { path, slot } of journalFilesOfOtherCounts({
@@ -227,6 +258,7 @@ export const openSlots = ({
 		ownedStores: () =>
 			slots.flatMap(({ sqliteStore }) => (sqliteStore ? [sqliteStore] : [])),
 		ownedJournals: () => [...journals],
+		ownedHandoffs,
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
 		close,
 	};

@@ -19,10 +19,20 @@ const HandedEntrySchema = z.object({
 	sent: z.boolean(),
 });
 
-/** One customer's owed entries, handed to the replica that owns the customer now; idempotent on (writerId, seq). */
+/** An open lock as it crosses replicas: the track that took it and the row it inserted, so the new owner can settle it. */
+const HandedLockSchema = z.object({
+	track: z.record(z.string(), z.unknown()),
+	row: z.record(z.string(), z.unknown()),
+});
+
+/**
+ * One customer's owed entries and open locks, handed to the replica that owns the customer now; entries are
+ * idempotent on (writerId, seq), locks on lock_id.
+ */
 export const HandoffSchema = z.object({
 	customerId: z.string().min(1),
-	entries: z.array(HandedEntrySchema).min(1),
+	entries: z.array(HandedEntrySchema),
+	locks: z.array(HandedLockSchema),
 });
 
 export type Handoff = z.infer<typeof HandoffSchema>;

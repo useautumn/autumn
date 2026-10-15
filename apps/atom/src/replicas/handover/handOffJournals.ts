@@ -1,15 +1,15 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { peerRequestHeaders } from "../../replication/transport/peerSignature.js";
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
-import type { HandedEntry } from "../../state/journal/types/journal.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import {
 	type HandoffBatch,
 	MAX_HANDOFF_ENTRIES,
 	PEER_HANDOFF_PATH,
 } from "./handoffContract.js";
+import type { CustomerHandoff } from "./types/customerHandoff.js";
 
-/** Batches in flight at once per thread, each up to MAX_HANDOFF_ENTRIES entries to one owner. */
+/** Batches in flight at once per thread, each up to MAX_HANDOFF_ENTRIES entries and locks to one owner. */
 const BATCHES_IN_FLIGHT = 4;
 /** A new owner that has not taken a batch by then keeps answering from its copy; those entries drain to Autumn instead. */
 const HANDOFF_TIMEOUT_MS = 2_000;
@@ -21,11 +21,10 @@ export type HandOffContext = {
 	logger: Pick<AutumnLogger, "info" | "warn">;
 };
 
-type Pending = {
-	atomId: string | null;
-	customerId: string;
-	entries: HandedEntry[];
-};
+type Pending = CustomerHandoff & { atomId: string | null };
+
+const sizeOf = ({ entries, locks }: Pending): number =>
+	entries.length + locks.length;
 
 /** One request's worth of customers, all from one folder, all to one owner. */
 type Batch = {
@@ -43,9 +42,10 @@ const sendBatch = async ({
 	batch: Batch;
 }): Promise<boolean> => {
 	const body = JSON.stringify({
-		handoffs: batch.items.map(({ customerId, entries }) => ({
+		handoffs: batch.items.map(({ customerId, entries, locks }) => ({
 			customerId,
 			entries,
+			locks,
 		})),
 	} satisfies HandoffBatch);
 	try {
@@ -85,18 +85,18 @@ const batchesOf = async ({
 	for (const item of pending) {
 		const owner = await ctx.ring.ownerOf({ customerId: item.customerId });
 		if (owner === ctx.ring.self) {
-			kept += item.entries.length;
+			kept += sizeOf(item);
 			continue;
 		}
 		const key = `${owner}\u0000${item.atomId ?? ""}`;
 		let batch = open.get(key);
-		if (!batch || batch.entries + item.entries.length > MAX_HANDOFF_ENTRIES) {
+		if (!batch || batch.entries + sizeOf(item) > MAX_HANDOFF_ENTRIES) {
 			batch = { owner, atomId: item.atomId, items: [], entries: 0 };
 			open.set(key, batch);
 			batches.push(batch);
 		}
 		batch.items.push(item);
-		batch.entries += item.entries.length;
+		batch.entries += sizeOf(item);
 	}
 	return { batches, kept };
 };
@@ -113,15 +113,13 @@ export const handOffJournals = async ({
 }): Promise<{ handed: number; kept: number }> => {
 	const pending: Pending[] = (
 		await Promise.all(
-			ctx.folders.all().flatMap(({ atomId, slots }) =>
-				slots.ownedJournals().map(async (journal) =>
-					(
-						await journal.handoffs()
-					).map((handoff) => ({
-						atomId,
-						...handoff,
-					})),
-				),
+			ctx.folders.all().map(async ({ atomId, slots }) =>
+				(
+					await slots.ownedHandoffs()
+				).map((handoff) => ({
+					atomId,
+					...handoff,
+				})),
 			),
 		)
 	).flat();
