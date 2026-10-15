@@ -2,7 +2,9 @@ import type { TrackCommand } from "@autumn/balance-engine";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import { timeStage } from "../../threads/stats/stageClock.js";
 import {
+	encodedOrgOf,
 	encodeJournalEntries,
+	readJournalOrgs,
 	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
@@ -164,11 +166,19 @@ export const openJournal = ({
 		return oldest;
 	}
 
+	/** Orgs the file holds: a commit carries an org's JSON only until one holding it has committed. */
+	const storedOrgs = new Set(readJournalOrgs({ ctx }).keys());
+
 	const groupCommit = createGroupCommit({
 		commit: async (entries: JournalEntry[]) => {
 			await timeStage("journalAppend", () =>
-				file.write("insertJournalEntries", encodeJournalEntries({ entries })),
+				file.write(
+					"insertJournalEntries",
+					encodeJournalEntries({ entries, storedOrgs }),
+				),
 			);
+			for (const entry of entries)
+				storedOrgs.add(encodedOrgOf(entry.command.org).hash);
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
