@@ -35,6 +35,7 @@ export const ApprovalRuleRow = ({
 				<Switch
 					aria-label={`${enabled ? "Disable" : "Enable"} ${rule.name}`}
 					checked={enabled}
+					disabled={toggle.isPending}
 					onCheckedChange={(checked) =>
 						toggle.mutate({ id: rule.id, enabled: checked })
 					}
