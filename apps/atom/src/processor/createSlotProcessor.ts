@@ -41,15 +41,20 @@ export const createSlotProcessor = ({
 		throw new CannotAnswerError({ reason: "subject_not_written" });
 	};
 
+	/** A keyed request past the barrier would claim its key from a copy missing the handed rows: the API's claim decides it. */
 	const awaitHandoff = async ({
 		customerId,
 		movedFrom,
+		keyed,
 	}: {
 		customerId: string;
 		movedFrom: string | null;
+		keyed: boolean;
 	}) => {
-		if (movedFrom && ctx.barrier)
-			await ctx.barrier.wait({ customerId, from: movedFrom });
+		if (!movedFrom || !ctx.barrier) return;
+		const outcome = await ctx.barrier.wait({ customerId, from: movedFrom });
+		if (outcome === "late" && keyed)
+			throw new CannotAnswerError({ reason: "handoff_late" });
 	};
 
 	/** A straggler for a customer whose owner changed on its way here is not decided from this copy; one the previous owner hopped here is. */
@@ -70,14 +75,16 @@ export const createSlotProcessor = ({
 	const decide = async <T>({
 		customerId,
 		movedFrom,
+		keyed = false,
 		run,
 	}: {
 		customerId: string;
 		movedFrom: string | null;
+		keyed?: boolean;
 		run: () => Promise<T>;
 	}): Promise<T> => {
 		// The handoff first: a moved customer's keys arrive with its entries, so the claim reads them.
-		await awaitHandoff({ customerId, movedFrom });
+		await awaitHandoff({ customerId, movedFrom, keyed });
 		const request = beginRequest();
 		try {
 			await refuseMoved({ customerId, movedFrom });
@@ -90,13 +97,15 @@ export const createSlotProcessor = ({
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
+			const key = checkCallerKeyOf({ request });
 			return decide({
 				customerId: request.params.customer_id,
 				movedFrom: request.movedFrom,
+				keyed: key !== null,
 				run: () =>
 					callerKeys.run({
 						customerId: request.params.customer_id,
-						key: checkCallerKeyOf({ request }),
+						key,
 						run: async () => {
 							const { response, result } = await check({ ctx, request });
 							return {
@@ -112,13 +121,15 @@ export const createSlotProcessor = ({
 		},
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
+			const key = trackCallerKeyOf({ request });
 			return decide({
 				customerId: request.params.customer_id,
 				movedFrom: request.movedFrom,
+				keyed: key !== null,
 				run: () =>
 					callerKeys.run({
 						customerId: request.params.customer_id,
-						key: trackCallerKeyOf({ request }),
+						key,
 						run: () => track({ ctx, request }),
 					}),
 			});

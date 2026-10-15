@@ -36,6 +36,8 @@ export type ForwardReason =
 	| "secret_key_not_known"
 	/** The replica that owns the customer could not be reached, or shed the check before it ran. */
 	| "owner_unavailable"
+	/** A keyed request on a customer that just moved here, whose handoff has not landed: the API's claim decides it, not this copy. */
+	| "handoff_late"
 	/** A track by event name tracks every feature that lists it: the API maps those. */
 	| "track_by_event"
 	/** A track the caller waits on is answered with the API's per-balance deductions. */
