@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { RoleOption } from "@/components/v2/selects/RoleSelect";
 
-// Mirrors ApiRole (shared/api/roles/apiRole.ts, re-exported from @autumn/shared); import it once #4992 merges.
+// Mirrors ApiRole; import it from @autumn/shared/api/roles/apiRole once #4992 merges.
 export type RoleAccess = "none" | "read" | "write";
 export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
 
