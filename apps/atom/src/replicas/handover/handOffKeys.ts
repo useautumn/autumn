@@ -141,7 +141,8 @@ export const handOffKeysUpToNow = async ({
 		if (sent.failed > 0)
 			return { handed, failed: sent.failed, complete: false };
 		if (sent.handed === 0) return { handed, failed: 0, complete: true };
-		from = readAt - KEYS_OVERLAP_MS;
+		// keysSince waits for the commits in flight, so every key appended before readAt was read: no overlap, or rounds never converge.
+		from = readAt;
 	}
 	return { handed, failed: 0, complete: false };
 };
