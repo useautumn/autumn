@@ -140,8 +140,8 @@ const pendingEntriesOf = async ({
 		)
 	).flat();
 
-/** Where each slot's lock reads left off, so a later round hands only the locks taken since. */
-type LockMarks = Map<OpenLocks, number>;
+/** Where each slot's lock reads left off, so a later round or sweep hands only the locks taken since. */
+export type LockMarks = Map<OpenLocks, number>;
 
 /** The folder's open locks taken since the marks, joined onto their customer's pending handoff or a handoff of their own. */
 const withPendingLocks = ({
@@ -251,12 +251,17 @@ const sendRound = async ({
 export const handOffJournals = async ({
 	ctx,
 	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
+	marks = new Map(),
+	quiet = false,
 }: {
 	ctx: HandOffContext;
 	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
 	ownerOf?: (customerId: string) => Promise<string>;
+	/** Carried across calls by a caller that sweeps again later, so each sweep hands only the locks taken since. */
+	marks?: LockMarks;
+	/** A sweep after the first handoff logs nothing of its own; the caller sums it. */
+	quiet?: boolean;
 }): Promise<{ handed: number; kept: number; locks: number }> => {
-	const marks: LockMarks = new Map();
 	const first = await sendRound({
 		ctx,
 		pending: await pendingOf({ ctx, marks }),
@@ -278,12 +283,20 @@ export const handOffJournals = async ({
 		locks += moreLocks;
 		customers += sent > 0 ? pending.length : 0;
 	}
-	ctx.logger.info(
-		{
-			type: "atom_handoff",
-			data: { customers, batches: first.batches, rounds, handed, kept, locks },
-		},
-		`Handed ${handed} owed entries and ${locks} open locks to the new owners in ${rounds} round(s); ${kept} entries stay to drain to Autumn`,
-	);
+	if (!quiet)
+		ctx.logger.info(
+			{
+				type: "atom_handoff",
+				data: {
+					customers,
+					batches: first.batches,
+					rounds,
+					handed,
+					kept,
+					locks,
+				},
+			},
+			`Handed ${handed} owed entries and ${locks} open locks to the new owners in ${rounds} round(s); ${kept} entries stay to drain to Autumn`,
+		);
 	return { handed, kept, locks };
 };
