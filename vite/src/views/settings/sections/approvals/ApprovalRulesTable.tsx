@@ -3,9 +3,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { SettingsTable } from "../../SettingsTable";
-import { ApprovalRuleRow } from "./ApprovalRuleRow";
+import { ApprovalRuleRow, type RuleRowActions } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
-import type { RuleDialogs } from "./editor/useRuleDialogs";
 import { useApprovalRuleRows } from "./useApprovalRuleRows";
 
 const COLUMNS = [
@@ -15,10 +14,10 @@ const COLUMNS = [
 
 export const ApprovalRulesTable = ({
 	rules,
-	dialogs,
+	rowActions,
 }: {
 	rules: ApprovalRule[];
-	dialogs: RuleDialogs;
+	rowActions: RuleRowActions;
 }) => {
 	const [filter, setFilter] = useState("");
 	const rows = useApprovalRuleRows({ rules, filter });
@@ -50,8 +49,8 @@ export const ApprovalRulesTable = ({
 							key={rule.id}
 							rule={rule}
 							parts={parts}
-							onEdit={() => dialogs.openEditor({ rule })}
-							onDelete={() => dialogs.openDelete({ rule })}
+							onEdit={() => rowActions.onEdit(rule)}
+							onDelete={() => rowActions.onDelete(rule)}
 						/>
 					))}
 				</SettingsTable>

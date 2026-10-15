@@ -1,7 +1,7 @@
 import type { ApprovalRule, CreateApprovalRuleParams } from "@autumn/shared";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-/** The D2 `/approvals/rules` routes (approvals-api-schema.md §2). */
+/** Rule routes always read and write live rules, whatever env the dashboard is in. */
 export const useApprovalRulesApi = () => {
 	const axios = useAxiosInstance();
 

@@ -16,6 +16,11 @@ import { cn } from "@/lib/utils";
 import type { SentencePart } from "./buildRuleSentence";
 import { RuleSentencePart } from "./RuleSentencePart";
 
+export type RuleRowActions = {
+	onEdit: (rule: ApprovalRule) => void;
+	onDelete: (rule: ApprovalRule) => void;
+};
+
 export const ApprovalRuleRow = ({
 	rule,
 	parts,
@@ -49,6 +54,7 @@ export const ApprovalRuleRow = ({
 				<Switch
 					aria-label={`${enabled ? "Disable" : "Enable"} ${rule.name}`}
 					checked={enabled}
+					disabled={toggle.isPending}
 					onCheckedChange={(checked) =>
 						toggle.mutate({ id: rule.id, enabled: checked })
 					}
