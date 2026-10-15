@@ -1,6 +1,6 @@
 import type { Database } from "bun:sqlite";
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join } from "node:path";
 import { newSqliteConnection } from "./newSqliteConnection.js";
 import { JOURNAL_SIZE_LIMIT_BYTES } from "./openSqliteDatabase.js";
 
@@ -62,7 +62,27 @@ export const startWalCheckpointer = ({
 				open.set(path, database);
 			}
 			// Passive never waits on a reader or writer: what it cannot copy now it copies next time.
-			database.run("PRAGMA wal_checkpoint(PASSIVE)");
+			const [passive] = database
+				.query<{ busy: number; log: number; checkpointed: number }, []>(
+					"PRAGMA wal_checkpoint(PASSIVE)",
+				)
+				.all();
+			// BENCH ONLY (#369 write amplification, never merge): frames in the log when copied, and how many were copied.
+			if (passive) {
+				const frames = (minute.frames.get(path) ?? 0) + Number(passive.log);
+				minute.frames.set(path, frames);
+				logger.info?.(
+					{
+						type: "atom_write_amp_checkpoint",
+						data: {
+							file: path.slice(dataDir.length + 1),
+							logFrames: Number(passive.log),
+							checkpointedFrames: Number(passive.checkpointed),
+						},
+					},
+					"write amp checkpoint",
+				);
+			}
 			// A log past its limit is cut by the next write; a file nobody writes to any more is cut here instead.
 			if (statSync(`${path}${WAL_SUFFIX}`).size > JOURNAL_SIZE_LIMIT_BYTES)
 				database.run("PRAGMA wal_checkpoint(TRUNCATE)");
@@ -80,6 +100,51 @@ export const startWalCheckpointer = ({
 	}
 
 	let tick = 0;
+	// BENCH ONLY (#369 write amplification, never merge): log frames per file this minute, and the process's disk writes.
+	const minute = {
+		frames: new Map<string, number>(),
+		startedAt: performance.now(),
+	};
+	const processWriteBytes = () => {
+		try {
+			return Number(
+				/write_bytes: (\d+)/.exec(readFileSync("/proc/self/io", "utf8"))?.[1] ??
+					0,
+			);
+		} catch {
+			return 0;
+		}
+	};
+	let writeBytes = processWriteBytes();
+	function readPageStats(): void {
+		const journals = [...minute.frames].filter(([path]) =>
+			basename(path).startsWith("journal"),
+		);
+		const [hot] = journals.sort((a, b) => b[1] - a[1]);
+		minute.frames = new Map();
+		if (!hot) return;
+		const database = open.get(hot[0]);
+		if (!database) return;
+		const pages = database
+			.query<
+				{ name: string; pagetype: string; pages: number; fill: number },
+				[]
+			>(
+				"SELECT name, pagetype, count(*) AS pages, round(sum(pgsize - unused) * 1.0 / sum(pgsize), 3) AS fill FROM dbstat GROUP BY name, pagetype",
+			)
+			.all();
+		logger.info?.(
+			{
+				type: "atom_write_amp_pages",
+				data: {
+					file: hot[0].slice(dataDir.length + 1),
+					logFramesThisMinute: hot[1],
+					pages,
+				},
+			},
+			"write amp pages",
+		);
+	}
 
 	function checkpoint(): void {
 		const paths = listWalDatabases({ dataDir }).sort();
@@ -119,6 +184,26 @@ export const startWalCheckpointer = ({
 				},
 				"WAL checkpoint tick",
 			);
+		const nowBytes = processWriteBytes();
+		logger.info?.(
+			{
+				type: "atom_write_amp_tick",
+				data: { tick, processWriteBytes: nowBytes - writeBytes },
+			},
+			"write amp tick",
+		);
+		writeBytes = nowBytes;
+		if (performance.now() - minute.startedAt >= 60_000) {
+			minute.startedAt = performance.now();
+			try {
+				readPageStats();
+			} catch (error) {
+				logger.warn(
+					{ type: "atom_write_amp_pages_failed", error },
+					"write amp pages failed",
+				);
+			}
+		}
 		tick += 1;
 	}
 
