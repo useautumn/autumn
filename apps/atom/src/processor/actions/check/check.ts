@@ -25,7 +25,6 @@ export const check = async ({
 	if (request.params.send_event === true)
 		return answerDeductingCheck({
 			ctx,
-			journal: ctx.journal,
 			check: answerableCheck,
 			idempotencyKey: request.idempotencyKey,
 			skipEvent: request.params.skip_event === true,

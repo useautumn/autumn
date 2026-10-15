@@ -1,62 +1,42 @@
-import { computeCheck } from "@autumn/balance-engine";
 import type { CheckResponseV3 } from "@autumn/shared";
-import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
-import type { Journal } from "../../../state/journal/types/journal.js";
 import type { AnswerableCheck } from "../../types/check.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { checkToCommand, renderCheck } from "../check/answerCheck.js";
 import { readCurrentSubject } from "../readCurrentSubject/readCurrentSubject.js";
-import { trackToCommand } from "./trackToCommand.js";
+import { deductOnSubject } from "./deductOnSubject.js";
+import { checkToTrackCommand } from "./trackToCommand.js";
 
-/**
- * A send_event check decided by the engine's own check and, when allowed, owed to Autumn as the worker's track. The
- * caller hears only once the deduction is on disk; one that could not be written is left to the API to deduct, as is
- * every one while the customer's journal is backed up.
- */
+/** A send_event check deducted here, answered once it is on disk with the subject it leaves. */
 export const answerDeductingCheck = async ({
 	ctx,
-	journal,
 	check,
 	idempotencyKey,
 	skipEvent,
 	subject,
 }: {
 	ctx: SlotProcessorContext;
-	journal: Journal;
 	check: AnswerableCheck;
 	idempotencyKey: string | null;
 	skipEvent: boolean;
 	subject: CurrentSubject;
 }): Promise<CheckResponseV3> => {
-	if (journal.isBackedUp({ customerId: check.customerId }))
-		throw new CannotAnswerError({ reason: "journal_backlog" });
 	const command = checkToCommand({ check, subject });
-	const track = trackToCommand({ command, subject, skipEvent, idempotencyKey });
-	const result = computeCheck({ fullSubject: subject.fullSubject, command });
-	if (!result.allowed)
-		return renderCheck({
-			ctx,
-			check,
-			command,
-			result,
-			subject,
-			isDeductingCheck: true,
-		});
-
-	const committed = journal.append({
-		customerId: check.customerId,
-		command: track,
+	const { result, committed } = deductOnSubject({
+		ctx,
+		subject,
+		command,
+		track: checkToTrackCommand({ command, subject, skipEvent, idempotencyKey }),
 	});
 	// Read before the commit lands: this deduction and those before it, not one appended while it was in flight.
-	const deducted = readCurrentSubject({
-		ctx,
-		customerId: check.customerId,
-		entityId: check.entityId,
-	});
-	await committed.catch(() => {
-		throw new CannotAnswerError({ reason: "journal_not_written" });
-	});
+	const deducted = result.allowed
+		? readCurrentSubject({
+				ctx,
+				customerId: check.customerId,
+				entityId: check.entityId,
+			})
+		: subject;
+	await committed;
 	return renderCheck({
 		ctx,
 		check,

@@ -1,3 +1,4 @@
+import type { TrackResponseV3 } from "@autumn/shared";
 import type {
 	CheckAnswer,
 	SlotProcessor,
@@ -10,6 +11,7 @@ import type {
 import {
 	checkRequestToWire,
 	replyToError,
+	trackRequestToWire,
 	wireToAppliedSubject,
 	wireToDigest,
 } from "./ownerCallContract.js";
@@ -83,7 +85,11 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	async function call(
 		body: OwnerCallBody,
 	): Promise<
-		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
+		| CheckAnswer
+		| TrackResponseV3
+		| boolean
+		| AppliedSubjectOnWire[]
+		| SubjectDigestOnWire[]
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
@@ -112,6 +118,12 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					request: checkRequestToWire({ request }),
 				})) as CheckAnswer,
+			track: async ({ request }) =>
+				(await call({
+					type: "track",
+					atomId,
+					request: trackRequestToWire({ request }),
+				})) as TrackResponseV3,
 			setSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "setSubject",

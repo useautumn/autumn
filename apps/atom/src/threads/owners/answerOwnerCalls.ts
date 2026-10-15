@@ -8,6 +8,7 @@ import {
 	digestToWire,
 	errorToReply,
 	wireToCheckRequest,
+	wireToTrackRequest,
 } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCall } from "./types/ownerCall.js";
@@ -20,6 +21,7 @@ type OwnerContext = {
 /** Answered from this thread's files, so refused until it has caught up: what it missed while it was down is not there yet. */
 const READS = new Set<OwnerCall["type"]>([
 	"check",
+	"track",
 	"listSince",
 	"digestSince",
 	"fetchSubjects",
@@ -69,6 +71,12 @@ const runOwnerCall = async ({
 		return (
 			await slots.fetchSubjects({ slot: call.slot, keys: call.keys })
 		).map(appliedSubjectToWire);
+	if (call.type === "track") {
+		const request = wireToTrackRequest({ request: call.request });
+		return slots
+			.processorFor({ customerId: request.params.customer_id })
+			.track({ request });
+	}
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
 		.processorFor({ customerId: request.params.customer_id })

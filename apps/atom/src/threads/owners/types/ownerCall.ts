@@ -1,8 +1,9 @@
 import type { CatalogRow } from "@autumn/balance-engine";
-import type { ApiVersion } from "@autumn/shared";
+import type { ApiVersion, TrackResponseV3 } from "@autumn/shared";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
+import type { TrackRequest } from "../../../processor/types/track.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -14,12 +15,18 @@ export type CheckRequestOnWire = Omit<CheckRequest, "apiVersion"> & {
 	apiVersion: ApiVersion | null;
 };
 
+/** A track as it crosses threads: plain data, with the API version by name. */
+export type TrackRequestOnWire = Omit<TrackRequest, "apiVersion"> & {
+	apiVersion: ApiVersion;
+};
+
 /** The whole shared catalog, as Autumn sent it. */
 export type CatalogUpdate = { rows: CatalogRow[]; readAt: number };
 
 /** A call to the thread that owns a customer's slot, in the folder `atomId` names (null: a deployment's one folder). */
 export type OwnerCallBody = { atomId: string | null } & (
 	| { type: "check"; request: CheckRequestOnWire }
+	| { type: "track"; request: TrackRequestOnWire }
 	| { type: "setSubject"; customerId: string; body: string }
 	| { type: "deleteSubject"; customerId: string; body: string }
 	| { type: "setCatalog"; catalog: CatalogUpdate }
@@ -78,6 +85,7 @@ export type OwnerReply =
 			ok: true;
 			value:
 				| CheckAnswer
+				| TrackResponseV3
 				| boolean
 				| AppliedSubjectOnWire[]
 				| SubjectDigestOnWire[];

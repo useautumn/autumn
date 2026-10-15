@@ -1,6 +1,5 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
-import { IDEMPOTENCY_KEY_HEADER } from "../../handlers/receiveCheck.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -59,7 +58,7 @@ export function requestLogMiddleware({
 
 		const durationMs = Date.now() - startedAt;
 		const failure = context.get("failure");
-		const idempotencyKey = context.req.header(IDEMPOTENCY_KEY_HEADER);
+		const idempotencyKey = context.get("idempotencyKey");
 		const line = {
 			statusCode,
 			durationMs,

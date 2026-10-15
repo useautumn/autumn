@@ -2,7 +2,7 @@ import { spyOn } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseTrackCommand } from "@autumn/balance-engine";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
@@ -310,12 +310,14 @@ export const recordJournals = () => {
 		key: string | undefined;
 		value: number;
 	}[] = [];
+	const commands: TrackCommand[] = [];
 	const forwarder = createJournalForwarder({
 		ctx: {
 			autumnClient: {
 				appendTracks: async ({ writer, tracks }) => {
 					for (const { command: sent } of tracks) {
 						const command = parseTrackCommand({ input: sent });
+						commands.push(command);
 						appended.push({
 							writer,
 							owner: command.requestId,
@@ -328,5 +330,5 @@ export const recordJournals = () => {
 			logger: quiet,
 		},
 	});
-	return { forwarder, appended };
+	return { forwarder, appended, commands };
 };

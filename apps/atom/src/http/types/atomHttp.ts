@@ -55,6 +55,8 @@ export type AtomHttpEnv = {
 		allowed?: boolean;
 		/** Set when another replica passed the request on: applied here, passed no further. */
 		relayed?: boolean;
+		/** The key the request's deduction carries to Autumn, when the caller named one. */
+		idempotencyKey?: string | null;
 		failure?: AtomFailure;
 	};
 };
