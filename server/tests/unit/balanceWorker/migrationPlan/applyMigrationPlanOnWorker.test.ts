@@ -161,6 +161,19 @@ describe("applyMigrationPlanOnWorker", () => {
 		expect(await send({ client })).toBe("stale");
 	});
 
+	test("a resend after an unknown outcome that the worker refuses for another reason rethrows the unknown outcome", async () => {
+		const client = scriptedClient([
+			() => {
+				throw timedOut();
+			},
+			() => {
+				throw unreachable();
+			},
+		]);
+		const error = await send({ client }).catch((cause: unknown) => cause);
+		expect((error as BalanceWorkerClientError).outcome).toBe("unknown");
+	});
+
 	test("a stale copy is reported, not resent: the ops were selected from rows the worker no longer holds", async () => {
 		const client = scriptedClient([
 			() => {

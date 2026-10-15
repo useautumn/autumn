@@ -34,7 +34,7 @@ export const BATCH_MIGRATION_FEATURE_OP_CONCURRENCY = Number(
 	process.env.BATCH_MIGRATION_FEATURE_OP_CONCURRENCY ?? 3,
 );
 
-/** Customer plans in flight per page; one migration chunk runs at a time, so this is the fleet-wide peak. */
+/** Customer plans in flight per page. */
 export const BATCH_MIGRATION_WORKER_SEND_CONCURRENCY = 64;
 
 /** Customers in a row the worker can't be reached for before the run stops as interrupted. */

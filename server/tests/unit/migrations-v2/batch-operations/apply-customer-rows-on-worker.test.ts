@@ -239,7 +239,7 @@ describe("applyCustomerRowsOnWorker", () => {
 		expect(client.requests).toHaveLength(4);
 	});
 
-	test("a refusal the worker may have run is not sent again", async () => {
+	test("a refusal the worker may have run is resent once under its own id, never under a new one", async () => {
 		const client = scriptedClient([
 			() => {
 				throw new BalanceWorkerClientError({
@@ -260,5 +260,54 @@ describe("applyCustomerRowsOnWorker", () => {
 		]);
 		expect(await run({ client })).toMatchObject({ status: "failed" });
 		expect(client.requests).toHaveLength(2);
+	});
+
+	test("a timeout whose resend is refused as not ready fails the customer as unavailable, with no fresh id", async () => {
+		const client = scriptedClient([
+			() => {
+				throw new BalanceWorkerClientError({
+					code: "DEADLINE",
+					outcome: "unknown",
+					message: "timed out after the send",
+				});
+			},
+			() => {
+				throw refusedWith("NOT_READY")();
+			},
+		]);
+		expect(await run({ client })).toEqual({
+			status: "failed",
+			reason: "DEADLINE",
+			unavailable: true,
+		});
+		expect(
+			new Set(client.requests.map(({ command }) => command.commandId)).size,
+		).toBe(1);
+	});
+
+	test("a page aborted mid-send throws instead of counting the customer as unreachable", async () => {
+		const controller = new AbortController();
+		const client = {
+			requests: [] as ApplyBillingPlanRequest[],
+			applyBillingPlan: async () => {
+				controller.abort(new Error("page stalled"));
+				throw new BalanceWorkerClientError({
+					code: "ABORTED",
+					outcome: "not_submitted",
+					message: "aborted",
+				});
+			},
+		};
+		const error = await applyCustomerRowsOnWorker({
+			ctx,
+			customer,
+			rows: ["grant_selected"],
+			toPlan,
+			reselect: async () => [],
+			signal: controller.signal,
+			retryDelaysMs: [],
+			client,
+		}).catch((cause: unknown) => cause);
+		expect((error as Error).message).toBe("page stalled");
 	});
 });

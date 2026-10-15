@@ -3,6 +3,7 @@ import type {
 	BatchMigrationPageCustomer,
 	BatchMigrationRemovedItem,
 } from "@/internal/migrations/v2/batchOperations/execute/types/batchMigrationExecutionTypes.js";
+import { BATCH_MIGRATION_CANDIDATE_ROW_BATCH } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -20,7 +21,7 @@ import {
 	selectHeldRemoveCandidates,
 } from "./selectHeldRemoveCandidates.js";
 
-export type RemoveOnWorkerResult = {
+type RemoveOnWorkerResult = {
 	removedItems: BatchMigrationRemovedItem[];
 	failureReasons: Record<string, string>;
 };
@@ -39,14 +40,23 @@ const deleteUnheldRows = async ({
 	patch: BatchMigrationExecutionPatch;
 	rows: HeldRemoveCandidateRow[];
 }): Promise<HeldRemoveCandidateRow[]> => {
-	if (rows.length === 0) return [];
-	const deletedIds = new Set(
-		await deleteCustomerEntitlementRows({
+	const deletedIds = new Set<string>();
+	for (
+		let start = 0;
+		start < rows.length;
+		start += BATCH_MIGRATION_CANDIDATE_ROW_BATCH
+	) {
+		const batch = rows.slice(
+			start,
+			start + BATCH_MIGRATION_CANDIDATE_ROW_BATCH,
+		);
+		const deleted = await deleteCustomerEntitlementRows({
 			db: ctx.db,
-			customerEntitlementIds: rows.map((row) => row.customerEntitlementId),
+			customerEntitlementIds: batch.map((row) => row.customerEntitlementId),
 			scope: patch.scope,
-		}),
-	);
+		});
+		for (const id of deleted) deletedIds.add(id);
+	}
 	return rows.filter((row) => deletedIds.has(row.customerEntitlementId));
 };
 

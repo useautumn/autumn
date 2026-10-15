@@ -64,15 +64,30 @@ export const applyMigrationPlanOnWorker = async ({
 	const send = () =>
 		sendPlan({ ctx, client, customerId, plan, commandId, signal });
 	try {
-		await send().catch((cause: unknown) => {
-			if (!isUnknownOutcome(cause)) throw cause;
-			signal?.throwIfAborted();
-			return send();
-		});
+		await send();
+		return "applied";
+	} catch (cause) {
+		if (isStaleSubject(cause)) return "stale";
+		if (!isUnknownOutcome(cause)) throw cause;
+		signal?.throwIfAborted();
+		return resendUnknownOutcome({ send, unknownOutcome: cause });
+	}
+};
+
+/** Same id, so a landed first send reads as DUPLICATE; any other refusal keeps the outcome unknown. */
+const resendUnknownOutcome = async ({
+	send,
+	unknownOutcome,
+}: {
+	send: () => Promise<void>;
+	unknownOutcome: unknown;
+}): Promise<MigrationPlanOutcome> => {
+	try {
+		await send();
 		return "applied";
 	} catch (cause) {
 		if (isDuplicateCommand(cause)) return "applied";
 		if (isStaleSubject(cause)) return "stale";
-		throw cause;
+		throw unknownOutcome;
 	}
 };

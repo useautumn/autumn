@@ -15,7 +15,7 @@ import { BATCH_MIGRATION_WORKER_TRANSIENT_RETRY_DELAYS_MS } from "@/internal/mig
 import { generateId, timeout } from "@/utils/genUtils.js";
 import type { WorkerPageCustomer } from "./types/workerPageCustomer.js";
 
-export type CustomerRowsOutcome<Row> =
+type CustomerRowsOutcome<Row> =
 	| { status: "applied"; rows: Row[] }
 	| { status: "failed"; reason: string; unavailable: boolean };
 
@@ -95,6 +95,7 @@ export const applyCustomerRowsOnWorker = async <Row>({
 			return { status: "applied", rows: freshRows };
 		return failed({ reason: "STALE_SUBJECT" });
 	} catch (error) {
+		signal.throwIfAborted();
 		if (!(error instanceof BalanceWorkerClientError)) throw error;
 		return failed({
 			reason: error.workerCode ?? error.code,

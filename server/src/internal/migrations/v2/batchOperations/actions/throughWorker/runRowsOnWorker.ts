@@ -9,7 +9,7 @@ import type { HeldRow } from "./types/heldRow.js";
 import type { WorkerPageCustomer } from "./types/workerPageCustomer.js";
 import type { WorkerPageGate } from "./types/workerPageGate.js";
 
-export type RowsOnWorkerResult<Row> = {
+type RowsOnWorkerResult<Row> = {
 	appliedRows: Row[];
 	failureReasons: Record<string, string>;
 };
@@ -28,7 +28,7 @@ const rowsByCustomerOf = <Row extends { internalCustomerId: string }>({
 	return rowsByCustomer;
 };
 
-/** One plan per customer, 64 in flight; every outcome feeds the page's unreachable-in-a-row gate. */
+/** One plan per customer, sent concurrently; every outcome feeds the page's unreachable-in-a-row gate. */
 export const runRowsOnWorker = async <Row extends HeldRow>({
 	ctx,
 	migrationRunId,
