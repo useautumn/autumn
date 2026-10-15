@@ -124,7 +124,10 @@ export const handleCheck = createRoute({
 					run: runOnWorker,
 					fallback: async ({ error, reason }) => {
 						// An Atom may hold the same deduction under this key; its hand-in must find the key free.
-						if (isUnsubmittedFailOpen({ reason }))
+						if (
+							rawBody.send_event === true &&
+							isUnsubmittedFailOpen({ reason })
+						)
 							markIdempotencyKeyUnused({ ctx });
 						return checkFailOpenResponse({
 							ctx,
