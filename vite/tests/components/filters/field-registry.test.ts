@@ -9,6 +9,11 @@ import {
 	rowsToFilter,
 } from "@/components/filters/fieldRegistry";
 import type { FilterRow } from "@/components/filters/types";
+import {
+	type FilterRule,
+	MIGRATION_FILTER_REGISTRY,
+	type MigrationRowFilter,
+} from "@/views/migrations/migration/filters/filterRowTypes";
 
 type ToyFilter = {
 	customer_id?: string | { $ne: string };
@@ -165,5 +170,49 @@ describe("field registry converts rows ⇄ filter", () => {
 			{ field: "amount", operator: "lte", values: ["10"] },
 		];
 		expect(rowsToFilter({ registry, rows })).toEqual({ amount: { $lte: 10 } });
+	});
+});
+
+describe("migration registry fields round-trip", () => {
+	test.each<{ name: string; row: FilterRule; filter: MigrationRowFilter }>([
+		{
+			name: "customer is",
+			row: { field: "customer_id", operator: "is", values: ["cus_1"] },
+			filter: { customer_id: "cus_1" },
+		},
+		{
+			name: "customer is not",
+			row: { field: "customer_id", operator: "is_not", values: ["cus_1"] },
+			filter: { customer_id: { $ne: "cus_1" } },
+		},
+		{
+			name: "customer in",
+			row: { field: "customer_id", operator: "in", values: ["a", "b"] },
+			filter: { customer_id: { $in: ["a", "b"] } },
+		},
+		{
+			name: "customer not in",
+			row: { field: "customer_id", operator: "not_in", values: ["a", "b"] },
+			filter: { customer_id: { $nin: ["a", "b"] } },
+		},
+		{
+			name: "paid",
+			row: { field: "paid", operator: "is", values: ["false"] },
+			filter: { paid: false },
+		},
+		{
+			name: "price exists",
+			row: { field: "price", operator: "exists", values: [] },
+			filter: { price: { $ne: null } },
+		},
+		{
+			name: "price does not exist",
+			row: { field: "price", operator: "not_exists", values: [] },
+			filter: { price: null },
+		},
+	])("$name", ({ row, filter }) => {
+		const registry = MIGRATION_FILTER_REGISTRY;
+		expect(rowsToFilter({ registry, rows: [row] })).toEqual(filter);
+		expect(filterToRows({ registry, filter })).toEqual([row]);
 	});
 });
