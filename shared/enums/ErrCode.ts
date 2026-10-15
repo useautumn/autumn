@@ -227,7 +227,7 @@ export const ErrCode = {
 
 	// Roles
 	RoleNotFound: "role_not_found",
-	RoleAlreadyExists: "role_already_exists",
+	RoleExists: "role_exists",
 	RoleBuiltIn: "role_built_in",
 	RoleInUse: "role_in_use",
 

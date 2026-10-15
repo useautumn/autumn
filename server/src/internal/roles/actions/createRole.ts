@@ -15,5 +15,6 @@ export const createRole = async ({
 	await handleRoleNameTakenErrors({ db, orgId: org.id, name: params.name });
 
 	const role = await roleRepo.insert({ db, orgId: org.id, params });
-	return customRoleToApiRole({ role, memberCount: 0 });
+	const usage = await roleRepo.getUsage({ db, orgId: org.id });
+	return customRoleToApiRole({ role, usage });
 };

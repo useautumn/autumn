@@ -30,9 +30,6 @@ export const updateRole = async ({
 	}
 
 	const role = await roleRepo.update({ db, orgId: org.id, name, params });
-	const memberCounts = await roleRepo.countMembers({ db, orgId: org.id });
-	return customRoleToApiRole({
-		role,
-		memberCount: memberCounts.get(role.role) ?? 0,
-	});
+	const usage = await roleRepo.getUsage({ db, orgId: org.id });
+	return customRoleToApiRole({ role, usage });
 };
