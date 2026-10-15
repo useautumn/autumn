@@ -1,9 +1,9 @@
 import { AppEnv } from "@autumn/shared";
-import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { setErrorReportingUser } from "@/lib/errorReporting";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
@@ -159,13 +159,9 @@ export default function App() {
 				email: data.user.email,
 				name: data.user.name,
 			});
-			Sentry.setUser({
-				email: data.user.email ?? "unknown_email",
-				name: data.user.name ?? "unknown_name",
-				id: data.user.id ?? "unknown_user",
-			});
-			Sentry.setTags({
-				org_id: data.session.activeOrganizationId ?? "unknown_org",
+			setErrorReportingUser({
+				user: data.user,
+				orgId: data.session.activeOrganizationId,
 			});
 
 			const isLocal = window.location.hostname === "localhost";

@@ -1,7 +1,7 @@
 import { AppEnv, AuthType, ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { auth } from "@/utils/auth.js";
 import { assertSandboxAccess, SANDBOX_ORG_HEADER } from "./sandboxAccess.js";
 
@@ -62,16 +62,26 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const sandboxOrgId = c.req.header(SANDBOX_ORG_HEADER);
 
 	type OrgWithFeatures = NonNullable<
-		Awaited<ReturnType<typeof OrgService.getWithFeatures>>
+		Awaited<ReturnType<typeof getOrgWithFeaturesCached>>
 	>;
 	let resolved: OrgWithFeatures;
 
-	if (sandboxOrgId) {
-		const candidate = await OrgService.getWithFeatures({
+	// Redis-cached like the secret-key path (cleared by clearOrgCache). Skipping L1 means a
+	// feature created by one request is visible to the next, whichever process serves it.
+	const loadOrg = ({ orgId, env }: { orgId: string; env: AppEnv }) =>
+		getOrgWithFeaturesCached({
 			db: ctx.db,
+			orgId,
+			env,
+			skipL1: true,
+			allowNotFound: true,
+			requestId: ctx.id,
+		});
+
+	if (sandboxOrgId) {
+		const candidate = await loadOrg({
 			orgId: sandboxOrgId,
 			env: AppEnv.Sandbox,
-			allowNotFound: true,
 		});
 		assertSandboxAccess({
 			sessionOrgId: orgId,
@@ -87,11 +97,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		if (appEnvHeader) {
 			ctx.env = appEnvHeader;
 		}
-		const data = await OrgService.getWithFeatures({
-			db: ctx.db,
-			orgId,
-			env: ctx.env,
-		});
+		const data = await loadOrg({ orgId, env: ctx.env });
 		if (!data) {
 			throw new RecaseError({
 				message: "Org not found",

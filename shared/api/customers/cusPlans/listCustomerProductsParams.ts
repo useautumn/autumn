@@ -6,15 +6,16 @@ import {
 	createCursorLimitSchema,
 	defineCursor,
 } from "../../common/cursorPaginationSchemas.js";
+import {
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	CUSTOMER_PRODUCTS_MAX_LIMIT,
+} from "./customerProductsLimits.js";
 
 export enum CustomerProductKind {
 	Subscription = "subscription",
 	OneOff = "one_off",
 	AddOn = "add_on",
 }
-
-export const CUSTOMER_PRODUCTS_DEFAULT_LIMIT = 10;
-export const CUSTOMER_PRODUCTS_MAX_LIMIT = 100;
 
 export const CustomerProductsStatusFilterSchema = z.enum([
 	"active",
