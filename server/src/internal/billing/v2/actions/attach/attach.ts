@@ -13,6 +13,7 @@ import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
+import { isOneOffAttachWithNothingToCharge } from "@/internal/billing/v2/actions/attach/utils/isOneOffAttachWithNothingToCharge";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import {
 	findPendingInvoiceConflict,
@@ -98,6 +99,14 @@ export async function attach({
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+
+	if (
+		billingContext.checkoutMode === "stripe_checkout" &&
+		isOneOffAttachWithNothingToCharge({ billingContext, autumnBillingPlan })
+	) {
+		billingContext.checkoutMode = null;
+	}
+
 	await handleAttachComputeErrors({
 		ctx,
 		billingContext,

@@ -582,3 +582,71 @@ test.concurrent(`${chalk.yellowBright("stripe-checkout: recurring + one-off comb
 		latestTotal: expectedTotal,
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: One-off quantity fully covered by included usage
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer with NO payment method
+ * - One-off prepaid plan (no base price) with 100 included messages
+ * - Attach with quantity: 100, so nothing is charged
+ *
+ * Expected Result:
+ * - No Stripe Checkout; the plan attaches directly
+ * - 100 messages granted, no invoice
+ */
+test.concurrent(`${chalk.yellowBright("stripe-checkout: one-off with nothing to charge attaches directly")}`, async () => {
+	const customerId = "stripe-checkout-one-off-nothing-to-charge";
+	const includedUsage = 100;
+
+	const oneOff = products.base({
+		id: "one-off-nothing-to-charge",
+		items: [
+			items.oneOffMessages({ includedUsage, billingUnits: 100, price: 10 }),
+		],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true }), // No payment method!
+			s.products({ list: [oneOff] }),
+		],
+		actions: [],
+	});
+
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: includedUsage }],
+	});
+	expect(preview.total).toBe(0);
+
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		options: [{ feature_id: TestFeature.Messages, quantity: includedUsage }],
+	});
+	expect(result.payment_url).toBeFalsy();
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({
+		customer,
+		productId: oneOff.id,
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: includedUsage,
+		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 0,
+	});
+});
