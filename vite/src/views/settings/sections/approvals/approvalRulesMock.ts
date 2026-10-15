@@ -9,23 +9,30 @@ export type ApprovalRulesApi = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const editedBy = (name: string) => ({
-	user_id: `usr_${name.split(" ")[0].toLowerCase()}`,
-	name,
-});
 
-const mockRule = (
-	rule: Pick<ApprovalRule, "id" | "name" | "subjects" | "actions" | "when"> &
-		Partial<ApprovalRule> & { daysAgo: number; editor: string },
-): ApprovalRule => ({
-	note: null,
-	enabled: true,
-	version: 1,
-	created_at: Date.now() - rule.daysAgo * DAY_MS,
-	updated_at: Date.now() - rule.daysAgo * DAY_MS,
-	updated_by: editedBy(rule.editor),
-	...rule,
-});
+const mockRule = ({
+	daysAgo,
+	editor,
+	...rule
+}: Pick<ApprovalRule, "id" | "name" | "subjects" | "actions" | "when"> &
+	Partial<ApprovalRule> & {
+		daysAgo: number;
+		editor: string;
+	}): ApprovalRule => {
+	const at = Date.now() - daysAgo * DAY_MS;
+	return {
+		note: null,
+		enabled: true,
+		version: 1,
+		created_at: at,
+		updated_at: at,
+		updated_by: {
+			user_id: `usr_${editor.split(" ")[0].toLowerCase()}`,
+			name: editor,
+		},
+		...rule,
+	};
+};
 
 let rules: ApprovalRule[] = [
 	mockRule({
@@ -118,17 +125,12 @@ let rules: ApprovalRule[] = [
 	}),
 ];
 
-const findRule = (id: string) => {
-	const rule = rules.find((candidate) => candidate.id === id);
-	if (!rule) throw new Error(`Approval rule ${id} not found`);
-	return rule;
-};
-
 /** In-memory stand-in for the D2 `/approvals/rules` routes, same shapes as approvals-api-schema.md §2. */
 export const mockApprovalRulesApi: ApprovalRulesApi = {
 	list: async () => ({ list: rules }),
 	update: async ({ id, params }) => {
-		const rule = findRule(id);
+		const rule = rules.find((candidate) => candidate.id === id);
+		if (!rule) throw new Error(`Approval rule ${id} not found`);
 		const updated = {
 			...rule,
 			...params,

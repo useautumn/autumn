@@ -13,8 +13,17 @@ import type {
 import {
 	buildRuleSentence,
 	type RuleLabels,
-	sentenceText,
+	type SentencePart,
 } from "@/views/settings/sections/approvals/buildRuleSentence";
+
+const sentenceText = (parts: SentencePart[]) =>
+	parts
+		.map((part) =>
+			part.kind === "condition"
+				? [part.field, part.operator, part.value].filter(Boolean).join(" ")
+				: part.text,
+		)
+		.join(" ");
 
 const NAMES: Record<string, string> = {
 	usr_john: "John Doe",

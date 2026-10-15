@@ -314,12 +314,3 @@ export const buildRuleSentence = ({
 	),
 	...whenParts({ rule, labels }),
 ];
-
-export const sentenceText = (parts: SentencePart[]) =>
-	parts
-		.map((part) =>
-			part.kind === "condition"
-				? [part.field, part.operator, part.value].filter(Boolean).join(" ")
-				: part.text,
-		)
-		.join(" ");

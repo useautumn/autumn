@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { useToggleApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
 import { cn } from "@/lib/utils";
 import type { SentencePart } from "./buildRuleSentence";
-import { RuleSentence } from "./RuleSentence";
+import { RuleSentencePart } from "./RuleSentencePart";
 
 export const ApprovalRuleRow = ({
 	rule,
@@ -20,7 +20,11 @@ export const ApprovalRuleRow = ({
 		<TableRow className="hover:bg-transparent">
 			<TableCell className="whitespace-normal py-4 pl-4">
 				<div className={cn("flex flex-col gap-3", !enabled && "opacity-50")}>
-					<RuleSentence parts={parts} />
+					<p className="flex flex-wrap items-center gap-x-1.5 gap-y-2 text-sm">
+						{parts.map((part) => (
+							<RuleSentencePart key={part.key} part={part} />
+						))}
+					</p>
 					<span className="text-subtle text-xs">
 						Edited by {rule.updated_by.name} ·{" "}
 						{format(rule.updated_at, "MMM d")}
