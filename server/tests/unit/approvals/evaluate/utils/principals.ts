@@ -1,8 +1,5 @@
-import type {
-	ApprovalPrincipal,
-	ApprovalRule,
-	ApprovalRuleParams,
-} from "@autumn/shared";
+import type { ApprovalRule, ApprovalRuleParams } from "@autumn/shared";
+import type { ApprovalPrincipal } from "@autumn/shared/api/approvals/evaluate/index.js";
 
 const user = ({
 	role,

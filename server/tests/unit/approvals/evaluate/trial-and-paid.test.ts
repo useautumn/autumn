@@ -8,12 +8,12 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { AppEnv } from "@autumn/shared";
 import {
-	AppEnv,
 	type BillingChangeFacts,
 	evaluateApprovalRules,
 	type FreeTrialFacts,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/evaluate/index.js";
 import { rules } from "@tests/utils/fixtures/rules.js";
 import { facts } from "./utils/facts.js";
 import { principals, storedRule } from "./utils/principals.js";

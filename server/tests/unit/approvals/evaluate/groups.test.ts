@@ -11,11 +11,13 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	type ApprovalRuleWhen,
+	WHEN_FIELD_LABELS,
+} from "@autumn/shared";
+import {
 	type ApprovalVerdict,
 	type BillingChangeFacts,
 	evaluateApprovalRules,
-	WHEN_FIELD_LABELS,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/evaluate/index.js";
 import { rules } from "@tests/utils/fixtures/rules.js";
 import { facts } from "./utils/facts.js";
 import { principals, storedRule } from "./utils/principals.js";
