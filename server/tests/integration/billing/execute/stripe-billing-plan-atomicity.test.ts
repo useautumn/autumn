@@ -94,7 +94,7 @@ const runFailingSubscriptionPlan = async ({
 	});
 	const promotionCode = await ctx.stripeCli.promotionCodes.create({
 		promotion: { type: "coupon", coupon: coupon.id },
-		code: `MINAMT${Date.now()}`,
+		code: `MINAMT${customerId.replaceAll("-", "")}`,
 		restrictions: {
 			minimum_amount: 100,
 			minimum_amount_currency: "usd",
