@@ -10,7 +10,7 @@ import {
 	type EditorRow,
 	PINNED_FIELDS,
 } from "./editorFields";
-import { FIELD_CODECS, INCOMING_PLAN } from "./fieldCodecs";
+import { FIELD_CODECS } from "./fieldCodecs";
 import { type Filter, isEmptyObject, mergeFilters } from "./filterParts";
 
 /** `group: "pinned"` is the row above the groups. */
@@ -34,7 +34,7 @@ const rowIssue = ({
 	pinned: boolean;
 }) => {
 	const fields: Record<string, readonly string[]> = EDITOR_FIELDS[area];
-	if (!Object.hasOwn(fields, row.field)) {
+	if (!Object.keys(fields).includes(row.field)) {
 		return "This condition isn't available for these actions.";
 	}
 	if (!fields[row.field].includes(row.operator)) {
@@ -50,7 +50,8 @@ const rowIssue = ({
 
 /** The row's filter, or null when its value is missing or doesn't fit the field. */
 const encodeRow = ({ area, row }: { area: WhenKey; row: EditorRow }) => {
-	if (row.value === null && row.operator !== "has_none") return null;
+	const isEmpty = row.value === undefined || row.value === null;
+	if (isEmpty && row.operator !== "has_none") return null;
 	const filter = FIELD_CODECS[row.field].toFilter(row);
 	const schema = buildWhenSchema({ shape: WHEN_SHAPES[area] });
 	return filter && schema.safeParse(filter).success ? filter : null;
@@ -75,21 +76,12 @@ const groupToFilter = ({
 	for (const { row, index } of inBoardOrder) {
 		const fieldIssue = rowIssue({ area, row, pinned: false });
 		const addition = fieldIssue ? null : encodeRow({ area, row });
-		const message =
-			fieldIssue ?? (addition ? null : "Choose a value for this condition.");
-		const merged =
-			addition &&
-			mergeFilters({ base: filter, addition, andPath: INCOMING_PLAN });
-		if (merged) filter = merged;
-		else {
-			issues.push({
-				group,
-				row: index,
-				message:
-					message ??
-					"This condition can't be combined with another one in its group.",
-			});
+		if (addition) {
+			filter = mergeFilters({ base: filter, addition });
+			continue;
 		}
+		const message = fieldIssue ?? "Choose a value for this condition.";
+		issues.push({ group, row: index, message });
 	}
 	return { filter, issues };
 };
