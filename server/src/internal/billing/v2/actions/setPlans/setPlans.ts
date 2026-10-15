@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { logBillingApprovalDecision } from "@/internal/approvals/enforce/logBillingApprovalDecision";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
@@ -153,8 +153,8 @@ export const setPlans = async ({
 		return result;
 	}
 
-	// Approvals: log the decision (shadow mode, never blocks)
-	await logBillingApprovalDecision({
+	// Approvals: log the decision, and block a deny when the org enforces approvals
+	await checkBillingApproval({
 		ctx,
 		billingContext,
 		billingPlan,

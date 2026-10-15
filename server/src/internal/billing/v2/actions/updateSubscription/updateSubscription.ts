@@ -5,7 +5,7 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { logBillingApprovalDecision } from "@/internal/approvals/enforce/logBillingApprovalDecision";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
 import { billingContextToUpdateAction } from "@/internal/approvals/facts/billing/billingContextToUpdateAction";
 
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
@@ -101,8 +101,8 @@ export async function updateSubscription({
 		};
 	}
 
-	// 5. Approvals: log the decision (shadow mode, never blocks)
-	await logBillingApprovalDecision({
+	// 5. Approvals: log the decision, and block a deny when the org enforces approvals
+	await checkBillingApproval({
 		ctx,
 		billingContext,
 		billingPlan,
