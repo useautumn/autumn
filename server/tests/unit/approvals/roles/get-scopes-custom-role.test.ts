@@ -32,19 +32,23 @@ const supportAccess: RoleAccessMap = {
 	billing: "read",
 };
 
+/** Stands in for drizzle's select builder; every chained call resolves to the one joined row. */
 const fakeDb = ({
 	role,
 	customRole,
 }: {
 	role: string;
 	customRole?: { access: RoleAccessMap };
-}) =>
-	({
-		query: {
-			member: { findFirst: async () => ({ role }) },
-			organizationRole: { findFirst: async () => customRole },
-		},
-	}) as unknown as ResolverDb;
+}) => {
+	const rows = [{ role, customAccess: customRole?.access ?? null }];
+	const chain = {
+		from: () => chain,
+		leftJoin: () => chain,
+		where: () => chain,
+		limit: async () => rows,
+	};
+	return { select: () => chain } as unknown as ResolverDb;
+};
 
 const resolve = (db: ResolverDb) =>
 	getScopesForUserInOrg({ db, userId: "usr_1", organizationId: "org_1" });

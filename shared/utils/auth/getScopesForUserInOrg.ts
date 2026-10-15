@@ -8,7 +8,7 @@ import { ROLE_SCOPES, type Role, type ScopeString } from "../scopeDefinitions";
 /** Any drizzle db over the shared schema; server's instrumented db overrides `execute`. */
 type ScopeResolverDb = Pick<
 	PgDatabase<PgQueryResultHKT, typeof schema>,
-	"query"
+	"select"
 >;
 
 // Own keys only: `in` would also match inherited names like "constructor".
@@ -25,31 +25,33 @@ export async function getScopesForUserInOrg({
 	userId: string;
 	organizationId: string;
 }): Promise<{ role: string | null; scopes: ScopeString[] }> {
-	const membership = await db.query.member.findFirst({
-		where: and(
-			eq(member.userId, userId),
-			eq(member.organizationId, organizationId),
-		),
-	});
+	// One statement, so a concurrent role rename can't leave the member's role unresolved.
+	const [membership] = await db
+		.select({ role: member.role, customAccess: organizationRole.access })
+		.from(member)
+		.leftJoin(
+			organizationRole,
+			and(
+				eq(organizationRole.organizationId, member.organizationId),
+				eq(organizationRole.role, member.role),
+			),
+		)
+		.where(
+			and(eq(member.userId, userId), eq(member.organizationId, organizationId)),
+		)
+		.limit(1);
 
 	if (!membership) {
 		return { role: null, scopes: [] };
 	}
 
-	const { role } = membership;
+	const { role, customAccess } = membership;
 	if (isCanonicalRole(role)) {
 		return { role, scopes: [...ROLE_SCOPES[role]] };
 	}
-
-	const customRole = await db.query.organizationRole.findFirst({
-		where: and(
-			eq(organizationRole.organizationId, organizationId),
-			eq(organizationRole.role, role),
-		),
-	});
-	if (!customRole) {
+	if (!customAccess) {
 		return { role, scopes: [] };
 	}
 
-	return { role, scopes: roleAccessToScopes({ access: customRole.access }) };
+	return { role, scopes: roleAccessToScopes({ access: customAccess }) };
 }
