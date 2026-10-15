@@ -15,6 +15,7 @@
 		"build": "bun scripts/buildNative.ts",
 		"patch:regenerate": "bun scripts/regeneratePatch.ts",
 		"probe:admin-list-offsets": "bun scripts/probeAdminListOffsets.ts",
+		"probe:admin-list-offsets:stress": "bun scripts/stressAdminListOffsets.ts",
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"test:native": "bun test --config ./bunfig.toml tests/native",
