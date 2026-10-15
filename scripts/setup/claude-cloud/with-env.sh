@@ -21,6 +21,20 @@ fi
 	exit 2
 }
 
+# The infisical CLI ships as a workspace dependency; later shells may not have
+# the session hook's PATH.
+export PATH="$ROOT/node_modules/.bin:$PATH"
+
+# Fresh VMs have no server/.env. Keep it to local endpoints only: it is sourced
+# after Infisical injection, so any blank key would wipe a real secret.
+if [ ! -f "$ROOT/server/.env" ]; then
+	cat >"$ROOT/server/.env" <<'EOF'
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
+CRITICAL_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
+REDIS_URL=redis://localhost:6379
+EOF
+fi
+
 token_file="${HOME}/.cache/autumn-infisical-token"
 [ -s "$token_file" ] || {
 	echo "missing $token_file — run: bash scripts/setup/claude-cloud/session-start.sh" >&2
