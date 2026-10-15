@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { afterEach, describe, expect, jest, test } from "bun:test";
+import { afterEach, describe, expect, jest, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +10,7 @@ import {
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
+import { SQLITE_WRITES } from "../../../src/state/writer/sqliteWrites.js";
 import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 const MINUTE_MS = 60_000;
@@ -179,5 +180,55 @@ describe("journal keys", () => {
 		expect(keyRowsIn({ databasePath })).toEqual([
 			{ customerId: "cus_2", appendedAt: 1_000 },
 		]);
+	});
+});
+
+/** Lets the prune loop take its turn after a timer fires: its continuation is a microtask, never a timer. */
+const flushMicrotasks = async () => {
+	for (let i = 0; i < 8; i++) await Promise.resolve();
+};
+
+/** The in-memory journal writes inline, so the prune's statement can be held open like a writer that never answers. */
+const holdPruneOpen = () => {
+	const prune = spyOn(SQLITE_WRITES, "pruneJournalKeys").mockImplementation(
+		() => new Promise<string>(() => {}) as unknown as string,
+	);
+	return {
+		calls: () => prune.mock.calls.length,
+		restore: () => prune.mockRestore(),
+	};
+};
+
+describe("the key prune loop", () => {
+	test("a prune the writer never answers is the only one in flight, however many minutes pass", async () => {
+		const held = holdPruneOpen();
+		try {
+			jest.useFakeTimers();
+			open({ databasePath: ":memory:" });
+			for (let minute = 1; minute <= 5; minute++) {
+				jest.advanceTimersByTime(MINUTE_MS);
+				await flushMicrotasks();
+			}
+			expect(held.calls()).toBe(1);
+		} finally {
+			held.restore();
+		}
+	});
+
+	test("close ends the loop: no prune starts after it", async () => {
+		const held = holdPruneOpen();
+		try {
+			jest.useFakeTimers();
+			const journal = open({ databasePath: ":memory:" });
+			journal.close();
+			journals.splice(journals.indexOf(journal), 1);
+			for (let minute = 1; minute <= 3; minute++) {
+				jest.advanceTimersByTime(MINUTE_MS);
+				await flushMicrotasks();
+			}
+			expect(held.calls()).toBe(0);
+		} finally {
+			held.restore();
+		}
 	});
 });
