@@ -10,7 +10,7 @@ import {
 	CreateBalanceParamsV0Schema,
 	DeleteBalanceParamsV0Schema,
 	ExtCheckParamsSchema,
-	FinalizeLockParamsV0Schema,
+	FinalizeLockParamsV1Schema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
 	TrackTokensParamsSchema,
@@ -308,19 +308,22 @@ export const balancesFinalizeContract = oc
 			),
 	})
 	.input(
-		FinalizeLockParamsV0Schema.meta({
+		FinalizeLockParamsV1Schema.meta({
 			title: "FinalizeBalanceParams",
 			examples: [
 				{
+					customer_id: "cus_123",
 					lock_id: "lock_abc123",
 					action: "confirm",
 				},
 				{
+					customer_id: "cus_123",
 					lock_id: "lock_abc123",
 					action: "confirm",
 					override_value: 3,
 				},
 				{
+					customer_id: "cus_123",
 					lock_id: "lock_abc123",
 					action: "release",
 				},

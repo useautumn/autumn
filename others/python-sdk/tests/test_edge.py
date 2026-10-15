@@ -208,7 +208,7 @@ class WriteCheckAsyncTests(unittest.IsolatedAsyncioTestCase):
 class FinalizeTests(unittest.TestCase):
     def test_use_edge_leaves_finalize_with_autumn(self):
         hosts = Hosts(edge=lambda _: check_answer("from_edge"), autumn=lambda _: httpx.Response(200, json={"success": True}))
-        client_for(hosts).balances.finalize(lock_id="lock_1", action="confirm")
+        client_for(hosts).balances.finalize(customer_id="customer_123", lock_id="lock_1", action="confirm")
         self.assertEqual(hosts.sent["edge"], [])
         self.assertEqual([r.url.path for r in hosts.sent["autumn"]], ["/v1/balances.finalize"])
 

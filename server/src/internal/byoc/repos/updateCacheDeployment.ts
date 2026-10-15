@@ -1,8 +1,12 @@
 import { atomDeployments, type ByocCacheDeployment } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { publishCatalogInvalidation } from "@/internal/balanceWorker/catalog/publishCatalogInvalidation.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-import { changesAtomRoute } from "../utils/classifyCacheDeployment.js";
+import {
+	becomesAtomPushTarget,
+	changesAtomRoute,
+} from "../utils/classifyCacheDeployment.js";
 import { pickChangedFields } from "../utils/pickChangedFields.js";
 import { isReadRow } from "./utils/cacheDeploymentWhere.js";
 
@@ -18,7 +22,7 @@ export const updateCacheDeployment = async ({
 }): Promise<void> => {
 	const changed = pickChangedFields({ from, to });
 	if (Object.keys(changed).length === 0) return;
-	await ctx.db
+	const written = await ctx.db
 		.update(atomDeployments)
 		.set(changed)
 		.where(
@@ -26,7 +30,14 @@ export const updateCacheDeployment = async ({
 				isReadRow({ ctx, cacheDeployment: from }),
 				eq(atomDeployments.status, from.status),
 			),
-		);
+		)
+		.returning({ id: atomDeployments.id });
 	if (changesAtomRoute({ from, to }))
 		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
+	// Herald pushes a catalog only when it changes: the invalidation sends the new Atom its org's catalog now.
+	if (
+		written.length > 0 &&
+		becomesAtomPushTarget({ from, to, orgId: ctx.org.id, env: ctx.env })
+	)
+		await publishCatalogInvalidation({ ctx, orgId: ctx.org.id, env: ctx.env });
 };
