@@ -1,4 +1,4 @@
-import type { StringMatcher } from "@api/common/filters/matcher";
+import type { StringMatcher } from "../../../../common/filters/matcher";
 
 /** `"pro"` → "pro"; `{ $in: ["a", "b"] }` → "a or b"; `{ $ne: "a" }` → "not a". */
 export const describeStringMatcher = ({

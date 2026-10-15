@@ -1,4 +1,4 @@
-import type { FullCustomer } from "@models/cusModels/fullCusModel";
+import type { FullCustomer } from "../../../../models/cusModels/fullCusModel";
 
 export type RewardApplyFacts = { customer: FullCustomer; reward_id: string };
 

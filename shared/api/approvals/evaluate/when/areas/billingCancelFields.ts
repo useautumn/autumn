@@ -1,21 +1,30 @@
+import { WHEN_FIELD_LABELS } from "../../../schemas/when/whenFieldLabels";
 import type { BillingCancelFacts } from "../../facts/billingFacts";
 import { arrayField } from "../fields/arrayField";
 import { customerField } from "../fields/customerField";
 import { refundField } from "../fields/refundField";
 import { stringField } from "../fields/stringField";
+import { labelsUnder } from "../labelsUnder";
 import type { WhenFields } from "../whenFieldTypes";
 import { outgoingPlanFields } from "./billingChangeFields";
 
+const labels = WHEN_FIELD_LABELS.billing_cancel;
+
 export const billingCancelFields: WhenFields<BillingCancelFacts> = {
-	customer: customerField({ read: (facts) => facts.customer }),
+	customer: customerField({
+		label: labels.customer,
+		read: (facts) => facts.customer,
+	}),
 	cancel_action: stringField({
-		label: "Timing",
+		label: labels.cancel_action,
 		read: (facts) => facts.cancel_action,
 	}),
 	outgoing: arrayField({
-		label: "Plan",
+		label: labels.outgoing,
 		read: (facts) => facts.outgoing,
-		element: outgoingPlanFields({ planLabel: "Plan" }),
+		element: outgoingPlanFields({
+			labels: labelsUnder({ labels, prefix: "outgoing" }),
+		}),
 	}),
-	refund: refundField({ read: (facts) => facts.refund }),
+	refund: refundField({ label: labels.refund, read: (facts) => facts.refund }),
 };

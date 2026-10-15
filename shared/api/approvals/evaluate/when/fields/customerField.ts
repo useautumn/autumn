@@ -1,17 +1,19 @@
-import { customerFilterMatchesFullCustomer } from "@api/customers/utils/match/customerFilterMatchesFullCustomer";
-import type { CustomerFilter } from "@api/migrations/filters/customerFilter";
-import type { FullCustomer } from "@models/cusModels/fullCusModel";
+import type { FullCustomer } from "../../../../../models/cusModels/fullCusModel";
+import { customerFilterMatchesFullCustomer } from "../../../../customers/utils/match/customerFilterMatchesFullCustomer";
+import type { CustomerFilter } from "../../../../migrations/filters/customerFilter";
 import { describeStringMatcher } from "../format/describeStringMatcher";
 import { leafField } from "./leafField";
 
 /** The migration `CustomerFilter`, matched by the existing in-memory matcher. */
 export const customerField = <Parent>({
+	label,
 	read,
 }: {
+	label: string;
 	read: (parent: Parent) => FullCustomer;
 }) =>
 	leafField<Parent>({
-		label: "Customer",
+		label,
 		matches: ({ filter, parent }) =>
 			customerFilterMatchesFullCustomer({
 				filter: filter as CustomerFilter,

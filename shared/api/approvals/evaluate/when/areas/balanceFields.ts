@@ -1,3 +1,4 @@
+import { WHEN_FIELD_LABELS } from "../../../schemas/when/whenFieldLabels";
 import type {
 	BalanceCreateFacts,
 	BalanceUpdateFacts,
@@ -12,30 +13,35 @@ import type { WhenFields } from "../whenFieldTypes";
 
 type ResetFacts = NonNullable<BalanceCreateFacts["reset"]>;
 
+const createLabels = WHEN_FIELD_LABELS.balance_create;
+
 export const balanceCreateFields: WhenFields<BalanceCreateFacts> = {
-	customer: customerField({ read: (facts) => facts.customer }),
+	customer: customerField({
+		label: createLabels.customer,
+		read: (facts) => facts.customer,
+	}),
 	feature_id: stringField({
-		label: "Feature",
+		label: createLabels.feature_id,
 		read: (facts) => facts.feature_id,
 	}),
 	included_grant: numberField({
-		label: "Amount",
+		label: createLabels.included_grant,
 		read: (facts) => facts.included_grant,
 	}),
 	unlimited: booleanField({
-		label: "Unlimited",
+		label: createLabels.unlimited,
 		read: (facts) => facts.unlimited,
 	}),
 	expires_at: relativeDateField({
-		label: "Expires within",
+		label: createLabels.expires_at,
 		read: (facts) => facts.expires_at,
 	}),
 	reset: nullableObjectField<BalanceCreateFacts, ResetFacts>({
-		label: "Reset interval",
+		label: createLabels.reset,
 		read: (facts) => facts.reset,
 		fields: {
 			interval: stringField({
-				label: "Reset interval",
+				label: createLabels["reset.interval"],
 				read: (reset) => reset.interval,
 			}),
 		},
@@ -43,23 +49,31 @@ export const balanceCreateFields: WhenFields<BalanceCreateFacts> = {
 	}),
 };
 
+const updateLabels = WHEN_FIELD_LABELS.balance_update;
+
 export const balanceUpdateFields: WhenFields<BalanceUpdateFacts> = {
-	customer: customerField({ read: (facts) => facts.customer }),
+	customer: customerField({
+		label: updateLabels.customer,
+		read: (facts) => facts.customer,
+	}),
 	feature_id: stringField({
-		label: "Feature",
+		label: updateLabels.feature_id,
 		read: (facts) => facts.feature_id,
 	}),
 	included_grant: numberField({
-		label: "Amount",
+		label: updateLabels.included_grant,
 		read: (facts) => facts.included_grant,
 	}),
 	add_to_balance: numberField({
-		label: "Add to balance",
+		label: updateLabels.add_to_balance,
 		read: (facts) => facts.add_to_balance,
 	}),
 	remaining: numberField({
-		label: "Remaining",
+		label: updateLabels.remaining,
 		read: (facts) => facts.remaining,
 	}),
-	usage: numberField({ label: "Usage", read: (facts) => facts.usage }),
+	usage: numberField({
+		label: updateLabels.usage,
+		read: (facts) => facts.usage,
+	}),
 };
