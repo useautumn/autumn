@@ -26,7 +26,10 @@ const ring = createReplicaRing({
 	},
 });
 const ownerClassOf = new Map<string, OwnerClass>();
-for (const customerId of plan.customerIds)
+for (const customerId of [
+	...plan.customerIds,
+	...(plan.hot ? [plan.hot.customerId] : []),
+])
 	ownerClassOf.set(
 		customerId,
 		(await ring.ownerOf({ customerId })) === plan.members.a ? "a" : "b",
@@ -34,18 +37,26 @@ for (const customerId of plan.customerIds)
 
 let routed: OwnerClass[] = ["a", "b"];
 let stopped = false;
-const seconds = new Map<number, Record<OwnerClass, RollCounts>>();
+type SecondCounts = Record<OwnerClass, RollCounts> & { hot: RollCounts };
+const seconds = new Map<number, SecondCounts>();
 const keys = { allowed: [] as string[], ambiguous: [] as string[] };
 let flushedThrough = -1;
 
-const countsOf = (second: number, owner: OwnerClass): RollCounts => {
+const countsOf = (second: number, owner: OwnerClass | "hot"): RollCounts => {
 	const held = seconds.get(second) ?? {
 		a: emptyRollCounts(),
 		b: emptyRollCounts(),
+		hot: emptyRollCounts(),
 	};
 	seconds.set(second, held);
 	return held[owner];
 };
+
+/** Counted in its owner class and, for the hot customer, in `hot` too. */
+const intoAll = (second: number, customerId: string): RollCounts[] => [
+	countsOf(second, ownerClassOf.get(customerId) ?? "a"),
+	...(customerId === plan.hot?.customerId ? [countsOf(second, "hot")] : []),
+];
 
 const add = (record: Record<string, number>, key: string) => {
 	record[key] = (record[key] ?? 0) + 1;
@@ -63,6 +74,8 @@ let nextKey = 0;
 const lastKeyOf = new Map<string, string>();
 /** How each key's first send ended, so a replay deducted twice names its cause (bench diagnosis). */
 const firstOutcomeOf = new Map<string, Record<string, unknown>>();
+/** Where each key's first send went, so a retry can go to the other replica. */
+const firstToOf = new Map<string, OwnerClass>();
 const doublesFile = process.env.RIG_REPLAY_DOUBLES_FILE;
 /** Every keyed send's outcome, so P1 can say how each key applied twice got there (bench diagnosis). */
 const sendsOf = new Map<string, Record<string, unknown>[]>();
@@ -139,10 +152,7 @@ const send = async ({
 }) => {
 	const sentAt = Date.now();
 	const second = Math.floor((sentAt - plan.startAt) / 1000);
-	const into = countsOf(second, ownerClassOf.get(customerId) ?? "a");
-	into.sent++;
-	const to = routed[Math.floor(Math.random() * routed.length)] ?? "a";
-	add(into.sentTo, to);
+	const intos = intoAll(second, customerId);
 	const previous = deducts ? lastKeyOf.get(customerId) : undefined;
 	const isReplay =
 		previous !== undefined && Math.random() * 100 < config.replayPercent;
@@ -152,6 +162,21 @@ const send = async ({
 			? `${plan.index}-${nextKey++}`
 			: null;
 	if (key && !isReplay) lastKeyOf.set(customerId, key);
+	const firstTo = key ? firstToOf.get(key) : undefined;
+	const otherThanFirst =
+		firstTo === undefined ? undefined : firstTo === "a" ? "b" : "a";
+	const to =
+		isReplay &&
+		config.replayToOtherReplica &&
+		otherThanFirst &&
+		routed.includes(otherThanFirst)
+			? otherThanFirst
+			: (routed[Math.floor(Math.random() * routed.length)] ?? "a");
+	if (key && !isReplay) firstToOf.set(key, to);
+	for (const into of intos) {
+		into.sent++;
+		add(into.sentTo, to);
+	}
 	const lockId = lock && key && !isReplay ? `lock-${key}` : null;
 	const startedAt = performance.now();
 	try {
@@ -172,7 +197,8 @@ const send = async ({
 			allowed?: boolean;
 			code?: string;
 		} | null;
-		into.histogram[bucketOf(performance.now() - startedAt)]++;
+		for (const into of intos)
+			into.histogram[bucketOf(performance.now() - startedAt)]++;
 		if (key)
 			noteSend(key, {
 				second,
@@ -190,14 +216,15 @@ const send = async ({
 			// A first send that timed out or never answered may or may not have deducted: not counted as twice.
 			const firstDeducted = first?.allowed === true;
 			const doubled = reply.ok && body?.allowed && firstDeducted;
-			add(
-				into.failedStatus,
-				doubled
-					? "replay allowed (deducted twice)"
-					: firstDeducted
-						? `replay ${reply.status} ${body?.code ?? ""}`
-						: `replay after undeducted first ${reply.status}`,
-			);
+			for (const into of intos)
+				add(
+					into.failedStatus,
+					doubled
+						? "replay allowed (deducted twice)"
+						: firstDeducted
+							? `replay ${reply.status} ${body?.code ?? ""}`
+							: `replay after undeducted first ${reply.status}`,
+				);
 			if (doubled && doublesFile && key)
 				await Bun.write(
 					Bun.file(
@@ -225,20 +252,22 @@ const send = async ({
 				forwarded: reply.headers.get("x-atom-forwarded"),
 			});
 		const proxied = reply.headers.get("x-atom-proxied");
-		if (proxied) add(into.proxied, proxied);
 		const forwarded = reply.headers.get("x-atom-forwarded");
-		if (forwarded) {
-			into.forwarded++;
-			add(into.forwardReasons, forwarded);
-		} else if (reply.ok) into.answered++;
-		else
-			add(
-				into.failedStatus,
-				body?.code ? `${reply.status} ${body.code}` : String(reply.status),
-			);
+		for (const into of intos) {
+			if (proxied) add(into.proxied, proxied);
+			if (forwarded) {
+				into.forwarded++;
+				add(into.forwardReasons, forwarded);
+			} else if (reply.ok) into.answered++;
+			else
+				add(
+					into.failedStatus,
+					body?.code ? `${reply.status} ${body.code}` : String(reply.status),
+				);
+		}
 		if (!key) return;
 		if (reply.ok && body?.allowed) {
-			into.allowed++;
+			for (const into of intos) into.allowed++;
 			keys.allowed.push(key);
 			if (lockId) {
 				locks.taken++;
@@ -248,13 +277,15 @@ const send = async ({
 		if (lockId && !(reply.ok && body?.allowed))
 			add(locks.takeFailed, body?.code ?? String(reply.status));
 	} catch (error) {
-		into.histogram[bucketOf(performance.now() - startedAt)]++;
-		add(
-			into.failedStatus,
-			error instanceof Error && error.name === "TimeoutError"
-				? "timeout"
-				: "error",
-		);
+		for (const into of intos)
+			into.histogram[bucketOf(performance.now() - startedAt)]++;
+		for (const into of intos)
+			add(
+				into.failedStatus,
+				error instanceof Error && error.name === "TimeoutError"
+					? "timeout"
+					: "error",
+			);
 		if (key) {
 			noteSend(key, {
 				second,
@@ -317,7 +348,9 @@ const pickCustomer = (): string => {
 	return plan.customerIds[low] as string;
 };
 
-const owed = { deductions: 0, reads: 0 };
+const owed = { deductions: 0, reads: 0, hotDeductions: 0, hotReads: 0 };
+const hotRate = plan.hot?.deductionsPerSec ?? 0;
+const hotReadRate = hotRate * (plan.hot?.readChecksPerDeduction ?? 0);
 let deductionsSent = 0;
 await Bun.sleep(Math.max(0, plan.startAt - Date.now()));
 let last = performance.now();
@@ -336,6 +369,18 @@ for (;;) {
 		});
 	for (; owed.reads >= 1; owed.reads--)
 		void send({ customerId: pickCustomer(), deducts: false });
+	if (plan.hot) {
+		owed.hotDeductions += hotRate * dtS;
+		owed.hotReads += hotReadRate * dtS;
+		for (; owed.hotDeductions >= 1; owed.hotDeductions--)
+			void send({
+				customerId: plan.hot.customerId,
+				deducts: true,
+				lock: plan.lockEvery > 0 && ++deductionsSent % plan.lockEvery === 0,
+			});
+		for (; owed.hotReads >= 1; owed.hotReads--)
+			void send({ customerId: plan.hot.customerId, deducts: false });
+	}
 	flushSettled();
 	await Bun.sleep(2);
 }

@@ -8,6 +8,7 @@ import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import {
 	closeSync,
+	existsSync,
 	fstatSync,
 	mkdirSync,
 	mkdtempSync,
@@ -67,6 +68,7 @@ const READY_POLL_MS = 100;
 type AtomRun = {
 	child: ReturnType<typeof Bun.spawn>;
 	srcDir: string;
+	env: Record<string, string>;
 	startedAt: number;
 	readyAt: number | null;
 	sigtermAt: number | null;
@@ -258,7 +260,50 @@ const watchReady = async (started: AtomRun): Promise<void> => {
 	}
 };
 
-const startAtom = ({ srcDir }: { srcDir: string }): AtomRun => {
+/** The box keeps each src slot n at /root/s<n>/atom-rig; the same apps/atom inside it. */
+const srcDirOf = (src: number) =>
+	defaultSrcDir.replace(/\/s\d+\/atom-rig\//, `/s${src}/atom-rig/`);
+const shaOf = (srcDir: string) =>
+	Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: srcDir })
+		.stdout.toString()
+		.trim();
+
+/** The Atom's own log lines a swap is judged by: each sender thread's handoff and its announcement. */
+const HANDOFF_TYPES = new Set([
+	"atom_handoff",
+	"atom_leaving",
+	"atom_peer_handed",
+	"atom_peer_joined",
+	"atom_leave_unannounced",
+	"atom_grant_unannounced",
+	"atom_handover_in_flight",
+]);
+const handoffLines = () =>
+	readFileSync(logPath, "utf8")
+		.split("\n")
+		.filter((line) => line.includes('"type":"atom_'))
+		.flatMap((line) => {
+			try {
+				const parsed = JSON.parse(line) as {
+					time: number;
+					type: string;
+					data?: unknown;
+				};
+				return HANDOFF_TYPES.has(parsed.type)
+					? [{ time: parsed.time, type: parsed.type, data: parsed.data }]
+					: [];
+			} catch {
+				return [];
+			}
+		});
+
+const startAtom = ({
+	srcDir,
+	env = {},
+}: {
+	srcDir: string;
+	env?: Record<string, string>;
+}): AtomRun => {
 	const child = Bun.spawn(
 		[process.execPath, "--config=./bunfig.toml", "src/main.ts"],
 		{
@@ -282,12 +327,14 @@ const startAtom = ({ srcDir }: { srcDir: string }): AtomRun => {
 				...pushQueueEnv,
 				...replica.bunJscFlags,
 				...replica.extraEnv,
+				...env,
 			},
 		},
 	);
 	const started: AtomRun = {
 		child,
 		srcDir,
+		env,
 		startedAt: Date.now(),
 		readyAt: null,
 		sigtermAt: null,
@@ -323,6 +370,7 @@ const statusOf = () => ({
 	running: run !== null && run.exitedAt === null,
 	pid: run?.child.pid ?? null,
 	srcDir: run?.srcDir ?? null,
+	env: run?.env ?? null,
 	startedAt: run?.startedAt ?? null,
 	readyAt: run?.readyAt ?? null,
 	sigtermAt: run?.sigtermAt ?? null,
@@ -339,6 +387,8 @@ const control = Bun.serve({
 		if (pathname === "/status") return Response.json(statusOf());
 		if (pathname === "/writers")
 			return Response.json({ writers: readWriters() });
+		if (pathname === "/handoffs")
+			return Response.json({ lines: handoffLines() });
 		if (request.method !== "POST")
 			return new Response("control: POST /stop | /start | /peers", {
 				status: 405,
@@ -346,6 +396,8 @@ const control = Bun.serve({
 		const body = (await request.json().catch(() => ({}))) as {
 			peers?: string[];
 			srcDir?: string;
+			src?: number;
+			env?: Record<string, string>;
 			delayMs?: number;
 			durationMs?: number;
 			port?: number;
@@ -375,6 +427,16 @@ const control = Bun.serve({
 			return Response.json({ armedAt: chaos.killArmedAt });
 		}
 		if (pathname === "/stop") return Response.json(await stopAtom());
+		if (pathname === "/kill") {
+			const target = run;
+			if (!target || target.exitedAt !== null)
+				return Response.json({ error: "not running" }, { status: 409 });
+			target.child.kill("SIGKILL");
+			const killedAt = Date.now();
+			await target.child.exited;
+			target.exitedAt ??= Date.now();
+			return Response.json({ killedAt, exitedAt: target.exitedAt });
+		}
 		if (pathname === "/peers") {
 			writePeers(body.peers ?? []);
 			return Response.json({ at: Date.now(), peers });
@@ -382,10 +444,24 @@ const control = Bun.serve({
 		if (pathname === "/start") {
 			if (run && run.exitedAt === null)
 				return Response.json({ error: "already running" }, { status: 409 });
+			const srcDir =
+				body.srcDir ??
+				(body.src === undefined ? defaultSrcDir : srcDirOf(body.src));
+			if (!existsSync(srcDir))
+				return Response.json(
+					{ error: `no src dir ${srcDir}` },
+					{ status: 400 },
+				);
 			if (body.peers) writePeers(body.peers);
 			if (run) restarts++;
-			run = startAtom({ srcDir: body.srcDir ?? defaultSrcDir });
-			return Response.json({ startedAt: run.startedAt, pid: run.child.pid });
+			run = startAtom({ srcDir, env: body.env });
+			return Response.json({
+				startedAt: run.startedAt,
+				pid: run.child.pid,
+				srcDir,
+				sha: shaOf(srcDir),
+				env: run.env,
+			});
 		}
 		return new Response("no such control route", { status: 404 });
 	},
@@ -393,6 +469,7 @@ const control = Bun.serve({
 
 writePeers([peer]);
 run = startAtom({ srcDir: defaultSrcDir });
+console.log(JSON.stringify({ initialSha: shaOf(defaultSrcDir) }));
 console.log(
 	JSON.stringify({
 		variant: rigConfig.variant,

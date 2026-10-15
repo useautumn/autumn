@@ -13,6 +13,7 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import { LATEST_VERSION } from "@autumn/shared";
 import { rigConfig } from "./rigConfig.js";
 import { log, startStubAndSeed } from "./rigSetup.js";
 import {
@@ -23,6 +24,7 @@ import {
 	mergeRollCounts,
 	mergeRollLockCounts,
 	type OwnerClass,
+	percentileOf,
 	type RollCounts,
 	type RollLoadPlan,
 	type RollLockCounts,
@@ -100,6 +102,14 @@ const loads = Array.from({ length: config.loadProcesses }, (_, index) => {
 		readChecksPerDeduction: roll.readChecksPerDeduction,
 		lockEvery: roll.lockEvery,
 		lockFinalizeAfterMs: roll.lockFinalizeAfterMs,
+		hot:
+			roll.hotDeductionsPerSec > 0
+				? {
+						customerId: config.customers.hotCustomerId,
+						deductionsPerSec: roll.hotDeductionsPerSec / config.loadProcesses,
+						readChecksPerDeduction: config.hot.readChecksPerDeduction,
+					}
+				: null,
 	};
 	const planPath = join(outDir, `roll-plan-${index}.json`);
 	writeFileSync(planPath, JSON.stringify(plan));
@@ -125,7 +135,9 @@ const mark = (name: string, at = Date.now()) => {
 	log(`${second.toFixed(1).padStart(7)} s  ${name}`);
 };
 
+let routed: OwnerClass[] = ["a", "b"];
 const route = (to: OwnerClass[]) => {
+	routed = to;
 	tellLoads({ type: "route", to });
 	mark(`route ${to.join("+")}`);
 };
@@ -146,6 +158,21 @@ const control = async (
 		);
 	return (await reply.json()) as Record<string, number | null>;
 };
+
+type ThreadView = { index: number; ready: boolean; handoffLate?: number };
+/** The replica's /health thread list now: how many threads it runs and which are ready. */
+const threadsOf = async (replica: OwnerClass) =>
+	fetch(`${replicaUrls[replica]}/health`, {
+		signal: AbortSignal.timeout(2_000),
+	})
+		.then(async (reply) => {
+			const health = (await reply.json()) as { threads?: ThreadView[] };
+			return (health.threads ?? []).map(({ index, ready }) => ({
+				index,
+				ready,
+			}));
+		})
+		.catch((error) => String(error));
 
 const statusOf = async (replica: OwnerClass) =>
 	(await (await fetch(`${controlUrls[replica]}/status`)).json()) as {
@@ -169,6 +196,123 @@ const waitReady = async (replica: OwnerClass) => {
 
 /** The leaver's chaos before its SIGTERM; marks what the supervisor did once it has exited. */
 const KILL_PATTERN = '"type":"atom_handoff".*"handed":[1-9]';
+let killArmed = false;
+let outageStarted = false;
+/** Autumn's worker down or slow from the roll's first SIGTERM (stub.outage). */
+const startOutage = async () => {
+	const { outage } = config.stub;
+	if (outage.mode === "none" || outageStarted) return;
+	outageStarted = true;
+	const reply = await fetch(`${stubUrl}/__rig/outage`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(outage),
+	});
+	const { from, until } = (await reply.json()) as {
+		from: number;
+		until: number;
+	};
+	mark(`stub ${outage.mode} on`, from);
+	setTimeout(() => mark(`stub ${outage.mode} off`, until), until - Date.now());
+};
+
+/** Long locks on the hot customer, one per swap, each taken before the SIGTERM and finalized after it. */
+const longLocks: Record<string, unknown>[] = [];
+const longLockRuns: Promise<void>[] = [];
+const sendLongLock = async (
+	path: string,
+	body: Record<string, unknown>,
+	key?: string,
+) => {
+	const to = routed[Math.floor(Math.random() * routed.length)] ?? "a";
+	try {
+		const reply = await fetch(`${replicaUrls[to]}${path}`, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				authorization: `Bearer ${config.tenant.secretKey}`,
+				"x-atom-token": config.tenant.token,
+				"x-api-version": LATEST_VERSION,
+				...(key && { "idempotency-key": key }),
+			},
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(config.requestTimeoutMs),
+		});
+		const answer = (await reply.json().catch(() => null)) as {
+			allowed?: boolean;
+			code?: string;
+		} | null;
+		return {
+			to,
+			status: reply.status,
+			allowed: answer?.allowed ?? null,
+			code: answer?.code ?? null,
+			forwarded: reply.headers.get("x-atom-forwarded"),
+			proxied: reply.headers.get("x-atom-proxied"),
+		};
+	} catch (error) {
+		return {
+			to,
+			status: 0,
+			allowed: null,
+			code: String(error),
+			forwarded: null,
+			proxied: null,
+		};
+	}
+};
+const longLock = (index: number) => {
+	const key = `long-${index}`;
+	const lockId = `lock-${key}`;
+	const customerId = config.customers.hotCustomerId;
+	const takenAt = Date.now();
+	const run = (async () => {
+		const take = await sendLongLock(
+			"/v1/balances.check",
+			{
+				customer_id: customerId,
+				feature_id: "messages",
+				required_balance: 1,
+				send_event: true,
+				lock: { enabled: true, lock_id: lockId },
+			},
+			key,
+		);
+		mark(`long lock ${index} taken ${take.status} ${take.to}`, takenAt);
+		const took = take.status === 200 && take.allowed === true;
+		if (took) {
+			keys.allowed.push(key);
+			locks.taken++;
+		} else if (take.status !== 200) {
+			keys.ambiguous.push(key);
+			add(locks.takeFailed, `long ${take.status} ${take.code ?? ""}`);
+		}
+		keys.sends[key] = [{ ...take, replay: false, long: true }];
+		await sleepUntil(takenAt + roll.longLockMs);
+		const finalize = took
+			? await sendLongLock("/v1/balances.finalize", {
+					customer_id: customerId,
+					lock_id: lockId,
+					action: "release",
+				})
+			: null;
+		if (finalize) {
+			mark(`long lock ${index} finalized ${finalize.status} ${finalize.to}`);
+			if (finalize.forwarded) add(locks.finalizeForwarded, finalize.forwarded);
+			else if (finalize.status === 200) locks.finalized++;
+			else
+				add(
+					locks.finalizeFailed,
+					`long ${finalize.status} ${finalize.code ?? ""}`,
+				);
+		}
+		longLocks.push({ key, lockId, takenAt, take, finalize });
+	})();
+	longLockRuns.push(run);
+};
+const add = (record: Record<string, number>, key: string) => {
+	record[key] = (record[key] ?? 0) + 1;
+};
 const armChaos = async (replica: OwnerClass) => {
 	if (roll.chaos === "netem-handoff") {
 		const on = await control(replica, "/netem", {
@@ -183,8 +327,16 @@ const armChaos = async (replica: OwnerClass) => {
 			typeof on.at === "number" ? on.at : Date.now(),
 		);
 	}
-	if (roll.chaos === "kill9-wipe" && replica === roll.order[0]) {
-		await control(replica, "/killOn", { pattern: KILL_PATTERN, wipe: true });
+	const killing =
+		(roll.chaos === "kill9-wipe" || roll.chaos === "kill9-handoff") &&
+		replica === roll.order[0] &&
+		!killArmed;
+	if (killing) {
+		killArmed = true;
+		await control(replica, "/killOn", {
+			pattern: KILL_PATTERN,
+			wipe: roll.chaos === "kill9-wipe",
+		});
 		mark(`${replica} kill armed`);
 	}
 };
@@ -205,37 +357,129 @@ const sleepUntil = async (at: number) => {
 };
 
 /** One replica swapped as Alien swaps a container, each step at its measured offset; the other keeps serving. */
+type SwapPlan = {
+	replica: OwnerClass;
+	env?: Record<string, string>;
+	src?: number;
+};
+const swapPlan: SwapPlan[] = roll.swaps.length
+	? roll.swaps
+	: Array.from({ length: roll.repeat }, (_, round) =>
+			roll.order.map((replica) => ({ replica, env: roll.restartEnv[round] })),
+		).flat();
+/** Per swap: what restarted, from which src, and both replicas' /health thread lists around it. */
+const swapDetails: Record<string, unknown>[] = [];
+let swapIndex = 0;
+
+/** Polls the restarted replica's public port until it answers anything (503 starting included). */
+const waitPortOpen = async (replica: OwnerClass) => {
+	for (;;) {
+		const status = await fetch(`${replicaUrls[replica]}/health`, {
+			signal: AbortSignal.timeout(1_000),
+		})
+			.then((reply) => reply.status)
+			.catch(() => 0);
+		if (status !== 0) return status;
+		await Bun.sleep(20);
+	}
+};
+
 const swap = async (
 	replica: OwnerClass,
 	{
 		sigtermAtOnce = false,
 		registerAtReady = false,
-	}: { sigtermAtOnce?: boolean; registerAtReady?: boolean } = {},
+		env,
+		src,
+	}: {
+		sigtermAtOnce?: boolean;
+		registerAtReady?: boolean;
+		env?: Record<string, string>;
+		src?: number;
+	} = {},
 ) => {
+	const index = swapIndex++;
 	const other: OwnerClass = replica === "a" ? "b" : "a";
-	route([other]);
-	mark(`${replica} deregistered`);
-	if (!sigtermAtOnce) await Bun.sleep(roll.deregisterToSigtermMs);
+	const detail: Record<string, unknown> = {
+		index,
+		replica,
+		env: env ?? null,
+		src: src ?? null,
+		threadsBefore: await threadsOf(replica),
+		peerThreadsBefore: await threadsOf(other),
+	};
+	swapDetails.push(detail);
+	const deregisterMs = roll.deregisterOffsetMs ?? roll.deregisterToSigtermMs;
+	const routeUntilExit = !sigtermAtOnce && deregisterMs === 0;
+	if (roll.longLockMs > 0) {
+		longLock(index);
+		const lead = roll.longLockMs / 2 - (routeUntilExit ? 0 : deregisterMs);
+		if (lead > 0) await Bun.sleep(lead);
+	}
+	if (!routeUntilExit) {
+		route([other]);
+		mark(`${replica} deregistered`);
+		if (!sigtermAtOnce) await Bun.sleep(deregisterMs);
+	}
 	await armChaos(replica);
+	void startOutage();
 	const stopped = await control(replica, "/stop");
 	mark(`${replica} sigterm`, stopped.sigtermAt ?? Date.now());
 	const exitedAt = stopped.exitedAt ?? Date.now();
 	mark(`${replica} exited`, exitedAt);
+	if (routeUntilExit) {
+		route([other]);
+		mark(`${replica} deregistered`);
+	}
 	await markChaos(replica);
 	await sleepUntil(exitedAt + roll.exitToDnsDropMs);
 	await control(other, "/peers", { peers: [] });
 	mark(`${replica} dns drop`);
 	await Bun.sleep(roll.dnsDropToStartMs);
-	const started = await control(replica, "/start", {
+	const started = (await control(replica, "/start", {
 		peers: [members[other]],
-	});
+		...(env && { env }),
+		...(src !== undefined && { src }),
+	})) as unknown as { startedAt?: number; sha?: string; srcDir?: string };
 	mark(`${replica} started`, started.startedAt ?? Date.now());
+	mark(
+		`${replica} src ${src ?? "arm"} ${started.sha ?? "?"} env ${JSON.stringify(env ?? {})}`,
+	);
+	detail.sha = started.sha;
+	detail.srcDir = started.srcDir;
 	await control(other, "/peers", { peers: [members[replica]] });
 	mark(`${replica} dns add`);
+	if (roll.sendBeforeReady) {
+		const status = await waitPortOpen(replica);
+		route(["a", "b"]);
+		mark(`${replica} port open ${status}`);
+	}
 	await waitReady(replica);
+	detail.threadsAfter = await threadsOf(replica);
+	detail.peerThreadsAfter = await threadsOf(other);
 	if (registerAtReady) return;
 	await Bun.sleep(roll.readyToRegisteredMs);
 	route(["a", "b"]);
+	mark(`${replica} registered`);
+};
+
+/** Host loss: SIGKILL with no roll in progress, the ALB still sending to it, restarted on the same data dir. */
+const killMidTraffic = async () => {
+	const replica = roll.order[0] as OwnerClass;
+	const other: OwnerClass = replica === "a" ? "b" : "a";
+	await sleepUntil(startAt + roll.killAtSeconds * 1000);
+	swapDetails.push({
+		index: swapIndex++,
+		replica,
+		threadsBefore: await threadsOf(replica),
+	});
+	const killed = await control(replica, "/kill");
+	mark(`${replica} kill9`, killed.killedAt ?? Date.now());
+	await Bun.sleep(roll.killRestartMs);
+	const started = await control(replica, "/start", { peers: [members[other]] });
+	mark(`${replica} started`, started.startedAt ?? Date.now());
+	await waitReady(replica);
+	await Bun.sleep(roll.readyToRegisteredMs);
 	mark(`${replica} registered`);
 };
 
@@ -313,7 +557,7 @@ writeFileSync(
 /** Each second is written once every load process has reported it. */
 const reported = new Map<
 	number,
-	{ counts: Record<OwnerClass, RollCounts>; from: number }
+	{ counts: Record<OwnerClass | "hot", RollCounts>; from: number }
 >();
 const keys = {
 	allowed: [] as string[],
@@ -327,6 +571,7 @@ const receive = (line: {
 	second?: number;
 	a?: RollCounts;
 	b?: RollCounts;
+	hot?: RollCounts;
 	allowed?: string[];
 	ambiguous?: string[];
 	sends?: Record<string, Record<string, unknown>[]>;
@@ -347,11 +592,16 @@ const receive = (line: {
 	}
 	if (line.type !== "second" || line.second === undefined) return;
 	const held = reported.get(line.second) ?? {
-		counts: { a: emptyRollCounts(), b: emptyRollCounts() },
+		counts: {
+			a: emptyRollCounts(),
+			b: emptyRollCounts(),
+			hot: emptyRollCounts(),
+		},
 		from: 0,
 	};
 	if (line.a) mergeRollCounts(held.counts.a, line.a);
 	if (line.b) mergeRollCounts(held.counts.b, line.b);
+	if (line.hot) mergeRollCounts(held.counts.hot, line.hot);
 	held.from++;
 	reported.set(line.second, held);
 	if (held.from < config.loadProcesses) return;
@@ -381,16 +631,20 @@ mark("load started");
 await Bun.sleep(roll.warmupSeconds * 1000);
 mark(`chaos ${roll.chaos}`);
 if (roll.chaos === "both-sigterm") await swapBoth();
+else if (roll.chaos === "kill9-traffic") await killMidTraffic();
 else if (roll.chaos === "sigterm-b-at-health") {
 	const [first, second] = roll.order as [OwnerClass, OwnerClass];
 	await swap(first, { registerAtReady: true });
 	mark(`${first} registered`);
 	await swap(second, { sigtermAtOnce: true });
-} else for (const replica of roll.order) await swap(replica);
+} else
+	for (const { replica, env, src } of swapPlan)
+		await swap(replica, { env, src });
 await Bun.sleep(roll.settleSeconds * 1000);
 mark("load stopping");
 tellLoads({ type: "stop" });
 await reading;
+await Promise.all(longLockRuns);
 clearInterval(healthPolls);
 
 /** P1: every deduction a client saw allowed was applied once at the stub, and nothing else was. */
@@ -484,9 +738,117 @@ const windowBars = windowBarsOf({
 	startAt,
 });
 
+/** Per window, each side's handoff log lines: one atom_handoff + one announcement per sender thread. */
+const handoffLinesOf = async (replica: OwnerClass) =>
+	fetch(`${controlUrls[replica]}/handoffs`)
+		.then(
+			async (reply) =>
+				(
+					(await reply.json()) as {
+						lines: {
+							time: number;
+							type: string;
+							data?: Record<string, unknown>;
+						}[];
+					}
+				).lines,
+		)
+		.catch(() => []);
+const handoffLines = {
+	a: await handoffLinesOf("a"),
+	b: await handoffLinesOf("b"),
+};
+const handoffAnnouncements = windows.map((window, index) => {
+	const peer: OwnerClass = window.replica === "a" ? "b" : "a";
+	const inside = (replica: OwnerClass) =>
+		handoffLines[replica].filter(
+			(line) => line.time >= window.from && line.time <= window.to,
+		);
+	const tally = (replica: OwnerClass) => {
+		const lines = inside(replica);
+		const count = (type: string) =>
+			lines.filter((line) => line.type === type).length;
+		const sum = (type: string, field: string) =>
+			lines
+				.filter((line) => line.type === type)
+				.reduce((n, line) => n + Number(line.data?.[field] ?? 0), 0);
+		return {
+			atom_handoff: count("atom_handoff"),
+			atom_leaving: count("atom_leaving"),
+			atom_peer_handed: count("atom_peer_handed"),
+			/** One per thread of this side that handed the other replica (the joiner, or the leaver's peer) its share. */
+			handedToOther: lines.filter(
+				(line) =>
+					line.type === "atom_peer_handed" &&
+					line.data?.peer === members[replica === "a" ? "b" : "a"],
+			).length,
+			atom_peer_joined: count("atom_peer_joined"),
+			unannounced:
+				count("atom_leave_unannounced") + count("atom_grant_unannounced"),
+			inFlightWarnings: count("atom_handover_in_flight"),
+			handed: sum("atom_handoff", "handed"),
+			kept: sum("atom_handoff", "kept"),
+		};
+	};
+	const detail = swapDetails.filter((d) => d.replica === window.replica)[
+		windows.slice(0, index).filter((w) => w.replica === window.replica).length
+	];
+	const countOf = (threads: unknown) =>
+		Array.isArray(threads) ? threads.length : null;
+	const leaverThreads = countOf(detail?.threadsBefore);
+	const standInThreads = countOf(detail?.peerThreadsBefore);
+	const leaver = tally(window.replica);
+	const standIn = tally(peer);
+	return {
+		replica: window.replica,
+		leaverThreads,
+		standInThreads,
+		joinerThreads: countOf(detail?.threadsAfter),
+		leaver,
+		standIn,
+		/** Every leaver thread announced its leave, and every stand-in thread handed the joiner its share. */
+		leaveComplete:
+			leaverThreads !== null && leaver.atom_leaving === leaverThreads,
+		joinComplete:
+			standInThreads !== null && standIn.handedToOther >= standInThreads,
+	};
+});
+const hotSeconds = readJsonl<{
+	type: string;
+	second: number;
+	hot?: RollCounts;
+}>("roll.jsonl").filter(
+	(line) => line.type === "second" && line.hot && line.hot.sent > 0,
+);
+const hot =
+	roll.hotDeductionsPerSec > 0
+		? hotSeconds.reduce(
+				(into, line) => mergeRollCounts(into, line.hot as RollCounts),
+				emptyRollCounts(),
+			)
+		: null;
+
 const summary = {
 	marks,
 	chaos: roll.chaos,
+	swapPlan,
+	swapDetails,
+	handoffAnnouncements,
+	longLocks,
+	hot: hot && {
+		customerId: config.customers.hotCustomerId,
+		targetPerSec: roll.hotDeductionsPerSec,
+		seconds: hotSeconds.length,
+		sent: hot.sent,
+		answered: hot.answered,
+		allowed: hot.allowed,
+		forwarded: hot.forwarded,
+		forwardReasons: hot.forwardReasons,
+		failedStatus: hot.failedStatus,
+		shed: hot.failedStatus["503 atom_overloaded"] ?? 0,
+		p50Ms: percentileOf({ histogram: hot.histogram, p: 0.5 }),
+		p99Ms: percentileOf({ histogram: hot.histogram, p: 0.99 }),
+	},
 	twoOwner,
 	windows: windowBars,
 	swapDurations: swapDurationsOf({ marks }),

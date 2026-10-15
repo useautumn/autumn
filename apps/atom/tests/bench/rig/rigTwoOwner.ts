@@ -24,21 +24,47 @@ export type SwapWindow = {
 
 const WINDOW_TAIL_MS = 15_000;
 
+/** The marks of one replica's swaps, k-th with k-th: each swap starts at a SIGTERM (or an unplanned kill9). */
+const swapMarksOf = ({
+	marks,
+	replica,
+}: {
+	marks: Mark[];
+	replica: OwnerClass;
+}) => {
+	const named = (...names: string[]) =>
+		marks
+			.filter((m) => names.some((name) => m.name === `${replica} ${name}`))
+			.sort((x, y) => x.at - y.at);
+	const starts = named("sigterm", "kill9");
+	const exits = named("exited", "kill9");
+	const starteds = named("started");
+	const readies = named("ready");
+	return starts.map((start, k) => ({
+		start,
+		exited: exits[k],
+		started: starteds[k],
+		ready: readies[k],
+	}));
+};
+
 export const swapWindowsOf = ({ marks }: { marks: Mark[] }): SwapWindow[] =>
-	(["a", "b"] as const).flatMap((replica) => {
-		const sigterm = marks.find((m) => m.name === `${replica} sigterm`);
-		const ready = marks.find((m) => m.name === `${replica} ready`);
-		if (!sigterm || !ready) return [];
-		const started = marks.find((m) => m.name === `${replica} started`);
-		return [
-			{
-				replica,
-				from: sigterm.at,
-				to: ready.at + WINDOW_TAIL_MS,
-				startedAt: started?.at ?? null,
-			},
-		];
-	});
+	(["a", "b"] as const)
+		.flatMap((replica) =>
+			swapMarksOf({ marks, replica }).flatMap(({ start, started, ready }) =>
+				ready
+					? [
+							{
+								replica,
+								from: start.at,
+								to: ready.at + WINDOW_TAIL_MS,
+								startedAt: started?.at ?? null,
+							},
+						]
+					: [],
+			),
+		)
+		.sort((x, y) => x.from - y.from);
 
 type Switch = {
 	customerId: string;
@@ -258,22 +284,24 @@ export const windowBarsOf = ({
 
 /** Per swap: SIGTERM → exit, exit → /health 200, and the restart's own start → /health 200. */
 export const swapDurationsOf = ({ marks }: { marks: Mark[] }) =>
-	(["a", "b"] as const).flatMap((replica) => {
-		const at = (name: string) =>
-			marks.find((m) => m.name === `${replica} ${name}`)?.at;
-		const sigterm = at("sigterm");
-		const exited = at("exited");
-		const started = at("started");
-		const ready = at("ready");
-		if (sigterm === undefined) return [];
-		return [
-			{
-				replica,
-				sigtermToExitMs: exited !== undefined ? exited - sigterm : null,
-				exitToReadyMs:
-					exited !== undefined && ready !== undefined ? ready - exited : null,
-				startToReadyMs:
-					started !== undefined && ready !== undefined ? ready - started : null,
-			},
-		];
-	});
+	(["a", "b"] as const)
+		.flatMap((replica) =>
+			swapMarksOf({ marks, replica }).map((swap) => {
+				const sigterm = swap.start.at;
+				const exited = swap.exited?.at;
+				const started = swap.started?.at;
+				const ready = swap.ready?.at;
+				return {
+					replica,
+					at: sigterm,
+					sigtermToExitMs: exited !== undefined ? exited - sigterm : null,
+					exitToReadyMs:
+						exited !== undefined && ready !== undefined ? ready - exited : null,
+					startToReadyMs:
+						started !== undefined && ready !== undefined
+							? ready - started
+							: null,
+				};
+			}),
+		)
+		.sort((x, y) => x.at - y.at);

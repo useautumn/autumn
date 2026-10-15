@@ -52,6 +52,15 @@ const counts = {
 	/** Lock ids settled more than once, by hand-in or by a forwarded finalize: a double settle. */
 	finalizeDupes: 0,
 };
+/** Autumn's worker down or slow for a while, set by the roll at its first SIGTERM (stub.outage). */
+const outage = {
+	mode: "none" as "none" | "down" | "slow",
+	from: 0,
+	until: 0,
+	slowMs: 0,
+	refused: 0,
+	slowed: 0,
+};
 const settledLocks = new Map<string, number>();
 const recordSettled = ({ lockId }: { lockId: string }) => {
 	const n = (settledLocks.get(lockId) ?? 0) + 1;
@@ -253,6 +262,15 @@ const recordHandIns = (raw: unknown) => {
 };
 
 const appendTracks = async (request: Request) => {
+	if (Date.now() < outage.until) {
+		if (outage.mode === "down") {
+			outage.refused++;
+			await request.arrayBuffer();
+			return Response.json({ code: "unavailable" }, { status: 503 });
+		}
+		outage.slowed++;
+		await Bun.sleep(outage.slowMs);
+	}
 	const raw = await request.json();
 	const parsed = AtomTracksAppendRequestSchema.safeParse(raw);
 	if (!parsed.success)
@@ -337,7 +355,19 @@ Bun.serve({
 		if (pathname === "/__rig/seed")
 			return Response.json({ seeded: await seed() });
 		if (pathname === "/__rig/stats")
-			return Response.json({ ...counts, queue: queue.stats() });
+			return Response.json({ ...counts, outage, queue: queue.stats() });
+		if (pathname === "/__rig/outage") {
+			const body = (await request.json()) as {
+				mode: "down" | "slow";
+				durationMs: number;
+				slowMs?: number;
+			};
+			outage.mode = body.mode;
+			outage.from = Date.now();
+			outage.until = outage.from + body.durationMs;
+			outage.slowMs = body.slowMs ?? 0;
+			return Response.json(outage);
+		}
 		if (pathname === "/__rig/handins") return Response.json({ handIns });
 		if (pathname === "/__rig/applied")
 			return Response.json({ applied: Object.fromEntries(applied) });

@@ -36,16 +36,23 @@ const notAnswered = (counts: RollCounts) =>
 const swapsOf = () => {
 	const swaps: { replica: OwnerClass; from: number; to: number }[] = [];
 	for (const replica of ["a", "b"] as const) {
-		const from = marks.find((m) => m.name === `${replica} deregistered`);
-		const to = marks.find((m) => m.name === `${replica} registered`);
-		if (from && to)
-			swaps.push({
-				replica,
-				from: Math.floor(from.second) - 3,
-				to: Math.ceil(to.second) + 5,
-			});
+		const named = (name: string) =>
+			marks.filter((m) => m.name === `${replica} ${name}`);
+		const froms = [...named("deregistered"), ...named("kill9")].sort(
+			(x, y) => x.second - y.second,
+		);
+		const tos = named("registered");
+		for (const [k, from] of froms.entries()) {
+			const to = tos[k];
+			if (to)
+				swaps.push({
+					replica,
+					from: Math.floor(from.second) - 3,
+					to: Math.ceil(to.second) + 5,
+				});
+		}
 	}
-	return swaps;
+	return swaps.sort((x, y) => x.from - y.from);
 };
 
 const row = (counts: RollCounts) =>
@@ -160,5 +167,12 @@ if (summary.locks?.taken)
 	console.log(
 		`locks: ${JSON.stringify(summary.locks)} stub finalizes ${summary.stub.finalizes} finalizeDupes ${summary.stub.finalizeDupes}`,
 	);
+if (summary.hot) console.log(`hot: ${JSON.stringify(summary.hot)}`);
+for (const line of summary.handoffAnnouncements ?? [])
+	console.log(`handoff announcements: ${JSON.stringify(line)}`);
+for (const line of summary.swapDetails ?? [])
+	console.log(`swap detail: ${JSON.stringify(line)}`);
+for (const line of summary.longLocks ?? [])
+	console.log(`long lock: ${JSON.stringify(line)}`);
 console.log(`stub: ${JSON.stringify(summary.stub)}`);
 console.log(`replicas: ${JSON.stringify(summary.replicas)}`);

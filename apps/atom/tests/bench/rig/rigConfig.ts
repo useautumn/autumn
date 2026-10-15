@@ -31,6 +31,12 @@ const defaults = {
 		seedConcurrency: 64,
 		/** http posts each push to a random replica; queue enqueues it for the replicas' push receivers, as herald's SQS queue does. */
 		pushVia: "http" as "http" | "queue",
+		/** Autumn's worker down (tracks.append answers 503) or slow (answers after slowMs) for durationMs from the roll's first SIGTERM. */
+		outage: {
+			mode: "none" as "none" | "down" | "slow",
+			durationMs: 30_000,
+			slowMs: 2_000,
+		},
 	},
 	customers: { count: 7_000, hotCustomerId: "cus_hot" },
 	background: {
@@ -55,6 +61,8 @@ const defaults = {
 	deductionRoute: "check" as "check" | "track",
 	/** Share of deductions (0–100) that resend the customer's previous key, as a caller's retry; roll mode tallies their answers. */
 	replayPercent: 0,
+	/** A replayed key goes to the replica its first send did not (when that one is routed), as a retry through another target. */
+	replayToOtherReplica: false,
 	/**
 	 * A rolling deploy as Alien rolls a release (measured on dep_tco9, 2026-10-13): one replica at a time, deregistered from
 	 * the ALB and still serving for 12 s, then SIGTERM; its atom.svc record stays until the container is removed, 11–14 s
@@ -84,9 +92,32 @@ const defaults = {
 			| "sigterm-b-at-health"
 			| "netem-handoff"
 			| "kill9-wipe"
+			| "kill9-handoff"
+			| "kill9-traffic"
 			| "both-sigterm",
 		netemDelayMs: 2_000,
 		bothSigtermGapMs: 500,
+		/** Rounds of `order`, back to back. */
+		repeat: 1,
+		/** Env the supervisor adds to each round's restarts (index = round), e.g. [{ ATOM_THREADS: "6" }, { ATOM_THREADS: "3" }]. */
+		restartEnv: [] as Record<string, string>[],
+		/** An explicit swap list, replacing order × repeat: each restart's env and src slot (the box's /root/s<n>). */
+		swaps: [] as {
+			replica: "a" | "b";
+			env?: Record<string, string>;
+			src?: number;
+		}[],
+		/** Requests reach a restarted replica from the moment its public port answers, before its /health is 200. */
+		sendBeforeReady: false,
+		/** How long before its SIGTERM the leaver stops getting requests (null: deregisterToSigtermMs); 0: until it exits. */
+		deregisterOffsetMs: null as number | null,
+		/** kill9-traffic: SIGKILL order[0] this long after the load starts, restart it on the same data dir killRestartMs later. */
+		killAtSeconds: 60,
+		killRestartMs: 10_000,
+		/** The hot customer's flat deductions/s through the roll (0: none), with hot.readChecksPerDeduction reads each. */
+		hotDeductionsPerSec: 0,
+		/** Per swap, a lock on the hot customer taken longLockMs / 2 before the SIGTERM and finalized longLockMs / 2 after it. */
+		longLockMs: 0,
 	},
 	warmupSeconds: 20,
 	healthEveryMs: 10_000,

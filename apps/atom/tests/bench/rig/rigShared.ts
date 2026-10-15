@@ -202,6 +202,12 @@ export type RollLoadPlan = {
 	readChecksPerDeduction: number;
 	lockEvery: number;
 	lockFinalizeAfterMs: number;
+	/** This process's share of the hot customer's flat rate during a roll; null when the roll has none. */
+	hot: {
+		customerId: string;
+		deductionsPerSec: number;
+		readChecksPerDeduction: number;
+	} | null;
 };
 
 /** The locked checks a load process sent and how each finalize ended; summed by the driver. */
