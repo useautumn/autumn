@@ -1,11 +1,14 @@
 /**
- * A write check sent through the real SDK under `useEdge`, whose edge call times out, so the SDK resends it to the API.
+ * A write check sent through the SDK under `useEdge` whose edge call times out, so the SDK resends it, under the same
+ * Idempotency-Key, to the API. The Atom's hand-in claims that key where the API's middleware does.
  *
- * Contract (one deduction in Postgres, the Atom's view converging on it), for each order:
- *  1. the Atom applies it, its reply is late, and its hand-in reaches Autumn before the API fallback;
- *  2. the Atom applies it, its reply is late, and its hand-in reaches Autumn only after the API fallback applied it;
- *  3. the request reaches the Atom only after the API fallback applied it;
- *  4. as 2, for a lock.
+ * Contract: one deduction in Postgres, and the Atom's view converging on it, whichever side lands first:
+ *  1. the Atom applies, its reply is late, its hand-in lands first: the API's resend is 409;
+ *  2. the Atom applies, its reply is late, the API's resend lands first: the hand-in lands only its seq;
+ *  3. the request reaches the Atom after the API applied it: the Atom shows two until its hand-in settles;
+ *  4. as 2, for a lock: one hold;
+ *  5. as 2, but the API cannot reach the worker and fails open: the key is freed, so the hand-in deducts;
+ *  6. as 2, but the org is over its write cap: the API's 429 frees the key, so the hand-in deducts.
  */
 
 import { expect, test } from "bun:test";
@@ -16,9 +19,11 @@ import {
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
+import { setServerRateLimitOverride } from "@tests/utils/serverEdgeConfigTestUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { and, eq, sum } from "drizzle-orm";
+import { RateLimitType } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 import { Autumn } from "../../../../../packages/sdk/src/sdk/sdk.js";
 import { atomTestClient } from "../utils/atomTestClient.js";
 import {
@@ -39,25 +44,26 @@ import {
 const replicaSet = useReplicaSet({ size: 1 });
 
 const DEDUCTED = 10;
-/** Past the SDK's 1 s edge timeout (edgeHTTPClient.ts EDGE_TIMEOUT_MS). */
+/** Past the SDK's edge timeout (edgeHTTPClient.ts EDGE_TIMEOUT_MS = 1 s). */
 const EDGE_DELAY_MS = 1_500;
 
-type EdgeMode = "lateReply" | "lateArrival";
+/** The edge forwards at once and replies late, or forwards late: the Atom applies before or after the API. */
+type EdgeDelay = "lateReply" | "lateArrival";
 
-type Seen = { status: number; forwarded: string | null; key: string | null };
+type Seen = { status: number; key: string | null };
 
-/** A Bun server recording every reply it passes on: what the edge or the API answered, and under which key. */
+/** A server passing every request on to `targetUrl` with `headers` over its own, keeping each reply's status and key. */
 const startTap = ({
 	targetUrl,
 	headers = {},
-	mode,
+	delay,
 }: {
 	targetUrl: string;
 	headers?: Record<string, string>;
-	mode?: EdgeMode;
+	delay?: EdgeDelay;
 }) => {
 	const seen: Seen[] = [];
-	let settled = Promise.resolve();
+	let settled: Promise<unknown> = Promise.resolve();
 	const server = Bun.serve({
 		hostname: "127.0.0.1",
 		port: 0,
@@ -74,25 +80,20 @@ const startTap = ({
 					headers: sent,
 					body,
 				});
-				const text = await reply.text();
-				seen.push({
-					status: reply.status,
-					forwarded: reply.headers.get("x-atom-forwarded"),
-					key: sent.get("idempotency-key"),
-				});
-				return new Response(text, {
+				seen.push({ status: reply.status, key: sent.get("idempotency-key") });
+				return new Response(await reply.text(), {
 					status: reply.status,
 					headers: { "content-type": "application/json" },
 				});
 			};
-			// The forward runs to its end even after the SDK gives up on this call, as a real edge's would.
-			if (mode === "lateArrival") {
-				const done = timeout(EDGE_DELAY_MS).then(forward);
-				settled = done.then(() => undefined);
-				return done;
+			// Runs to its end after the SDK gives up on the call, as a real edge's forward does.
+			if (delay === "lateArrival") {
+				const forwarded = timeout(EDGE_DELAY_MS).then(forward);
+				settled = forwarded;
+				return forwarded;
 			}
 			const reply = await forward();
-			if (mode === "lateReply") await timeout(EDGE_DELAY_MS);
+			if (delay === "lateReply") await timeout(EDGE_DELAY_MS);
 			return reply;
 		},
 	});
@@ -104,7 +105,6 @@ const startTap = ({
 	};
 };
 
-/** What Postgres holds of the customer's messages. */
 const postgresRemaining = async ({ customerId }: { customerId: string }) => {
 	const [row] = await defaultCtx.db
 		.select({ remaining: sum(customerEntitlements.balance) })
@@ -123,7 +123,7 @@ const postgresRemaining = async ({ customerId }: { customerId: string }) => {
 	return Number(row?.remaining);
 };
 
-/** What the Atom answers itself, from a plain check that deducts nothing. */
+/** What the Atom answers itself, from a check that deducts nothing. */
 const atomRemaining = async ({
 	atom,
 	customerId,
@@ -160,22 +160,25 @@ const sdkCheck = async ({
 		});
 		return { status: 200, allowed: reply.allowed };
 	} catch (error) {
-		return {
-			status: (error as { statusCode?: number }).statusCode ?? null,
-			error: String(error),
-		};
+		return { status: (error as { statusCode?: number }).statusCode ?? null };
 	}
 };
 
-const runFallback = async ({
+/**
+ * One SDK write check through a slow edge, with the Atom's hand-ins held until the call is over when `apiFirst`.
+ * Resolves with what each side saw and held, once the Atom's view agrees with Postgres.
+ */
+const sendThroughSlowEdge = async ({
 	customerId,
-	mode,
-	holdHandIns,
+	delay,
+	apiFirst,
+	apiHeaders,
 	lockId,
 }: {
 	customerId: string;
-	mode: EdgeMode;
-	holdHandIns: boolean;
+	delay: EdgeDelay;
+	apiFirst: boolean;
+	apiHeaders?: Record<string, string>;
 	lockId?: string;
 }) => {
 	const { atom } = await initMessagesCustomer({ customerId, atom: replicaSet });
@@ -183,125 +186,154 @@ const runFallback = async ({
 	const edge = startTap({
 		targetUrl: atom.endpointUrl,
 		headers: { "x-atom-token": atom.token },
-		mode,
+		delay,
 	});
 	const api = startTap({
 		targetUrl: atomTestClient().baseUrl.replace(/\/v1$/, ""),
+		headers: apiHeaders,
 	});
 	const sdk = new Autumn({
 		secretKey: defaultCtx.orgSecretKey,
 		serverURL: api.url,
 		edgeURL: edge.url,
 		useEdge: true,
+		retryConfig: { strategy: "none" },
 		xApiVersion: LATEST_VERSION,
 	});
 	try {
-		if (holdHandIns) set.holdHandIns();
-		const startedAt = Date.now();
+		if (apiFirst) set.holdHandIns();
 		const answered = await sdkCheck({ sdk, customerId, lockId });
-		const sdkMs = Date.now() - startedAt;
 		await edge.settled();
 		const atomBeforeHandIn = await atomRemaining({ atom, customerId });
-		const postgresBeforeHandIn = await postgresRemaining({ customerId });
-		if (holdHandIns) await set.releaseHandIns();
+		if (apiFirst) await set.releaseHandIns();
 		await expectAutumnLockState({ customerId, atomSeqs: [1] });
-		const handedInAt = Date.now();
-		await timeout(2_000);
-		const postgresFinal = await postgresRemaining({ customerId });
-		let atomFinal = await atomRemaining({ atom, customerId });
+		const postgres = await postgresRemaining({ customerId });
 		await pollUntilAsserted({
-			fetch: async () => {
-				atomFinal = await atomRemaining({ atom, customerId });
-				return atomFinal;
-			},
-			assert: (remaining) => expect(remaining).toBe(postgresFinal),
-			timeoutMs: 120_000,
+			fetch: () => atomRemaining({ atom, customerId }),
+			assert: (remaining) => expect(remaining).toBe(postgres),
+			timeoutMs: 90_000,
 		});
-		const measured = {
-			customerId,
-			mode,
-			holdHandIns,
-			lock: Boolean(lockId),
-			sdk: { ...answered, ms: sdkMs },
+		return {
+			answered,
 			edgeSaw: edge.seen,
 			apiSaw: api.seen,
 			atomBeforeHandIn,
-			postgresBeforeHandIn,
-			postgresFinal,
-			atomFinal,
-			atomConvergedMsAfterHandIn: Date.now() - handedInAt,
-			openLocks: lockId ? await openLockIdsOf({ customerId }) : undefined,
+			postgres,
+			openLockIds: await openLockIdsOf({ customerId }),
 		};
-		console.log(`EDGE_FALLBACK_MEASURED ${JSON.stringify(measured)}`);
-		return measured;
 	} finally {
 		edge.stop();
 		api.stop();
 	}
 };
 
-const expectOneDeduction = (
-	measured: Awaited<ReturnType<typeof runFallback>>,
-) => {
-	const key = measured.edgeSaw[0]?.key;
+type Sent = Awaited<ReturnType<typeof sendThroughSlowEdge>>;
+
+/** The Atom applied and both sides were sent the SDK's one key; Postgres holds one deduction. */
+const expectOneDeduction = ({
+	sent,
+	apiStatus,
+}: {
+	sent: Sent;
+	apiStatus: number;
+}) => {
+	const key = sent.edgeSaw[0]?.key;
 	expect(key).toBeTruthy();
-	expect(measured.edgeSaw).toEqual([{ status: 200, forwarded: null, key }]);
-	expect(measured.apiSaw.map((seen) => seen.key)).toEqual([key]);
-	expect(measured.postgresFinal).toBe(INCLUDED_MESSAGES - DEDUCTED);
-	expect(measured.atomFinal).toBe(INCLUDED_MESSAGES - DEDUCTED);
+	expect(sent.edgeSaw).toEqual([{ status: 200, key }]);
+	expect(sent.apiSaw).toEqual([{ status: apiStatus, key }]);
+	expect(sent.postgres).toBe(INCLUDED_MESSAGES - DEDUCTED);
 };
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("edge-fallback1: the Atom applies, its reply is late, its hand-in lands first: one deduction")}`,
+	`${chalk.yellowBright("edge-fallback1: the Atom applies, its reply is late, its hand-in lands first: the API's resend is 409, one deduction")}`,
 	async () => {
-		const measured = await runFallback({
+		const sent = await sendThroughSlowEdge({
 			customerId: "edge-fallback1",
-			mode: "lateReply",
-			holdHandIns: false,
+			delay: "lateReply",
+			apiFirst: false,
 		});
-		expectOneDeduction(measured);
+		expectOneDeduction({ sent, apiStatus: 409 });
+		expect(sent.answered.status).toBe(409);
 	},
 	240_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("edge-fallback2: the Atom applies, its reply is late, the API fallback lands first: one deduction")}`,
+	`${chalk.yellowBright("edge-fallback2: the Atom applies, its reply is late, the API's resend lands first: one deduction")}`,
 	async () => {
-		const measured = await runFallback({
+		const sent = await sendThroughSlowEdge({
 			customerId: "edge-fallback2",
-			mode: "lateReply",
-			holdHandIns: true,
+			delay: "lateReply",
+			apiFirst: true,
 		});
-		expectOneDeduction(measured);
+		expectOneDeduction({ sent, apiStatus: 200 });
+		expect(sent.answered).toEqual({ status: 200, allowed: true });
 	},
 	240_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("edge-fallback3: the request reaches the Atom after the API fallback applied it: one deduction")}`,
+	`${chalk.yellowBright("edge-fallback3: the request reaches the Atom after the API applied it: the Atom's double settles to one deduction")}`,
 	async () => {
-		const measured = await runFallback({
+		const sent = await sendThroughSlowEdge({
 			customerId: "edge-fallback3",
-			mode: "lateArrival",
-			holdHandIns: false,
+			delay: "lateArrival",
+			apiFirst: false,
 		});
-		expectOneDeduction(measured);
+		expectOneDeduction({ sent, apiStatus: 200 });
+		expect(sent.atomBeforeHandIn).toBe(INCLUDED_MESSAGES - 2 * DEDUCTED);
 	},
 	240_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("edge-fallback4: a lock the Atom takes with a late reply, the API fallback landing first: one hold")}`,
+	`${chalk.yellowBright("edge-fallback4: a lock the Atom takes with a late reply, the API's resend landing first: one hold")}`,
 	async () => {
 		const lockId = `edge-fallback4-${crypto.randomUUID()}`;
-		const measured = await runFallback({
+		const sent = await sendThroughSlowEdge({
 			customerId: "edge-fallback4",
-			mode: "lateReply",
-			holdHandIns: true,
+			delay: "lateReply",
+			apiFirst: true,
 			lockId,
 		});
-		expectOneDeduction(measured);
-		expect(measured.openLocks).toEqual([lockId]);
+		expectOneDeduction({ sent, apiStatus: 200 });
+		expect(sent.openLockIds).toEqual([lockId]);
+	},
+	240_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("edge-fallback5: the API's resend fails open without the worker: the key is freed, and the Atom's deduction lands")}`,
+	async () => {
+		const sent = await sendThroughSlowEdge({
+			customerId: "edge-fallback5",
+			delay: "lateReply",
+			apiFirst: true,
+			apiHeaders: { "x-balance-worker-outage": "true" },
+		});
+		expectOneDeduction({ sent, apiStatus: 202 });
+	},
+	240_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("edge-fallback6: the org is over its write cap: the API's 429 frees the key, and the Atom's deduction lands")}`,
+	async () => {
+		const override = await setServerRateLimitOverride({
+			ctx: defaultCtx,
+			orgKey: defaultCtx.org.id,
+			limits: { [RateLimitType.SyncBalanceWriteOrg]: 0 },
+		});
+		try {
+			const sent = await sendThroughSlowEdge({
+				customerId: "edge-fallback6",
+				delay: "lateReply",
+				apiFirst: true,
+			});
+			expectOneDeduction({ sent, apiStatus: 429 });
+		} finally {
+			await override.restore();
+		}
 	},
 	240_000,
 );
