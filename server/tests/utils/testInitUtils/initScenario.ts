@@ -14,6 +14,7 @@ import {
 	type RewardEntitlement,
 	type RewardRedemption,
 	RewardType,
+	type Role,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { warmEntityCaches as warmEntityCachesFn } from "@tests/integration/balances/utils/warmEntityCaches.js";
@@ -30,6 +31,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { createReferralProgram, createReward } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
+import type { ScenarioMember } from "./autumnAs.js";
 import {
 	createSubOrgTestContext,
 	type TaxRegistrationCountry,
@@ -321,6 +323,7 @@ type ScenarioConfig = {
 	rewards: RewardConfig[];
 	platformConfig?: PlatformCreateConfig;
 	featureGrants: FeatureGrantConfig[];
+	memberRoles: Role[];
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -1043,6 +1046,14 @@ const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
 	});
 };
 
+/** Adds a fresh org member with a built-in role; returned in `members`, call as them with `autumnAs`. */
+const member = ({ role }: { role: Role }): ConfigFn => {
+	return (config) => ({
+		...config,
+		memberRoles: [...config.memberRoles, role],
+	});
+};
+
 /** Scenario configuration functions for use with `initScenario`. */
 export const s = {
 	customer,
@@ -1081,6 +1092,7 @@ export const s = {
 	platform: {
 		create: platformCreate,
 	},
+	member,
 	rewards: {
 		redeem: redeemReward,
 	},
@@ -1105,6 +1117,7 @@ const defaultConfig: ScenarioConfig = {
 	referralProgram: undefined,
 	rewards: [],
 	featureGrants: [],
+	memberRoles: [],
 };
 
 /**
@@ -1150,6 +1163,7 @@ type InitScenarioImplementationResult = {
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
 	redemption: RewardRedemption | null;
+	members: ScenarioMember[];
 };
 
 // customerId provided -> customerId: string in return.
@@ -1182,6 +1196,7 @@ export async function initScenario(params: {
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
 	redemption: RewardRedemption | null;
+	members: ScenarioMember[];
 }>;
 
 // customerId omitted -> customerId: undefined in return.
@@ -1214,6 +1229,7 @@ export async function initScenario(params: {
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
 	redemption: RewardRedemption | null;
+	members: ScenarioMember[];
 }>;
 
 export async function initScenario({
@@ -1512,6 +1528,15 @@ export async function initScenario({
 		version: ApiVersion.V2_6,
 		secretKey: ctx.orgSecretKey,
 	});
+
+	const members = await Promise.all(
+		config.memberRoles.map(async (role): Promise<ScenarioMember> => {
+			// Lazy: loading better-auth costs every scenario that adds no members.
+			const { createDashboardSession } = await import("./dashboardSession.js");
+			const session = await createDashboardSession(ctx, { role });
+			return { ...session, role, env: ctx.env };
+		}),
+	);
 
 	// 4. Entities (requires customerId).
 	if (generatedEntities.length > 0) {
@@ -1998,5 +2023,6 @@ export async function initScenario({
 		otherCustomers: otherCustomersMap,
 		referralCode,
 		redemption,
+		members,
 	};
 }
