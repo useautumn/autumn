@@ -70,6 +70,7 @@ export const createReplica = ({
 	joined = ringPeers,
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
+	loop = loopOnTime,
 }: {
 	address: string;
 	peers: string[];
@@ -84,6 +85,8 @@ export const createReplica = ({
 	journalForwarder?: typeof forwardingNowhere;
 	/** True from the moment the thread starts stopping, as its server's stop sets it. */
 	stopping?: () => boolean;
+	/** The thread's event loop as admission reads it: how far behind it runs. */
+	loop?: { lagMs: () => number };
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -142,7 +145,7 @@ export const createReplica = ({
 			dataDir: dataDir,
 		},
 		counters,
-		loop: loopOnTime,
+		loop,
 		replication,
 		stopping,
 		peer: { port: PEER_PORT, secret, ring, membership },
