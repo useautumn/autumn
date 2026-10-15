@@ -53,8 +53,8 @@ def is_unserved_route(response: httpx.Response) -> bool:
 
 
 def _failed_before_sending(error: Optional[Exception]) -> bool:
-    # httpx raises ConnectError only while connecting (refused, unresolved, TLS), before any of the request is sent.
-    return isinstance(error, httpx.ConnectError)
+    # httpx raises these only while connecting (refused, unresolved, TLS, no connection in time), before any request is sent.
+    return isinstance(error, (httpx.ConnectError, httpx.ConnectTimeout))
 
 
 def _timeout_of(request: httpx.Request) -> Dict[str, Optional[float]]:
