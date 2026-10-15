@@ -458,6 +458,9 @@ async function spawnWorker(fleet?: Fleet): Promise<Worker> {
 			DATABASE_URL: databaseUrl,
 			KAFKA_BROKERS: (useScram ? scramBrokers : brokers).join(","),
 			KAFKA_AUTH_MODE: useScram ? "scram" : "none",
+			...(process.env.KAFKA_GROUP_PROTOCOL && {
+				KAFKA_GROUP_PROTOCOL: process.env.KAFKA_GROUP_PROTOCOL,
+			}),
 			...(useScram && {
 				KAFKA_SASL_MECHANISM: "scram-sha-512",
 				KAFKA_SASL_USERNAME_BALANCE_WORKER: SCRAM_USER,
@@ -1059,6 +1062,141 @@ function setGroupAcl(present: boolean): void {
 	]);
 }
 
+/** Waits until every live worker owns something and the roster and the log have been quiet for 6s. */
+async function settleRoster(t0: number): Promise<boolean> {
+	return waitFor(
+		() =>
+			recovered(t0, liveWorkers()) &&
+			liveWorkers().every((w) =>
+				[...currentOwners().values()].includes(w.endpoint),
+			) &&
+			workerEvents
+				.filter((e) => e.event === "consumer.group_join")
+				.every((e) => Date.now() - e.t > 6_000) &&
+			Date.now() - Math.max(0, ...ownershipEvents.map((e) => e.seenAt)) > 6_000,
+		RECOVERY_TIMEOUT_MS,
+		"roster to settle",
+	);
+}
+
+/** A 5th worker joins and leaves gracefully; what happens to the partitions that never change owner. */
+async function runKeepScenario(): Promise<void> {
+	step = "boot";
+	await bootFleet(FLEET_SIZE);
+	step = "baseline";
+	startHammer();
+	let t0 = Date.now();
+	await Bun.sleep(10_000);
+	closeStep({ t0, faultClearedAt: t0, isRecovered: true });
+	for (let cycle = 1; cycle <= ITERATIONS; cycle++) {
+		step = `join#${cycle}`;
+		t0 = mark(`${step}: spawning a 5th worker`);
+		const joiner = await spawnWorker();
+		closeStep({ t0, faultClearedAt: t0, isRecovered: await settleRoster(t0) });
+		step = `leave#${cycle}`;
+		t0 = mark(`${step}: SIGTERM ${joiner.name}`);
+		joiner.killedBy = "SIGTERM";
+		joiner.child.kill("SIGTERM");
+		await joiner.child.exited;
+		closeStep({ t0, faultClearedAt: t0, isRecovered: await settleRoster(t0) });
+	}
+}
+
+/** Workers boot while metering leaders keep moving, so partition-startup ListOffsets meets NOT_LEADER. */
+async function runBootChurnScenario(): Promise<void> {
+	const reassigner = Bun.spawn(
+		[
+			"java",
+			"-Xmx128m",
+			"-cp",
+			`${join(kafkaBin as string, "../libs")}/*`,
+			new URL("./ReassignPartitions.java", import.meta.url).pathname,
+			brokers.join(","),
+		],
+		{ stdin: "pipe", stdout: "pipe", stderr: "inherit" },
+	);
+	children.push(reassigner);
+	const lines: string[] = [];
+	void pumpLines(reassigner.stdout as ReadableStream<Uint8Array>, (line) => {
+		if (!line.startsWith("SLF4J")) lines.push(line);
+	});
+	await waitFor(() => lines.includes("ready"), 60_000, "reassigner");
+	let moves = 0;
+	let moving = true;
+	const churn = (async () => {
+		const brokerIds = [1, 2, 3];
+		while (moving) {
+			const off = brokerIds[moves % 3] as number;
+			const metadata = await admin.fetchTopicMetadata({
+				topics: [topics.metering, topics.commands],
+			});
+			const entries: string[] = [];
+			for (const topic of metadata.topics)
+				for (const p of topic.partitions)
+					if (p.leader === off)
+						entries.push(
+							`${topic.name}:${p.partitionId}:${brokerIds
+								.filter((b) => b !== off)
+								.slice(0, REPLICATION)
+								.join(",")}`,
+						);
+			if (entries.length) {
+				const before = lines.length;
+				reassigner.stdin.write(`${entries.join(" ")}\n`);
+				reassigner.stdin.flush();
+				await waitFor(() => lines.length > before, 30_000, "reassignment");
+				mark(
+					`moved ${entries.length} leaders off broker ${off}: ${lines.at(-1)}`,
+				);
+			}
+			moves++;
+			await Bun.sleep(Number(process.env.CHAOS_CHURN_GAP_MS ?? 2_000));
+		}
+	})();
+	for (let round = 1; round <= ITERATIONS; round++) {
+		step = `boot#${round}`;
+		const t0 = mark(
+			`${step}: booting ${FLEET_SIZE} workers under leader churn`,
+		);
+		for (const worker of liveWorkers()) {
+			worker.killedBy = "SIGTERM";
+			worker.child.kill("SIGTERM");
+		}
+		await Promise.all(workers.map((w) => w.child.exited));
+		for (let i = 0; i < FLEET_SIZE; i++) await spawnWorker();
+		if (round === 1) startHammer();
+		const ok = await waitFor(
+			() => everyPartitionOwned(liveWorkers()) && recovered(t0, liveWorkers()),
+			RECOVERY_TIMEOUT_MS,
+			"fleet to own everything under churn",
+		);
+		closeStep({
+			t0,
+			faultClearedAt: t0,
+			isRecovered: ok,
+			notes: {
+				startupErrors: countBy(
+					workerEvents.filter(
+						(e) =>
+							e.t >= t0 &&
+							/^(error|unhealthy|log\.warn|log\.error)$/.test(e.event) &&
+							/ListOffsets|Offsets|offset|NOT_LEADER|Unanswered|leader/i.test(
+								JSON.stringify(e.cause ?? e.args),
+							),
+					),
+					(e) =>
+						`${e.event}:${JSON.stringify(e.cause ?? e.args).slice(0, 200)}`,
+				),
+				exits: workerEvents.filter(
+					(e) => e.t >= t0 && e.event === "worker.exited",
+				).length,
+			},
+		});
+	}
+	moving = false;
+	await churn;
+}
+
 async function runAuthScenario(): Promise<void> {
 	const HOLD_MS = Number(process.env.CHAOS_AUTH_HOLD_MS ?? 60_000);
 	step = "boot";
@@ -1455,6 +1593,8 @@ function claimAudit() {
 let scenarioError: unknown;
 try {
 	if (SCENARIO === "kill") await runKillScenario();
+	else if (SCENARIO === "keep") await runKeepScenario();
+	else if (SCENARIO === "bootchurn") await runBootChurnScenario();
 	else if (SCENARIO === "bluegreen") await runBlueGreenScenario();
 	else if (SCENARIO === "auth") await runAuthScenario();
 	else throw new Error(`Unknown CHAOS_SCENARIO ${SCENARIO}`);
