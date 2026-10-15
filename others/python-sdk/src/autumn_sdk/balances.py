@@ -926,6 +926,7 @@ class Balances(BaseSDK):
         *,
         lock_id: str,
         action: models.FinalizeLockAction,
+        customer_id: str,
         override_value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -937,6 +938,7 @@ class Balances(BaseSDK):
 
         :param lock_id: The lock ID that was passed into the previous check call.
         :param action: Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+        :param customer_id: The customer the lock belongs to. A lock of any other customer is not found.
         :param override_value: Additional properties to attach to this finalize lock event.
         :param properties: Additional properties to attach to this finalize lock event.
         :param retries: Override the default retry configuration for this method
@@ -959,6 +961,7 @@ class Balances(BaseSDK):
             action=action,
             override_value=override_value,
             properties=properties,
+            customer_id=customer_id,
         )
 
         req = self._build_request(
@@ -1027,6 +1030,7 @@ class Balances(BaseSDK):
         *,
         lock_id: str,
         action: models.FinalizeLockAction,
+        customer_id: str,
         override_value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -1038,6 +1042,7 @@ class Balances(BaseSDK):
 
         :param lock_id: The lock ID that was passed into the previous check call.
         :param action: Use 'confirm' to commit the deduction, or 'release' to return the held balance.
+        :param customer_id: The customer the lock belongs to. A lock of any other customer is not found.
         :param override_value: Additional properties to attach to this finalize lock event.
         :param properties: Additional properties to attach to this finalize lock event.
         :param retries: Override the default retry configuration for this method
@@ -1060,6 +1065,7 @@ class Balances(BaseSDK):
             action=action,
             override_value=override_value,
             properties=properties,
+            customer_id=customer_id,
         )
 
         req = self._build_request_async(

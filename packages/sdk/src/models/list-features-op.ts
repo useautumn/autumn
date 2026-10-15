@@ -10,6 +10,10 @@ import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import {
+  CreditDimensionUnion,
+  CreditDimensionUnion$inboundSchema,
+} from "./credit-dimension-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type ListFeaturesGlobals = {
@@ -45,63 +49,6 @@ export const ListFeaturesCombine = {
  */
 export type ListFeaturesCombine = OpenEnum<typeof ListFeaturesCombine>;
 
-export type ListFeaturesDimensions6 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const ListFeaturesDimensionsToEnum3 = {
-  Inf: "inf",
-} as const;
-export type ListFeaturesDimensionsToEnum3 = ClosedEnum<
-  typeof ListFeaturesDimensionsToEnum3
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type ListFeaturesDimensionsToUnion3 =
-  | number
-  | ListFeaturesDimensionsToEnum3;
-
-export type ListFeaturesDimensionsTier3 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | ListFeaturesDimensionsToEnum3;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type ListFeaturesDimensions5 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<ListFeaturesDimensionsTier3>;
-};
-
-export type ListFeaturesDimensionsUnion3 =
-  | ListFeaturesDimensions5
-  | ListFeaturesDimensions6;
-
 export type ListFeaturesMultipliers3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -126,9 +73,7 @@ export type ListFeaturesCreditSchema3 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: ListFeaturesDimensions5 | ListFeaturesDimensions6;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -138,63 +83,6 @@ export type ListFeaturesCreditSchema3 = {
    */
   creditCost: number;
 };
-
-export type ListFeaturesDimensions4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const ListFeaturesDimensionsToEnum2 = {
-  Inf: "inf",
-} as const;
-export type ListFeaturesDimensionsToEnum2 = ClosedEnum<
-  typeof ListFeaturesDimensionsToEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type ListFeaturesDimensionsToUnion2 =
-  | number
-  | ListFeaturesDimensionsToEnum2;
-
-export type ListFeaturesDimensionsTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | ListFeaturesDimensionsToEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type ListFeaturesDimensions3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<ListFeaturesDimensionsTier2>;
-};
-
-export type ListFeaturesDimensionsUnion2 =
-  | ListFeaturesDimensions3
-  | ListFeaturesDimensions4;
 
 export type ListFeaturesMultipliers2 = {
   /**
@@ -223,9 +111,7 @@ export type ListFeaturesCreditSchema2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: ListFeaturesDimensions3 | ListFeaturesDimensions4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -235,63 +121,6 @@ export type ListFeaturesCreditSchema2 = {
    */
   creditCost: number;
 };
-
-export type ListFeaturesDimensions2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const ListFeaturesDimensionsToEnum1 = {
-  Inf: "inf",
-} as const;
-export type ListFeaturesDimensionsToEnum1 = ClosedEnum<
-  typeof ListFeaturesDimensionsToEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type ListFeaturesDimensionsToUnion1 =
-  | number
-  | ListFeaturesDimensionsToEnum1;
-
-export type ListFeaturesDimensionsTier1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | ListFeaturesDimensionsToEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type ListFeaturesDimensions1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<ListFeaturesDimensionsTier1>;
-};
-
-export type ListFeaturesDimensionsUnion1 =
-  | ListFeaturesDimensions1
-  | ListFeaturesDimensions2;
 
 export type ListFeaturesMultipliers1 = {
   /**
@@ -341,9 +170,7 @@ export type ListFeaturesCreditSchema1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: ListFeaturesDimensions1 | ListFeaturesDimensions2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -500,130 +327,6 @@ export const ListFeaturesCombine$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListFeaturesCombine);
 
 /** @internal */
-export const ListFeaturesDimensions6$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions6,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensions6FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions6, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions6$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions6' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
-  typeof ListFeaturesDimensionsToEnum3
-> = z.enum(ListFeaturesDimensionsToEnum3);
-
-/** @internal */
-export const ListFeaturesDimensionsToUnion3$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsToUnion3,
-  unknown
-> = smartUnion([types.number(), ListFeaturesDimensionsToEnum3$inboundSchema]);
-
-export function listFeaturesDimensionsToUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsToUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsToUnion3' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsTier3$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsTier3,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      ListFeaturesDimensionsToEnum3$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensionsTier3FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsTier3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsTier3' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensions5$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions5,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => ListFeaturesDimensionsTier3$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function listFeaturesDimensions5FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions5, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions5$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions5' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsUnion3$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsUnion3,
-  unknown
-> = smartUnion([
-  z.lazy(() => ListFeaturesDimensions5$inboundSchema),
-  z.lazy(() => ListFeaturesDimensions6$inboundSchema),
-]);
-
-export function listFeaturesDimensionsUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsUnion3' from JSON`,
-  );
-}
-
-/** @internal */
 export const ListFeaturesMultipliers3$inboundSchema: z.ZodMiniType<
   ListFeaturesMultipliers3,
   unknown
@@ -651,17 +354,15 @@ export const ListFeaturesCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => ListFeaturesDimensions5$inboundSchema),
-        z.lazy(() => ListFeaturesDimensions6$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => ListFeaturesMultipliers3$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => ListFeaturesMultipliers3$inboundSchema),
+      ),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -680,130 +381,6 @@ export function listFeaturesCreditSchema3FromJSON(
     jsonString,
     (x) => ListFeaturesCreditSchema3$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'ListFeaturesCreditSchema3' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensions4$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions4,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensions4FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions4, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions4$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions4' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
-  typeof ListFeaturesDimensionsToEnum2
-> = z.enum(ListFeaturesDimensionsToEnum2);
-
-/** @internal */
-export const ListFeaturesDimensionsToUnion2$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsToUnion2,
-  unknown
-> = smartUnion([types.number(), ListFeaturesDimensionsToEnum2$inboundSchema]);
-
-export function listFeaturesDimensionsToUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsToUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsToUnion2' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsTier2$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsTier2,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      ListFeaturesDimensionsToEnum2$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensionsTier2FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsTier2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsTier2' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensions3$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions3,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => ListFeaturesDimensionsTier2$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function listFeaturesDimensions3FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions3' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsUnion2$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsUnion2,
-  unknown
-> = smartUnion([
-  z.lazy(() => ListFeaturesDimensions3$inboundSchema),
-  z.lazy(() => ListFeaturesDimensions4$inboundSchema),
-]);
-
-export function listFeaturesDimensionsUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsUnion2' from JSON`,
   );
 }
 
@@ -835,17 +412,15 @@ export const ListFeaturesCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => ListFeaturesDimensions3$inboundSchema),
-        z.lazy(() => ListFeaturesDimensions4$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => ListFeaturesMultipliers2$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => ListFeaturesMultipliers2$inboundSchema),
+      ),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -864,130 +439,6 @@ export function listFeaturesCreditSchema2FromJSON(
     jsonString,
     (x) => ListFeaturesCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'ListFeaturesCreditSchema2' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensions2$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions2,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensions2FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions2' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
-  typeof ListFeaturesDimensionsToEnum1
-> = z.enum(ListFeaturesDimensionsToEnum1);
-
-/** @internal */
-export const ListFeaturesDimensionsToUnion1$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsToUnion1,
-  unknown
-> = smartUnion([types.number(), ListFeaturesDimensionsToEnum1$inboundSchema]);
-
-export function listFeaturesDimensionsToUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsToUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsToUnion1' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsTier1$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsTier1,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      ListFeaturesDimensionsToEnum1$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function listFeaturesDimensionsTier1FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsTier1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsTier1' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensions1$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensions1,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => ListFeaturesDimensionsTier1$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function listFeaturesDimensions1FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensions1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensions1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensions1' from JSON`,
-  );
-}
-
-/** @internal */
-export const ListFeaturesDimensionsUnion1$inboundSchema: z.ZodMiniType<
-  ListFeaturesDimensionsUnion1,
-  unknown
-> = smartUnion([
-  z.lazy(() => ListFeaturesDimensions1$inboundSchema),
-  z.lazy(() => ListFeaturesDimensions2$inboundSchema),
-]);
-
-export function listFeaturesDimensionsUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<ListFeaturesDimensionsUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListFeaturesDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListFeaturesDimensionsUnion1' from JSON`,
   );
 }
 
@@ -1066,17 +517,15 @@ export const ListFeaturesCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => ListFeaturesDimensions1$inboundSchema),
-        z.lazy(() => ListFeaturesDimensions2$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => ListFeaturesMultipliers1$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => ListFeaturesMultipliers1$inboundSchema),
+      ),
+    ),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => ListFeaturesTier$inboundSchema)),
   }),

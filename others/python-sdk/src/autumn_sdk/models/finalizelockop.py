@@ -49,6 +49,8 @@ class FinalizeBalanceParamsTypedDict(TypedDict):
     r"""The lock ID that was passed into the previous check call."""
     action: FinalizeLockAction
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
+    customer_id: str
+    r"""The customer the lock belongs to. A lock of any other customer is not found."""
     override_value: NotRequired[float]
     r"""Additional properties to attach to this finalize lock event."""
     properties: NotRequired[Dict[str, Any]]
@@ -61,6 +63,9 @@ class FinalizeBalanceParams(BaseModel):
 
     action: FinalizeLockAction
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
+
+    customer_id: str
+    r"""The customer the lock belongs to. A lock of any other customer is not found."""
 
     override_value: Optional[float] = None
     r"""Additional properties to attach to this finalize lock event."""

@@ -123,6 +123,7 @@ actions:
               const result = await autumn.balances.finalize({
                 lockId: "lock_abc123",
                 action: "confirm",
+                customerId: "cus_123",
               });
 
               console.log(result);

@@ -44,6 +44,10 @@ export type FinalizeBalanceParams = {
    * Additional properties to attach to this finalize lock event.
    */
   properties?: { [k: string]: any } | undefined;
+  /**
+   * The customer the lock belongs to. A lock of any other customer is not found.
+   */
+  customerId: string;
 };
 
 /**
@@ -75,6 +79,7 @@ export type FinalizeBalanceParams$Outbound = {
   action: string;
   override_value?: number | undefined;
   properties?: { [k: string]: any } | undefined;
+  customer_id: string;
 };
 
 /** @internal */
@@ -87,11 +92,13 @@ export const FinalizeBalanceParams$outboundSchema: z.ZodMiniType<
     action: FinalizeLockAction$outboundSchema,
     overrideValue: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
+    customerId: z.string(),
   }),
   z.transform((v) => {
     return remap$(v, {
       lockId: "lock_id",
       overrideValue: "override_value",
+      customerId: "customer_id",
     });
   }),
 );

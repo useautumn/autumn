@@ -10,6 +10,11 @@ import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import {
+  CreditDimensionInputUnion,
+  CreditDimensionInputUnion$Outbound,
+  CreditDimensionInputUnion$outboundSchema,
+} from "./credit-dimension-input-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type CreateInvoiceGlobals = {
@@ -190,68 +195,7 @@ export type CreateInvoiceItemPrice = {
   processors?: CreateInvoiceItemProcessors | undefined;
 };
 
-export type CreateInvoiceDimensionsMatch4 = string | number | boolean;
-
-export type CreateInvoiceDimensions4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsMatch3 = string | number | boolean;
-
-export const CreateInvoiceDimensionsToEnum2 = {
-  Inf: "inf",
-} as const;
-export type CreateInvoiceDimensionsToEnum2 = ClosedEnum<
-  typeof CreateInvoiceDimensionsToEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type CreateInvoiceDimensionsToUnion2 =
-  | number
-  | CreateInvoiceDimensionsToEnum2;
-
-export type CreateInvoiceDimensionsTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | CreateInvoiceDimensionsToEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensions3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsTier2>;
-};
-
-export type CreateInvoiceDimensionsUnion2 =
-  | CreateInvoiceDimensions3
-  | CreateInvoiceDimensions4;
-
-export type CreateInvoiceMultipliersMatch2 = string | number | boolean;
+export type CreateInvoiceMatch2 = string | number | boolean;
 
 export type CreateInvoiceMultipliers2 = {
   /**
@@ -280,9 +224,7 @@ export type CreateInvoiceCreditSchema2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: CreateInvoiceDimensions3 | CreateInvoiceDimensions4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -293,68 +235,7 @@ export type CreateInvoiceCreditSchema2 = {
   creditCost: number;
 };
 
-export type CreateInvoiceDimensionsMatch2 = string | number | boolean;
-
-export type CreateInvoiceDimensions2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsMatch1 = string | number | boolean;
-
-export const CreateInvoiceDimensionsToEnum1 = {
-  Inf: "inf",
-} as const;
-export type CreateInvoiceDimensionsToEnum1 = ClosedEnum<
-  typeof CreateInvoiceDimensionsToEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type CreateInvoiceDimensionsToUnion1 =
-  | number
-  | CreateInvoiceDimensionsToEnum1;
-
-export type CreateInvoiceDimensionsTier1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | CreateInvoiceDimensionsToEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensions1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsTier1>;
-};
-
-export type CreateInvoiceDimensionsUnion1 =
-  | CreateInvoiceDimensions1
-  | CreateInvoiceDimensions2;
-
-export type CreateInvoiceMultipliersMatch1 = string | number | boolean;
+export type CreateInvoiceMatch1 = string | number | boolean;
 
 export type CreateInvoiceMultipliers1 = {
   /**
@@ -404,9 +285,7 @@ export type CreateInvoiceCreditSchema1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: CreateInvoiceDimensions1 | CreateInvoiceDimensions2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -698,77 +577,7 @@ export type CreateInvoiceLicenseQuantityItemPrice = {
   processors?: CreateInvoiceLicenseQuantityItemProcessors | undefined;
 };
 
-export type CreateInvoiceDimensionsLicenseQuantityMatch4 =
-  | string
-  | number
-  | boolean;
-
-export type CreateInvoiceDimensionsLicenseQuantity4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsLicenseQuantityMatch3 =
-  | string
-  | number
-  | boolean;
-
-export const CreateInvoiceDimensionsToLicenseQuantityEnum2 = {
-  Inf: "inf",
-} as const;
-export type CreateInvoiceDimensionsToLicenseQuantityEnum2 = ClosedEnum<
-  typeof CreateInvoiceDimensionsToLicenseQuantityEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type CreateInvoiceDimensionsLicenseQuantityToUnion2 =
-  | number
-  | CreateInvoiceDimensionsToLicenseQuantityEnum2;
-
-export type CreateInvoiceDimensionsLicenseQuantityTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | CreateInvoiceDimensionsToLicenseQuantityEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsLicenseQuantity3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsLicenseQuantityTier2>;
-};
-
-export type CreateInvoiceLicenseQuantityDimensionsUnion2 =
-  | CreateInvoiceDimensionsLicenseQuantity3
-  | CreateInvoiceDimensionsLicenseQuantity4;
-
-export type CreateInvoiceLicenseQuantityMultipliersMatch2 =
-  | string
-  | number
-  | boolean;
+export type CreateInvoiceLicenseQuantityMatch2 = string | number | boolean;
 
 export type CreateInvoiceLicenseQuantityMultipliers2 = {
   /**
@@ -797,11 +606,7 @@ export type CreateInvoiceCreditSchemaLicenseQuantity2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensionsLicenseQuantity3
-      | CreateInvoiceDimensionsLicenseQuantity4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -814,77 +619,7 @@ export type CreateInvoiceCreditSchemaLicenseQuantity2 = {
   creditCost: number;
 };
 
-export type CreateInvoiceDimensionsLicenseQuantityMatch2 =
-  | string
-  | number
-  | boolean;
-
-export type CreateInvoiceDimensionsLicenseQuantity2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsLicenseQuantityMatch1 =
-  | string
-  | number
-  | boolean;
-
-export const CreateInvoiceDimensionsToLicenseQuantityEnum1 = {
-  Inf: "inf",
-} as const;
-export type CreateInvoiceDimensionsToLicenseQuantityEnum1 = ClosedEnum<
-  typeof CreateInvoiceDimensionsToLicenseQuantityEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type CreateInvoiceDimensionsLicenseQuantityToUnion1 =
-  | number
-  | CreateInvoiceDimensionsToLicenseQuantityEnum1;
-
-export type CreateInvoiceDimensionsLicenseQuantityTier1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | CreateInvoiceDimensionsToLicenseQuantityEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type CreateInvoiceDimensionsLicenseQuantity1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsLicenseQuantityTier1>;
-};
-
-export type CreateInvoiceLicenseQuantityDimensionsUnion1 =
-  | CreateInvoiceDimensionsLicenseQuantity1
-  | CreateInvoiceDimensionsLicenseQuantity2;
-
-export type CreateInvoiceLicenseQuantityMultipliersMatch1 =
-  | string
-  | number
-  | boolean;
+export type CreateInvoiceLicenseQuantityMatch1 = string | number | boolean;
 
 export type CreateInvoiceLicenseQuantityMultipliers1 = {
   /**
@@ -938,11 +673,7 @@ export type CreateInvoiceCreditSchemaLicenseQuantity1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensionsLicenseQuantity1
-      | CreateInvoiceDimensionsLicenseQuantity2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -1775,211 +1506,19 @@ export function createInvoiceItemPriceToJSON(
 }
 
 /** @internal */
-export type CreateInvoiceDimensionsMatch4$Outbound = string | number | boolean;
+export type CreateInvoiceMatch2$Outbound = string | number | boolean;
 
 /** @internal */
-export const CreateInvoiceDimensionsMatch4$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsMatch4$Outbound,
-  CreateInvoiceDimensionsMatch4
+export const CreateInvoiceMatch2$outboundSchema: z.ZodMiniType<
+  CreateInvoiceMatch2$Outbound,
+  CreateInvoiceMatch2
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createInvoiceDimensionsMatch4ToJSON(
-  createInvoiceDimensionsMatch4: CreateInvoiceDimensionsMatch4,
+export function createInvoiceMatch2ToJSON(
+  createInvoiceMatch2: CreateInvoiceMatch2,
 ): string {
   return JSON.stringify(
-    CreateInvoiceDimensionsMatch4$outboundSchema.parse(
-      createInvoiceDimensionsMatch4,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensions4$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensions4$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensions4$Outbound,
-  CreateInvoiceDimensions4
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function createInvoiceDimensions4ToJSON(
-  createInvoiceDimensions4: CreateInvoiceDimensions4,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensions4$outboundSchema.parse(createInvoiceDimensions4),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsMatch3$Outbound = string | number | boolean;
-
-/** @internal */
-export const CreateInvoiceDimensionsMatch3$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsMatch3$Outbound,
-  CreateInvoiceDimensionsMatch3
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceDimensionsMatch3ToJSON(
-  createInvoiceDimensionsMatch3: CreateInvoiceDimensionsMatch3,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsMatch3$outboundSchema.parse(
-      createInvoiceDimensionsMatch3,
-    ),
-  );
-}
-
-/** @internal */
-export const CreateInvoiceDimensionsToEnum2$outboundSchema: z.ZodMiniEnum<
-  typeof CreateInvoiceDimensionsToEnum2
-> = z.enum(CreateInvoiceDimensionsToEnum2);
-
-/** @internal */
-export type CreateInvoiceDimensionsToUnion2$Outbound = number | string;
-
-/** @internal */
-export const CreateInvoiceDimensionsToUnion2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsToUnion2$Outbound,
-  CreateInvoiceDimensionsToUnion2
-> = smartUnion([z.number(), CreateInvoiceDimensionsToEnum2$outboundSchema]);
-
-export function createInvoiceDimensionsToUnion2ToJSON(
-  createInvoiceDimensionsToUnion2: CreateInvoiceDimensionsToUnion2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsToUnion2$outboundSchema.parse(
-      createInvoiceDimensionsToUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsTier2$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsTier2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsTier2$Outbound,
-  CreateInvoiceDimensionsTier2
-> = z.pipe(
-  z.object({
-    to: smartUnion([z.number(), CreateInvoiceDimensionsToEnum2$outboundSchema]),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function createInvoiceDimensionsTier2ToJSON(
-  createInvoiceDimensionsTier2: CreateInvoiceDimensionsTier2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsTier2$outboundSchema.parse(
-      createInvoiceDimensionsTier2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensions3$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsTier2$Outbound>;
-};
-
-/** @internal */
-export const CreateInvoiceDimensions3$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensions3$Outbound,
-  CreateInvoiceDimensions3
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() => CreateInvoiceDimensionsTier2$outboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function createInvoiceDimensions3ToJSON(
-  createInvoiceDimensions3: CreateInvoiceDimensions3,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensions3$outboundSchema.parse(createInvoiceDimensions3),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsUnion2$Outbound =
-  | CreateInvoiceDimensions3$Outbound
-  | CreateInvoiceDimensions4$Outbound;
-
-/** @internal */
-export const CreateInvoiceDimensionsUnion2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsUnion2$Outbound,
-  CreateInvoiceDimensionsUnion2
-> = smartUnion([
-  z.lazy(() => CreateInvoiceDimensions3$outboundSchema),
-  z.lazy(() => CreateInvoiceDimensions4$outboundSchema),
-]);
-
-export function createInvoiceDimensionsUnion2ToJSON(
-  createInvoiceDimensionsUnion2: CreateInvoiceDimensionsUnion2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsUnion2$outboundSchema.parse(
-      createInvoiceDimensionsUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceMultipliersMatch2$Outbound = string | number | boolean;
-
-/** @internal */
-export const CreateInvoiceMultipliersMatch2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceMultipliersMatch2$Outbound,
-  CreateInvoiceMultipliersMatch2
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceMultipliersMatch2ToJSON(
-  createInvoiceMultipliersMatch2: CreateInvoiceMultipliersMatch2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceMultipliersMatch2$outboundSchema.parse(
-      createInvoiceMultipliersMatch2,
-    ),
+    CreateInvoiceMatch2$outboundSchema.parse(createInvoiceMatch2),
   );
 }
 
@@ -2015,11 +1554,7 @@ export function createInvoiceMultipliers2ToJSON(
 export type CreateInvoiceCreditSchema2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensions3$Outbound
-      | CreateInvoiceDimensions4$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?: { [k: string]: CreateInvoiceMultipliers2$Outbound } | undefined;
   credit_cost: number;
 };
@@ -2032,13 +1567,9 @@ export const CreateInvoiceCreditSchema2$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
-    dimensions: z.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => CreateInvoiceDimensions3$outboundSchema),
-        z.lazy(() => CreateInvoiceDimensions4$outboundSchema),
-      ]),
-    )),
+    dimensions: z.optional(
+      z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+    ),
     multipliers: z.optional(z.record(
       z.string(),
       z.lazy(() => CreateInvoiceMultipliers2$outboundSchema),
@@ -2063,211 +1594,19 @@ export function createInvoiceCreditSchema2ToJSON(
 }
 
 /** @internal */
-export type CreateInvoiceDimensionsMatch2$Outbound = string | number | boolean;
+export type CreateInvoiceMatch1$Outbound = string | number | boolean;
 
 /** @internal */
-export const CreateInvoiceDimensionsMatch2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsMatch2$Outbound,
-  CreateInvoiceDimensionsMatch2
+export const CreateInvoiceMatch1$outboundSchema: z.ZodMiniType<
+  CreateInvoiceMatch1$Outbound,
+  CreateInvoiceMatch1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createInvoiceDimensionsMatch2ToJSON(
-  createInvoiceDimensionsMatch2: CreateInvoiceDimensionsMatch2,
+export function createInvoiceMatch1ToJSON(
+  createInvoiceMatch1: CreateInvoiceMatch1,
 ): string {
   return JSON.stringify(
-    CreateInvoiceDimensionsMatch2$outboundSchema.parse(
-      createInvoiceDimensionsMatch2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensions2$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensions2$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensions2$Outbound,
-  CreateInvoiceDimensions2
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function createInvoiceDimensions2ToJSON(
-  createInvoiceDimensions2: CreateInvoiceDimensions2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensions2$outboundSchema.parse(createInvoiceDimensions2),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsMatch1$Outbound = string | number | boolean;
-
-/** @internal */
-export const CreateInvoiceDimensionsMatch1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsMatch1$Outbound,
-  CreateInvoiceDimensionsMatch1
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceDimensionsMatch1ToJSON(
-  createInvoiceDimensionsMatch1: CreateInvoiceDimensionsMatch1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsMatch1$outboundSchema.parse(
-      createInvoiceDimensionsMatch1,
-    ),
-  );
-}
-
-/** @internal */
-export const CreateInvoiceDimensionsToEnum1$outboundSchema: z.ZodMiniEnum<
-  typeof CreateInvoiceDimensionsToEnum1
-> = z.enum(CreateInvoiceDimensionsToEnum1);
-
-/** @internal */
-export type CreateInvoiceDimensionsToUnion1$Outbound = number | string;
-
-/** @internal */
-export const CreateInvoiceDimensionsToUnion1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsToUnion1$Outbound,
-  CreateInvoiceDimensionsToUnion1
-> = smartUnion([z.number(), CreateInvoiceDimensionsToEnum1$outboundSchema]);
-
-export function createInvoiceDimensionsToUnion1ToJSON(
-  createInvoiceDimensionsToUnion1: CreateInvoiceDimensionsToUnion1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsToUnion1$outboundSchema.parse(
-      createInvoiceDimensionsToUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsTier1$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsTier1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsTier1$Outbound,
-  CreateInvoiceDimensionsTier1
-> = z.pipe(
-  z.object({
-    to: smartUnion([z.number(), CreateInvoiceDimensionsToEnum1$outboundSchema]),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function createInvoiceDimensionsTier1ToJSON(
-  createInvoiceDimensionsTier1: CreateInvoiceDimensionsTier1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsTier1$outboundSchema.parse(
-      createInvoiceDimensionsTier1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensions1$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsTier1$Outbound>;
-};
-
-/** @internal */
-export const CreateInvoiceDimensions1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensions1$Outbound,
-  CreateInvoiceDimensions1
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(z.lazy(() => CreateInvoiceDimensionsTier1$outboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function createInvoiceDimensions1ToJSON(
-  createInvoiceDimensions1: CreateInvoiceDimensions1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensions1$outboundSchema.parse(createInvoiceDimensions1),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsUnion1$Outbound =
-  | CreateInvoiceDimensions1$Outbound
-  | CreateInvoiceDimensions2$Outbound;
-
-/** @internal */
-export const CreateInvoiceDimensionsUnion1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceDimensionsUnion1$Outbound,
-  CreateInvoiceDimensionsUnion1
-> = smartUnion([
-  z.lazy(() => CreateInvoiceDimensions1$outboundSchema),
-  z.lazy(() => CreateInvoiceDimensions2$outboundSchema),
-]);
-
-export function createInvoiceDimensionsUnion1ToJSON(
-  createInvoiceDimensionsUnion1: CreateInvoiceDimensionsUnion1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsUnion1$outboundSchema.parse(
-      createInvoiceDimensionsUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceMultipliersMatch1$Outbound = string | number | boolean;
-
-/** @internal */
-export const CreateInvoiceMultipliersMatch1$outboundSchema: z.ZodMiniType<
-  CreateInvoiceMultipliersMatch1$Outbound,
-  CreateInvoiceMultipliersMatch1
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceMultipliersMatch1ToJSON(
-  createInvoiceMultipliersMatch1: CreateInvoiceMultipliersMatch1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceMultipliersMatch1$outboundSchema.parse(
-      createInvoiceMultipliersMatch1,
-    ),
+    CreateInvoiceMatch1$outboundSchema.parse(createInvoiceMatch1),
   );
 }
 
@@ -2359,11 +1698,7 @@ export function createInvoiceFeatureOverrideTierToJSON(
 export type CreateInvoiceCreditSchema1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensions1$Outbound
-      | CreateInvoiceDimensions2$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?: { [k: string]: CreateInvoiceMultipliers1$Outbound } | undefined;
   tier_behavior: "graduated";
   tiers: Array<CreateInvoiceFeatureOverrideTier$Outbound>;
@@ -2377,13 +1712,9 @@ export const CreateInvoiceCreditSchema1$outboundSchema: z.ZodMiniType<
   z.object({
     meteredFeatureId: z.string(),
     billingUnits: z.optional(z.number()),
-    dimensions: z.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => CreateInvoiceDimensions1$outboundSchema),
-        z.lazy(() => CreateInvoiceDimensions2$outboundSchema),
-      ]),
-    )),
+    dimensions: z.optional(
+      z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+    ),
     multipliers: z.optional(z.record(
       z.string(),
       z.lazy(() => CreateInvoiceMultipliers1$outboundSchema),
@@ -2952,252 +2283,23 @@ export function createInvoiceLicenseQuantityItemPriceToJSON(
 }
 
 /** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityMatch4$Outbound =
+export type CreateInvoiceLicenseQuantityMatch2$Outbound =
   | string
   | number
   | boolean;
 
 /** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityMatch4$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityMatch4$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityMatch4
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
+export const CreateInvoiceLicenseQuantityMatch2$outboundSchema: z.ZodMiniType<
+  CreateInvoiceLicenseQuantityMatch2$Outbound,
+  CreateInvoiceLicenseQuantityMatch2
+> = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createInvoiceDimensionsLicenseQuantityMatch4ToJSON(
-  createInvoiceDimensionsLicenseQuantityMatch4:
-    CreateInvoiceDimensionsLicenseQuantityMatch4,
+export function createInvoiceLicenseQuantityMatch2ToJSON(
+  createInvoiceLicenseQuantityMatch2: CreateInvoiceLicenseQuantityMatch2,
 ): string {
   return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityMatch4$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityMatch4,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantity4$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantity4$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantity4$Outbound,
-    CreateInvoiceDimensionsLicenseQuantity4
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantity4ToJSON(
-  createInvoiceDimensionsLicenseQuantity4:
-    CreateInvoiceDimensionsLicenseQuantity4,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantity4$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantity4,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityMatch3$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityMatch3$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityMatch3$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityMatch3
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceDimensionsLicenseQuantityMatch3ToJSON(
-  createInvoiceDimensionsLicenseQuantityMatch3:
-    CreateInvoiceDimensionsLicenseQuantityMatch3,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityMatch3$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityMatch3,
-    ),
-  );
-}
-
-/** @internal */
-export const CreateInvoiceDimensionsToLicenseQuantityEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof CreateInvoiceDimensionsToLicenseQuantityEnum2> = z.enum(
-    CreateInvoiceDimensionsToLicenseQuantityEnum2,
-  );
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityToUnion2$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityToUnion2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityToUnion2$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityToUnion2
-  > = smartUnion([
-    z.number(),
-    CreateInvoiceDimensionsToLicenseQuantityEnum2$outboundSchema,
-  ]);
-
-export function createInvoiceDimensionsLicenseQuantityToUnion2ToJSON(
-  createInvoiceDimensionsLicenseQuantityToUnion2:
-    CreateInvoiceDimensionsLicenseQuantityToUnion2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityToUnion2$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityToUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityTier2$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityTier2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityTier2$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityTier2
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        CreateInvoiceDimensionsToLicenseQuantityEnum2$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantityTier2ToJSON(
-  createInvoiceDimensionsLicenseQuantityTier2:
-    CreateInvoiceDimensionsLicenseQuantityTier2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityTier2$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityTier2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantity3$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsLicenseQuantityTier2$Outbound>;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantity3$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantity3$Outbound,
-    CreateInvoiceDimensionsLicenseQuantity3
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(
-        z.lazy(() =>
-          CreateInvoiceDimensionsLicenseQuantityTier2$outboundSchema
-        ),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantity3ToJSON(
-  createInvoiceDimensionsLicenseQuantity3:
-    CreateInvoiceDimensionsLicenseQuantity3,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantity3$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantity3,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceLicenseQuantityDimensionsUnion2$Outbound =
-  | CreateInvoiceDimensionsLicenseQuantity3$Outbound
-  | CreateInvoiceDimensionsLicenseQuantity4$Outbound;
-
-/** @internal */
-export const CreateInvoiceLicenseQuantityDimensionsUnion2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceLicenseQuantityDimensionsUnion2$Outbound,
-    CreateInvoiceLicenseQuantityDimensionsUnion2
-  > = smartUnion([
-    z.lazy(() => CreateInvoiceDimensionsLicenseQuantity3$outboundSchema),
-    z.lazy(() => CreateInvoiceDimensionsLicenseQuantity4$outboundSchema),
-  ]);
-
-export function createInvoiceLicenseQuantityDimensionsUnion2ToJSON(
-  createInvoiceLicenseQuantityDimensionsUnion2:
-    CreateInvoiceLicenseQuantityDimensionsUnion2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceLicenseQuantityDimensionsUnion2$outboundSchema.parse(
-      createInvoiceLicenseQuantityDimensionsUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceLicenseQuantityMultipliersMatch2$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const CreateInvoiceLicenseQuantityMultipliersMatch2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceLicenseQuantityMultipliersMatch2$Outbound,
-    CreateInvoiceLicenseQuantityMultipliersMatch2
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceLicenseQuantityMultipliersMatch2ToJSON(
-  createInvoiceLicenseQuantityMultipliersMatch2:
-    CreateInvoiceLicenseQuantityMultipliersMatch2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceLicenseQuantityMultipliersMatch2$outboundSchema.parse(
-      createInvoiceLicenseQuantityMultipliersMatch2,
+    CreateInvoiceLicenseQuantityMatch2$outboundSchema.parse(
+      createInvoiceLicenseQuantityMatch2,
     ),
   );
 }
@@ -3238,11 +2340,7 @@ export function createInvoiceLicenseQuantityMultipliers2ToJSON(
 export type CreateInvoiceCreditSchemaLicenseQuantity2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensionsLicenseQuantity3$Outbound
-      | CreateInvoiceDimensionsLicenseQuantity4$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?: {
     [k: string]: CreateInvoiceLicenseQuantityMultipliers2$Outbound;
   } | undefined;
@@ -3258,13 +2356,9 @@ export const CreateInvoiceCreditSchemaLicenseQuantity2$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => CreateInvoiceDimensionsLicenseQuantity3$outboundSchema),
-          z.lazy(() => CreateInvoiceDimensionsLicenseQuantity4$outboundSchema),
-        ]),
-      )),
+      dimensions: z.optional(
+        z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+      ),
       multipliers: z.optional(z.record(
         z.string(),
         z.lazy(() => CreateInvoiceLicenseQuantityMultipliers2$outboundSchema),
@@ -3292,252 +2386,23 @@ export function createInvoiceCreditSchemaLicenseQuantity2ToJSON(
 }
 
 /** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityMatch2$Outbound =
+export type CreateInvoiceLicenseQuantityMatch1$Outbound =
   | string
   | number
   | boolean;
 
 /** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityMatch2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityMatch2$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityMatch2
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
+export const CreateInvoiceLicenseQuantityMatch1$outboundSchema: z.ZodMiniType<
+  CreateInvoiceLicenseQuantityMatch1$Outbound,
+  CreateInvoiceLicenseQuantityMatch1
+> = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function createInvoiceDimensionsLicenseQuantityMatch2ToJSON(
-  createInvoiceDimensionsLicenseQuantityMatch2:
-    CreateInvoiceDimensionsLicenseQuantityMatch2,
+export function createInvoiceLicenseQuantityMatch1ToJSON(
+  createInvoiceLicenseQuantityMatch1: CreateInvoiceLicenseQuantityMatch1,
 ): string {
   return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityMatch2$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityMatch2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantity2$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantity2$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantity2$Outbound,
-    CreateInvoiceDimensionsLicenseQuantity2
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantity2ToJSON(
-  createInvoiceDimensionsLicenseQuantity2:
-    CreateInvoiceDimensionsLicenseQuantity2,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantity2$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantity2,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityMatch1$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityMatch1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityMatch1$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityMatch1
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceDimensionsLicenseQuantityMatch1ToJSON(
-  createInvoiceDimensionsLicenseQuantityMatch1:
-    CreateInvoiceDimensionsLicenseQuantityMatch1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityMatch1$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityMatch1,
-    ),
-  );
-}
-
-/** @internal */
-export const CreateInvoiceDimensionsToLicenseQuantityEnum1$outboundSchema:
-  z.ZodMiniEnum<typeof CreateInvoiceDimensionsToLicenseQuantityEnum1> = z.enum(
-    CreateInvoiceDimensionsToLicenseQuantityEnum1,
-  );
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityToUnion1$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityToUnion1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityToUnion1$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityToUnion1
-  > = smartUnion([
-    z.number(),
-    CreateInvoiceDimensionsToLicenseQuantityEnum1$outboundSchema,
-  ]);
-
-export function createInvoiceDimensionsLicenseQuantityToUnion1ToJSON(
-  createInvoiceDimensionsLicenseQuantityToUnion1:
-    CreateInvoiceDimensionsLicenseQuantityToUnion1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityToUnion1$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityToUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantityTier1$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantityTier1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantityTier1$Outbound,
-    CreateInvoiceDimensionsLicenseQuantityTier1
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        CreateInvoiceDimensionsToLicenseQuantityEnum1$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantityTier1ToJSON(
-  createInvoiceDimensionsLicenseQuantityTier1:
-    CreateInvoiceDimensionsLicenseQuantityTier1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantityTier1$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantityTier1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceDimensionsLicenseQuantity1$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<CreateInvoiceDimensionsLicenseQuantityTier1$Outbound>;
-};
-
-/** @internal */
-export const CreateInvoiceDimensionsLicenseQuantity1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceDimensionsLicenseQuantity1$Outbound,
-    CreateInvoiceDimensionsLicenseQuantity1
-  > = z.pipe(
-    z.object({
-      match: z.record(
-        z.string(),
-        smartUnion([z.string(), z.number(), z.boolean()]),
-      ),
-      priority: z.optional(z.int()),
-      tierBehavior: z.literal("graduated"),
-      tiers: z.array(
-        z.lazy(() =>
-          CreateInvoiceDimensionsLicenseQuantityTier1$outboundSchema
-        ),
-      ),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        tierBehavior: "tier_behavior",
-      });
-    }),
-  );
-
-export function createInvoiceDimensionsLicenseQuantity1ToJSON(
-  createInvoiceDimensionsLicenseQuantity1:
-    CreateInvoiceDimensionsLicenseQuantity1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceDimensionsLicenseQuantity1$outboundSchema.parse(
-      createInvoiceDimensionsLicenseQuantity1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceLicenseQuantityDimensionsUnion1$Outbound =
-  | CreateInvoiceDimensionsLicenseQuantity1$Outbound
-  | CreateInvoiceDimensionsLicenseQuantity2$Outbound;
-
-/** @internal */
-export const CreateInvoiceLicenseQuantityDimensionsUnion1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceLicenseQuantityDimensionsUnion1$Outbound,
-    CreateInvoiceLicenseQuantityDimensionsUnion1
-  > = smartUnion([
-    z.lazy(() => CreateInvoiceDimensionsLicenseQuantity1$outboundSchema),
-    z.lazy(() => CreateInvoiceDimensionsLicenseQuantity2$outboundSchema),
-  ]);
-
-export function createInvoiceLicenseQuantityDimensionsUnion1ToJSON(
-  createInvoiceLicenseQuantityDimensionsUnion1:
-    CreateInvoiceLicenseQuantityDimensionsUnion1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceLicenseQuantityDimensionsUnion1$outboundSchema.parse(
-      createInvoiceLicenseQuantityDimensionsUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type CreateInvoiceLicenseQuantityMultipliersMatch1$Outbound =
-  | string
-  | number
-  | boolean;
-
-/** @internal */
-export const CreateInvoiceLicenseQuantityMultipliersMatch1$outboundSchema:
-  z.ZodMiniType<
-    CreateInvoiceLicenseQuantityMultipliersMatch1$Outbound,
-    CreateInvoiceLicenseQuantityMultipliersMatch1
-  > = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function createInvoiceLicenseQuantityMultipliersMatch1ToJSON(
-  createInvoiceLicenseQuantityMultipliersMatch1:
-    CreateInvoiceLicenseQuantityMultipliersMatch1,
-): string {
-  return JSON.stringify(
-    CreateInvoiceLicenseQuantityMultipliersMatch1$outboundSchema.parse(
-      createInvoiceLicenseQuantityMultipliersMatch1,
+    CreateInvoiceLicenseQuantityMatch1$outboundSchema.parse(
+      createInvoiceLicenseQuantityMatch1,
     ),
   );
 }
@@ -3646,11 +2511,7 @@ export function createInvoiceLicenseQuantityFeatureOverrideTierToJSON(
 export type CreateInvoiceCreditSchemaLicenseQuantity1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | CreateInvoiceDimensionsLicenseQuantity1$Outbound
-      | CreateInvoiceDimensionsLicenseQuantity2$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?: {
     [k: string]: CreateInvoiceLicenseQuantityMultipliers1$Outbound;
   } | undefined;
@@ -3667,13 +2528,9 @@ export const CreateInvoiceCreditSchemaLicenseQuantity1$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => CreateInvoiceDimensionsLicenseQuantity1$outboundSchema),
-          z.lazy(() => CreateInvoiceDimensionsLicenseQuantity2$outboundSchema),
-        ]),
-      )),
+      dimensions: z.optional(
+        z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+      ),
       multipliers: z.optional(z.record(
         z.string(),
         z.lazy(() => CreateInvoiceLicenseQuantityMultipliers1$outboundSchema),

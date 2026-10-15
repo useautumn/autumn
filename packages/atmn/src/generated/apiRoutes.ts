@@ -2930,6 +2930,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				description:
 					"Additional properties to attach to this finalize lock event.",
 			},
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"The customer the lock belongs to. A lock of any other customer is not found.",
+			},
 		],
 	},
 	{

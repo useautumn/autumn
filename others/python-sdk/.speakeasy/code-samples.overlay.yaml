@@ -102,7 +102,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.balances.finalize(lock_id="lock_abc123", action="confirm")
+                res = autumn.balances.finalize(lock_id="lock_abc123", action="confirm", customer_id="cus_123")
 
                 # Handle response
                 print(res)

@@ -974,33 +974,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="dimensions.{key}" type="object">
+                    <DynamicResponseField name="dimensions.{key}" type="object | object">
                       Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="match.{key}" type="string">
-                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="priority" type="integer">
-                          Breaks ties between dimensions that match the same number of keys. Higher wins.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="tier_behavior" type="any" />
-
-                        <DynamicResponseField name="tiers" type="object[]">
-                          <Expandable title="properties">
-                            <DynamicResponseField name="to" type="number">
-                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                            </DynamicResponseField>
-
-                            <DynamicResponseField name="credit_cost" type="number">
-                              Credits consumed per billing-unit group within this tier.
-                            </DynamicResponseField>
-
-                          </Expandable>
-                        </DynamicResponseField>
-
-                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="multipliers.{key}" type="object">
@@ -1590,33 +1565,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                               Number of metered-feature units priced together. Defaults to one when omitted.
                             </DynamicResponseField>
 
-                            <DynamicResponseField name="dimensions.{key}" type="object">
+                            <DynamicResponseField name="dimensions.{key}" type="object | object">
                               Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                              <Expandable title="properties">
-                                <DynamicResponseField name="match.{key}" type="string">
-                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="priority" type="integer">
-                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="tier_behavior" type="any" />
-
-                                <DynamicResponseField name="tiers" type="object[]">
-                                  <Expandable title="properties">
-                                    <DynamicResponseField name="to" type="number">
-                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                                    </DynamicResponseField>
-
-                                    <DynamicResponseField name="credit_cost" type="number">
-                                      Credits consumed per billing-unit group within this tier.
-                                    </DynamicResponseField>
-
-                                  </Expandable>
-                                </DynamicResponseField>
-
-                              </Expandable>
                             </DynamicResponseField>
 
                             <DynamicResponseField name="multipliers.{key}" type="object">
@@ -2135,33 +2085,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                                       Number of metered-feature units priced together. Defaults to one when omitted.
                                     </DynamicResponseField>
 
-                                    <DynamicResponseField name="dimensions.{key}" type="object">
+                                    <DynamicResponseField name="dimensions.{key}" type="object | object">
                                       Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                                      <Expandable title="properties">
-                                        <DynamicResponseField name="match.{key}" type="string">
-                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                                        </DynamicResponseField>
-
-                                        <DynamicResponseField name="priority" type="integer">
-                                          Breaks ties between dimensions that match the same number of keys. Higher wins.
-                                        </DynamicResponseField>
-
-                                        <DynamicResponseField name="tier_behavior" type="any" />
-
-                                        <DynamicResponseField name="tiers" type="object[]">
-                                          <Expandable title="properties">
-                                            <DynamicResponseField name="to" type="number">
-                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                                            </DynamicResponseField>
-
-                                            <DynamicResponseField name="credit_cost" type="number">
-                                              Credits consumed per billing-unit group within this tier.
-                                            </DynamicResponseField>
-
-                                          </Expandable>
-                                        </DynamicResponseField>
-
-                                      </Expandable>
                                     </DynamicResponseField>
 
                                     <DynamicResponseField name="multipliers.{key}" type="object">
@@ -2695,33 +2620,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                       Number of metered-feature units priced together. Defaults to one when omitted.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="dimensions.{key}" type="object">
+                    <DynamicResponseField name="dimensions.{key}" type="object | object">
                       Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="match.{key}" type="string">
-                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="priority" type="integer">
-                          Breaks ties between dimensions that match the same number of keys. Higher wins.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="tier_behavior" type="any" />
-
-                        <DynamicResponseField name="tiers" type="object[]">
-                          <Expandable title="properties">
-                            <DynamicResponseField name="to" type="number">
-                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                            </DynamicResponseField>
-
-                            <DynamicResponseField name="credit_cost" type="number">
-                              Credits consumed per billing-unit group within this tier.
-                            </DynamicResponseField>
-
-                          </Expandable>
-                        </DynamicResponseField>
-
-                      </Expandable>
                     </DynamicResponseField>
 
                     <DynamicResponseField name="multipliers.{key}" type="object">
@@ -3311,33 +3211,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                               Number of metered-feature units priced together. Defaults to one when omitted.
                             </DynamicResponseField>
 
-                            <DynamicResponseField name="dimensions.{key}" type="object">
+                            <DynamicResponseField name="dimensions.{key}" type="object | object">
                               Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                              <Expandable title="properties">
-                                <DynamicResponseField name="match.{key}" type="string">
-                                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="priority" type="integer">
-                                  Breaks ties between dimensions that match the same number of keys. Higher wins.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="tier_behavior" type="any" />
-
-                                <DynamicResponseField name="tiers" type="object[]">
-                                  <Expandable title="properties">
-                                    <DynamicResponseField name="to" type="number">
-                                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                                    </DynamicResponseField>
-
-                                    <DynamicResponseField name="credit_cost" type="number">
-                                      Credits consumed per billing-unit group within this tier.
-                                    </DynamicResponseField>
-
-                                  </Expandable>
-                                </DynamicResponseField>
-
-                              </Expandable>
                             </DynamicResponseField>
 
                             <DynamicResponseField name="multipliers.{key}" type="object">
@@ -3856,33 +3731,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
                                       Number of metered-feature units priced together. Defaults to one when omitted.
                                     </DynamicResponseField>
 
-                                    <DynamicResponseField name="dimensions.{key}" type="object">
+                                    <DynamicResponseField name="dimensions.{key}" type="object | object">
                                       Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-                                      <Expandable title="properties">
-                                        <DynamicResponseField name="match.{key}" type="string">
-                                          Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                                        </DynamicResponseField>
-
-                                        <DynamicResponseField name="priority" type="integer">
-                                          Breaks ties between dimensions that match the same number of keys. Higher wins.
-                                        </DynamicResponseField>
-
-                                        <DynamicResponseField name="tier_behavior" type="any" />
-
-                                        <DynamicResponseField name="tiers" type="object[]">
-                                          <Expandable title="properties">
-                                            <DynamicResponseField name="to" type="number">
-                                              Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                                            </DynamicResponseField>
-
-                                            <DynamicResponseField name="credit_cost" type="number">
-                                              Credits consumed per billing-unit group within this tier.
-                                            </DynamicResponseField>
-
-                                          </Expandable>
-                                        </DynamicResponseField>
-
-                                      </Expandable>
                                     </DynamicResponseField>
 
                                     <DynamicResponseField name="multipliers.{key}" type="object">
@@ -4117,33 +3967,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
               Number of metered-feature units priced together. Defaults to one when omitted.
             </DynamicResponseField>
 
-            <DynamicResponseField name="dimensions.{key}" type="object">
+            <DynamicResponseField name="dimensions.{key}" type="object | object">
               Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-              <Expandable title="properties">
-                <DynamicResponseField name="match.{key}" type="string">
-                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="priority" type="integer">
-                  Breaks ties between dimensions that match the same number of keys. Higher wins.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="tier_behavior" type="any" />
-
-                <DynamicResponseField name="tiers" type="object[]">
-                  <Expandable title="properties">
-                    <DynamicResponseField name="to" type="number">
-                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="credit_cost" type="number">
-                      Credits consumed per billing-unit group within this tier.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="multipliers.{key}" type="object">
@@ -4472,33 +4297,8 @@ The response returns requested amounts under `billing_controls.balance_allocatio
               Number of metered-feature units priced together. Defaults to one when omitted.
             </DynamicResponseField>
 
-            <DynamicResponseField name="dimensions.{key}" type="object">
+            <DynamicResponseField name="dimensions.{key}" type="object | object">
               Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
-              <Expandable title="properties">
-                <DynamicResponseField name="match.{key}" type="string">
-                  Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="priority" type="integer">
-                  Breaks ties between dimensions that match the same number of keys. Higher wins.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="tier_behavior" type="any" />
-
-                <DynamicResponseField name="tiers" type="object[]">
-                  <Expandable title="properties">
-                    <DynamicResponseField name="to" type="number">
-                      Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="credit_cost" type="number">
-                      Credits consumed per billing-unit group within this tier.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
-              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="multipliers.{key}" type="object">
