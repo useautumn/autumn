@@ -5,6 +5,7 @@
  * Contract: a later future phase running a row adds a scheduled row with that row's id
  * and `phase_starts_at` set to the phase start (null on the row itself), ordered with
  * the scheduled rows, counted in `total_count`, paged by the cursor and in the seed page.
+ * A phase the customer's test clock has passed is no longer listed.
  */
 
 import { expect, test } from "bun:test";
@@ -17,6 +18,7 @@ import {
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusBatchService } from "@/internal/customers/CusBatchService.js";
@@ -176,5 +178,49 @@ test.concurrent(
 				phase_starts_at: phases[1].starts_at,
 			},
 		]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("customer products page: a repeated phase the test clock has passed is no longer a row")}`,
+	async () => {
+		const customerId = "cpp-repeated-started";
+		const enterprise = enterprisePlan("cpp-repeated-started-ent");
+		const { autumnV2_4, ctx, advancedTo, testClockId } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: enterprise.id })],
+		});
+		if (!testClockId) throw new Error("Expected a test clock");
+
+		const repeatStart = advancedTo + ms.days(10);
+		const { phases } = await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: enterprise.id }] },
+				{ starts_at: repeatStart, plans: [{ plan_id: enterprise.id }] },
+			],
+		});
+		const activeId = phases[0].customer_product_ids[0];
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+			advanceTo: repeatStart + ms.days(1),
+			waitForSeconds: 15,
+		});
+
+		const page = await CusService.getProductsPage({
+			ctx,
+			idOrInternalId: customerId,
+			params: { start_cursor: "", limit: 10, status: "active" },
+		});
+		expect(pageRows(page.list)).toEqual([
+			{ id: activeId, status: CusProductStatus.Active, phase_starts_at: null },
+		]);
+		expect(page.total_count).toBe(1);
 	},
 );

@@ -10,6 +10,8 @@ import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssign
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
+	/** The customer's current time (test clock aware); later phases before it have started. */
+	nowMs: number;
 	status: CustomerProductsStatusFilter;
 	entityId?: string;
 	kind?: CustomerProductKind;
@@ -146,7 +148,13 @@ export const freeTrialLateral = sql`
 
 // Identical consecutive phases share one row, so each later future phase it runs is
 // listed as a row of its own, as Set Plans shows it. Phases are looked up per customer.
-const customerProductRows = ({ customers }: { customers: SQL }) => sql`(
+const customerProductRows = ({
+	customers,
+	nowMs,
+}: {
+	customers: SQL;
+	nowMs: number;
+}) => sql`(
 	SELECT cp.*, NULL::numeric AS phase_starts_at
 	FROM ${customers} rows_customer
 	JOIN customer_products cp ON cp.internal_customer_id = rows_customer.internal_id
@@ -160,7 +168,7 @@ const customerProductRows = ({ customers }: { customers: SQL }) => sql`(
 		CROSS JOIN LATERAL unnest(ph.customer_product_ids) AS phase_product(id)
 		-- customers.internal_id is COLLATE "C"; match the schedules index's default collation.
 		WHERE sch.internal_customer_id = rows_customer.internal_id COLLATE "default"
-			AND ph.starts_at > EXTRACT(EPOCH FROM now()) * 1000
+			AND ph.starts_at > ${nowMs}
 			AND EXISTS (
 				SELECT 1 FROM phases earlier
 				WHERE earlier.schedule_id = ph.schedule_id
@@ -211,6 +219,7 @@ const buildFilters = ({
 
 export const getCustomerProductsPageQuery = ({
 	internalCustomerId,
+	nowMs,
 	status,
 	entityId,
 	kind,
@@ -241,7 +250,7 @@ export const getCustomerProductsPageQuery = ({
 			cpr_data.customer_prices,
 			ce_data.customer_entitlements,
 			ft_data.free_trial
-		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId) })}
+		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId), nowMs })}
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		${customerPricesLateral}
 		${customerEntitlementsLateral}
@@ -257,6 +266,7 @@ export const getCustomerProductsPageQuery = ({
 
 export const getCustomerProductsCountQuery = ({
 	internalCustomerId,
+	nowMs,
 	status,
 	entityId,
 	kind,
@@ -265,7 +275,7 @@ export const getCustomerProductsCountQuery = ({
 
 	return sql`
 		SELECT COUNT(*)::int AS total_count
-		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId) })}
+		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId), nowMs })}
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
@@ -282,9 +292,11 @@ export const getCustomerProductsCountQuery = ({
 export const customerProductsSeedCte = ({
 	inStatuses,
 	limit,
+	nowMs,
 }: {
 	inStatuses?: CusProductStatus[];
 	limit: number;
+	nowMs: number;
 }) => {
 	const statusFilter = cpStatusInClause(inStatuses);
 	const fetchLimit = limit + 1;
@@ -304,7 +316,7 @@ export const customerProductsSeedCte = ({
 					ORDER BY ${customerProductsOrderExpr}
 				) AS rn,
 				COUNT(*) OVER (PARTITION BY cp.internal_customer_id)::int AS total_count
-			FROM ${customerProductRows({ customers: sql`cr` })}
+			FROM ${customerProductRows({ customers: sql`cr`, nowMs })}
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			WHERE TRUE ${statusFilter}
 				AND ${sql.raw(notLicenseAssignmentSql("cp"))}

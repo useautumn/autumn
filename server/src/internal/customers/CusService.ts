@@ -42,6 +42,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
+import { getTestClockFrozenTimeMs } from "@/external/stripe/testClocks/utils/convertStripeTestClock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCustomerEntitlementsViaWorker } from "@/internal/balances/balanceWorker/resetCustomerEntitlementsViaWorker.js";
 import {
@@ -331,24 +332,28 @@ export class CusService {
 		});
 	}
 
+	/** Pass `internalCustomerId` together with `nowMs`, the customer's test-clock-aware time. */
 	static async getProductsPage({
 		ctx,
 		idOrInternalId,
 		internalCustomerId,
+		nowMs,
 		params,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
 		internalCustomerId?: string;
+		nowMs?: number;
 		params: ListCustomerProductsParams;
 	}): Promise<CustomerProductsPage> {
 		const { db, org, env } = ctx;
 
 		let resolvedInternalId = internalCustomerId;
-		if (!resolvedInternalId) {
+		let resolvedNowMs = nowMs;
+		if (!resolvedInternalId || resolvedNowMs === undefined) {
 			const customer = await CusService.get({
 				db,
-				idOrInternalId,
+				idOrInternalId: resolvedInternalId ?? idOrInternalId,
 				orgId: org.id,
 				env,
 			});
@@ -356,6 +361,11 @@ export class CusService {
 				throw new CustomerNotFoundError({ customerId: idOrInternalId });
 			}
 			resolvedInternalId = customer.internal_id;
+			resolvedNowMs ??=
+				(await getTestClockFrozenTimeMs({
+					ctx,
+					stripeCustomerId: customer.processor?.id,
+				})) ?? Date.now();
 		}
 
 		const cursor =
@@ -363,6 +373,7 @@ export class CusService {
 
 		const sharedArgs = {
 			internalCustomerId: resolvedInternalId,
+			nowMs: resolvedNowMs,
 			status: params.status,
 			entityId: params.entity_id,
 			kind: params.kind,
@@ -395,15 +406,18 @@ export class CusService {
 		ctx,
 		idOrInternalId,
 		internalCustomerId,
+		nowMs,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
 		internalCustomerId?: string;
+		nowMs?: number;
 	}): Promise<CustomerProductsPage> {
 		return CusService.getProductsPage({
 			ctx,
 			idOrInternalId,
 			internalCustomerId,
+			nowMs,
 			params: {
 				start_cursor: "",
 				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
