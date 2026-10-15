@@ -33,7 +33,7 @@ type CatchUpResult = {
 /**
  * Copies from one peer, folder by folder, what each lacks: first the tenants the peer holds that this replica does
  * not, so a folder registered on the peer alone exists here before its rows are asked for. With `withRecentKeys`, the
- * idempotency keys the peer took in the last 90 min too: the relay carries every later one.
+ * idempotency keys the peer took within the key window too: the relay carries every later one.
  */
 const catchUpFrom = async ({
 	ctx,
@@ -79,7 +79,7 @@ const describe = (result: CatchUpResult) =>
 
 /**
  * Before this replica serves: copies from the first ready peer that answers what its folders lack, everything on a fresh
- * volume, and the peer's idempotency keys of the last 90 min. With no peer there is nothing to copy; with none ready or
+ * volume, and the peer's idempotency keys taken within the key window. With no peer there is nothing to copy; with none ready or
  * answering it gives up after a few tries, so two replicas restarting at once cannot wait on each other.
  */
 export const catchUpBeforeServing = async ({

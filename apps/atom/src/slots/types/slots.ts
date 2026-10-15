@@ -55,7 +55,7 @@ export type SubjectSource = {
 	}): Promise<AppliedSubject[]>;
 	/** The peer's catalog when it was read after `readAtAfter`; null otherwise. */
 	catalog(params: { readAtAfter: number }): Promise<CatalogRows | null>;
-	/** A page of the idempotency keys one slot took in the last 90 min, past `after`. */
+	/** A page of the idempotency keys one slot took within the key window, past `after`. */
 	recentKeys(params: {
 		slot: number;
 		slotCount: number;
@@ -86,7 +86,7 @@ export type Slots = {
 		slot: number;
 		keys: SubjectKey[];
 	}): Promise<AppliedSubject[]>;
-	/** A page of the idempotency keys a slot took in the last 90 min, past `after`, answered by the slot's owner. */
+	/** A page of the idempotency keys a slot took within the key window, past `after`, answered by the slot's owner. */
 	recentKeys(params: {
 		slot: number;
 		after: JournalKeyRow | null;
@@ -109,7 +109,7 @@ export type Slots = {
 		source: SubjectSource;
 		window: number | null;
 	}): Promise<{ slots: number; written: number }>;
-	/** Copies into the journals of the slots this thread owns every idempotency key `source` took in the last 90 min. */
+	/** Copies into the journals of the slots this thread owns every idempotency key `source` took within the key window. */
 	copyRecentKeys(params: { source: SubjectSource }): Promise<number>;
 	close(): void;
 };

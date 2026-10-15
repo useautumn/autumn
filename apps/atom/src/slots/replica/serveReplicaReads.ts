@@ -40,7 +40,7 @@ export const serveReplicaReads = ({ ctx }: { ctx: ReplicaSlotsContext }) => {
 		return owners.fetchSubjectsOn({ thread: owner, atomId, slot, keys });
 	}
 
-	/** A page of a slot's idempotency keys of the last 90 min, answered by the slot's owner. */
+	/** A page of a slot's idempotency keys taken within the key window, answered by the slot's owner. */
 	async function recentKeys({
 		slot,
 		after,

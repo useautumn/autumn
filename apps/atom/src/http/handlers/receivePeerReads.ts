@@ -116,7 +116,7 @@ export const receiveCatalogSince = ({ ctx }: { ctx: PeerReadContext }) =>
 		);
 	};
 
-/** A page of one slot's idempotency keys of the last 90 min, for a peer copying them before it serves. */
+/** A page of one slot's idempotency keys taken within the key window, for a peer copying them before it serves. */
 export const receiveRecentKeys = ({ ctx }: { ctx: PeerReadContext }) =>
 	async function receive(context: Context<AtomHttpEnv>) {
 		const asked = peerRead<RecentKeysRequest>({ ctx, context });

@@ -10,15 +10,13 @@ import {
 	findFeatureById,
 } from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { IDEMPOTENCY_KEY_TTL_MS } from "../../../state/journal/idempotencyKeyTtl.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
-
-/** As long as the API holds a track's body key, so a command sent again inside it is applied once. */
-const TRACK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 
 /** The worker's claim. Never on the caller's key as the request id: that is the claim's owner, and an owner claiming again is resumed. */
 const claimOf = ({ key }: { key: string }) => ({
 	key,
-	ttlMs: TRACK_IDEMPOTENCY_TTL_MS,
+	ttlMs: IDEMPOTENCY_KEY_TTL_MS,
 });
 
 /**

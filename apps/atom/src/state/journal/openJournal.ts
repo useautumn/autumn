@@ -13,6 +13,7 @@ import {
 } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
+import { IDEMPOTENCY_KEY_TTL_MS } from "./idempotencyKeyTtl.js";
 import type {
 	HandedEntry,
 	Journal,
@@ -29,8 +30,6 @@ export const MAX_OWED_PER_CUSTOMER = 20_000;
 export const MAX_UNSENT_AGE_MS = 5 * 60_000;
 export const MAX_UNSENT_PER_THREAD = 50_000;
 
-/** A caller's key is held this long after its append; past it the row is only waiting for the prune. */
-export const KEY_ROW_TTL_MS = 90 * 60_000;
 const PRUNE_EVERY_MS = 60_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
@@ -371,7 +370,7 @@ export const openJournal = ({
 				ctx,
 				customerId,
 				key,
-				appendedSince: now() - KEY_ROW_TTL_MS,
+				appendedSince: now() - IDEMPOTENCY_KEY_TTL_MS,
 			})
 		);
 	}
@@ -396,7 +395,7 @@ export const openJournal = ({
 	}): JournalKeyRow[] {
 		return readRecentJournalKeys({
 			ctx,
-			appendedSince: now() - KEY_ROW_TTL_MS,
+			appendedSince: now() - IDEMPOTENCY_KEY_TTL_MS,
 			after,
 			limit,
 		});
@@ -405,7 +404,7 @@ export const openJournal = ({
 	let closed = false;
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
-		const appendedBefore = String(now() - KEY_ROW_TTL_MS);
+		const appendedBefore = String(now() - IDEMPOTENCY_KEY_TTL_MS);
 		while (!closed) {
 			const pruned = await file.write("pruneJournalKeys", appendedBefore);
 			if (Number(pruned) < PRUNE_CHUNK) return;
