@@ -46,7 +46,12 @@ function emit(event: string, fields: Record<string, unknown> = {}): void {
 function ignoreLog(): void {}
 const logger = {
 	debug: ignoreLog,
-	info: ignoreLog,
+	/** Only structured lines (the rejoin's `balance_worker.*` events); the rest is noise here. */
+	info: (...args: unknown[]) => {
+		const [first] = args;
+		if (typeof first === "object" && first !== null && "event" in first)
+			emit("log.info", { args: describe(args) });
+	},
 	warn: (...args: unknown[]) => emit("log.warn", { args: describe(args) }),
 	error: (...args: unknown[]) => emit("log.error", { args: describe(args) }),
 };
@@ -200,7 +205,11 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+		groupId: event.payload.groupId,
+	}),
 );
 
 const slotGate =

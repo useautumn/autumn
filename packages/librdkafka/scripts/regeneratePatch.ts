@@ -19,6 +19,7 @@ for (const patch of [
 	"bunUvToNapi.patch",
 	"brokerWakeup.patch",
 	"consumeErrorAfterRecords.patch",
+	"fatalErrorCause.patch",
 	"lockPoolThreadCalls.patch",
 ]) {
 	await $`patch -p1 --forward --silent -i ${join(patches, patch)}`.cwd(target);

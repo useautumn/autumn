@@ -18,7 +18,7 @@ Needs a C/C++ toolchain, Python 3 and Perl (macOS: Xcode command line tools).
 ## The patch
 
 `patches/@confluentinc%2Fkafka-javascript@1.10.0.patch` at the repo root is applied by `bun install`.
-It is five patches, kept here for provenance:
+It is six patches, kept here for provenance:
 
 - `patches/pr471.patch`: upstream PR #471 (NAN → N-API) at `47334c9`, verbatim.
 - `patches/bunUvToNapi.patch`: ours. Bun implements only `uv_mutex_*` of libuv; the addon's rwlocks,
@@ -30,6 +30,9 @@ It is five patches, kept here for provenance:
 - `patches/consumeErrorAfterRecords.patch`: ours. A batch consume that read an error after it already held
   records returned the records and dropped the error. librdkafka raises a consumer's fatal error exactly once,
   so the consumer stayed up owning nothing; the next consume now returns it.
+- `patches/fatalErrorCause.patch`: ours. librdkafka queues a fatal error as a bare `ERR__FATAL` and keeps its
+  cause on the handle. A consume now returns the cause (`GROUP_AUTHORIZATION_FAILED`, `FENCED_INSTANCE_ID`, …) with
+  `isFatal: true`, so an owner can tell a broker refusal it should wait out from a client it should replace.
 - `patches/lockPoolThreadCalls.patch`: ours. A consumer's seek, commit, committed and position run on pool
   threads and took no lock, so a disconnect could free the client under them; they now share the connection
   lock as consume does. Admin requests held it exclusively across their network wait, serializing every
