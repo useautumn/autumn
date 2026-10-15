@@ -1190,4 +1190,19 @@ describe("group protocol", () => {
 		},
 		{ timeout: STOP_LOOP_TIMEOUT_MS + 10_000 },
 	);
+	// A stop's bound must not outlive it: a pending timer kept every stopping worker alive for the full bound.
+	test("a stopped consumer leaves nothing that holds the process open", async () => {
+		const child = Bun.spawn(
+			[
+				"bun",
+				new URL("./fixtures/consumerStopExits.ts", import.meta.url).pathname,
+			],
+			{ stdout: "pipe", stderr: "inherit" },
+		);
+		const output = await new Response(child.stdout).text();
+		const stoppedAt = Number(/stopped (\d+)/.exec(output)?.[1]);
+		await child.exited;
+		expect(child.exitCode).toBe(0);
+		expect(Date.now() - stoppedAt).toBeLessThan(2_000);
+	});
 });
