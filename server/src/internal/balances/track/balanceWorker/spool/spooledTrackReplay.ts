@@ -1,6 +1,13 @@
+import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import { BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS } from "@autumn/env/balanceWorkerConstants";
 import type { TrackParams } from "@autumn/shared";
+import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
+import { trackParamsToTrackCommands } from "../balanceWorkerTrackRequest.js";
+
+type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
 /** Retried rather than dropped, so the queue's redrive parks it in the DLQ: replaying could deduct twice, dropping could lose it. */
 export class SpooledTrackTooOldError extends Error {
@@ -12,7 +19,7 @@ export class SpooledTrackTooOldError extends Error {
 	}
 }
 
-export function assertSpooledTrackReplayable({
+function assertSpooledTrackReplayable({
 	ctx,
 	body,
 	spooledAt,
@@ -36,37 +43,62 @@ export function assertSpooledTrackReplayable({
 	throw new SpooledTrackTooOldError({ ageMs });
 }
 
-/** A replay on Redis crossed engines: if the original append landed late, the worker applied it too. */
-export function logSpooledTrackDrained({
+/** Re-appends the exact commands the stalled append carried, onto the same command-log partition. The worker
+ *  decides both copies in log order under one command id, so whichever lands second is a no-op. */
+export async function replaySpooledTrack({
+	ctx,
+	body,
+	tokens,
+	spooledAt,
+	client = getBalanceWorkerClient(),
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	tokens?: TokenDeduction;
+	spooledAt: number;
+	client?: QueueClient;
+}): Promise<void> {
+	assertSpooledTrackReplayable({ ctx, body, spooledAt });
+	const commands = trackParamsToTrackCommands({
+		ctx,
+		body,
+		recordsCreditCost: tokens !== undefined,
+	});
+	await client.queue.track({ commands });
+	logSpooledTrackDrained({ ctx, body, spooledAt });
+}
+
+function logSpooledTrackDrained({
 	ctx,
 	body,
 	spooledAt,
-	onWorker,
-	alreadyApplied,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	spooledAt: number;
-	onWorker: boolean;
-	alreadyApplied: boolean;
 }): void {
+	const routedToWorker = isBalanceWorkerRolloutEnabled({
+		ctx,
+		customerId: body.customer_id,
+	});
 	const fields = {
 		type: "balance_worker_track_spool_drained",
 		drain_lag_ms: Date.now() - spooledAt,
-		drain_engine: onWorker ? "worker" : "redis",
-		already_applied: alreadyApplied,
+		drain_engine: "command_log",
+		routed_to_worker: routedToWorker,
 		feature_id: body.feature_id,
 		event_name: body.event_name,
 	};
-	if (onWorker) {
+	if (routedToWorker) {
 		ctx.logger.info(
-			"[track] spooled track drained on the balance worker",
+			"[track] spooled track re-appended to the command log",
 			fields,
 		);
 		return;
 	}
+	// The original may already be on the worker's log, so Redis would apply it a second time.
 	ctx.logger.warn(
-		"[track] spooled worker track drained on Redis after a routing change",
+		"[track] spooled track re-appended to the command log after its customer moved off the worker",
 		fields,
 	);
 }

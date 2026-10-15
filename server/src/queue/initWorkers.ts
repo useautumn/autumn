@@ -40,6 +40,7 @@ import { shutdownSqsSendBatchers } from "./queueUtils.js";
 import { getQueueRetryBudget } from "./retryBudget/getQueueRetryBudget.js";
 import { reportJobTimeout } from "./retryBudget/reportJobTimeout.js";
 import type { RetryBudget } from "./retryBudget/types/retryBudget.js";
+import { spooledTrackRedeliveryDelaySeconds } from "./spooledTrackRedelivery.js";
 import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
@@ -326,6 +327,39 @@ export const startPollingLoop = async ({
 		);
 	};
 
+	const delaySpooledTrackRedelivery = async ({
+		sqs,
+		message,
+		job,
+		error,
+	}: {
+		sqs: SQSClient;
+		message: Message;
+		job: SqsJob;
+		error: unknown;
+	}) => {
+		const delaySeconds = spooledTrackRedeliveryDelaySeconds({
+			job,
+			error,
+			receiveCount: Number(message.Attributes?.ApproximateReceiveCount),
+		});
+		if (delaySeconds === null || !message.ReceiptHandle) return;
+		try {
+			await sqs.send(
+				new ChangeMessageVisibilityCommand({
+					QueueUrl: queueUrl,
+					ReceiptHandle: message.ReceiptHandle,
+					VisibilityTimeout: delaySeconds,
+				}),
+			);
+		} catch (visibilityError) {
+			// The receive's own visibility still redelivers it, only sooner.
+			logger.warn(`${prefix} could not delay a spooled track's redelivery`, {
+				error: visibilityError,
+			});
+		}
+	};
+
 	const handleSingleMessage = async ({
 		sqs,
 		message,
@@ -377,6 +411,7 @@ export const startPollingLoop = async ({
 				});
 			}
 		} catch (error) {
+			await delaySpooledTrackRedelivery({ sqs, message, job, error });
 			if (override?.ack !== "always-after-processing") throw error;
 
 			// The next scan rediscovers the work, so this attempt's failure is absorbed.
