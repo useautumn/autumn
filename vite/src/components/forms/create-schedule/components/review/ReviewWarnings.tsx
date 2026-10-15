@@ -1,6 +1,6 @@
 import type { SetPlansPreviewWarning, SetPlansTextPart } from "@autumn/shared";
-import { Alert, StatusChipIcon } from "@autumn/ui";
 import { SetPlansTextLine } from "@/components/forms/shared/errors/SetPlansTextLine";
+import { WarningBanner } from "@/components/forms/shared/WarningBanner";
 
 /** Changes that remove or lose something, charge now, or move when billing starts get a banner; the review sections already show the rest. */
 const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
@@ -47,35 +47,18 @@ export function ReviewWarnings({
 	const bannerWarnings = warnings.filter((warning) =>
 		BANNER_WARNING_TYPES.has(warning.type),
 	);
-	if (bannerWarnings.length === 0) return null;
-
 	const isInfoOnly = bannerWarnings.every(
 		(warning) => warning.severity === "info",
 	);
-	const lines = toBannerLines(bannerWarnings);
 
 	return (
-		<div className="px-4 pt-4">
-			<Alert
-				variant={isInfoOnly ? "default" : "warning"}
-				className="gap-0.5 p-1.5"
-			>
-				{lines.map((line) => (
-					<div
-						key={line.message}
-						className="flex items-center gap-2.5 px-2 py-1.5"
-					>
-						<StatusChipIcon
-							tone={isInfoOnly ? "neutral" : "amber"}
-							glyph="alert"
-						/>
-						<span>
-							<BannerLineText line={line} />
-						</span>
-					</div>
-				))}
-			</Alert>
-		</div>
+		<WarningBanner
+			lines={toBannerLines(bannerWarnings).map((line) => ({
+				key: line.message,
+				severity: isInfoOnly ? "info" : "warning",
+				content: <BannerLineText line={line} />,
+			}))}
+		/>
 	);
 }
 

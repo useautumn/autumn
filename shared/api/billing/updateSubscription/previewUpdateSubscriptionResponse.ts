@@ -31,11 +31,6 @@ export const PreviewUpdateSubscriptionResponseSchema =
 	BillingPreviewResponseSchema.extend({
 		object: z.literal("update_subscription_preview").meta({ internal: true }),
 		intent: z.enum(UpdateSubscriptionPreviewIntent),
-		/** Set when the update applies a pending plan that replaces this live plan. */
-		replaces_plan: z
-			.object({ name: z.string() })
-			.optional()
-			.meta({ internal: true }),
 		tax: PreviewTaxSchema.optional(),
 		invoice_credits: PreviewInvoiceCreditsSchema.optional(),
 	});

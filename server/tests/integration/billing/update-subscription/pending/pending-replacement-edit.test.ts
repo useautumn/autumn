@@ -189,7 +189,6 @@ test.concurrent(
 				edit,
 			);
 		expect(preview.total).toBe(unchanged.total - 2000);
-		expect(preview.replaces_plan).toEqual({ name: live.product.name });
 
 		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
 			edit,
@@ -280,7 +279,6 @@ for (const onEntity of [false, true]) {
 					cancel,
 				);
 			expect(preview.total).toBe(0);
-			expect(preview.replaces_plan).toBeUndefined();
 			expect(
 				preview.line_items.filter(
 					(lineItem: { total: number }) => lineItem.total !== 0,
