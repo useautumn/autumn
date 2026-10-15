@@ -1,5 +1,6 @@
+import { Database } from "bun:sqlite";
 import { spyOn } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
@@ -337,6 +338,29 @@ export const heldEverywhere = async (replica: Replica) =>
 	).flat();
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+/** The idempotency key rows in every journal file of the replica's folder, oldest first. */
+export const keyRowsOn = ({ dataDir }: { dataDir: string }) =>
+	readdirSync(dataDir)
+		.filter((file) => file.startsWith("journal-") && file.endsWith(".sqlite"))
+		.flatMap((file) => {
+			const database = new Database(join(dataDir, file), { readonly: true });
+			try {
+				return database
+					.query<{ customerId: string; appendedAt: number }, []>(
+						"SELECT customer_id AS customerId, appended_at AS appendedAt FROM journal_keys",
+					)
+					.all();
+			} finally {
+				database.close();
+			}
+		})
+		.sort((left, right) => left.appendedAt - right.appendedAt);
+
+/** Waits up to a second for a relay to land; the assertion after it says whether one did. */
+export const relayLanded = async (landed: () => boolean) => {
+	for (let tries = 0; tries < 500 && !landed(); tries++) await Bun.sleep(2);
+};
 
 /**
  * Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from, and
