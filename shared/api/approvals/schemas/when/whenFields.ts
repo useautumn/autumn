@@ -1,12 +1,12 @@
-import { arrayFilter } from "@api/common/filters/arrayFilter";
+import { z } from "zod/v4";
+import { arrayFilter } from "../../../common/filters/arrayFilter";
 import {
 	NumberMatcherSchema,
 	nullableObjectFilter,
 	StringMatcherSchema,
-} from "@api/common/filters/matcher";
-import { CustomerFilterSchema } from "@api/migrations/filters/customerFilter";
-import { PlanFilterSchema } from "@api/migrations/filters/planFilter";
-import { z } from "zod/v4";
+} from "../../../common/filters/matcher";
+import { CustomerFilterSchema } from "../../../migrations/filters/customerFilter";
+import { PlanFilterSchema } from "../../../migrations/filters/planFilter";
 
 /** Quantifiers an array filter must use explicitly in a rule. */
 export const ARRAY_QUANTIFIERS = ["$some", "$every", "$none"];

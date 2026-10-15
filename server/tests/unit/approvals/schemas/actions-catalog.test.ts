@@ -12,6 +12,8 @@ import {
 	APPROVAL_AREAS,
 	type ApprovalAction,
 	MODERN_SCOPES,
+	WHEN_FIELD_LABELS,
+	WHEN_SHAPES,
 } from "@autumn/shared";
 
 /** The When fields board: area → action → which `when` fields it gets (null = who-only). */
@@ -97,5 +99,48 @@ describe("ACTIONS catalog", () => {
 
 	test("there is no checkout.create_link action (checkout is a billing condition)", () => {
 		expect(actionIds).not.toContain("checkout.create_link");
+	});
+
+	test("bare-verb areas carry a sentence label", () => {
+		const bareVerbAreas = [
+			"invoices",
+			"customers",
+			"api_keys",
+			"migrations",
+			"members",
+		];
+		for (const id of actionIds) {
+			const action: { area: string; label: string; sentence_label?: string } =
+				ACTIONS[id];
+			if (!bareVerbAreas.includes(action.area)) continue;
+			expect(action.sentence_label).toBeDefined();
+		}
+		expect(ACTIONS["invoices.create"]).toMatchObject({
+			sentence_label: "Create invoices",
+		});
+	});
+});
+
+describe("WHEN_FIELD_LABELS", () => {
+	test.each(Object.keys(WHEN_SHAPES) as (keyof typeof WHEN_SHAPES)[])(
+		"%s labels every top-level field",
+		(whenKey) => {
+			const labels: Record<string, string> = WHEN_FIELD_LABELS[whenKey];
+			const unlabelled = Object.keys(WHEN_SHAPES[whenKey]).filter(
+				(field) => !labels[field],
+			);
+			expect(unlabelled).toEqual([]);
+		},
+	);
+
+	test("board labels", () => {
+		expect(WHEN_FIELD_LABELS.billing_change).toMatchObject({
+			paid: "Charges customer",
+			checkout: "Sends checkout link",
+			total: "Due now",
+			"incoming.free_trial": "Free trial",
+		});
+		expect(WHEN_FIELD_LABELS.balance_update.included_grant).toBe("Included");
+		expect(WHEN_FIELD_LABELS.invoice.refund).toBe("Refund or credit amount");
 	});
 });

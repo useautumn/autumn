@@ -1,15 +1,15 @@
-import { arrayFilter } from "@api/common/filters/arrayFilter";
+import { z } from "zod/v4";
+import { arrayFilter } from "../../../common/filters/arrayFilter";
 import {
 	BooleanMatcherSchema,
 	enumMatcher,
 	NumberMatcherSchema,
 	nullableObjectFilter,
-} from "@api/common/filters/matcher";
+} from "../../../common/filters/matcher";
 import {
 	type PlanFilter,
 	PlanFilterSchema,
-} from "@api/migrations/filters/planFilter";
-import { z } from "zod/v4";
+} from "../../../migrations/filters/planFilter";
 import { IdMatcherSchema } from "./whenFields";
 
 const FreeTrialFilterSchema = nullableObjectFilter(

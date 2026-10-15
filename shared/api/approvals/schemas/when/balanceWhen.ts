@@ -1,11 +1,11 @@
+import { z } from "zod/v4";
+import { ResetInterval } from "../../../../models/productModels/intervals/resetInterval";
 import {
 	BooleanMatcherSchema,
 	enumMatcher,
 	NumberMatcherSchema,
 	nullableObjectFilter,
-} from "@api/common/filters/matcher";
-import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { z } from "zod/v4";
+} from "../../../common/filters/matcher";
 import { buildWhenSchema, type WhenOf } from "./buildWhenSchema";
 import { RelativeDateMatcherSchema, sharedWhenFields } from "./whenFields";
 

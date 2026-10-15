@@ -8,6 +8,7 @@ export * from "./schemas/when/customerWhen";
 export * from "./schemas/when/invoiceWhen";
 export * from "./schemas/when/planChangeFilter";
 export * from "./schemas/when/rewardWhen";
+export * from "./schemas/when/whenFieldLabels";
 export * from "./schemas/when/whenFields";
 export * from "./schemas/when/whenSchemas";
 export * from "./validate/types";

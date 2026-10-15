@@ -4,11 +4,10 @@ import {
 	APPROVAL_AREAS,
 	type ApprovalAction,
 } from "../actions/approvalActions";
+import { joinWithAnd } from "../utils/joinWithAnd";
 import { actionsToWhenSchema } from "./actionsToWhenSchema";
 import { findStrippedKeys } from "./findStrippedKeys";
 import { ARRAY_QUANTIFIERS } from "./when/whenFields";
-
-const listFormat = new Intl.ListFormat("en", { type: "conjunction" });
 
 const whenIssueMessage = ({ issue }: { issue: z.core.$ZodIssue }) =>
 	issue.code === "invalid_union"
@@ -29,9 +28,9 @@ export const checkRuleActionsAndWhen = (
 		...new Set(rule.actions.map((action) => ACTIONS[action].area)),
 	];
 	if (areas.length > 1) {
-		const areaLabels = listFormat.format(
-			areas.map((area) => APPROVAL_AREAS[area]),
-		);
+		const areaLabels = joinWithAnd({
+			items: areas.map((area) => APPROVAL_AREAS[area]),
+		});
 		ctx.addIssue({
 			code: "custom",
 			path: ["actions"],
@@ -44,9 +43,9 @@ export const checkRuleActionsAndWhen = (
 
 	const whenSchema = actionsToWhenSchema({ actions: rule.actions });
 	if (!whenSchema) {
-		const actionLabels = listFormat.format(
-			rule.actions.map((action) => ACTIONS[action].label),
-		);
+		const actionLabels = joinWithAnd({
+			items: rule.actions.map((action) => ACTIONS[action].label),
+		});
 		ctx.addIssue({
 			code: "custom",
 			path: ["when"],
