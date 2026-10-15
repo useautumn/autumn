@@ -59,6 +59,7 @@ export const setupStripeInvoicePaidContext = async ({
 			ctx,
 			customerProducts,
 			stripeSubscriptionId,
+			internalCustomerId: fullCustomer.internal_id,
 		});
 
 		fullCustomer.customer_products = customerProducts;
