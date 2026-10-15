@@ -272,6 +272,16 @@ console.log(
 	JSON.stringify({
 		type: "keys",
 		...keys,
+		// Each key's first send, compact, so a key the stub never applied can be traced to where it was answered.
+		firsts: [...sendsOf].map(([key, [first]]) => [
+			key,
+			first?.second,
+			first?.owner,
+			first?.to,
+			first?.status,
+			first?.proxied ?? "",
+			first?.forwarded ?? "",
+		]),
 		// Only keys sent more than once or left to the API: a key applied twice is one of them, or was sent once.
 		sends: Object.fromEntries(
 			[...sendsOf].filter(
