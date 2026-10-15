@@ -9,6 +9,7 @@ export async function receiveFinalize(context: Context<AtomHttpEnv>) {
 		body: context.get("body"),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
 		...arrivalOf(context),
+		movedFrom: context.get("movedFrom") ?? null,
 	});
 	const answer = await context
 		.get("slots")

@@ -85,6 +85,10 @@ export const createSlotProcessor = ({
 		},
 		finalize: async ({ request }) => {
 			refuseUnwritten(request.params);
+			await awaitHandoff({
+				customerId: request.params.customer_id,
+				movedFrom: request.movedFrom,
+			});
 			return finalize({ ctx, request });
 		},
 		setSubject: async (params) => {
