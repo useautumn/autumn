@@ -136,6 +136,8 @@ test.concurrent(
 			before,
 			targetVersion: 2,
 			result,
+			// Customized Messages (10) differs from v2's catalog (5), so the row is custom.
+			isCustom: true,
 		});
 
 		const messagesAfter = await readScopedFeatureRow({

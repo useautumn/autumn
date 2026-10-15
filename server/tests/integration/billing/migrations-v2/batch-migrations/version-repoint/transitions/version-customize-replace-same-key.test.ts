@@ -91,6 +91,8 @@ test.concurrent(
 			before,
 			targetVersion: 2,
 			result,
+			// Messages 200 and Words 25 differ from v2's 500 and 50, so the row is custom.
+			isCustom: true,
 		});
 
 		// Messages lands on the customize's 200 — not the target catalog's 500.
