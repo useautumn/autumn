@@ -39,7 +39,7 @@ function createFakeNative() {
 	const committed = new Map<string, number>();
 	const watermark = { highOffset: 100 };
 	const committedOutcomes: (NativeKafkaError | null)[] = [];
-	const gate: { held?: Promise<void> } = {};
+	const gate: { held?: Promise<void>; seek?: Promise<void> } = {};
 	let rebalance: NativeRebalanceCallback | undefined;
 	let consumeWaiter: (() => void) | undefined;
 
@@ -144,6 +144,14 @@ function createFakeNative() {
 		seek(position, _timeout, done) {
 			seeks.push(position);
 			const outcome = seekOutcomes.shift() ?? null;
+			const held = gate.seek;
+			if (held) {
+				void held.then(() => {
+					calls.push("seeked");
+					done(outcome);
+				});
+				return;
+			}
 			queueMicrotask(() => done(outcome));
 		},
 		pause(partitions) {
@@ -1028,5 +1036,28 @@ describe("librdkafka consumer runner", () => {
 		await until(() => fake.seeks.length > 0);
 		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 3 });
 		await consumer.disconnect();
+	});
+
+	// A seek runs on a native pool thread; freeing the client under it is a use-after-free.
+	test("disconnect waits for a seek still running natively before closing the client", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.assignments.length > 0);
+		const seekDone = Promise.withResolvers<void>();
+		fake.gate.seek = seekDone.promise;
+		consumer.seek({ topic, partition: 0, offset: "4" });
+		const closing = consumer.disconnect();
+		await Bun.sleep(30);
+		expect(fake.calls).not.toContain("disconnect");
+		seekDone.resolve();
+		await closing;
+		expect(fake.calls.indexOf("seeked")).toBeLessThan(
+			fake.calls.indexOf("disconnect"),
+		);
 	});
 });

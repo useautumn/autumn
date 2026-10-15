@@ -23,10 +23,19 @@ test("an idempotent producer keeps the whole retry window", () => {
 });
 
 // The KafkaJS shim sets `retries` to 5 unless told otherwise, and librdkafka would honour it.
-test("the producer's own retry count reaches librdkafka", () => {
+test("a plain producer's own retry count reaches librdkafka", () => {
 	const config = nativeProducerConfigOf({
-		config: { idempotent: true, retry: { retries: 10 } },
+		config: { retry: { retries: 10 } },
 		defaults,
 	});
 	expect(config.retries).toBe(10);
+});
+
+// Exhausted retries fail a possibly-written record with a broker code; only the timeout should end it.
+test("an idempotent producer retries until its message timeout, never for a count", () => {
+	for (const config of [{ idempotent: true }, { transactionalId: "owner-3" }]) {
+		expect(nativeProducerConfigOf({ config, defaults }).retries).toBe(
+			2_147_483_647,
+		);
+	}
 });

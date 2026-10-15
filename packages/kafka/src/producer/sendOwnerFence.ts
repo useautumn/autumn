@@ -1,4 +1,4 @@
-import { isKafkaProtocolError } from "../client/kafkaErrorClassification.js";
+import { isKafkaRefusalOfUnwritten } from "../client/kafkaErrorClassification.js";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -63,7 +63,7 @@ export async function sendOwnerFence({
 			acks: -1,
 		});
 	} catch (cause) {
-		if (isKafkaProtocolError({ cause })) {
+		if (isKafkaRefusalOfUnwritten({ cause })) {
 			throw new KafkaBatchNotCommittedError({ cause });
 		}
 		throw new KafkaTransactionStateUnknownError({

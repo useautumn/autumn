@@ -136,7 +136,7 @@ function reseekRacedPartitions({
 
 /** librdkafka sets a seek's barrier only when its pool thread runs it; until then a poll can still return
  *  records from before the seek, so no poll starts while a seek is on its way. */
-async function settleSeeks({
+export async function settleSeeks({
 	scope,
 }: {
 	scope: ConsumerRunnerScope;
