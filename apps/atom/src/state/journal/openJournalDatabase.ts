@@ -42,6 +42,50 @@ const createJournalSchema = ({ database }: { database: Database }) => {
 		.run({ writerId: crypto.randomUUID() });
 };
 
+/**
+ * BENCH ONLY: the rolling-handover build keys entries by writer too, at the same schema version. A file it reshaped goes
+ * back to this shape; a peer's entries become this writer's, numbered after the customer's last seq.
+ */
+const removeWriterIds = ({ database }: { database: Database }) => {
+	const columns = database
+		.query<{ name: string }, []>("PRAGMA table_info(journal_entries)")
+		.all()
+		.map(({ name }) => name);
+	if (!columns.includes("writer_id")) return;
+	database.transaction(() => {
+		database.run(`
+			CREATE TABLE journal_entries_prev (
+				customer_id TEXT NOT NULL,
+				seq INTEGER NOT NULL CHECK (seq > 0),
+				appended_at INTEGER NOT NULL,
+				command_json TEXT NOT NULL,
+				PRIMARY KEY (customer_id, seq)
+			) WITHOUT ROWID
+		`);
+		database.run(`
+			INSERT INTO journal_entries_prev (customer_id, seq, appended_at, command_json)
+			SELECT customer_id, seq, appended_at, command_json FROM journal_entries
+			WHERE writer_id = (SELECT writer_id FROM journal_meta WHERE id = 1)
+		`);
+		database.run(`
+			INSERT INTO journal_entries_prev (customer_id, seq, appended_at, command_json)
+			SELECT customer_id,
+				coalesce((SELECT last_seq FROM journal_seqs WHERE journal_seqs.customer_id = foreign_entries.customer_id), 0)
+					+ row_number() OVER (PARTITION BY customer_id ORDER BY appended_at, writer_id, seq),
+				appended_at, command_json
+			FROM journal_entries AS foreign_entries
+			WHERE writer_id != (SELECT writer_id FROM journal_meta WHERE id = 1)
+		`);
+		database.run(`
+			INSERT INTO journal_seqs (customer_id, last_seq)
+			SELECT customer_id, max(seq) FROM journal_entries_prev GROUP BY customer_id
+			ON CONFLICT (customer_id) DO UPDATE SET last_seq = max(last_seq, excluded.last_seq)
+		`);
+		database.run("DROP TABLE journal_entries");
+		database.run("ALTER TABLE journal_entries_prev RENAME TO journal_entries");
+	})();
+};
+
 /** A slot's journal: the deductions the Atom granted and has not yet seen Autumn apply, kept as lightly as the slot's subjects. */
 export const openJournalDatabase = ({
 	databasePath,
@@ -54,6 +98,7 @@ export const openJournalDatabase = ({
 		dropSchema: dropJournalSchema,
 		createSchema: createJournalSchema,
 	});
+	removeWriterIds({ database });
 	createJournalKeysTable({ database });
 	// Additive like journal_keys: a file from an earlier build gains it on open, and its rows with an inline org still read.
 	database.run(`
