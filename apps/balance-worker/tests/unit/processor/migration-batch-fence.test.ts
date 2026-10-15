@@ -17,6 +17,9 @@ import { createCommitterStateStore } from "../../../src/committer/createCommitte
 import type { Committer } from "../../../src/committer/types/committer.js";
 import type { MigrationLaneItem } from "../../../src/processor/commands/applyMigrationBatch/types/migrationLaneItem.js";
 import { createPartitionProcessor } from "../../../src/processor/createPartitionProcessor.js";
+import { hydrateSubject } from "../../../src/processor/subject/actions/ensureSubject/hydrateSubject.js";
+import { createInFlightLoads } from "../../../src/processor/subject/inFlightLoads/createInFlightLoads.js";
+import type { SubjectScope } from "../../../src/processor/subject/types/subject.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createSubjectMap } from "../../../src/processor/writer/subjectMap/createSubjectMap.js";
 import type { WorkerDb } from "../../../src/types/workerDb.js";
@@ -77,11 +80,14 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
 const createLaneProcessor = async ({
 	coldApply,
 	readRows,
+	openItemRuns,
 }: {
 	coldApply: ColdApply;
 	readRows?: (customerId: string) => Promise<SubjectRowsEnvelope | null>;
+	openItemRuns?: () => Set<string>;
 }) => {
 	const events: string[] = [];
+	const loggedTypes: string[] = [];
 	const committer: Committer = {
 		apply: async ({ records, expectedOffset }) => ({
 			nextOffset: (records.at(-1)?.position.offset ?? expectedOffset - 1n) + 1n,
@@ -118,6 +124,9 @@ const createLaneProcessor = async ({
 			return result;
 		},
 		markMigrationItemRunsSucceeded: async ({ runs }) => runs.length,
+		...(openItemRuns && {
+			readOpenMigrationItemRuns: async () => openItemRuns(),
+		}),
 	};
 	const processor = createPartitionProcessor({
 		ctx: {
@@ -131,6 +140,8 @@ const createLaneProcessor = async ({
 			db,
 			appender: {
 				appendCommitted: async ({ outcomes }) => {
+					for (const outcome of outcomes)
+						loggedTypes.push(outcome.command.type);
 					const baseOffset = appended;
 					appended += BigInt(outcomes.length);
 					return { baseOffset };
@@ -145,7 +156,8 @@ const createLaneProcessor = async ({
 	});
 	await processor.initialize({ request: createInitializeRequest() });
 	await processor.drain();
-	return { processor, events };
+	loggedTypes.length = 0;
+	return { processor, events, loggedTypes };
 };
 
 const deleteGrantItem = ({
@@ -336,7 +348,7 @@ describe("migration batch fence", () => {
 		expect(retried).toMatchObject({ cold: 1, coldApplied: 1, coldFailed: 0 });
 	});
 
-	test("a customer appearing twice in one batch is written cold once", async () => {
+	test("a record delivered twice in one batch is applied once", async () => {
 		const { processor, events } = await createLaneProcessor({
 			coldApply: async ({ batch }) => appliedResult({ batch }),
 		});
@@ -348,14 +360,14 @@ describe("migration batch fence", () => {
 			],
 		});
 
-		expect(outcome).toMatchObject({ cold: 1, resident: 1 });
+		expect(outcome).toMatchObject({ cold: 1, resident: 0 });
 		expect(events.filter((event) => event === "cold:cus_twice")).toHaveLength(
 			1,
 		);
 	});
 
-	test("an applied cold customer never becomes resident", async () => {
-		const { processor } = await createLaneProcessor({
+	test("an applied cold customer never becomes resident and is logged as an evict", async () => {
+		const { processor, loggedTypes } = await createLaneProcessor({
 			coldApply: async ({ batch }) => appliedResult({ batch }),
 		});
 		const before = processor.readSubjectMapUsage();
@@ -368,6 +380,100 @@ describe("migration batch fence", () => {
 		expect(processor.readSubjectMapUsage().residentSubjects).toBe(
 			before.residentSubjects,
 		);
+		expect(loggedTypes).toEqual(["evict"]);
+	});
+
+	test("a cold write that fails for a reason other than the forced rollback is redelivered, with its fence released", async () => {
+		let fails = true;
+		const { processor, events } = await createLaneProcessor({
+			coldApply: async ({ batch }) => {
+				if (!fails) return appliedResult({ batch });
+				fails = false;
+				throw new Error("deadlock detected");
+			},
+		});
+
+		await expect(
+			processor.applyMigrationBatch?.({
+				items: [deleteGrantItem({ customerId: "cus_cold" })],
+			}) ?? Promise.resolve(),
+		).rejects.toThrow("redelivered");
+		const redelivered = await processor.applyMigrationBatch?.({
+			items: [deleteGrantItem({ customerId: "cus_cold" })],
+		});
+
+		expect(redelivered).toMatchObject({ cold: 1, coldApplied: 1 });
+		expect(events.filter((event) => event === "read:cus_cold")).toEqual([]);
+	});
+
+	test("a redelivered record whose item run already settled is not applied again, but is logged as an evict", async () => {
+		const { processor, events, loggedTypes } = await createLaneProcessor({
+			coldApply: async ({ batch }) => appliedResult({ batch }),
+			openItemRuns: () => new Set(),
+		});
+
+		const outcome = await processor.applyMigrationBatch?.({
+			items: [deleteGrantItem({ customerId: testIdentity.customerId })],
+		});
+
+		expect(outcome).toMatchObject({ alreadySettled: 1, cold: 0, resident: 0 });
+		expect(events.filter((event) => event.startsWith("cold:"))).toEqual([]);
+		expect(loggedTypes).toEqual(["evict"]);
+	});
+
+	test("a load whose read has finished but whose rows are not kept yet is not cold", async () => {
+		const rows = gate();
+		const { processor, events } = await createLaneProcessor({
+			coldApply: async ({ batch }) => appliedResult({ batch }),
+			readRows: async (customerId) => {
+				await rows.promise;
+				return envelopeOf(customerId);
+			},
+		});
+
+		const read = processor.readSubjectState({
+			command: readStateCommand("cus_racing"),
+		});
+		await tick();
+		rows.open();
+		const batch = processor.applyMigrationBatch?.({
+			items: [deleteGrantItem({ customerId: "cus_racing" })],
+		});
+		await read;
+		const outcome = await batch;
+
+		expect(outcome).toMatchObject({ cold: 0, resident: 1 });
+		expect(events.filter((event) => event.startsWith("cold:"))).toEqual([]);
+	});
+
+	test("an initialize for a fenced customer is refused", async () => {
+		const commit = gate();
+		const { processor } = await createLaneProcessor({
+			coldApply: async ({ batch }) => {
+				await commit.promise;
+				return appliedResult({ batch });
+			},
+		});
+		const batch = processor.applyMigrationBatch?.({
+			items: [deleteGrantItem({ customerId: "cus_cold" })],
+		});
+		await tick();
+
+		const request = createInitializeRequest();
+		const fencedRequest = {
+			...request,
+			command: {
+				...request.command,
+				commandId: "init_fenced",
+				identity: identityOf("cus_cold"),
+			},
+			state: { ...request.state, identity: identityOf("cus_cold") },
+		};
+		await expect(
+			processor.initialize({ request: fencedRequest }),
+		).rejects.toThrow("being migrated");
+		commit.open();
+		await batch;
 	});
 });
 
@@ -416,5 +522,44 @@ describe("evicted then migrated", () => {
 
 		expect(outcome).toMatchObject({ cold: 1, coldApplied: 1 });
 		expect(events).toContain(`cold:${testIdentity.customerId}`);
+	});
+});
+
+describe("load reservation", () => {
+	test("a customer still counts as loading while its read rows are being kept", async () => {
+		const identity = identityOf("cus_keeping");
+		const customerKey = meteringIdentityToPartitionKey({ identity });
+		const inFlightLoads = createInFlightLoads();
+		const loadingWhenKept: boolean[] = [];
+		const state = createInitializeRequest().state;
+		const scope = {
+			ctx: {
+				baseline: "map",
+				writer: {
+					waitForEvicted: () => null,
+					adopt: ({ state: kept }: { state: typeof state }) => {
+						loadingWhenKept.push(
+							inFlightLoads.loadingCustomer({ customerKey }),
+						);
+						return kept;
+					},
+				},
+			},
+			state: { inFlightLoads },
+		} as unknown as SubjectScope;
+
+		await hydrateSubject({
+			scope,
+			identity,
+			read: () =>
+				inFlightLoads.join({
+					subjectKey: meteringIdentityToSubjectKey({ identity }),
+					customerKey,
+					start: async () => ({ baseline: state, baselineAt: 1, bytes: 1 }),
+				}),
+		});
+
+		expect(loadingWhenKept).toEqual([true]);
+		expect(inFlightLoads.loadingCustomer({ customerKey })).toBe(false);
 	});
 });

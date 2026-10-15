@@ -186,6 +186,7 @@ export type PartitionsConfig = {
 	topic: string;
 	/** Held paused from assignment until the partition is admitted, so no command meets a runtime that is not ready. */
 	commandTopic?: string;
+	migrationTopic?: string;
 	healthRefreshIntervalMs: number;
 	partitionBootstrapRetryIntervalMs?: number;
 	/** How long a revoked partition keeps serving while it waits for a successor's `ready`. */

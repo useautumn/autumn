@@ -58,6 +58,20 @@ export const createInFlightLoads = (): InFlightLoads => {
 	return {
 		join: (params) => join({ entries, customerCounts, ...params }),
 		loadingCustomer: ({ customerKey }) => customerCounts.has(customerKey),
+		reserveCustomer: ({ customerKey }) => {
+			customerCounts.set(
+				customerKey,
+				(customerCounts.get(customerKey) ?? 0) + 1,
+			);
+			let released = false;
+			return () => {
+				if (released) return;
+				released = true;
+				const remaining = (customerCounts.get(customerKey) ?? 1) - 1;
+				if (remaining > 0) customerCounts.set(customerKey, remaining);
+				else customerCounts.delete(customerKey);
+			};
+		},
 		inFlight: ({ subjectKey }) => entries.get(subjectKey)?.promise ?? null,
 		overtakeCustomer: ({ customerKey }) =>
 			overtakeCustomer({ entries, customerKey }),

@@ -205,6 +205,11 @@ function pauseHandedOffCommands({
 }): void {
 	if (!ctx.config.commandTopic) return;
 	try {
+		if (ctx.config.migrationTopic)
+			ctx.consumer.pause({
+				topic: ctx.config.migrationTopic,
+				partitions: [partition],
+			});
 		ctx.consumer.pause({
 			topic: ctx.config.commandTopic,
 			partitions: [partition],

@@ -9,7 +9,7 @@ import type { PartitionRuntimePort } from "../../partitions/types/partitions.js"
 import type { MigrationLaneItem } from "../../processor/commands/applyMigrationBatch/types/migrationLaneItem.js";
 
 const MAX_ITEMS_PER_APPLY = 2_000;
-const RUNTIME_WAIT_MS = 30_000;
+const RUNTIME_WAIT_MS = 10_000;
 const RUNTIME_POLL_MS = 100;
 
 const migrationLaneRecordSchema = z
@@ -36,7 +36,10 @@ export function createMigrationRecordHandler({
 }: {
 	ctx: MigrationConsumerContext;
 }): TopicRecordHandler {
-	const buffered = new Map<number, MigrationLaneItem[]>();
+	const buffered = new Map<
+		number,
+		{ items: MigrationLaneItem[]; lastOffset: bigint }
+	>();
 
 	function readResumeOffset(): null {
 		return null;
@@ -62,9 +65,11 @@ export function createMigrationRecordHandler({
 			});
 			return;
 		}
-		const items = buffered.get(partition) ?? [];
+		const offset = BigInt(message.offset);
+		const held = buffered.get(partition);
+		const items = held && held.lastOffset < offset ? held.items : [];
 		items.push(item);
-		buffered.set(partition, items);
+		buffered.set(partition, { items, lastOffset: offset });
 	}
 
 	async function ownedRuntimeOf({
@@ -91,7 +96,7 @@ export function createMigrationRecordHandler({
 		topic: string;
 		partition: number;
 	}): Promise<void> {
-		const items = buffered.get(partition) ?? [];
+		const items = buffered.get(partition)?.items ?? [];
 		buffered.delete(partition);
 		for (let start = 0; start < items.length; start += MAX_ITEMS_PER_APPLY) {
 			const chunk = items.slice(start, start + MAX_ITEMS_PER_APPLY);
@@ -111,5 +116,9 @@ export function createMigrationRecordHandler({
 		}
 	}
 
-	return { readResumeOffset, applyRecord, settleBatch };
+	function resolvesOnSettle(): boolean {
+		return true;
+	}
+
+	return { readResumeOffset, applyRecord, settleBatch, resolvesOnSettle };
 }

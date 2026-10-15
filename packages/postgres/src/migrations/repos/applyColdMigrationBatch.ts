@@ -101,7 +101,7 @@ const lockSql = ({
 	)
 	SELECT CASE WHEN (SELECT count(*) FROM own) = 1
 		THEN (SELECT count(*) FROM ce_locked) + 0 * (SELECT count(*) FROM cp_locked) + 0 * (SELECT count(*) FROM runs_locked)
-		ELSE (${`${COLD_MIGRATION_NOT_OWNER_MARKER}${nonce}`}::text)::integer END AS locked`;
+		ELSE (${`${COLD_MIGRATION_NOT_OWNER_MARKER}${nonce}:`}::text || (SELECT count(*) FROM own))::integer END AS locked`;
 
 const applySql = ({ document }: { document: string }): SQL => sql`
 	WITH ${opsSql({ document })},
@@ -231,9 +231,12 @@ const lastResultRows = ({
 	(Array.isArray(results) ? results.at(-1) : results)?.rows ?? [];
 
 export class ColdMigrationBatchRolledBackError extends Error {
+	readonly reason: string;
+
 	constructor({ reason, cause }: { reason: string; cause: unknown }) {
 		super(`Cold migration batch rolled back: ${reason}`, { cause });
 		this.name = "ColdMigrationBatchRolledBackError";
+		this.reason = reason;
 	}
 }
 
@@ -282,7 +285,7 @@ export const applyColdMigrationBatch = async ({
 	if (lock === null || apply === null)
 		throw new Error("Cold migration batch has a value with no literal");
 	const forcedRollback = batch.forceRollback
-		? `; SELECT ('${COLD_MIGRATION_FORCED_ROLLBACK_MARKER}${nonce}'::text)::integer`
+		? `; SELECT ('${COLD_MIGRATION_FORCED_ROLLBACK_MARKER}${nonce}:' || count(*))::integer FROM customer_entitlements WHERE id = ''`
 		: "";
 	let results: StatementResult | StatementResult[];
 	try {
@@ -346,3 +349,60 @@ export const markMigrationItemRunsSucceeded = async ({
 	`);
 	return count.parse((rows[0] as { marked: unknown } | undefined)?.marked ?? 0);
 };
+
+/** The item runs among `runs` still waiting for their customer, so a redelivered record is never applied twice. */
+export const readOpenMigrationItemRuns = async ({
+	ctx,
+	runs,
+}: {
+	ctx: { db: Pick<PostgresDb, "execute"> };
+	runs: readonly {
+		migrationInternalId: string;
+		migrationRunId: string;
+		internalCustomerId: string;
+	}[];
+}): Promise<Set<string>> => {
+	if (runs.length === 0) return new Set();
+	const document = JSON.stringify(
+		runs.map((run) => ({
+			migration_internal_id: run.migrationInternalId,
+			migration_run_id: run.migrationRunId,
+			item_id: run.internalCustomerId,
+		})),
+	);
+	const { rows } = await ctx.db.execute(sql`
+		SELECT r.migration_internal_id, r.migration_run_id, r.item_id
+		FROM migration_item_runs r
+		JOIN jsonb_to_recordset(${document}::text::jsonb) AS a(migration_internal_id text, migration_run_id text, item_id text)
+			ON r.migration_internal_id = a.migration_internal_id
+			AND r.migration_run_id = a.migration_run_id
+			AND r.item_id = a.item_id
+		WHERE r.item_kind = 'customer' AND r.dry_run = false AND r.status = 'running'
+	`);
+	return new Set(
+		(
+			rows as {
+				migration_internal_id: string;
+				migration_run_id: string;
+				item_id: string;
+			}[]
+		).map((row) =>
+			itemRunKeyOf({
+				migrationInternalId: row.migration_internal_id,
+				migrationRunId: row.migration_run_id,
+				internalCustomerId: row.item_id,
+			}),
+		),
+	);
+};
+
+export const itemRunKeyOf = ({
+	migrationInternalId,
+	migrationRunId,
+	internalCustomerId,
+}: {
+	migrationInternalId: string;
+	migrationRunId: string;
+	internalCustomerId: string;
+}): string =>
+	JSON.stringify([migrationInternalId, migrationRunId, internalCustomerId]);

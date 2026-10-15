@@ -88,6 +88,7 @@ async function applyBatch({
 		return;
 	}
 
+	const resolvesOnSettle = ctx.handler.resolvesOnSettle?.({ topic }) ?? false;
 	for (const message of messages) {
 		if (
 			!payload.isRunning() ||
@@ -115,11 +116,22 @@ async function applyBatch({
 			});
 			return;
 		}
+		if (resolvesOnSettle) continue;
 		payload.resolveOffset(message.offset);
 		await payload.heartbeat();
 	}
 
 	await ctx.handler.settleBatch?.({ topic, partition });
+	const last = messages.at(-1);
+	if (resolvesOnSettle && last) {
+		if (
+			!payload.isRunning() ||
+			!hasCurrentBatchGeneration({ state, payload, generation })
+		)
+			return;
+		payload.resolveOffset(last.offset);
+		await payload.heartbeat();
+	}
 	await commitBatchOffsets({ ctx, state, payload, generation });
 }
 

@@ -234,6 +234,12 @@ export function createMeteringConsumer({
 		await secondaryHandlerOf(position)?.settleBatch?.(position);
 	}
 
+	function resolvesOnSettle({ topic }: { topic: string }): boolean {
+		return (
+			secondaryHandlerOf({ topic })?.resolvesOnSettle?.({ topic }) ?? false
+		);
+	}
+
 	// The handler kind is decided once here, never per record.
 	const handler: TopicConsumerHandler = isRecordsHandler(ctx.handler)
 		? { readResumeOffset, applyRecords: bindApplyRecords(ctx.handler) }
@@ -241,6 +247,7 @@ export function createMeteringConsumer({
 				readResumeOffset,
 				applyRecord: bindApplyRecord(ctx.handler),
 				settleBatch,
+				resolvesOnSettle,
 			};
 
 	return createTopicConsumer({

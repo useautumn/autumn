@@ -44,6 +44,8 @@ export type TopicRecordHandler = {
 		record: TopicRecord,
 	): TopicRecordResult | Promise<TopicRecordResult>;
 	settleBatch?(position: { topic: string; partition: number }): Promise<void>;
+	/** The topic's records are applied in settleBatch, so none is resolved before it returns. */
+	resolvesOnSettle?(position: { topic: string }): boolean;
 };
 
 /** One partition's records, in order, sized by `recordsPerSlice`; the handler heartbeats through a long apply. */

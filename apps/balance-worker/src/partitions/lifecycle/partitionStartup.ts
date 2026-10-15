@@ -27,6 +27,11 @@ async function resumeCommands({
 	ctx: AllocationScope["ctx"];
 	partition: number;
 }): Promise<void> {
+	if (ctx.config.migrationTopic)
+		await ctx.consumer.resume({
+			topic: ctx.config.migrationTopic,
+			partitions: [partition],
+		});
 	if (!ctx.config.commandTopic) return;
 	await ctx.consumer.resume({
 		topic: ctx.config.commandTopic,

@@ -21,6 +21,7 @@ import {
 	type PostgresClientConfig,
 	type PostgresLogger,
 	readEntitySubjectSnapshots,
+	readOpenMigrationItemRuns,
 	readPartitionProgress,
 	readSubjectSnapshot,
 	sumPooledContributionGrants,
@@ -91,6 +92,8 @@ export const createWorkerDb = ({
 }): WorkerDb => ({
 	applyColdMigrationBatch: ({ batch }) =>
 		applyColdMigrationBatch({ ctx: { db: ctx.postgres.db }, batch }),
+	readOpenMigrationItemRuns: ({ runs }) =>
+		readOpenMigrationItemRuns({ ctx: { db: ctx.postgres.db }, runs }),
 	markMigrationItemRunsSucceeded: ({ runs }) =>
 		markMigrationItemRunsSucceeded({ ctx: { db: ctx.postgres.db }, runs }),
 	getSubjectRows: ({ identity, asOfTimestampMs }) =>

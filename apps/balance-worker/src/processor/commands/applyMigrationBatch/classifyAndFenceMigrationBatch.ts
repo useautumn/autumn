@@ -81,5 +81,10 @@ export const classifyAndFenceMigrationBatch = ({
 	const release = scope.ctx.writer.fenceCustomers({
 		customerKeys: cold.map(({ customerKey }) => customerKey),
 	});
+	for (const { identity } of cold)
+		scope.ctx.subjectHydrator.refreshSnapshots({
+			customer: { ...identity, entityId: null },
+			subjects: [],
+		});
 	return { cold, resident, release };
 };

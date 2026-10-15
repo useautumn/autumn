@@ -220,6 +220,8 @@ function pauseAllocatedPartitions({
 		ctx.consumer.pause({ topic: ctx.config.topic, partitions });
 		if (ctx.config.commandTopic)
 			ctx.consumer.pause({ topic: ctx.config.commandTopic, partitions });
+		if (ctx.config.migrationTopic)
+			ctx.consumer.pause({ topic: ctx.config.migrationTopic, partitions });
 	} catch (cause) {
 		reportPartitionError({ ctx, cause });
 	}

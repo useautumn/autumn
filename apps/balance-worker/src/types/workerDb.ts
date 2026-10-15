@@ -51,6 +51,13 @@ export type WorkerDb = {
 	applyColdMigrationBatch?(params: {
 		batch: ColdMigrationBatch;
 	}): Promise<ColdMigrationBatchResult>;
+	readOpenMigrationItemRuns?(params: {
+		runs: readonly {
+			migrationInternalId: string;
+			migrationRunId: string;
+			internalCustomerId: string;
+		}[];
+	}): Promise<Set<string>>;
 	markMigrationItemRunsSucceeded?(params: {
 		runs: readonly {
 			migrationInternalId: string;

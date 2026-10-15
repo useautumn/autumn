@@ -83,6 +83,27 @@ const coldOpOf = ({ op }: { op: BillingPlanOp }): ColdMigrationOp | null => {
 	return null;
 };
 
+/** One grant's ops compose the same way in SQL as in the engine: a lone delete, or at most one update and then increments. */
+const composesLikeTheEngine = ({
+	ops,
+}: {
+	ops: readonly ColdMigrationOp[];
+}): boolean => {
+	const byGrant = new Map<string, ColdMigrationOp[]>();
+	for (const op of ops) {
+		const grantOps = byGrant.get(op.customerEntitlementId) ?? [];
+		grantOps.push(op);
+		byGrant.set(op.customerEntitlementId, grantOps);
+	}
+	for (const grantOps of byGrant.values()) {
+		const kinds = grantOps.map(({ kind }) => kind);
+		if (kinds.includes("delete") && kinds.length > 1) return false;
+		if (kinds.filter((kind) => kind === "update").length > 1) return false;
+		if (kinds.indexOf("update") > 0) return false;
+	}
+	return true;
+};
+
 /** The plan as guarded SQL, or null when an op has no cold form and the customer takes the in-memory path. */
 export const coldOpsOf = ({
 	command,
@@ -96,5 +117,5 @@ export const coldOpsOf = ({
 		if (!cold) return null;
 		ops.push(cold);
 	}
-	return ops;
+	return composesLikeTheEngine({ ops }) ? ops : null;
 };

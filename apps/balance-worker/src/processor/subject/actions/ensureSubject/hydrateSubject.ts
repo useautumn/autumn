@@ -24,6 +24,25 @@ export const hydrateSubject = async ({
 	read: (params: { rowsOnly: boolean }) => Promise<InFlightRead>;
 }): Promise<SubjectState> => {
 	const customerKey = meteringIdentityToPartitionKey({ identity });
+	const release = scope.state.inFlightLoads.reserveCustomer({ customerKey });
+	try {
+		return await hydrateReserved({ scope, identity, read, customerKey });
+	} finally {
+		release();
+	}
+};
+
+const hydrateReserved = async ({
+	scope,
+	identity,
+	read,
+	customerKey,
+}: {
+	scope: SubjectScope;
+	identity: MeteringIdentity;
+	read: (params: { rowsOnly: boolean }) => Promise<InFlightRead>;
+	customerKey: string;
+}): Promise<SubjectState> => {
 	for (let attempt = 0; attempt < MAX_READS; attempt++) {
 		// Evicted with a write still unapplied: Postgres would be read without it.
 		for (

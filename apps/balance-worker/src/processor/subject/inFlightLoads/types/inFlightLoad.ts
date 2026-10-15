@@ -20,8 +20,10 @@ export type InFlightLoads = {
 		customerKey: string;
 		start: (params: { load: InFlightLoad }) => Promise<SubjectRead>;
 	}): Promise<InFlightRead>;
-	/** Whether any read of the customer or its entities is still running. */
+	/** Whether any read of the customer or its entities is still running, or its rows are on their way to residency. */
 	loadingCustomer(params: { customerKey: string }): boolean;
+	/** Counts the customer as loading until the returned release, so a read's result stays covered until it is kept. */
+	reserveCustomer(params: { customerKey: string }): () => void;
 	/** The read of the subject still running, or null. */
 	inFlight(params: { subjectKey: string }): Promise<InFlightRead> | null;
 	/** Flags every load of the customer still reading, its entities included. */

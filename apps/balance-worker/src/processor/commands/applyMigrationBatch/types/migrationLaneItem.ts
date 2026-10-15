@@ -24,6 +24,7 @@ export type ClassifiedMigrationItem = {
 
 export type MigrationBatchOutcome = {
 	size: number;
+	alreadySettled: number;
 	cold: number;
 	resident: number;
 	coldApplied: number;
@@ -38,8 +39,10 @@ export type MigrationBatchOutcome = {
 	rowsUpdated: number;
 	snapshotsDeleted: number;
 	runsMarked: number;
+	gateMs: number;
 	classifyMs: number;
 	coldSqlMs: number;
+	laneDeleteMs: number;
 	residentMs: number;
 	residentRunsMs: number;
 	evictLogMs: number;

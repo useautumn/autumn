@@ -49,7 +49,9 @@ export {
 export {
 	applyColdMigrationBatch,
 	ColdMigrationBatchRolledBackError,
+	itemRunKeyOf,
 	markMigrationItemRunsSucceeded,
+	readOpenMigrationItemRuns,
 } from "./migrations/repos/applyColdMigrationBatch.js";
 export type {
 	ColdMigrationBatch,
