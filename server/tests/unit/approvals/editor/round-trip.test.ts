@@ -166,6 +166,54 @@ describe("groups", () => {
 	});
 });
 
+describe("rows that set the same condition are ANDed, never overwritten", () => {
+	const cap = (value: number): EditorRow => ({
+		field: "discount_percent_off",
+		operator: "lte",
+		value,
+	});
+
+	test.each<{
+		name: string;
+		rows: EditorRow[];
+		when: unknown;
+		readsBack?: EditorRow[];
+	}>([
+		{
+			name: "two Customer rows",
+			rows: [
+				{ field: "customer", operator: "is_not", value: "acme" },
+				{ field: "customer", operator: "is_not", value: "globex" },
+			],
+			when: {
+				customer: { customer_id: { $ne: "acme" } },
+				$and: [{ customer: { customer_id: { $ne: "globex" } } }],
+			},
+		},
+		{
+			name: "three Discount caps, out of board order with another field",
+			rows: [cap(20), sampleRow("paid", "is"), cap(30), cap(40)],
+			readsBack: [sampleRow("paid", "is"), cap(20), cap(30), cap(40)],
+			when: {
+				paid: true,
+				discounts: { $every: { percent_off: { $lte: 20 } } },
+				$and: [
+					{ discounts: { $every: { percent_off: { $lte: 30 } } } },
+					{ discounts: { $every: { percent_off: { $lte: 40 } } } },
+				],
+			},
+		},
+	])("$name", ({ rows, when, readsBack = rows }) => {
+		const area = "billing_change";
+		expect<unknown>(stored({ area, groups: [rows] })).toEqual(when);
+		expect(whenToRows({ area, when })).toEqual({
+			editable: true,
+			groups: [readsBack],
+		});
+		expectValid(area, when);
+	});
+});
+
 describe("stored design cases open in the editor", () => {
 	test.each([
 		["recurring discounts", "billing_change", rules.recurringDiscounts()],
@@ -190,15 +238,6 @@ type IssueCase = {
 
 describe("rows that can't be stored report an issue", () => {
 	test.each<IssueCase>([
-		{
-			name: "the same matcher twice in one group",
-			area: "billing_change",
-			rows: [
-				sampleRow("customer", "is"),
-				{ ...sampleRow("customer", "is"), value: "b" },
-			],
-			issue: { group: 0, row: 1 },
-		},
 		{
 			name: "a field from another area",
 			area: "invoice",

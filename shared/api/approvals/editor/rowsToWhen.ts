@@ -48,23 +48,21 @@ const groupToFilter = ({
 }) => {
 	let filter: Filter = {};
 	const issues: EditorRowIssue[] = [];
-	rows.forEach((row, index) => {
+	const order = Object.keys(EDITOR_FIELDS[area]);
+	// Board order makes the stored form canonical, so it reads back the same.
+	const inBoardOrder = rows
+		.map((row, index) => ({ row, index }))
+		.sort((a, b) => order.indexOf(a.row.field) - order.indexOf(b.row.field));
+	for (const { row, index } of inBoardOrder) {
 		const fieldIssue = rowIssue({ area, row });
 		const addition = fieldIssue ? null : encodeRow({ area, row });
-		const message =
-			fieldIssue ?? (addition ? null : "Choose a value for this condition.");
-		const merged = addition && mergeFilters({ base: filter, addition });
-		if (merged) filter = merged;
-		else {
-			issues.push({
-				group,
-				row: index,
-				message:
-					message ??
-					"This condition can't be combined with another one in its group.",
-			});
+		if (addition) {
+			filter = mergeFilters({ base: filter, addition });
+			continue;
 		}
-	});
+		const message = fieldIssue ?? "Choose a value for this condition.";
+		issues.push({ group, row: index, message });
+	}
 	return { filter, issues };
 };
 

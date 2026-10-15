@@ -8,7 +8,12 @@ import {
 	type EditorRow,
 } from "./editorFields";
 import { FIELD_CODECS } from "./fieldCodecs";
-import { type Filter, isEmptyObject, isSameFilter } from "./filterParts";
+import {
+	andViewsOf,
+	type Filter,
+	isEmptyObject,
+	isSameFilter,
+} from "./filterParts";
 import { rowsToWhen } from "./rowsToWhen";
 
 export type WhenToRowsResult =
@@ -23,7 +28,7 @@ const readRows = ({ field, filter }: { field: EditorField; filter: Filter }) =>
 /** Rows in board order, so the editor shows them the way it lists fields. */
 const groupRows = ({ area, group }: { area: WhenKey; group: Filter }) =>
 	(Object.keys(EDITOR_FIELDS[area]) as EditorField[]).flatMap((field) =>
-		readRows({ field, filter: group }),
+		andViewsOf(group).flatMap((view) => readRows({ field, filter: view })),
 	);
 
 /** A top-level `$or` is the OR groups, unless a field reads it as its own row. */

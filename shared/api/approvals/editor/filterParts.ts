@@ -73,8 +73,7 @@ export const fromPlanFilter = (filter: unknown): PlanSelection | null =>
 const isMergeable = (value: unknown): value is Filter =>
 	isPlainObject(value) && !isEmptyObject(value);
 
-/** Deep-merges one row's filter into its group's; null when both set the same leaf. */
-export const mergeFilters = ({
+const deepMerge = ({
 	base,
 	addition,
 }: {
@@ -87,7 +86,7 @@ export const mergeFilters = ({
 		if (!(key in merged)) {
 			merged[key] = value;
 		} else if (isMergeable(current) && isMergeable(value)) {
-			const inner = mergeFilters({ base: current, addition: value });
+			const inner = deepMerge({ base: current, addition: value });
 			if (!inner) return null;
 			merged[key] = inner;
 		} else {
@@ -95,6 +94,29 @@ export const mergeFilters = ({
 		}
 	}
 	return merged;
+};
+
+/**
+ * Merges one row's filter into its group's. A row that sets something already
+ * set is kept whole as an `$and` entry, so no condition is ever overwritten.
+ */
+export const mergeFilters = ({
+	base,
+	addition,
+}: {
+	base: Filter;
+	addition: Filter;
+}): Filter => {
+	const merged = deepMerge({ base, addition });
+	if (merged) return merged;
+	const entries = Array.isArray(base.$and) ? base.$and : [];
+	return { ...base, $and: [...entries, addition] };
+};
+
+/** A group's own conditions, then each `$and` entry, as filters to read rows from. */
+export const andViewsOf = (group: Filter): Filter[] => {
+	const { $and: entries, ...rest } = group;
+	return [rest, ...(Array.isArray(entries) ? entries : [])];
 };
 
 export const isSameFilter = (a: unknown, b: unknown): boolean => {
