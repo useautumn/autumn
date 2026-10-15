@@ -27,7 +27,7 @@ for (const file of process.argv.slice(2)) {
 		console.log(`| ${label} | no summary |`);
 		continue;
 	}
-	const s = JSON.parse(text.slice(start));
+	const s = JSON.parse(text.slice(start, text.indexOf("\n}", start) + 2));
 	const churn: Record<string, number> = s.outcomesByPhase.churn ?? {};
 	const churnTotal = Object.values(churn).reduce((a, b) => a + b, 0);
 	const fmt = (o: Record<string, number>) =>

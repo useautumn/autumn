@@ -667,10 +667,12 @@ const OFFSETS_TOPIC = "__consumer_offsets";
 const OFFSETS_TOPIC_PARTITIONS = 50;
 const marks: { t: number; label: string }[] = [];
 
+/** Which of our topics a leader wave moves: CHURN_TOPICS=metering,commands,... narrows it to find what hurts. */
+const churnTopics = (process.env.CHURN_TOPICS ?? Object.keys(topics).join(","))
+	.split(",")
+	.map((name) => topics[name as keyof typeof topics]);
 async function moveLeadersOff({ broker }: { broker: number }): Promise<number> {
-	const metadata = await admin.fetchTopicMetadata({
-		topics: Object.values(topics),
-	});
+	const metadata = await admin.fetchTopicMetadata({ topics: churnTopics });
 	const reassign: {
 		topic: string;
 		partitionAssignment: { partition: number; replicas: number[] }[];
@@ -1204,6 +1206,7 @@ const summary = {
 		REPLICATION,
 		WAVES,
 		WAVE_GAP_MS,
+		CHURN_TOPICS: process.env.CHURN_TOPICS ?? "all",
 		...(SCENARIO === "partitions" && { GROW_TO, SPAWN_AFTER_GROW }),
 	},
 	groupIds,
@@ -1305,19 +1308,8 @@ const summary = {
 	reconciliation,
 	perSecond,
 };
-for (const worker of [...workers, ...lateWorkers]) {
-	worker.child.kill("SIGTERM");
-	await worker.child.exited;
-	rmSync(worker.dir, { recursive: true, force: true });
-}
-await routing.stop();
-await herald.disconnect();
-await watcher.disconnect();
-await admin.deleteTopics({ topics: Object.values(topics) });
-await admin.disconnect();
-for (const customer of [...customers.values(), ...extraCustomers])
-	await customer.cleanup();
-await postgres.close();
+// Out before teardown, so a teardown that hangs still leaves the run's report.
+console.log(JSON.stringify(summary, null, 1));
 const out = join(
 	process.env.BENCH_OUT_DIR ?? tmpdir(),
 	`leader-churn-${deployment}.json`,
@@ -1331,5 +1323,17 @@ await Bun.write(
 	),
 );
 console.error(`raw data: ${out}`);
-console.log(JSON.stringify(summary, null, 1));
+for (const worker of [...workers, ...lateWorkers]) {
+	worker.child.kill("SIGTERM");
+	await worker.child.exited;
+	rmSync(worker.dir, { recursive: true, force: true });
+}
+await routing.stop();
+await herald.disconnect();
+await watcher.disconnect();
+await admin.deleteTopics({ topics: Object.values(topics) });
+await admin.disconnect();
+for (const customer of [...customers.values(), ...extraCustomers])
+	await customer.cleanup();
+await postgres.close();
 process.exit(0);
