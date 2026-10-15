@@ -98,6 +98,12 @@ const CASES: {
 		readsBack: [trial("lt", 2, "month")],
 	},
 	{
+		name: "< 1 day only lets 'no trial' through, so it's stored and read as has none",
+		rows: [trial("lt", 1, "day")],
+		when: inIncoming(noTrial),
+		readsBack: [{ field: "free_trial", operator: "has_none", value: null }],
+	},
+	{
 		name: "card required and trial end sit beside the duration",
 		rows: [
 			trial("lte", 14, "day"),

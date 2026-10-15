@@ -100,26 +100,59 @@ export const fromPlanFilter = (
 const isMergeable = (value: unknown): value is Filter =>
 	isPlainObject(value) && !isEmptyObject(value);
 
-/** Deep-merges one row's filter into its group's; null when both set the same leaf. */
+const andEntriesOf = (filter: Filter) =>
+	Array.isArray(filter.$and) ? (filter.$and as Filter[]) : [];
+
+const isSamePath = (a: string[], b: string[]) =>
+	a.length === b.length && a.every((key, index) => key === b[index]);
+
+/**
+ * Deep-merges one row's filter into its group's; null when both set the same leaf.
+ * Inside the element at `andPath`, colliding conditions become separate `$and` entries.
+ */
 export const mergeFilters = ({
 	base,
 	addition,
+	andPath,
+	path = [],
 }: {
 	base: Filter;
 	addition: Filter;
+	andPath: string[];
+	path?: string[];
 }): Filter | null => {
-	const merged = { ...base };
+	let merged = { ...base };
+	const isAndElement = isSamePath(path, andPath);
 	for (const [key, value] of Object.entries(addition)) {
 		const current = merged[key];
+		const entries = andEntriesOf(merged);
+		if (isAndElement && entries.some((entry) => key in entry)) {
+			merged.$and = [...entries, { [key]: value }];
+			continue;
+		}
 		if (!(key in merged)) {
 			merged[key] = value;
-		} else if (isMergeable(current) && isMergeable(value)) {
-			const inner = mergeFilters({ base: current, addition: value });
-			if (!inner) return null;
-			merged[key] = inner;
-		} else {
-			return null;
+			continue;
 		}
+		const inner =
+			isMergeable(current) && isMergeable(value)
+				? mergeFilters({
+						base: current,
+						addition: value,
+						andPath,
+						path: [...path, key],
+					})
+				: null;
+		if (inner) {
+			merged[key] = inner;
+			continue;
+		}
+		if (!isAndElement) return null;
+		const { [key]: _moved, ...rest } = merged;
+		merged = {
+			...rest,
+			$and: [...entries, { [key]: current }, { [key]: value }],
+		};
 	}
 	return merged;
 };

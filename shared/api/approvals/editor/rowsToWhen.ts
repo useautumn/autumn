@@ -5,7 +5,7 @@ import {
 	type EditorRow,
 	PINNED_FIELDS,
 } from "./editorFields";
-import { FIELD_CODECS } from "./fieldCodecs";
+import { FIELD_CODECS, INCOMING_PLAN } from "./fieldCodecs";
 import { type Filter, isEmptyObject, mergeFilters } from "./filterParts";
 
 /** `group: "pinned"` is the row above the groups. */
@@ -54,10 +54,17 @@ const groupToFilter = ({
 }) => {
 	let filter: Filter = {};
 	const issues: EditorRowIssue[] = [];
-	rows.forEach((row, index) => {
+	const order = Object.keys(EDITOR_FIELDS[area]);
+	// Board order makes the stored form canonical, so it reads back the same.
+	const inBoardOrder = rows
+		.map((row, index) => ({ row, index }))
+		.sort((a, b) => order.indexOf(a.row.field) - order.indexOf(b.row.field));
+	for (const { row, index } of inBoardOrder) {
 		const message = rowIssue({ area, row, pinned: false });
 		const addition = message ? null : FIELD_CODECS[row.field].toFilter(row);
-		const merged = addition && mergeFilters({ base: filter, addition });
+		const merged =
+			addition &&
+			mergeFilters({ base: filter, addition, andPath: INCOMING_PLAN });
 		if (merged) filter = merged;
 		else {
 			issues.push({
@@ -68,7 +75,7 @@ const groupToFilter = ({
 					"This condition can't be combined with another one in its group.",
 			});
 		}
-	});
+	}
 	return { filter, issues };
 };
 

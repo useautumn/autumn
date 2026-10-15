@@ -302,50 +302,92 @@ describe("rows that can't be stored report an issue", () => {
 			rows: [],
 			issue: { group: "pinned", row: 0 },
 		},
-		// Until S3 adds `$and` on plan elements, these rows collide in `incoming.$every`.
-		{
-			name: "Incoming plan · any of, pinned version, beside a Free trial cap",
-			area: "billing_change",
-			rows: [
-				sampleRow("incoming_plan", "is_any_of"),
-				sampleRow("free_trial", "lt"),
-			],
-			issue: { group: 0, row: 1 },
-		},
-		{
-			name: "two Quantity rows in one group",
-			area: "billing_change",
-			rows: [
-				sampleRow("feature_quantity", "lte"),
-				{
-					...sampleRow("feature_quantity", "lte"),
-					value: { feature_id: "w", quantity: 5 },
-				},
-			],
-			issue: { group: 0, row: 1 },
-		},
 	])("$name", ({ area, pinned, rows, issue }) => {
 		expect(rowsToWhen({ area, pinned, groups: [rows] })).toEqual({
 			ok: false,
 			issues: [{ ...issue, message: expect.any(String) }],
 		});
 	});
+});
 
-	test.skip("Incoming plan · any of with a version and a Free trial combine with $and (needs S3's `$and` on PlanChangeFilter)", () => {
-		expectRoundTrip("billing_change", [
-			sampleRow("incoming_plan", "is_any_of"),
-			sampleRow("free_trial", "lt"),
-		]);
+describe("rows that collide in the incoming plan element combine with $and", () => {
+	const quantity = (feature_id: string, quantity: number): EditorRow => ({
+		field: "feature_quantity",
+		operator: "lte",
+		value: { feature_id, quantity },
+	});
+	const quantityLimit = (feature_id: string, limit: number) => ({
+		feature_quantities: { $none: { feature_id, quantity: { $gt: limit } } },
 	});
 
-	test.skip("two Quantity rows combine with $and (needs S3's `$and` on the feature_quantities element)", () => {
-		expectRoundTrip("billing_change", [
-			sampleRow("feature_quantity", "lte"),
-			{
-				field: "feature_quantity",
-				operator: "lte",
-				value: { feature_id: "w", quantity: 5 },
+	test.each<{
+		name: string;
+		rows: EditorRow[];
+		element: unknown;
+		readsBack?: EditorRow[];
+	}>([
+		{
+			name: "Incoming plan · any of with a version, beside a Free trial cap",
+			rows: [
+				sampleRow("incoming_plan", "is_any_of"),
+				sampleRow("free_trial", "lt"),
+			],
+			element: {
+				$and: [
+					{ $or: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }] },
+					{
+						$or: [
+							{ free_trial: null },
+							{
+								free_trial: {
+									duration_type: "day",
+									duration_length: { $lt: 60 },
+								},
+							},
+							{
+								free_trial: {
+									duration_type: "month",
+									duration_length: { $lt: 2 },
+								},
+							},
+						],
+					},
+				],
 			},
-		]);
+		},
+		{
+			name: "two Quantity rows",
+			rows: [quantity("seats", 10), quantity("workers", 5)],
+			element: {
+				$and: [quantityLimit("seats", 10), quantityLimit("workers", 5)],
+			},
+		},
+		{
+			name: "three Quantity rows, entered out of board order with another field",
+			rows: [
+				quantity("seats", 10),
+				sampleRow("incoming_paid", "is"),
+				quantity("a", 1),
+				quantity("b", 2),
+			],
+			element: {
+				paid: true,
+				$and: [
+					quantityLimit("seats", 10),
+					quantityLimit("a", 1),
+					quantityLimit("b", 2),
+				],
+			},
+			readsBack: [
+				sampleRow("incoming_paid", "is"),
+				quantity("seats", 10),
+				quantity("a", 1),
+				quantity("b", 2),
+			],
+		},
+	])("$name", ({ rows, element, readsBack }) => {
+		const when = stored({ area: "billing_change", groups: [rows] });
+		expect<unknown>(when).toEqual({ incoming: { $every: element } });
+		expectRoundTrip("billing_change", rows, readsBack);
 	});
 });
