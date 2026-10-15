@@ -5,10 +5,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackBodyIdempotencyKey } from "@/internal/balances/idempotency/trackBodyIdempotencyKey.js";
 import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyKey.js";
-import { rethrowBalanceWorkerError } from "../../balanceWorker/balanceWorkerErrors.js";
 import { trackParamsToTrackCommands } from "./balanceWorkerTrackRequest.js";
 import { appendOrSpoolTrack } from "./spool/appendOrSpoolTrack.js";
-import { isTrackSpoolEnabled } from "./spool/trackSpoolConfig.js";
 
 type QueueClient = Pick<BalanceWorkerClient, "queue">;
 
@@ -30,22 +28,17 @@ export async function runBalanceWorkerAsyncTrack({
 		body,
 		recordsCreditCost: tokens !== undefined,
 	});
-	const append = () => client.queue.track({ commands });
-	// A failed append is a 503, which releases the claim so the client can retry; a spooled one keeps it.
+	// Queued on Kafka or spooled to SQS keeps the claim; a 503 when both fail releases it so the client can retry.
 	await withIdempotencyKey({
 		ctx,
 		idempotencyKey: getTrackBodyIdempotencyKey({ body }),
 		routeGroup: RouteGroup.Balances,
-		run: async () => {
-			if (isTrackSpoolEnabled()) {
-				await appendOrSpoolTrack({ ctx, body, tokens, append });
-				return;
-			}
-			try {
-				await append();
-			} catch (cause) {
-				rethrowBalanceWorkerError({ cause });
-			}
-		},
+		run: () =>
+			appendOrSpoolTrack({
+				ctx,
+				body,
+				tokens,
+				append: ({ signal }) => client.queue.track({ commands, signal }),
+			}),
 	});
 }

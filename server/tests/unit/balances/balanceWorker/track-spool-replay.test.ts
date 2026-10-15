@@ -22,13 +22,7 @@ import { createWorkerFixture, partition, topic } from "./worker-fixture.js";
 // runQueuedTrack. Only the worker's command-id dedupe stands between them.
 const standardQueueUrl =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/track-spool-replay-test";
-const previousEnv = {
-	spool: process.env.BALANCE_WORKER_TRACK_SPOOL_ENABLED,
-	hedge: process.env.BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS,
-	standard: process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
-};
-process.env.BALANCE_WORKER_TRACK_SPOOL_ENABLED = "true";
-process.env.BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS = "20";
+const previousStandardQueueUrl = process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = standardQueueUrl;
 
 type SpooledMessage = {
@@ -61,14 +55,10 @@ afterAll(() => {
 	sqsClient.send = originalSend;
 	claimSpy.mockRestore();
 	releaseSpy.mockRestore();
-	for (const [key, value] of [
-		["BALANCE_WORKER_TRACK_SPOOL_ENABLED", previousEnv.spool],
-		["BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS", previousEnv.hedge],
-		["TRACK_ASYNC_STANDARD_SQS_QUEUE_URL", previousEnv.standard],
-	] as const) {
-		if (value === undefined) delete process.env[key];
-		else process.env[key] = value;
-	}
+	if (previousStandardQueueUrl === undefined)
+		delete process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
+	else
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = previousStandardQueueUrl;
 });
 
 /** Spools the track through a stalled append and returns what the append carried, to land late, and the SQS copy. */

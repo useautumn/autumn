@@ -1,8 +1,14 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
+import { BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS } from "@autumn/env/balanceWorkerConstants";
 import type { TrackParams } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
+import {
+	KafkaJSConnectionError,
+	KafkaJSNumberOfRetriesExceeded,
+	KafkaJSProtocolError,
+} from "kafkajs";
 import { runBalanceWorkerAsyncTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerAsyncTrack.js";
 import * as claimKey from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
 import * as releaseKey from "@/internal/misc/idempotency/actions/releaseIdempotencyKey.js";
@@ -11,27 +17,19 @@ import { createCustomerFixture } from "../balanceWorker/customer-fixture.js";
 
 const standardQueueUrl =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/track-spool-test-standard";
-const previousEnv = {
-	spool: process.env.BALANCE_WORKER_TRACK_SPOOL_ENABLED,
-	hedge: process.env.BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS,
-	standard: process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL,
-};
+const previousStandardQueueUrl = process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
 process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = standardQueueUrl;
-process.env.BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS = "50";
 
-const restoreEnv = (key: string, value: string | undefined) => {
-	if (value === undefined) delete process.env[key];
-	else process.env[key] = value;
-};
-
-/** What SQS was handed, and whether it takes the next send. */
+/** What SQS was handed, how often it was asked, and whether it takes the next send. */
 const sqs = {
 	messages: [] as { name: string; data: Record<string, unknown> }[],
+	sends: 0,
 	down: false,
 };
 const sqsClient = getSqsClient({ queueUrl: standardQueueUrl });
 const originalSend = sqsClient.send.bind(sqsClient);
 sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+	sqs.sends++;
 	if (sqs.down) throw new Error("SQS is unreachable");
 	const entries = command.input.Entries as {
 		Id: string;
@@ -43,51 +41,94 @@ sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 
 afterAll(() => {
 	sqsClient.send = originalSend;
-	restoreEnv("BALANCE_WORKER_TRACK_SPOOL_ENABLED", previousEnv.spool);
-	restoreEnv("BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS", previousEnv.hedge);
-	restoreEnv("TRACK_ASYNC_STANDARD_SQS_QUEUE_URL", previousEnv.standard);
+	if (previousStandardQueueUrl === undefined)
+		delete process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL;
+	else
+		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = previousStandardQueueUrl;
 });
 
-/** The raw error kafkajs threw on Oct 15, which today escapes as a 500. */
-const kafkaConnectionClosed = Object.assign(new Error("Closed connection"), {
-	name: "KafkaJSNumberOfRetriesExceeded",
-});
+/** What kafkajs throws once its own retries run out on a dropped broker connection (Oct 15). */
+const connectionClosed = () =>
+	new KafkaJSNumberOfRetriesExceeded(
+		// kafkajs's typings omit KafkaJSConnectionClosedError; this is its shape.
+		Object.assign(new KafkaJSConnectionError("Closed connection"), {
+			name: "KafkaJSConnectionClosedError",
+		}),
+		{ retryCount: 3, retryTime: 900 },
+	);
 
-/** An append whose outcome the test decides: ack, fail, or hang until released. */
-function createAppend() {
-	const appended: TrackCommand[][] = [];
-	let behaviour: "ack" | "fail" | "hang" = "ack";
-	let failure: Error = kafkaConnectionClosed;
-	const pending = Promise.withResolvers<void>();
+/** What kafkajs throws while a partition's leadership is moving. */
+const notLeader = () =>
+	new KafkaJSNumberOfRetriesExceeded(
+		new KafkaJSProtocolError(
+			Object.assign(
+				new Error("This server is not the leader for that topic-partition"),
+				{ type: "NOT_LEADER_FOR_PARTITION", code: 6, retriable: true },
+			),
+		),
+		{ retryCount: 3, retryTime: 900 },
+	);
+
+/** A broker refusal no retry fixes. */
+const messageTooLarge = () =>
+	new KafkaJSProtocolError(
+		Object.assign(
+			new Error(
+				"The request included a message larger than the max message size",
+			),
+			{ type: "MESSAGE_TOO_LARGE", code: 10, retriable: false },
+		),
+	);
+
+type AttemptOutcome = "ack" | "hang" | Error;
+
+/** A command log whose attempts the test scripts: ack, fail, or hang until released or out of time. */
+function createAppend({
+	outcomeOf,
+}: {
+	outcomeOf: (attempt: number) => AttemptOutcome;
+}) {
+	const attempts: { at: number; commands: TrackCommand[] }[] = [];
+	const released = Promise.withResolvers<void>();
+	const track = async ({
+		commands,
+		signal,
+	}: {
+		commands: readonly TrackCommand[];
+		signal?: AbortSignal;
+	}) => {
+		attempts.push({ at: performance.now(), commands: [...commands] });
+		const outcome = outcomeOf(attempts.length);
+		if (outcome instanceof Error) throw outcome;
+		if (outcome === "ack") return;
+		await Promise.race([
+			released.promise,
+			new Promise((_, reject) =>
+				signal?.addEventListener(
+					"abort",
+					() =>
+						reject(
+							new BalanceWorkerClientError({
+								code: "DEADLINE",
+								outcome: "unknown",
+								message: "Worker request deadline exceeded",
+							}),
+						),
+					{ once: true },
+				),
+			),
+		]);
+	};
 	const client = {
 		queue: {
-			track: async ({ commands }: { commands: readonly TrackCommand[] }) => {
-				appended.push([...commands]);
-				if (behaviour === "fail") throw failure;
-				if (behaviour === "hang") await pending.promise;
-			},
+			track,
 			reset: async () => undefined,
 			updateBalance: async () => undefined,
 			evict: async () => undefined,
 			finalize: async () => undefined,
 		},
 	};
-	return {
-		client,
-		appended,
-		ack: () => {
-			behaviour = "ack";
-		},
-		fail: (error: Error = kafkaConnectionClosed) => {
-			behaviour = "fail";
-			failure = error;
-		},
-		hang: () => {
-			behaviour = "hang";
-		},
-		landLate: () => pending.resolve(),
-		failLate: () => pending.reject(kafkaConnectionClosed),
-	};
+	return { client, attempts, land: () => released.resolve() };
 }
 
 function spyOnClaims() {
@@ -125,181 +166,180 @@ function fixture() {
 	return { ctx, body };
 }
 
-describe("runBalanceWorkerAsyncTrack with the SQS spool on", () => {
+describe("runBalanceWorkerAsyncTrack: Kafka retried, SQS once the hedge passes", () => {
+	let spies: ReturnType<typeof spyOnClaims>;
 	beforeEach(() => {
-		process.env.BALANCE_WORKER_TRACK_SPOOL_ENABLED = "true";
 		sqs.messages = [];
+		sqs.sends = 0;
 		sqs.down = false;
+		spies?.restore();
+		spies = spyOnClaims();
 	});
+	afterAll(() => spies?.restore());
 
 	test("an acked append spools nothing and keeps the claim", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
-			expect(append.appended).toHaveLength(1);
-			expect(sqs.messages).toEqual([]);
-			expect(spies.claims).toEqual(["track:k1"]);
-			expect(spies.releases).toEqual([]);
-		} finally {
-			spies.restore();
-		}
+		const { ctx, body } = fixture();
+		const append = createAppend({ outcomeOf: () => "ack" });
+		await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
+		expect(append.attempts).toHaveLength(1);
+		expect(sqs.sends).toBe(0);
+		expect(spies.claims).toEqual(["track:k1"]);
+		expect(spies.releases).toEqual([]);
 	});
 
-	test("a raw Kafka failure is spooled under the append's request id and timestamp, and the claim is kept", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.fail();
-			const tokens = {
-				usage: { modelName: "m", inputTokens: 1, outputTokens: 2 },
-				cost: 3,
-			};
-			await runBalanceWorkerAsyncTrack({
-				ctx,
-				body,
-				tokens,
-				client: append.client,
-			});
-			expect(sqs.messages).toHaveLength(1);
-			expect(sqs.messages[0]).toMatchObject({
-				name: "track",
-				data: {
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId: body.customer_id,
-					requestId: ctx.id,
-					body: { ...body, timestamp: ctx.timestamp },
-					tokens,
-					validateTrackBodyIdempotencyKey: false,
-					spooledAt: expect.any(Number),
-				},
-			});
-			expect(spies.releases).toEqual([]);
-		} finally {
-			spies.restore();
-		}
+	test("a dropped broker connection is retried and lands on Kafka without touching SQS", async () => {
+		const { ctx, body } = fixture();
+		const append = createAppend({
+			outcomeOf: (attempt) => (attempt === 1 ? connectionClosed() : "ack"),
+		});
+		await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
+		expect(append.attempts).toHaveLength(2);
+		expect(append.attempts[1]?.commands).toEqual(append.attempts[0]?.commands);
+		expect(sqs.sends).toBe(0);
+		expect(spies.releases).toEqual([]);
 	});
 
-	test("an append still unacked at the hedge is spooled and answered without waiting for it", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.hang();
-			await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
-			expect(sqs.messages).toHaveLength(1);
-			expect(sqs.messages[0]?.data.requestId).toBe(ctx.id);
-			expect(spies.releases).toEqual([]);
-			append.landLate();
-		} finally {
-			spies.restore();
-		}
+	test("with SQS down, Kafka is retried through a leader move past the hedge and the track lands", async () => {
+		const { ctx, body } = fixture();
+		sqs.down = true;
+		const startedAt = performance.now();
+		const append = createAppend({
+			outcomeOf: () =>
+				performance.now() - startedAt <
+				BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS + 200
+					? notLeader()
+					: "ack",
+		});
+		await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
+		expect(append.attempts.length).toBeGreaterThan(2);
+		expect(sqs.sends).toBe(1);
+		expect(sqs.messages).toEqual([]);
+		expect(spies.releases).toEqual([]);
 	});
 
-	test("an append and a spool that both fail answer 503, never 500, and release the claim", async () => {
-		const spies = spyOnClaims();
-		try {
+	test(
+		"with SQS down, a 503 comes only once Kafka is still failing at the deadline, and the claim is released",
+		async () => {
 			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.fail();
 			sqs.down = true;
+			const startedAt = performance.now();
+			const append = createAppend({ outcomeOf: () => notLeader() });
 			await expect(
 				runBalanceWorkerAsyncTrack({ ctx, body, client: append.client }),
 			).rejects.toMatchObject({
 				statusCode: 503,
 				code: "balance_worker_result_unknown",
 			});
+			expect(performance.now() - startedAt).toBeGreaterThan(2_500);
+			expect(append.attempts.length).toBeGreaterThan(5);
 			expect(spies.releases).toEqual(["track:k1"]);
-		} finally {
-			spies.restore();
-		}
+		},
+		{ timeout: 10_000 },
+	);
+
+	test("a refusal no retry fixes is spooled at once under the append's request id and timestamp", async () => {
+		const { ctx, body } = fixture();
+		const tokens = {
+			usage: { modelName: "m", inputTokens: 1, outputTokens: 2 },
+			cost: 3,
+		};
+		const startedAt = performance.now();
+		const append = createAppend({ outcomeOf: () => messageTooLarge() });
+		await runBalanceWorkerAsyncTrack({
+			ctx,
+			body,
+			tokens,
+			client: append.client,
+		});
+		expect(performance.now() - startedAt).toBeLessThan(
+			BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS,
+		);
+		expect(append.attempts).toHaveLength(1);
+		expect(sqs.messages).toHaveLength(1);
+		expect(sqs.messages[0]).toMatchObject({
+			name: "track",
+			data: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: body.customer_id,
+				requestId: ctx.id,
+				body: { ...body, timestamp: ctx.timestamp },
+				tokens,
+				validateTrackBodyIdempotencyKey: false,
+				spooledAt: expect.any(Number),
+			},
+		});
+		expect(spies.releases).toEqual([]);
+	});
+
+	test("an append still unacked at the hedge is spooled and answered without waiting for it", async () => {
+		const { ctx, body } = fixture();
+		const append = createAppend({ outcomeOf: () => "hang" });
+		await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
+		expect(sqs.messages).toHaveLength(1);
+		expect(sqs.messages[0]?.data.requestId).toBe(ctx.id);
+		expect(spies.releases).toEqual([]);
+		append.land();
+	});
+
+	test("Kafka retries stop once SQS holds the track", async () => {
+		const { ctx, body } = fixture();
+		const append = createAppend({ outcomeOf: () => connectionClosed() });
+		await runBalanceWorkerAsyncTrack({ ctx, body, client: append.client });
+		const attemptsWhenAccepted = append.attempts.length;
+		await Bun.sleep(600);
+		expect(sqs.messages).toHaveLength(1);
+		expect(append.attempts.length).toBeLessThanOrEqual(
+			attemptsWhenAccepted + 1,
+		);
 	});
 
 	test("a slow append whose spool fails still accepts the track once the append acks", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.hang();
-			sqs.down = true;
-			const accepted = runBalanceWorkerAsyncTrack({
-				ctx,
-				body,
-				client: append.client,
-			});
-			await Bun.sleep(120);
-			append.landLate();
-			await accepted;
-			expect(spies.releases).toEqual([]);
-		} finally {
-			spies.restore();
-		}
+		const { ctx, body } = fixture();
+		sqs.down = true;
+		const append = createAppend({ outcomeOf: () => "hang" });
+		const accepted = runBalanceWorkerAsyncTrack({
+			ctx,
+			body,
+			client: append.client,
+		});
+		await Bun.sleep(BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS + 150);
+		append.land();
+		await accepted;
+		expect(sqs.sends).toBe(1);
+		expect(spies.releases).toEqual([]);
 	});
 
-	test("a slow append that fails after its spool failed is a 503", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.hang();
-			sqs.down = true;
-			const accepted = runBalanceWorkerAsyncTrack({
-				ctx,
-				body,
-				client: append.client,
-			});
-			await Bun.sleep(120);
-			append.failLate();
-			await expect(accepted).rejects.toMatchObject({ statusCode: 503 });
-			expect(spies.releases).toEqual(["track:k1"]);
-		} finally {
-			spies.restore();
-		}
+	test("a refusal and an unreachable SQS answer 503, never 500, and release the claim", async () => {
+		const { ctx, body } = fixture();
+		sqs.down = true;
+		const append = createAppend({ outcomeOf: () => messageTooLarge() });
+		await expect(
+			runBalanceWorkerAsyncTrack({ ctx, body, client: append.client }),
+		).rejects.toMatchObject({
+			statusCode: 503,
+			code: "balance_worker_result_unknown",
+		});
+		expect(spies.releases).toEqual(["track:k1"]);
 	});
 
-	test("a client-coded append failure keeps its own 503 code when the spool also fails", async () => {
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.fail(
+	test("a client-coded append failure keeps its own 503 code when SQS also fails", async () => {
+		const { ctx, body } = fixture();
+		sqs.down = true;
+		const append = createAppend({
+			outcomeOf: () =>
 				new BalanceWorkerClientError({
 					code: "COMMAND_LOG_UNAVAILABLE",
 					outcome: "not_submitted",
 					message: "kafka away",
 				}),
-			);
-			sqs.down = true;
-			await expect(
-				runBalanceWorkerAsyncTrack({ ctx, body, client: append.client }),
-			).rejects.toMatchObject({
-				statusCode: 503,
-				code: "balance_worker_unavailable",
-			});
-		} finally {
-			spies.restore();
-		}
-	});
-});
-
-describe("runBalanceWorkerAsyncTrack with the SQS spool off", () => {
-	test("a failed append neither spools nor changes how it surfaces", async () => {
-		delete process.env.BALANCE_WORKER_TRACK_SPOOL_ENABLED;
-		sqs.messages = [];
-		const spies = spyOnClaims();
-		try {
-			const { ctx, body } = fixture();
-			const append = createAppend();
-			append.fail();
-			await expect(
-				runBalanceWorkerAsyncTrack({ ctx, body, client: append.client }),
-			).rejects.toBe(kafkaConnectionClosed);
-			expect(sqs.messages).toEqual([]);
-		} finally {
-			spies.restore();
-		}
+		});
+		await expect(
+			runBalanceWorkerAsyncTrack({ ctx, body, client: append.client }),
+		).rejects.toMatchObject({
+			statusCode: 503,
+			code: "balance_worker_unavailable",
+		});
+		expect(append.attempts).toHaveLength(1);
 	});
 });

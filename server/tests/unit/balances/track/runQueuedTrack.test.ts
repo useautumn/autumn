@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS } from "@autumn/env/balanceWorkerConstants";
 import {
 	ApiVersion,
 	ApiVersionClass,
@@ -76,7 +77,6 @@ await mockModuleWithRestore(
 );
 
 import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
-import { SPOOLED_TRACK_MAX_REPLAY_AGE_MS } from "@/internal/balances/track/balanceWorker/spool/trackSpoolConfig.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -242,7 +242,8 @@ describe("runQueuedTrack with a spooled worker-path track", () => {
 					ctx,
 					body,
 					validateTrackBodyIdempotencyKey: false,
-					spooledAt: Date.now() - SPOOLED_TRACK_MAX_REPLAY_AGE_MS - 1_000,
+					spooledAt:
+						Date.now() - BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS - 1_000,
 				}),
 			).rejects.toBeInstanceOf(SpooledTrackTooOldError);
 			expect(mockState.workerTrackCalls).toHaveLength(0);
@@ -257,7 +258,7 @@ describe("runQueuedTrack with a spooled worker-path track", () => {
 			body,
 			tokens,
 			validateTrackBodyIdempotencyKey: false,
-			spooledAt: Date.now() - SPOOLED_TRACK_MAX_REPLAY_AGE_MS - 1_000,
+			spooledAt: Date.now() - BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS - 1_000,
 		});
 		expect(mockState.workerTrackCalls).toHaveLength(0);
 		expect(mockState.runTrackV3Calls).toHaveLength(1);

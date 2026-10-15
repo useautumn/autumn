@@ -1,33 +1,26 @@
+import {
+	BALANCE_WORKER_TRACK_APPEND_DEADLINE_MS,
+	BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS,
+} from "@autumn/env/balanceWorkerConstants";
 import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { rethrowUnspooledAppendError } from "../../../balanceWorker/balanceWorkerErrors.js";
+import { type AppendAttempt, appendWithRetries } from "./appendWithRetries.js";
 import { spoolTrack } from "./spoolTrack.js";
-import { getTrackSpoolHedgeMs } from "./trackSpoolConfig.js";
+import type { AppendResult } from "./types/appendResult.js";
 
-type AppendResult = { acked: true } | { acked: false; error: unknown };
-
-const settleAppend = async (
-	append: () => Promise<void>,
-): Promise<AppendResult> => {
-	try {
-		await append();
-		return { acked: true };
-	} catch (error) {
-		return { acked: false, error };
-	}
-};
-
-/** The append's result if it settles within the hedge, else null: it is slow and may still land. */
+/** The append's result if it settles within the hedge, else null: it is slow or still retrying, and may yet land. */
 const settleWithinHedge = ({
 	appendResult,
-	hedgeMs,
 }: {
 	appendResult: Promise<AppendResult>;
-	hedgeMs: number;
 }): Promise<AppendResult | null> =>
 	new Promise((resolve) => {
-		const hedge = setTimeout(() => resolve(null), hedgeMs);
+		const hedge = setTimeout(
+			() => resolve(null),
+			BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS,
+		);
 		void appendResult.then((result) => {
 			clearTimeout(hedge);
 			resolve(result);
@@ -53,8 +46,8 @@ const isEitherDurable = ({
 	});
 
 /**
- * The command-log append with the async track queue as a second durable home: an append that fails, or is still
- * unacked after the hedge, is spooled, and the track is accepted once either write lands. Both failing is a 503.
+ * The command-log append, retried on retriable Kafka errors, with the async track queue as a second durable home once
+ * the hedge passes. The track is accepted when either write lands; only both failing by the deadline is a 503.
  */
 export async function appendOrSpoolTrack({
 	ctx,
@@ -65,14 +58,17 @@ export async function appendOrSpoolTrack({
 	ctx: AutumnContext;
 	body: TrackParams;
 	tokens?: TokenDeduction;
-	append: () => Promise<void>;
+	append: AppendAttempt;
 }): Promise<void> {
 	const startedAt = performance.now();
-	const appendResult = settleAppend(append);
-	const early = await settleWithinHedge({
-		appendResult,
-		hedgeMs: getTrackSpoolHedgeMs(),
+	const spoolLanded = new AbortController();
+	const appendResult = appendWithRetries({
+		ctx,
+		append,
+		deadline: startedAt + BALANCE_WORKER_TRACK_APPEND_DEADLINE_MS,
+		stop: spoolLanded.signal,
 	});
+	const early = await settleWithinHedge({ appendResult });
 	if (early?.acked) return;
 
 	const spooled = spoolTrack({
@@ -82,6 +78,10 @@ export async function appendOrSpoolTrack({
 		reason: early ? "append_failed" : "append_slow",
 		appendError: early && !early.acked ? early.error : undefined,
 		startedAt,
+	}).then((landed) => {
+		// SQS holds the track, so further Kafka attempts would only add copies for the worker to dedupe.
+		if (landed) spoolLanded.abort();
+		return landed;
 	});
 	if (await isEitherDurable({ appendResult, spooled })) return;
 

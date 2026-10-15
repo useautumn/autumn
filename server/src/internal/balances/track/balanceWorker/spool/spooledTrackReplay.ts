@@ -1,12 +1,12 @@
+import { BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS } from "@autumn/env/balanceWorkerConstants";
 import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { SPOOLED_TRACK_MAX_REPLAY_AGE_MS } from "./trackSpoolConfig.js";
 
 /** Retried rather than dropped, so the queue's redrive parks it in the DLQ: replaying could deduct twice, dropping could lose it. */
 export class SpooledTrackTooOldError extends Error {
 	constructor({ ageMs }: { ageMs: number }) {
 		super(
-			`Spooled track is ${ageMs}ms old, past the ${SPOOLED_TRACK_MAX_REPLAY_AGE_MS}ms the balance worker's dedup covers`,
+			`Spooled track is ${ageMs}ms old, past the ${BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS}ms the balance worker's dedup covers`,
 		);
 		this.name = "SpooledTrackTooOldError";
 	}
@@ -22,13 +22,13 @@ export function assertSpooledTrackReplayable({
 	spooledAt: number;
 }): void {
 	const ageMs = Date.now() - spooledAt;
-	if (ageMs <= SPOOLED_TRACK_MAX_REPLAY_AGE_MS) return;
+	if (ageMs <= BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS) return;
 	ctx.logger.error(
 		"[track] spooled track is too old to replay on the balance worker; refusing it",
 		{
 			type: "balance_worker_track_spool_stale_refused",
 			drain_lag_ms: ageMs,
-			max_replay_age_ms: SPOOLED_TRACK_MAX_REPLAY_AGE_MS,
+			max_replay_age_ms: BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS,
 			feature_id: body.feature_id,
 			event_name: body.event_name,
 		},
