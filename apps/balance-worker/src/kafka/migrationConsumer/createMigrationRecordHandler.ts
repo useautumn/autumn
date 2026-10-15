@@ -8,7 +8,7 @@ import { z } from "zod/v4";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
 import type { MigrationLaneItem } from "../../processor/commands/applyMigrationBatch/types/migrationLaneItem.js";
 
-const MAX_ITEMS_PER_APPLY = 2_000;
+const MAX_ITEMS_PER_APPLY = 500;
 const RUNTIME_WAIT_MS = 10_000;
 const RUNTIME_POLL_MS = 100;
 
@@ -101,11 +101,26 @@ export function createMigrationRecordHandler({
 		for (let start = 0; start < items.length; start += MAX_ITEMS_PER_APPLY) {
 			const chunk = items.slice(start, start + MAX_ITEMS_PER_APPLY);
 			const runtime = await ownedRuntimeOf({ partition });
-			const outcome = await runtime.process((processor) => {
-				if (!processor.applyMigrationBatch)
-					throw new Error("Processor cannot apply migration batches");
-				return processor.applyMigrationBatch({ items: chunk });
-			});
+			const outcome = await runtime
+				.process((processor) => {
+					if (!processor.applyMigrationBatch)
+						throw new Error("Processor cannot apply migration batches");
+					return processor.applyMigrationBatch({ items: chunk });
+				})
+				.catch((cause: unknown) => {
+					ctx.logger?.warn("Migration batch failed", {
+						event: "balance_worker.migration_batch_failed",
+						topic,
+						partition,
+						size: chunk.length,
+						reason: cause instanceof Error ? cause.message : String(cause),
+						cause:
+							cause instanceof Error && cause.cause instanceof Error
+								? cause.cause.message
+								: null,
+					});
+					throw cause;
+				});
 			ctx.logger?.info("Migration batch applied", {
 				event: "balance_worker.migration_batch",
 				topic,
