@@ -30,6 +30,13 @@ const PERIOD_STEPS_SECONDS = [
 	2 * 60 * 60,
 ];
 const MAX_POINTS = 120;
+const AXIOM_MAX_BUCKETS = 11_000;
+
+/** The finest window Axiom can bin the whole range into, 10s up to 24h. */
+const atomMetricsWindowSeconds = ({ range }: { range: AtomMetricsRange }) =>
+	PERIOD_STEPS_SECONDS.find(
+		(window) => RANGE_SECONDS[range] / window < AXIOM_MAX_BUCKETS,
+	) ?? PERIOD_STEPS_SECONDS[PERIOD_STEPS_SECONDS.length - 1];
 
 /** The finest period that plots the visible span, the range or the Atom's life if shorter, in at most 120 points. */
 export const atomMetricsPeriodSeconds = ({
@@ -42,14 +49,16 @@ export const atomMetricsPeriodSeconds = ({
 	now: number;
 }) => {
 	const spanSeconds = Math.min(RANGE_SECONDS[range], (now - createdAt) / 1000);
+	const windowSeconds = atomMetricsWindowSeconds({ range });
 	return (
-		PERIOD_STEPS_SECONDS.find((period) => spanSeconds / period <= MAX_POINTS) ??
-		PERIOD_STEPS_SECONDS[PERIOD_STEPS_SECONDS.length - 1]
+		PERIOD_STEPS_SECONDS.find(
+			(period) => period >= windowSeconds && spanSeconds / period <= MAX_POINTS,
+		) ?? PERIOD_STEPS_SECONDS[PERIOD_STEPS_SECONDS.length - 1]
 	);
 };
 
-/** Every replica's health line summed into the 10s window it landed in, the raw resolution. */
-const WINDOWS_PIPELINE = `
+/** Every replica's health line summed into the window it landed in. */
+const windowsPipeline = ({ windowSeconds }: { windowSeconds: number }) => `
 	| where line contains '"atom_health"'
 	| extend data = parse_json(line).data
 	| where todouble(data.interval.seconds) > 0
@@ -62,14 +71,20 @@ const WINDOWS_PIPELINE = `
 		coreSeconds = sum(lineSeconds * todouble(data.container.cpuLimitCores)),
 		memoryBytes = sum(todouble(data.container.memoryBytes)),
 		memoryLimitBytes = sum(todouble(data.container.memoryLimitBytes))
-		by bin(_time, 10s)
+		by bin(_time, ${windowSeconds}s)
 	| extend requestsPerSecond = requests / seconds,
 		forwardedPerSecond = forwarded / seconds,
 		pushesPerSecond = pushes / seconds`;
 
 /** Each period's totals for its average, and its busiest window, split as that window was, for its maximum. */
-const periodsPipeline = ({ periodSeconds }: { periodSeconds: number }) => `
-	${WINDOWS_PIPELINE}
+const periodsPipeline = ({
+	windowSeconds,
+	periodSeconds,
+}: {
+	windowSeconds: number;
+	periodSeconds: number;
+}) => `
+	${windowsPipeline({ windowSeconds })}
 	| summarize cpu = sum(cpuSeconds) / sum(coreSeconds),
 		memory = sum(memoryBytes) / sum(memoryLimitBytes),
 		requests = sum(requests),
@@ -82,7 +97,7 @@ const periodsPipeline = ({ periodSeconds }: { periodSeconds: number }) => `
 
 /** The last minute's totals, so one quiet or still-filling window doesn't read as the current rate. */
 const LATEST_PIPELINE = `
-	${WINDOWS_PIPELINE}
+	${windowsPipeline({ windowSeconds: 10 })}
 	| summarize _time = max(_time),
 		requests = sum(requests),
 		forwarded = sum(forwarded),
@@ -141,7 +156,10 @@ export const queryAtomMetrics = async ({
 		queryAtomLogs({
 			deploymentId,
 			startTime: `now-${range}`,
-			pipeline: periodsPipeline({ periodSeconds }),
+			pipeline: periodsPipeline({
+				windowSeconds: atomMetricsWindowSeconds({ range }),
+				periodSeconds,
+			}),
 		}),
 		queryAtomLogs({
 			deploymentId,
