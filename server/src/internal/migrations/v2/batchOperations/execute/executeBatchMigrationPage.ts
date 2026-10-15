@@ -2,9 +2,9 @@ import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import { executePatchOnWorker } from "../actions/executePatchOnWorker/executePatchOnWorker.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
 import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
-import { removeCustomerEntitlementsOnWorker } from "../actions/removeCustomerEntitlementsOnWorker/removeCustomerEntitlementsOnWorker.js";
 import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEntitlementsForPage/replaceCustomerEntitlementsForPage.js";
 import { repointCustomerProductsForPage } from "../actions/repointCustomerProductsForPage/repointCustomerProductsForPage.js";
 import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
@@ -82,20 +82,21 @@ export const executeBatchMigrationPage = async ({
 	const workerGate = createWorkerPageGate({ signal });
 
 	for (const patch of plan.patches) {
-		// A customer the worker failed gets no later writes this page; a retry run finishes it.
 		if (onWorker) {
-			const result = await removeCustomerEntitlementsOnWorker({
+			// A customer the worker failed gets no later writes this page; a retry run finishes it.
+			const notFailed = customers.filter(
+				({ internalId }) => !Object.hasOwn(failReasons, internalId),
+			);
+			const result = await executePatchOnWorker({
 				ctx,
 				migrationRunId,
 				gate: workerGate,
 				patch,
-				customers: customers.filter(
-					({ internalId }) => !Object.hasOwn(failReasons, internalId),
-				),
+				customers: notFailed,
 				phases,
 			});
 			removedItems.push(...result.removedItems);
-			Object.assign(failReasons, result.failureReasons);
+			Object.assign(failReasons, result.failReasons);
 			continue;
 		}
 
