@@ -1,15 +1,24 @@
 import { isPlainObject } from "../schemas/isPlainObject";
-import type { EditorField, EditorRow } from "./editorFields";
+import type {
+	EditorField,
+	EditorRow,
+	FeatureQuantity,
+	TrialDuration,
+} from "./editorFields";
 import {
 	type Filter,
 	fromNumberMatcher,
 	fromPlanFilter,
 	fromStringMatcher,
+	isCapOperator,
 	isEmptyObject,
+	isPlanBranches,
+	NEGATED_NUMBER_OPERATORS,
 	type RowRead,
 	toMatcher,
 	toPlanFilter,
 } from "./filterParts";
+import { fromTrialBranches, toTrialBranches } from "./freeTrialBranches";
 
 /** How one field's rows are stored in a group's filter, and read back out of it. */
 type FieldCodec = {
@@ -29,6 +38,7 @@ const get = (value: unknown, path: string[]) =>
 	);
 
 const INCOMING_PLAN = ["incoming", "$every"];
+const QUANTITY_LIMIT = [...INCOMING_PLAN, "feature_quantities", "$none"];
 
 const stringAt = (path: string[]): FieldCodec => ({
 	toFilter: (row) => at(path, toMatcher(row)),
@@ -66,6 +76,39 @@ const daysAt = ({
 	},
 });
 
+const planReads = ({
+	filter,
+	negative,
+}: {
+	filter: unknown;
+	negative: boolean;
+}) => {
+	const selection = fromPlanFilter(filter);
+	if (!selection) return [];
+	const [single, many] = negative
+		? ["is_not", "is_none_of"]
+		: ["is", "is_any_of"];
+	return [
+		{ operator: Array.isArray(selection) ? many : single, value: selection },
+	];
+};
+
+/** Every plan must match ("is"), or none may ("is not"). */
+const plansAt = (path: string[]): FieldCodec => ({
+	toFilter: (row) => {
+		const isNegative =
+			row.operator === "is_not" || row.operator === "is_none_of";
+		return at(
+			[...path, isNegative ? "$none" : "$every"],
+			toPlanFilter(row.value),
+		);
+	},
+	fromFilter: (group) => [
+		...planReads({ filter: get(group, [...path, "$every"]), negative: false }),
+		...planReads({ filter: get(group, [...path, "$none"]), negative: true }),
+	],
+});
+
 const CUSTOMER_PLAN = ["customer", "plan"];
 
 const customerPlan: FieldCodec = {
@@ -82,20 +125,107 @@ const customerPlan: FieldCodec = {
 		return [
 			...(has ? [{ operator: "has", value: has }] : []),
 			...(isEmptyObject(none) ? [{ operator: "has_none", value: null }] : []),
-			...(doesntHave ? [{ operator: "doesnt_have", value: doesntHave }] : []),
+			...(doesntHave && !Array.isArray(doesntHave)
+				? [{ operator: "doesnt_have", value: doesntHave }]
+				: []),
 		];
 	},
 };
 
+const currentPlans = plansAt(CUSTOMER_PLAN);
+
+// "Current plan is not X" is the same filter as "Customer doesn't have X", which reads it.
+const currentPlan: FieldCodec = {
+	toFilter: currentPlans.toFilter,
+	fromFilter: (group) =>
+		currentPlans.fromFilter(group).filter((read) => read.operator !== "is_not"),
+};
+
+const freeTrial: FieldCodec = {
+	toFilter: (row) => {
+		if (row.operator === "has_none")
+			return at([...INCOMING_PLAN, "free_trial"], null);
+		const duration = row.value as TrialDuration;
+		const branches = toTrialBranches({ operator: row.operator, duration });
+		return at([...INCOMING_PLAN, "$or"], branches);
+	},
+	fromFilter: (group) => {
+		const plan = get(group, INCOMING_PLAN);
+		if (!isPlainObject(plan)) return [];
+		if (plan.free_trial === null)
+			return [{ operator: "has_none", value: null }];
+		const trial = isPlanBranches(plan.$or) ? null : fromTrialBranches(plan.$or);
+		return trial ? [{ operator: trial.operator, value: trial.duration }] : [];
+	},
+};
+
+// Stored as "no quantity breaks the limit", so plans without the feature pass.
+const featureQuantity: FieldCodec = {
+	toFilter: (row) => {
+		const { feature_id, quantity } = row.value as FeatureQuantity;
+		const operator = NEGATED_NUMBER_OPERATORS[row.operator];
+		return at(QUANTITY_LIMIT, {
+			feature_id,
+			quantity: toMatcher({ operator, value: quantity }),
+		});
+	},
+	fromFilter: (group) =>
+		fromNumberMatcher(get(group, [...QUANTITY_LIMIT, "quantity"])).map(
+			(limit) => ({
+				operator: NEGATED_NUMBER_OPERATORS[limit.operator],
+				value: {
+					feature_id: get(group, [...QUANTITY_LIMIT, "feature_id"]),
+					quantity: limit.value,
+				},
+			}),
+		),
+};
+
+/** A cap on an optional amount also passes when there's none, like a trial cap. */
+const amountAt = ({
+	key,
+	amount,
+}: {
+	key: string;
+	amount: string;
+}): FieldCodec => ({
+	toFilter: (row) => {
+		const filter = at([key, amount], toMatcher(row));
+		return isCapOperator(row.operator)
+			? { $or: [{ [key]: null }, filter] }
+			: filter;
+	},
+	fromFilter: (group) => {
+		const branches = Array.isArray(group.$or) ? group.$or : [];
+		const isCapOr = branches.length === 2 && get(branches[0], [key]) === null;
+		return [
+			...fromNumberMatcher(get(group, [key, amount])),
+			...(isCapOr ? fromNumberMatcher(get(branches[1], [key, amount])) : []),
+		];
+	},
+});
+
 export const FIELD_CODECS: Record<EditorField, FieldCodec> = {
 	customer: stringAt(["customer", "customer_id"]),
 	customer_plan: customerPlan,
+	current_plan: currentPlan,
 	paid: booleanAt(["paid"]),
 	checkout: booleanAt(["checkout"]),
 	total: numberAt(["total"]),
+	next_cycle_total: amountAt({ key: "next_cycle", amount: "total" }),
+	incoming_plan: plansAt(["incoming"]),
+	outgoing_plan: plansAt(["outgoing"]),
 	incoming_paid: booleanAt([...INCOMING_PLAN, "paid"]),
 	incoming_recurring: booleanAt([...INCOMING_PLAN, "recurring"]),
 	incoming_addon: booleanAt([...INCOMING_PLAN, "addon"]),
+	free_trial: freeTrial,
+	trial_card_required: booleanAt([
+		...INCOMING_PLAN,
+		"free_trial",
+		"card_required",
+	]),
+	trial_on_end: stringAt([...INCOMING_PLAN, "free_trial", "on_end"]),
+	feature_quantity: featureQuantity,
 	customized: booleanAt([...INCOMING_PLAN, "customized"]),
 	discount: stringAt(["discounts", "$every", "reward_id"]),
 	discount_percent_off: numberAt(["discounts", "$every", "percent_off"]),
@@ -105,6 +235,7 @@ export const FIELD_CODECS: Record<EditorField, FieldCodec> = {
 	starts_at: daysAt({ path: ["starts_at", "$gte", "days_from_now"], sign: -1 }),
 	invoice_mode: booleanAt(["invoice_mode", "enabled"]),
 	cancel_action: stringAt(["cancel_action"]),
+	refund: amountAt({ key: "refund", amount: "amount" }),
 	feature: stringAt(["feature_id"]),
 	included_grant: numberAt(["included_grant"]),
 	unlimited: booleanAt(["unlimited"]),

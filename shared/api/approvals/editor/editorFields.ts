@@ -17,9 +17,17 @@ export const EDITOR_FIELDS = {
 		paid: IS,
 		checkout: IS,
 		total: NUMBER_OPERATORS,
+		next_cycle_total: NUMBER_OPERATORS,
+		incoming_plan: ID_OPERATORS,
+		outgoing_plan: ID_OPERATORS,
+		current_plan: ID_OPERATORS,
 		incoming_paid: IS,
 		incoming_recurring: IS,
 		incoming_addon: IS,
+		free_trial: ["lt", "lte", "gt", "gte", "has_none"],
+		trial_card_required: IS,
+		trial_on_end: ENUM_OPERATORS,
+		feature_quantity: NUMBER_OPERATORS,
 		customized: IS,
 		discount: ID_OPERATORS,
 		discount_percent_off: NUMBER_OPERATORS,
@@ -32,10 +40,13 @@ export const EDITOR_FIELDS = {
 	billing_cancel: {
 		...customerFields,
 		cancel_action: ENUM_OPERATORS,
+		outgoing_plan: ID_OPERATORS,
+		refund: NUMBER_OPERATORS,
 	},
 	invoice: {
 		...customerFields,
 		total: NUMBER_OPERATORS,
+		refund: NUMBER_OPERATORS,
 	},
 	balance_create: {
 		...customerFields,
@@ -75,6 +86,9 @@ export type EditorOperator = {
 
 /** A plan picker's choice; no `version` means any version. */
 export type PlanSelection = { plan_id: string; version?: number };
+export type TrialUnit = "day" | "month" | "year";
+export type TrialDuration = { length: number; unit: TrialUnit };
+export type FeatureQuantity = { feature_id: string; quantity: number };
 
 /**
  * `*_any_of` / `*_none_of` take arrays, `has_none` takes null; `starts_at` and
@@ -86,6 +100,9 @@ export type EditorRowValue =
 	| number
 	| boolean
 	| PlanSelection
+	| PlanSelection[]
+	| TrialDuration
+	| FeatureQuantity
 	| null;
 
 export type EditorRow = {
@@ -96,3 +113,9 @@ export type EditorRow = {
 
 /** Rows ANDed together; a rule's groups are ORed. */
 export type EditorGroup = EditorRow[];
+
+/** Fields set once for the whole rule, above its groups: Balances amounts are in the Feature's unit. */
+export const PINNED_FIELDS: Partial<Record<WhenKey, EditorField>> = {
+	balance_create: "feature",
+	balance_update: "feature",
+};

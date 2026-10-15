@@ -59,6 +59,11 @@ const shapes: { name: string; area: WhenKey; when: unknown }[] = [
 		when: { feature_id: "credits" },
 	},
 	{ name: "an empty $or", area: "billing_change", when: { $or: [] } },
+	{
+		name: "Balances' Feature inside a group",
+		area: "balance_create",
+		when: { $or: [{ feature_id: "a" }, { feature_id: "b" }] },
+	},
 ];
 
 describe("stored filters the editor can't show", () => {
@@ -72,6 +77,7 @@ describe("stored filters the editor can't show", () => {
 		(when) => {
 			expect(whenToRows({ area: "billing_change", when })).toEqual({
 				editable: true,
+				pinned: null,
 				groups: [],
 			});
 		},

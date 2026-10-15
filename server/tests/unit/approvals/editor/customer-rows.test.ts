@@ -82,6 +82,47 @@ test.each(cells)("$area · $name", ({ area, rows, when }) => {
 	});
 	expect(whenToRows({ area, when })).toEqual({
 		editable: true,
+		pinned: null,
 		groups: [rows],
+	});
+});
+
+test.each<{
+	name: string;
+	row: EditorRow;
+	when: unknown;
+	readsBack?: EditorRow;
+}>([
+	{
+		name: "Current plan is any of: every current plan matches",
+		row: {
+			field: "current_plan",
+			operator: "is_any_of",
+			value: [{ plan_id: "starter" }, { plan_id: "pro" }],
+		},
+		when: {
+			customer: { plan: { $every: { plan_id: { $in: ["starter", "pro"] } } } },
+		},
+	},
+	{
+		name: "Current plan is not reads back as Customer doesn't have plan",
+		row: { field: "current_plan", operator: "is_not", value: enterprise },
+		when: { customer: { plan: { $none: enterprise } } },
+		readsBack: {
+			field: "customer_plan",
+			operator: "doesnt_have",
+			value: enterprise,
+		},
+	},
+])("billing_change · $name", ({ row, when, readsBack = row }) => {
+	const area = "billing_change";
+	expect<unknown>(rowsToWhen({ area, groups: [[row]] })).toEqual({
+		ok: true,
+		when,
+	});
+	expect(whenToRows({ area, when })).toEqual({
+		editable: true,
+		pinned: null,
+		groups: [[readsBack]],
 	});
 });

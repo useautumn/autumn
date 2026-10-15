@@ -23,6 +23,20 @@ const STRING_OPERATORS: Record<string, string> = {
 	$nin: "is_none_of",
 };
 
+/** Each number operator's opposite; the map is its own inverse. */
+export const NEGATED_NUMBER_OPERATORS: Record<string, string> = {
+	eq: "ne",
+	ne: "eq",
+	lt: "gte",
+	lte: "gt",
+	gt: "lte",
+	gte: "lt",
+};
+
+/** Caps (<, ≤) on something optional also pass when it's absent. */
+export const isCapOperator = (operator: string) =>
+	operator === "lt" || operator === "lte";
+
 /** Mongo convention: equality ("is", "=") is the bare value. */
 export const toMatcher = ({ operator, value }: RowRead) => {
 	const key = MATCHER_KEYS[operator];
@@ -55,19 +69,32 @@ export const isEmptyObject = (value: unknown) =>
 const toSelection = ({ plan_id, version }: PlanSelection): PlanSelection =>
 	version === undefined ? { plan_id } : { plan_id, version };
 
-const isPlanSelection = (value: unknown): value is PlanSelection =>
-	isPlainObject(value) &&
-	typeof value.plan_id === "string" &&
-	(value.version === undefined || typeof value.version === "number");
+/** Version-less choices fit one `$in`; a pinned version needs a branch per choice. */
+export const toPlanFilter = (value: unknown) => {
+	if (!Array.isArray(value)) return toSelection(value as PlanSelection);
+	if (value.every((selection) => selection.version === undefined)) {
+		return { plan_id: { $in: value.map((selection) => selection.plan_id) } };
+	}
+	return { $or: value.map(toSelection) };
+};
 
-/** Null when the picker has no valid choice yet. */
-export const toPlanFilter = (value: unknown) =>
-	isPlanSelection(value) ? toSelection(value) : null;
+export const isPlanBranches = (branches: unknown) =>
+	Array.isArray(branches) &&
+	branches.every((branch) => isPlainObject(branch) && "plan_id" in branch);
 
-export const fromPlanFilter = (filter: unknown): PlanSelection | null =>
-	isPlainObject(filter) && typeof filter.plan_id === "string"
-		? toSelection(filter as PlanSelection)
-		: null;
+export const fromPlanFilter = (
+	filter: unknown,
+): PlanSelection | PlanSelection[] | null => {
+	if (!isPlainObject(filter)) return null;
+	const { plan_id: planId, $or: branches } = filter;
+	if (typeof planId === "string") return toSelection(filter as PlanSelection);
+	if (isPlainObject(planId) && Array.isArray(planId.$in)) {
+		return planId.$in.map((id: string) => ({ plan_id: id }));
+	}
+	if (isPlanBranches(branches))
+		return (branches as PlanSelection[]).map(toSelection);
+	return null;
+};
 
 // `{}` is a value ("has no plan"), not a container to merge into.
 const isMergeable = (value: unknown): value is Filter =>

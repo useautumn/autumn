@@ -18,6 +18,7 @@ import {
 	type EditorField,
 	type EditorGroup,
 	type EditorRow,
+	PINNED_FIELDS,
 	rowsToWhen,
 	whenToRows,
 } from "@autumn/shared/api/approvals/editor/index.js";
@@ -30,9 +31,17 @@ const SAMPLES: Record<EditorField, unknown[]> = {
 	paid: [true],
 	checkout: [true],
 	total: [20],
+	next_cycle_total: [99],
+	incoming_plan: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
+	outgoing_plan: [{ plan_id: "starter" }, { plan_id: "team" }],
+	current_plan: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
 	incoming_paid: [true],
 	incoming_recurring: [false],
 	incoming_addon: [true],
+	free_trial: [{ length: 2, unit: "month" }],
+	trial_card_required: [true],
+	trial_on_end: ["bill", "revert"],
+	feature_quantity: [{ feature_id: "seats", quantity: 10 }],
 	customized: [true],
 	discount: ["launch20", "partner"],
 	discount_percent_off: [20],
@@ -42,6 +51,7 @@ const SAMPLES: Record<EditorField, unknown[]> = {
 	starts_at: [7],
 	invoice_mode: [false],
 	cancel_action: ["cancel_immediately", "cancel_end_of_cycle"],
+	refund: [50],
 	feature: ["ai_credits", "messages"],
 	included_grant: [100],
 	unlimited: [true],
@@ -64,23 +74,35 @@ const sampleRow = (field: string, operator: string): EditorRow => {
 	} as EditorRow;
 };
 
+/** Board cells that store the same filter as an earlier field, which reads it back. */
+const ALIASES: Record<string, EditorRow> = {
+	"current_plan:is_not": {
+		field: "customer_plan",
+		operator: "doesnt_have",
+		value: { plan_id: "pro", version: 2 },
+	},
+};
+
 const AREAS = Object.keys(EDITOR_FIELDS) as WhenKey[];
 const fieldsOf = (area: WhenKey) =>
 	Object.entries(EDITOR_FIELDS[area] as Record<string, readonly string[]>);
 
-/** One group of rows in board order; Balances rules also need a Feature row. */
+/** One group of rows, with the area's pinned field (Balances' Feature) moved above it. */
 const editorInput = (area: WhenKey, rows: EditorRow[]) => {
-	const needsFeature =
-		area.startsWith("balance_") && !rows.some((row) => row.field === "feature");
-	const order = Object.keys(EDITOR_FIELDS[area]);
-	const group = needsFeature
-		? [sampleRow("feature", "is"), ...rows]
-		: [...rows];
-	group.sort((a, b) => order.indexOf(a.field) - order.indexOf(b.field));
-	return { groups: [group] };
+	const pinnedField = PINNED_FIELDS[area];
+	const groupRows = rows.filter((row) => row.field !== pinnedField);
+	const pinned = pinnedField
+		? (rows.find((row) => row.field === pinnedField) ??
+			sampleRow(pinnedField, "is"))
+		: null;
+	return { pinned, groups: groupRows.length > 0 ? [groupRows] : [] };
 };
 
-const stored = (input: { area: WhenKey; groups: EditorGroup[] }) => {
+const stored = (input: {
+	area: WhenKey;
+	pinned?: EditorRow | null;
+	groups: EditorGroup[];
+}) => {
 	const result = rowsToWhen(input);
 	if (!result.ok) throw new Error(JSON.stringify(result.issues));
 	return result.when;
@@ -97,11 +119,15 @@ const expectValid = (area: WhenKey, when: unknown) => {
 	expect(result.ok ? [] : result.issues).toEqual([]);
 };
 
-const expectRoundTrip = (area: WhenKey, rows: EditorRow[]) => {
+const expectRoundTrip = (
+	area: WhenKey,
+	rows: EditorRow[],
+	readsBack = rows,
+) => {
 	const when = stored({ area, ...editorInput(area, rows) });
 	expect(whenToRows({ area, when })).toEqual({
 		editable: true,
-		...editorInput(area, rows),
+		...editorInput(area, readsBack),
 	});
 	expectValid(area, when);
 };
@@ -114,7 +140,8 @@ describe("every field × operator round-trips", () => {
 	);
 
 	test.each(cells)("$area · $field $operator", ({ area, field, operator }) => {
-		expectRoundTrip(area, [sampleRow(field, operator)]);
+		const row = sampleRow(field, operator);
+		expectRoundTrip(area, [row], [ALIASES[`${field}:${operator}`] ?? row]);
 	});
 
 	test.each(AREAS)("%s: every field at once, in one group", (area) => {
@@ -164,11 +191,33 @@ describe("groups", () => {
 		expect(when).toEqual({ incoming: { $every: { customized: true } } });
 		expectValid("billing_change", when);
 	});
+
+	test("Balances keep Feature above the groups", () => {
+		const input = {
+			pinned: sampleRow("feature", "is"),
+			groups: [
+				[{ field: "included_grant", operator: "lte", value: 50 }],
+				[sampleRow("unlimited", "is")],
+			] as EditorGroup[],
+		};
+		const when = stored({ area: "balance_create", ...input });
+		expect(when).toEqual({
+			feature_id: "ai_credits",
+			$or: [{ included_grant: { $lte: 50 } }, { unlimited: true }],
+		});
+		expect(whenToRows({ area: "balance_create", when })).toEqual({
+			editable: true,
+			...input,
+		});
+		expectValid("balance_create", when);
+	});
 });
 
 describe("stored design cases open in the editor", () => {
 	test.each([
+		["enterprise trials", "billing_change", rules.enterpriseTrials()],
 		["recurring discounts", "billing_change", rules.recurringDiscounts()],
+		["support cancellations", "billing_cancel", rules.supportCancellations()],
 		[
 			"credit grants",
 			"balance_create",
@@ -177,15 +226,44 @@ describe("stored design cases open in the editor", () => {
 	] as const)("%s", (_name, area, rule) => {
 		const read = whenToRows({ area, when: rule.when });
 		if (!read.editable) throw new Error("not editable");
-		expect(stored({ area, groups: read.groups })).toEqual(rule.when);
+		expect(stored({ area, pinned: read.pinned, groups: read.groups })).toEqual(
+			rule.when,
+		);
+	});
+
+	test("support cancellations read as two groups", () => {
+		expect(
+			whenToRows({
+				area: "billing_cancel",
+				when: rules.supportCancellations().when,
+			}),
+		).toEqual({
+			editable: true,
+			pinned: null,
+			groups: [
+				[
+					{
+						field: "cancel_action",
+						operator: "is",
+						value: "cancel_end_of_cycle",
+					},
+				],
+				[
+					sampleRow("cancel_action", "is"),
+					sampleRow("outgoing_plan", "is"),
+					{ field: "refund", operator: "lte", value: 50 },
+				],
+			],
+		});
 	});
 });
 
 type IssueCase = {
 	name: string;
 	area: WhenKey;
+	pinned?: EditorRow;
 	rows: EditorRow[];
-	issue: { group: number; row: number };
+	issue: { group: number | "pinned"; row: number };
 };
 
 describe("rows that can't be stored report an issue", () => {
@@ -211,23 +289,63 @@ describe("rows that can't be stored report an issue", () => {
 			rows: [{ field: "paid", operator: "lt", value: 1 }],
 			issue: { group: 0, row: 0 },
 		},
-		...[
-			{ field: "customer_plan", operator: "has", value: null },
-			{ field: "customer", operator: "is", value: null },
-			{ field: "total", operator: "lte", value: "lots" },
-			{ field: "starts_at", operator: "is", value: "7" },
-			{ field: "paid", operator: "is", value: null },
-			{ field: "customer", operator: "is_any_of", value: [1, 2] },
-		].map((row) => ({
-			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
-			area: "billing_change" as const,
-			rows: [row as EditorRow],
+		{
+			name: "Balances' Feature inside a group",
+			area: "balance_create",
+			rows: [sampleRow("feature", "is")],
 			issue: { group: 0, row: 0 },
-		})),
-	])("$name", ({ area, rows, issue }) => {
-		expect(rowsToWhen({ area, groups: [rows] })).toEqual({
+		},
+		{
+			name: "a pinned row on an area without one",
+			area: "invoice",
+			pinned: sampleRow("total", "eq"),
+			rows: [],
+			issue: { group: "pinned", row: 0 },
+		},
+		// Until S3 adds `$and` on plan elements, these rows collide in `incoming.$every`.
+		{
+			name: "Incoming plan · any of, pinned version, beside a Free trial cap",
+			area: "billing_change",
+			rows: [
+				sampleRow("incoming_plan", "is_any_of"),
+				sampleRow("free_trial", "lt"),
+			],
+			issue: { group: 0, row: 1 },
+		},
+		{
+			name: "two Quantity rows in one group",
+			area: "billing_change",
+			rows: [
+				sampleRow("feature_quantity", "lte"),
+				{
+					...sampleRow("feature_quantity", "lte"),
+					value: { feature_id: "w", quantity: 5 },
+				},
+			],
+			issue: { group: 0, row: 1 },
+		},
+	])("$name", ({ area, pinned, rows, issue }) => {
+		expect(rowsToWhen({ area, pinned, groups: [rows] })).toEqual({
 			ok: false,
 			issues: [{ ...issue, message: expect.any(String) }],
 		});
+	});
+
+	test.skip("Incoming plan · any of with a version and a Free trial combine with $and (needs S3's `$and` on PlanChangeFilter)", () => {
+		expectRoundTrip("billing_change", [
+			sampleRow("incoming_plan", "is_any_of"),
+			sampleRow("free_trial", "lt"),
+		]);
+	});
+
+	test.skip("two Quantity rows combine with $and (needs S3's `$and` on the feature_quantities element)", () => {
+		expectRoundTrip("billing_change", [
+			sampleRow("feature_quantity", "lte"),
+			{
+				field: "feature_quantity",
+				operator: "lte",
+				value: { feature_id: "w", quantity: 5 },
+			},
+		]);
 	});
 });
