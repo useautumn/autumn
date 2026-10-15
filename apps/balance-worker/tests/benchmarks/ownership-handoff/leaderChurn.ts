@@ -716,13 +716,31 @@ async function moveCoordinators(): Promise<string> {
 			replicas: BROKER_IDS.filter((b) => b !== leader),
 		}),
 	);
+	const requestedAt = Date.now();
 	await reassignPartitions({
 		reassign: [{ topic: OFFSETS_TOPIC, partitionAssignment }],
 	});
+	// The move is asynchronous: a group has moved once its coordinator lookup names another broker.
+	const movedAfterMs = new Map<number, number | null>();
+	const deadline = requestedAt + WAVE_GAP_MS - 500;
+	for (const [partition, { leader, groups }] of byPartition) {
+		const groupId = groupIds[groups[0]];
+		movedAfterMs.set(partition, null);
+		while (Date.now() < deadline) {
+			const now = Number(
+				(await adminRequest(`coord ${groupId}`)).split(" ")[1],
+			);
+			if (now !== leader) {
+				movedAfterMs.set(partition, Date.now() - requestedAt);
+				break;
+			}
+			await Bun.sleep(100);
+		}
+	}
 	return [...byPartition]
 		.map(
 			([partition, { leader, groups }]) =>
-				`${groups.join("+")}@${OFFSETS_TOPIC}-${partition} off ${leader}`,
+				`${groups.join("+")}@${OFFSETS_TOPIC}-${partition} off ${leader} (${movedAfterMs.get(partition) === null ? "not moved yet" : `moved in ${movedAfterMs.get(partition)}ms`})`,
 		)
 		.join(", ");
 }
