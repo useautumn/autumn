@@ -2,7 +2,7 @@ import type { BillingContext, BillingPlan } from "@autumn/shared";
 import type { BillingCancelFacts } from "@autumn/shared/api/approvals/evaluate/index.js";
 import { billingPlanToChangedCustomerProducts } from "./billingPlanToChangedCustomerProducts";
 import type { BillingPreviewTotals } from "./billingPreviewTotals";
-import { findChangeCustomerProduct } from "./findChangeCustomerProduct";
+import { matchChangesToCustomerProducts } from "./matchChangesToCustomerProducts";
 
 /** Cancel, uncancel. The refund is the preview's, so a cap checks what will actually be refunded. */
 export const buildBillingCancelFacts = ({
@@ -26,9 +26,10 @@ export const buildBillingCancelFacts = ({
 			cancelAction === "cancel_end_of_cycle"
 				? cancelAction
 				: null,
-		outgoing: preview.outgoing.map((change) =>
-			findChangeCustomerProduct({ change, customerProducts: before }),
-		),
+		outgoing: matchChangesToCustomerProducts({
+			changes: preview.outgoing,
+			customerProducts: before,
+		}),
 		refund: preview.refund ? { amount: preview.refund.amount } : null,
 	};
 };

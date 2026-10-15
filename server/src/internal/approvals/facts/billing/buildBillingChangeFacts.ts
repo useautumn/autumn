@@ -13,8 +13,8 @@ import type { BillingPreviewTotals } from "./billingPreviewTotals";
 import { changeAddsPayPerUsePrice } from "./changeAddsPayPerUsePrice";
 import { changeRaisesRecurringPrice } from "./changeRaisesRecurringPrice";
 import { changeToIncomingPlanFacts } from "./changeToIncomingPlanFacts";
-import { findChangeCustomerProduct } from "./findChangeCustomerProduct";
 import { isBillingChangePaid } from "./isBillingChangePaid";
+import { matchChangesToCustomerProducts } from "./matchChangesToCustomerProducts";
 import { stripeDiscountsToDiscountFacts } from "./stripeDiscountsToDiscountFacts";
 
 /** Attach, update subscription, set plans, schedule. Totals come straight from the preview. */
@@ -34,12 +34,14 @@ export const buildBillingChangeFacts = ({
 	const { after, before } = billingPlanToChangedCustomerProducts({
 		autumnBillingPlan: billingPlan.autumn,
 	});
-	const incomingCustomerProducts = preview.incoming.map((change) =>
-		findChangeCustomerProduct({ change, customerProducts: after }),
-	);
-	const outgoing = preview.outgoing.map((change) =>
-		findChangeCustomerProduct({ change, customerProducts: before }),
-	);
+	const incomingCustomerProducts = matchChangesToCustomerProducts({
+		changes: preview.incoming,
+		customerProducts: after,
+	});
+	const outgoing = matchChangesToCustomerProducts({
+		changes: preview.outgoing,
+		customerProducts: before,
+	});
 	// Same order as the preview, so `incoming[0]` names the same plan in both.
 	const incoming = preview.incoming.map((change, index) =>
 		changeToIncomingPlanFacts({
@@ -72,6 +74,8 @@ export const buildBillingChangeFacts = ({
 			raisesRecurringPrice: changeRaisesRecurringPrice({
 				incoming: incomingCustomerProducts,
 				outgoing,
+				currentDiscounts,
+				incomingDiscounts: billingContext.stripeDiscounts ?? [],
 				currency,
 			}),
 			addsPayPerUsePrice: changeAddsPayPerUsePrice({
