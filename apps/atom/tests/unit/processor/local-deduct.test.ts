@@ -107,7 +107,7 @@ describe("a send_event check the Atom deducts itself", () => {
 			enforceOverdueBlock: true,
 			properties: null,
 			usageEvent: { name: "messages", idempotencyKey: null, id: null },
-			idempotency: { key: "track:atom_req_1", ttlMs: 86_400_000 },
+			idempotency: { key: "track:atom_req_1", ttlMs: 30 * 60_000 },
 		});
 		expect(journal.unsent({ limit: 10 })).toEqual([entry]);
 	});
@@ -219,7 +219,7 @@ describe("a track the Atom deducts itself", () => {
 			value: 7,
 			overageBehavior: "cap",
 			usageEvent: { name: "messages", idempotencyKey: "evt_1", id: null },
-			idempotency: { key: "track:evt_1", ttlMs: 86_400_000 },
+			idempotency: { key: "track:evt_1", ttlMs: 30 * 60_000 },
 		});
 		expect(entry?.command.enforceOverdueBlock).not.toBe(true);
 	});
