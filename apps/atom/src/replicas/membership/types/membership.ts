@@ -14,6 +14,10 @@ export type Membership = {
 	stateOf(address: string): MemberState | null;
 	/** The peer answers ready from the boot named: counted as an owner from now on, for every thread at once. True when this call flipped it. */
 	markJoined(params: { address: string; boot: string }): boolean;
+	/** Counts every flip to joined, so a thread that did not flip the peer notices it has to hand over. */
+	joinEpoch(): number;
+	/** The boot the peer was marked joined from, as the table holds it; null for a peer it does not hold. */
+	bootOf(address: string): number | null;
 	/** Whether the peer was marked joined from this boot: read from the shared table, so every thread tells a leaving peer back at the same address apart. */
 	isBootOf(params: { address: string; boot: string }): boolean;
 	markLeaving(address: string): void;

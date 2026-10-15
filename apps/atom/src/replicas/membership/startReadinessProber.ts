@@ -5,6 +5,8 @@ import { readyBootOf } from "./readyBootOf.js";
 
 /** How often each thread looks at the peers the service name lists. */
 export const PROBE_EVERY_MS = 1_000;
+/** How often each thread looks at the shared table for a peer another thread flipped: it hands over to it at once. */
+const FLIP_TICK_MS = 20;
 /** A listed peer that has answered no probe for this long is worth a line: both replicas may be owning everything. */
 const UNPROBED_WARN_MS = 60_000;
 
@@ -28,8 +30,8 @@ export const startReadinessProber = ({
 	const seen = new Set<string>();
 	/** When each listed peer was first seen unready, until it answers; warned about once. */
 	const unreadySince = new Map<string, number>();
-	/** The boot each peer was last handed over to from this thread: it is not handed to again until it boots anew. */
-	const handedTo = new Map<string, string>();
+	/** The boot each peer was last handed over to from this thread, as the table codes it: not again until it boots anew. */
+	const handedTo = new Map<string, number>();
 	let stopped = false;
 
 	const noteUnready = (peer: string) => {
@@ -56,6 +58,12 @@ export const startReadinessProber = ({
 				{ type: "atom_peer_joined", data: { peer, boot } },
 				`${peer} is ready: it owns its customers from now on`,
 			);
+		await handOverTo(peer);
+	}
+
+	/** Granted, then handed what this thread owes its customers, once per boot of the peer. */
+	async function handOverTo(peer: string): Promise<void> {
+		const boot = ctx.membership.bootOf(peer);
 		const granted = await announceTo({
 			ctx,
 			peer,
@@ -68,12 +76,27 @@ export const startReadinessProber = ({
 			);
 		const { handed, kept, told } = await handOverOnce({ ctx, peers: [peer] });
 		ctx.onHandedOff?.(peer);
-		if (granted && told.length === 1) handedTo.set(peer, boot);
+		if (granted && told.length === 1 && boot !== null) handedTo.set(peer, boot);
 		ctx.logger.info(
 			{ type: "atom_peer_handed", data: { peer, boot, handed, kept } },
 			`Handed ${peer} the entries its customers were owed`,
 		);
 	}
+
+	/** A peer another thread flipped since this thread last handed over: handed over now, no probe of its own needed. */
+	async function handOverToFlipped(): Promise<void> {
+		for (const peer of await listedPeers()) {
+			if (!ctx.membership.isMember(peer)) continue;
+			if (handedTo.get(peer) === ctx.membership.bootOf(peer)) continue;
+			seen.add(peer);
+			await handOverTo(peer);
+		}
+	}
+
+	const listedPeers = async (): Promise<string[]> =>
+		(await ctx.replication.peers().catch(() => [])).filter(
+			(peer) => peer !== ctx.ring.self,
+		);
 
 	/** Dropped by the name and answering from no boot this replica knows: gone, so its row is cleared. */
 	async function forgetGone(peer: string): Promise<void> {
@@ -86,9 +109,7 @@ export const startReadinessProber = ({
 	}
 
 	async function probeOnce(): Promise<void> {
-		const listed = (await ctx.replication.peers().catch(() => [])).filter(
-			(peer) => peer !== ctx.ring.self,
-		);
+		const listed = await listedPeers();
 		for (const peer of seen) if (!listed.includes(peer)) await forgetGone(peer);
 		for (const peer of listed) {
 			seen.add(peer);
@@ -104,16 +125,29 @@ export const startReadinessProber = ({
 				ctx.membership.isBootOf({ address: peer, boot })
 			)
 				continue;
-			if (handedTo.get(peer) === boot) continue;
+			if (
+				ctx.membership.isBootOf({ address: peer, boot }) &&
+				handedTo.get(peer) === ctx.membership.bootOf(peer)
+			)
+				continue;
 			await joinPeer({ peer, boot });
 		}
 	}
 
+	/** Every tick, a peer flipped on another thread is handed over to; every PROBE_EVERY_MS, the peers are probed. */
 	async function run(): Promise<void> {
+		// Below any epoch: a thread starting after a flip (replaced, or a late boot) hands over on its first tick.
+		let epochSeen = -1;
+		let probeDueAt = Date.now() + PROBE_EVERY_MS;
 		while (!stopped) {
-			await sleep(PROBE_EVERY_MS);
+			await sleep(FLIP_TICK_MS);
 			if (stopped) return;
-			await probeOnce().catch((error) =>
+			const epoch = ctx.membership.joinEpoch();
+			const probeDue = Date.now() >= probeDueAt;
+			if (epoch === epochSeen && !probeDue) continue;
+			epochSeen = epoch;
+			if (probeDue) probeDueAt = Date.now() + PROBE_EVERY_MS;
+			await (probeDue ? probeOnce() : handOverToFlipped()).catch((error) =>
 				ctx.logger.warn(
 					{ type: "atom_probe_failed", error },
 					"Could not probe the peers' readiness; trying again",
