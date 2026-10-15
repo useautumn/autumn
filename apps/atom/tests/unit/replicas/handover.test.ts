@@ -287,7 +287,7 @@ describe("a replica leaving the ring", () => {
 });
 
 describe("the leaving replica's owed entries", () => {
-	test("move to the new owner under their own writer and seq: its view holds them, and it hands them in for the old owner", async () => {
+	test("are copied to the new owner under their own writer and seq: its view holds them and it hands them in, and the old owner keeps sending its own in order", async () => {
 		const journals = recordJournals();
 		const { a, b } = await agreeingPair({ bForwarder: journals.forwarder });
 		connect({ replicas: [a, b] });
@@ -298,7 +298,13 @@ describe("the leaving replica's owed entries", () => {
 		await a.leave();
 
 		expect(await remainingAt(b)).toBe(8);
-		expect(aJournal.owed({ customerId: CUSTOMER })).toHaveLength(0);
+		// Nothing leaves the sender on the ack: its forwarder sends 1 then 2 as before, so no later seq of its can ever land ahead of them.
+		expect(
+			aJournal.owed({ customerId: CUSTOMER }).map(({ seq }) => seq),
+		).toEqual([1, 2]);
+		expect(aJournal.unsent({ limit: 10 }).map(({ seq }) => seq)).toEqual([
+			1, 2,
+		]);
 		const held = journalOwing(b)?.owed({ customerId: CUSTOMER }) ?? [];
 		expect(held.map(({ writerId, seq }) => ({ writerId, seq }))).toEqual([
 			{ writerId: aJournal.writerId, seq: 1 },
