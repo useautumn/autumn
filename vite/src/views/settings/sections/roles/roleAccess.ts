@@ -4,8 +4,9 @@ import {
 	type ResourceType,
 	type ScopeString,
 } from "@autumn/shared";
+import type { RoleOption } from "@/components/v2/selects/RoleSelect";
 
-// Mirrors ApiRole in @autumn/shared; swap for the shared import once #4992 merges.
+// Mirrors ApiRole (shared/api/roles/apiRole.ts, re-exported from @autumn/shared); import it once #4992 merges.
 export type RoleAccess = "none" | "read" | "write";
 export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
 
@@ -151,3 +152,27 @@ export const summarizeRules = ({ role }: { role: ApiRole }) => {
 	if (role.rule_count === 0) return "No rules";
 	return role.rule_count === 1 ? "1 rule" : `${role.rule_count} rules`;
 };
+
+/** A deleted role's members still carry its slug, so fall back to the raw name. */
+export const roleLabel = ({
+	roles,
+	name,
+}: {
+	roles: ApiRole[];
+	name: string;
+}) => roles.find((role) => role.name === name)?.label ?? name;
+
+export const memberRoleOptions = ({
+	roles,
+	allowOwner,
+}: {
+	roles: ApiRole[];
+	allowOwner: boolean;
+}): RoleOption[] =>
+	roles
+		.filter((role) => allowOwner || role.name !== "owner")
+		.map((role) => ({
+			value: role.name,
+			label: role.label,
+			description: summarizeAccess({ access: role.access }),
+		}));

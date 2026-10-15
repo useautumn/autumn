@@ -8,7 +8,9 @@ import {
 	canEditRole,
 	emptyAccess,
 	formValuesToRoleBody,
+	memberRoleOptions,
 	type RoleAccessRecord,
+	roleLabel,
 	roleToFormValues,
 	scopesToAccess,
 	summarizeAccess,
@@ -205,5 +207,32 @@ describe("delete errors", () => {
 		{ case: "not an HTTP error", error: new Error("boom"), count: null },
 	])("$case → $count", ({ error, count }) => {
 		expect(getRoleInUseCount({ error })).toBe(count);
+	});
+});
+
+describe("member role select", () => {
+	const roles = [
+		role({ name: "owner", label: "Owner", built_in: true }),
+		role({ name: "admin", label: "Admin", built_in: true }),
+		role({ name: "key_accounts", label: "Key accounts" }),
+	];
+
+	test.each([
+		{ name: "owner", label: "Owner" },
+		{ name: "key_accounts", label: "Key accounts" },
+		{ name: "deleted_role", label: "deleted_role" },
+	])("$name shows '$label'", ({ name, label }) => {
+		expect(roleLabel({ roles, name })).toBe(label);
+	});
+
+	test.each([
+		{ allowOwner: true, options: ["owner", "admin", "key_accounts"] },
+		{ allowOwner: false, options: ["admin", "key_accounts"] },
+	])("allowOwner: $allowOwner lists $options", ({ allowOwner, options }) => {
+		const result = memberRoleOptions({ roles, allowOwner });
+		expect(result.map((option) => option.value)).toEqual([...options]);
+		expect(result.find((o) => o.value === "key_accounts")?.label).toBe(
+			"Key accounts",
+		);
 	});
 });
