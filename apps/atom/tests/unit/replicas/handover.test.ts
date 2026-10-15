@@ -7,6 +7,8 @@ import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
+import { startReadinessProber } from "../../../src/replicas/membership/startReadinessProber.js";
+import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	ATOM_TOKEN,
@@ -17,6 +19,7 @@ import {
 	disconnect,
 	PEER_PORT,
 	PEER_SECRET,
+	PUBLIC_PORT,
 	quiet,
 	recordJournals,
 	storeOnly,
@@ -996,6 +999,52 @@ describe("a caller's idempotency key across a join", () => {
 		const retried = await a.app.request(
 			"/v1/balances.check",
 			keyedDeduction({ key: "k_older" }),
+		);
+
+		expect(retried.status).toBe(409);
+	});
+
+	test("a key the stand-in took during the join sweep, after its thread handed off and before the last one did, is 409 at the owner once applied", async () => {
+		const { a, b } = await standInTook({ key: "k_before" });
+		// The first of the stand-in's two threads hands off; the peer is not joined until the second does.
+		await startReadinessProber({
+			ctx: {
+				ring: b.ring,
+				membership: b.membership,
+				replication: { peers: async () => [A] },
+				folders: createDeployedFolders({ slots: b.slots }),
+				thread: 0,
+				threads: 2,
+				publicPort: PUBLIC_PORT,
+				peer: { port: PEER_PORT, secret: PEER_SECRET },
+				logger: quiet,
+			},
+		}).probeOnce();
+		expect(b.membership.isMember(A)).toBe(false);
+		const inSweep = await b.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_sweep" }),
+		);
+		expect(inSweep.status).toBe(200);
+		const bJournal = journalOwing(b);
+		if (!bJournal) throw new Error("B owes its keyed entries");
+		// Autumn applied both: nothing owed is swept, so only the key handoff can carry k_sweep.
+		await bJournal.reconcile({
+			customerId: CUSTOMER,
+			atomSeqs: { atom_1: { [bJournal.writerId]: 2 } },
+		});
+
+		b.membership.handedOff({ address: A, thread: 1, threads: 2 });
+		await until(() =>
+			a.slots
+				.ownedJournals()
+				.some((journal) =>
+					journal.holdsKey({ customerId: CUSTOMER, key: "k_sweep" }),
+				),
+		);
+		const retried = await a.app.request(
+			"/v1/balances.check",
+			keyedDeduction({ key: "k_sweep" }),
 		);
 
 		expect(retried.status).toBe(409);
