@@ -693,7 +693,7 @@ describe("a check Atom does not answer itself", () => {
 });
 
 describe("the request line", () => {
-	test("a request's line has status, method, path, duration and who it was about; a stored push's says its sample rate", async () => {
+	test("a request's line has status, method, path, duration and who it was about, at req and in the server's context; a stored push's says its sample rate", async () => {
 		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
@@ -702,6 +702,7 @@ describe("the request line", () => {
 		expect(logged[0]?.fields).toEqual({
 			statusCode: 200,
 			durationMs: expect.any(Number),
+			context: { customer_id: "cus_1" },
 			req: {
 				method: "POST",
 				path: "/v1/subjects.set",
@@ -728,7 +729,7 @@ describe("the request line", () => {
 		expect(health.threads[0].pushes).toBeGreaterThanOrEqual(2);
 	});
 
-	test("an answered check's line has its verdict at res.allowed, where its body has it, and no body; an allow says its sample rate", async () => {
+	test("an answered check's line has its id, its key's env and API version, its verdict at res.allowed, and no body; an allow says its sample rate", async () => {
 		sampleEveryAllow({ sampled: true });
 		const { app, logged } = createDeployedApp();
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
@@ -749,7 +750,13 @@ describe("the request line", () => {
 				...(allowed && { sample_rate: 0.01 }),
 				statusCode: 200,
 				durationMs: expect.any(Number),
+				context: {
+					env: "sandbox",
+					customer_id: "cus_1",
+					api_version: LATEST_VERSION,
+				},
 				req: {
+					id: expect.stringMatching(/^atom_req_/),
 					method: "POST",
 					path: "/v1/balances.check",
 					customer_id: "cus_1",
