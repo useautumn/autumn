@@ -388,6 +388,9 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 					const parts: string[] = [];
 
 					if (config.syncCoalesce === true) parts.push("Sync coalesce on");
+					if (config.expiredMetadataCleanup === true) {
+						parts.push("Metadata cleanup on");
+					}
 					if (axiomResponseBodyReductionDisabled) {
 						parts.push("Axiom response reduction off");
 					}
