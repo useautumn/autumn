@@ -1,4 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
+import { createRequestGate } from "./gates/createRequestGate.js";
+import { proxyRequest } from "./proxyRequest.js";
 import { replicaUrl } from "./replicaProcesses.js";
 import type {
 	PushLanding,
@@ -35,31 +37,18 @@ const unreachable = ({ message }: { message: string }): Response =>
 
 const forwardToReplica = async ({
 	request,
+	body,
 	replica,
 }: {
 	request: Request;
+	body: ArrayBuffer;
 	replica: Replica;
 }): Promise<Response> => {
-	const { pathname, search } = new URL(request.url);
-	const headers = new Headers(request.headers);
-	headers.delete("host");
 	try {
-		const response = await fetch(
-			`${replicaUrl({ replica })}${pathname}${search}`,
-			{
-				method: request.method,
-				headers,
-				body:
-					request.method === "GET" ? undefined : await request.arrayBuffer(),
-			},
-		);
-		// fetch already decoded the body, so its encoding and length no longer describe it.
-		const replyHeaders = new Headers(response.headers);
-		replyHeaders.delete("content-encoding");
-		replyHeaders.delete("content-length");
-		return new Response(await response.arrayBuffer(), {
-			status: response.status,
-			headers: replyHeaders,
+		return await proxyRequest({
+			targetUrl: replicaUrl({ replica }),
+			request,
+			body,
 		});
 	} catch {
 		return unreachable({ message: "The replica could not be reached" });
@@ -92,12 +81,32 @@ const recordPush = ({
 export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 	const state: BalancerState = { routedTo: null, turn: 0, pushes: [] };
 
-	async function receive(request: Request): Promise<Response> {
+	// A held push is taken at once, as herald sees a slow link: the replica gets it only when the gate opens.
+	const pushGate = createRequestGate({
+		answer: () => Response.json({ stored: true }),
+	});
+
+	async function sendToReplica({
+		request,
+		body,
+	}: {
+		request: Request;
+		body: ArrayBuffer;
+	}): Promise<Response> {
 		const replica = pickReplica({ ctx, state });
 		if (!replica) return unreachable({ message: "No replica is running" });
-		const response = await forwardToReplica({ request, replica });
+		const response = await forwardToReplica({ request, body, replica });
 		recordPush({ state, request, replica, status: response.status });
 		return response;
+	}
+
+	async function receive(request: Request): Promise<Response> {
+		// Read now: a held request's body is gone by the time the gate opens.
+		const body = await request.arrayBuffer();
+		const send = () => sendToReplica({ request, body });
+		return PUSH_PATHS.has(new URL(request.url).pathname)
+			? pushGate.pass({ send })
+			: send();
 	}
 
 	const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: receive });
@@ -108,6 +117,7 @@ export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 			state.routedTo = index;
 		},
 		pushes: () => [...state.pushes],
+		pushGate,
 		stop: () => server.stop(true),
 	};
 };
