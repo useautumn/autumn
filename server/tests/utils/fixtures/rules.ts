@@ -59,6 +59,12 @@ const enterpriseTrials = ({
 								duration_length: { $lt: 2 },
 							},
 						},
+						{
+							free_trial: {
+								duration_type: "year",
+								duration_length: { $lt: 60 / 365 },
+							},
+						},
 					],
 				},
 			},
