@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useCallback } from "react";
+import { customerDataUrl } from "@/boot/bootRequests";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
@@ -45,13 +46,11 @@ export const useCustomerQueryOptions = () => {
 				queryFn: async () => {
 					try {
 						const { data } = await axiosInstance.get(
-							`/customers/${customerId}`,
-							{
-								params: {
-									include_expired_loose: includeExpiredLoose || undefined,
-									entity_id: entityId ?? undefined,
-								},
-							},
+							customerDataUrl({
+								customerId: customerId as string,
+								entityId,
+								includeExpiredLoose,
+							}),
 						);
 						return data;
 					} catch (error) {

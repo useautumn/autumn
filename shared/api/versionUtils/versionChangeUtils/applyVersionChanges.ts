@@ -1,4 +1,6 @@
 import type { SharedContext } from "../../../types/sharedContext.js";
+// Registers every version change on import, so loading it here ties the registry to its only reader.
+import "./versionChangeRegistry.js";
 import { type ApiVersion, LATEST_VERSION } from "../ApiVersion.js";
 import { ApiVersionClass } from "../ApiVersionClass.js";
 import {

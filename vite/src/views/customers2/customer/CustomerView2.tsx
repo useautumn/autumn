@@ -13,7 +13,7 @@ import {
 	TooltipTrigger,
 } from "@autumn/ui";
 import { ClockIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useParams } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
@@ -37,11 +37,17 @@ import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
 import { CustomerPageTitle } from "./CustomerPageTitle";
-import { CustomerSheets } from "./CustomerSheets";
 import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { usePreloadEntityView } from "./hooks/usePreloadEntityView";
 import { Workbench } from "./workbench/Workbench";
+
+// Sheets open on user action; loading them beside the page keeps their forms out of its first render.
+const CustomerSheets = lazy(() =>
+	import("./CustomerSheets").then((module) => ({
+		default: module.CustomerSheets,
+	})),
+);
 
 export default function CustomerView2() {
 	const { customer_id } = useParams();
@@ -214,7 +220,9 @@ export default function CustomerView2() {
 					</div>
 				</div>
 
-				<CustomerSheets />
+				<Suspense fallback={null}>
+					<CustomerSheets />
+				</Suspense>
 				<Workbench />
 			</div>
 		</CustomerContext.Provider>

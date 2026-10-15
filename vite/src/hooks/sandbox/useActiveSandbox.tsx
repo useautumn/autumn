@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { ACTIVE_SANDBOX_STORAGE_KEY } from "@/boot/bootRequests";
 
 export type ActiveSandbox = {
 	id: string;
@@ -7,7 +8,7 @@ export type ActiveSandbox = {
 	icon?: string;
 };
 
-const STORAGE_KEY = "autumn_active_sandbox";
+const STORAGE_KEY = ACTIVE_SANDBOX_STORAGE_KEY;
 const listeners = new Set<() => void>();
 
 const read = (): ActiveSandbox | null => {

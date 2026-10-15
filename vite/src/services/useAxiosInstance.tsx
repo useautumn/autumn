@@ -1,6 +1,7 @@
-import { AppEnv, type ApiVersion } from "@autumn/shared";
+import { type ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
+import { bootAwareAxiosAdapter } from "@/boot/bootAwareFetch";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
@@ -26,6 +27,7 @@ export function useAxiosInstance(params?: {
 		const instance = axios.create({
 			baseURL: import.meta.env.VITE_BACKEND_URL,
 			withCredentials: true,
+			adapter: bootAwareAxiosAdapter,
 		});
 
 		instance.interceptors.request.use(

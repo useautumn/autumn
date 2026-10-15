@@ -56,7 +56,11 @@
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
+			"entry": [
+				"src/boot/bootPrefetch.ts",
+				"tests/**/*.{ts,tsx}",
+				"src/**/*.test.{ts,tsx}"
+			],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignoreDependencies": [
 				"tailwindcss",
