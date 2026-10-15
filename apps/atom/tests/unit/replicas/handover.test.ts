@@ -735,6 +735,50 @@ describe("a lock taken on the leaving owner", () => {
 		expect(b.stats().handoffLate).toBe(0);
 	});
 
+	test("taken on the stand-in while its join-time handoff to the returning owner is in flight is handed before the owner counts, so the finalize settles there", async () => {
+		const calls: string[] = [];
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		// B owns everything while A is away; the handoff to A takes 20 ms to land.
+		let handoffs = 0;
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname !== PEER_HANDOFF_PATH) return;
+				handoffs++;
+				await Bun.sleep(20);
+			},
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+		await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+
+		const probing = b.probeOnce();
+		await until(() => handoffs === 1);
+		// The lock lands on B, still the owner, while B's first handoff batch is on its way to A.
+		expect((await lockOn(b)).status).toBe(200);
+		await probing;
+
+		expect(b.membership.isMember(A)).toBe(true);
+		const reply = await finalizeOn(b);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(calls).toEqual([]);
+	});
+
 	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
 		const calls: string[] = [];
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
