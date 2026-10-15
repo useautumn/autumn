@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -390,6 +390,69 @@ describe("journal", () => {
 			journal.unsent({ limit: 10 }).map(({ customerId }) => customerId),
 		).toEqual(["cus_2"]);
 		expect(rowsIn({ databasePath })).toEqual([{ customerId: "cus_2", seq: 1 }]);
+	});
+
+	test("ceiling: a customer's sent but still owed deductions are never walked to find its oldest unsent one", async () => {
+		const lookupsWithSentPrefix = async ({ sent }: { sent: number }) => {
+			const journal = open({ databasePath: journalPath() });
+			await Promise.all(
+				Array.from({ length: sent + 1 }, (_, index) =>
+					journal.append({
+						customerId: "cus_1",
+						command: commandOf({ commandId: `c_${index}`, value: 1 }),
+					}),
+				),
+			);
+			journal.markSent({ entries: journal.unsent({ limit: sent }) });
+			const lookups = spyOn(Set.prototype, "has");
+			try {
+				journal.isBackedUp({ customerId: "cus_1" });
+				return lookups.mock.calls.length;
+			} finally {
+				lookups.mockRestore();
+			}
+		};
+
+		expect(await lookupsWithSentPrefix({ sent: 10_000 })).toBe(
+			await lookupsWithSentPrefix({ sent: 10 }),
+		);
+	}, 30_000);
+
+	test("ceiling: deductions sent out of order leave the oldest still unsent deciding, until it is sent, reconciled or forgotten", async () => {
+		let clock = 0;
+		const journal = open({ databasePath: journalPath(), now: () => clock });
+		const appendAt = async (commandId: string) => {
+			const entry = await journal.append({
+				customerId: "cus_1",
+				command: commandOf({ commandId }),
+			});
+			clock += MAX_UNSENT_AGE_MS / 2;
+			return entry;
+		};
+		const first = await appendAt("a");
+		const second = await appendAt("b");
+		const third = await appendAt("c");
+		clock += 1;
+
+		journal.markSent({ entries: [third, first] });
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
+		journal.markSent({ entries: [second] });
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
+
+		const late = await appendAt("d");
+		clock += MAX_UNSENT_AGE_MS;
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { atom_1: { [journal.writerId]: late.seq } },
+		});
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
+
+		await appendAt("e");
+		clock += MAX_UNSENT_AGE_MS;
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
+		journal.forget({ customerId: "cus_1" });
+		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
 	});
 
 	test("ceiling: past MAX_UNSENT_PER_THREAD unsent across the thread's journals, every customer's send_event goes to the API until Autumn takes some", async () => {
