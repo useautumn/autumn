@@ -104,6 +104,7 @@ export const setupInvoiceFinalizedContext = async ({
 			ctx,
 			customerProducts: currentCustomerProducts,
 			stripeSubscriptionId,
+			internalCustomerId: fullCustomer.internal_id,
 		});
 
 	if (customerProducts.length === 0) {
