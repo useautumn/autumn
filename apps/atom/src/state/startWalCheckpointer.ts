@@ -9,7 +9,7 @@ const TICK_MS = 1000;
  * Each file is checkpointed once per this many ticks, a slice of the files each tick. A longer round copies more of a hot
  * file at once, and on a 125 MB/s volume that burst stalls the writers behind it (rig, 2026-10-15).
  */
-export const TICKS_PER_FILE = 3;
+export const TICKS_PER_FILE = 10;
 const WAL_SUFFIX = "-wal";
 
 const listWalDatabases = ({ dataDir }: { dataDir: string }): string[] => {

@@ -48,10 +48,10 @@ describe("WAL checkpointer", () => {
 		}
 	});
 
-	test("copies a written log back into its file within 3 ticks, however many files the folder holds", () => {
+	test("copies a written log back into its file within 10 ticks, however many files the folder holds", () => {
 		const dataDir = mkdtempSync(join(tmpdir(), "atom-wal-"));
-		const paths = Array.from({ length: 6 }, (_, slot) =>
-			join(dataDir, `slot-00${slot}-of-006.sqlite`),
+		const paths = Array.from({ length: 12 }, (_, slot) =>
+			join(dataDir, `slot-${String(slot).padStart(3, "0")}-of-012.sqlite`),
 		);
 		const writers = paths.map((path) => openWriter({ path }));
 		const before = paths.map((path) => statSync(path).size);
@@ -60,7 +60,7 @@ describe("WAL checkpointer", () => {
 			dataDir,
 			logger: { warn: () => {} },
 		});
-		for (let tick = 0; tick < 3; tick++) checkpointer.checkpoint();
+		for (let tick = 0; tick < 10; tick++) checkpointer.checkpoint();
 		checkpointer.stop();
 
 		paths.forEach((path, index) => {
