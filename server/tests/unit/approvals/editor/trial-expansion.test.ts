@@ -54,12 +54,8 @@ const CASES: {
 			},
 			trial("lt", 2, "month"),
 		],
-		when: {
-			paid: false,
-			incoming: {
-				$every: { plan_id: "enterprise", $or: [noTrial, ...units("$lt", 60)] },
-			},
-		},
+		// S3's design-case fixture, year branch included.
+		when: rules.enterpriseTrials().when,
 	},
 	{
 		name: "< 45 days keeps days (1.5 months isn't whole)",
@@ -138,11 +134,6 @@ test.each([
 	[
 		"a hand-edited $or that isn't an expansion",
 		inIncoming({ $or: [noTrial, units("$lt", 60)[1]] }),
-	],
-	// S3's design-case fixture has no year branch, so it'd miss a 0.1-year trial.
-	[
-		"the design-case fixture without a year branch",
-		rules.enterpriseTrials().when,
 	],
 ])("%s isn't editable", (_name, when) => {
 	expect(whenToRows({ area: "billing_change", when })).toEqual({
