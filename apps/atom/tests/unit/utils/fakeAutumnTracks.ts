@@ -24,6 +24,8 @@ export const startFakeAutumn = () => {
 		down: false,
 		loseNextAck: false,
 		refuseWith: null as 400 | 401 | null,
+		/** A batch holding any of these commands is refused whole, as Autumn refuses a body with one bad track. */
+		refuseCommandIds: new Set<string>(),
 	};
 
 	const appendTracks = async (request: Request): Promise<Response> => {
@@ -36,9 +38,16 @@ export const startFakeAutumn = () => {
 		);
 		if (!parsed.success || switches.refuseWith === 400)
 			return Response.json({ code: "unreadable" }, { status: 400 });
+		const commands = parsed.data.tracks.map(({ command }) =>
+			parseTrackCommand({ input: command }),
+		);
+		if (
+			commands.some(({ commandId }) => switches.refuseCommandIds.has(commandId))
+		)
+			return Response.json({ code: "unreadable" }, { status: 400 });
 		requestSizes.push(parsed.data.tracks.length);
-		for (const { writerId, seq, command: sent } of parsed.data.tracks) {
-			const command = parseTrackCommand({ input: sent });
+		for (const [index, { writerId, seq }] of parsed.data.tracks.entries()) {
+			const command = commands[index] as (typeof commands)[number];
 			const key = command.idempotency?.key ?? command.commandId;
 			if (appliedKeys.has(key)) continue;
 			appliedKeys.add(key);
@@ -82,6 +91,7 @@ export const startFakeAutumn = () => {
 				down: false,
 				loseNextAck: false,
 				refuseWith: null,
+				refuseCommandIds: new Set<string>(),
 			});
 		},
 		stop: () => server.stop(true),

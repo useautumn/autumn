@@ -1,4 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { AutumnClientError } from "../autumnClient/autumnClientError.js";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
 import type { Journal, JournalEntry } from "../state/journal/types/journal.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
@@ -11,7 +12,7 @@ import type {
 const MAX_TRACKS_PER_REQUEST = 500;
 /** A batch short of the cap waits this long for the deductions right behind it: a burst becomes one call, not one each. */
 const LINGER_MS = 20;
-/** A batch Autumn did not take is sent again after this, doubling up to the last. */
+/** A batch Autumn did not take, or a track it refused alone, is sent again after this, doubling up to the last. */
 const FIRST_RETRY_MS = 1_000;
 const LAST_RETRY_MS = 30_000;
 /** A sent deduction no push has shown applied by now has its customer pulled: the read says how far Autumn has seen. */
@@ -38,10 +39,15 @@ type FolderForwarding = {
 type Draining = {
 	journalsOf: () => ForwardedJournal[];
 	isStopped: () => boolean;
+	/** Starts the drain again when it may have stopped: a parked customer's entries are free to go. */
+	resume: () => void;
 };
 
 /** A track to hand in, beside the journal it is owed from. */
 type Unsent = { forwarded: ForwardedJournal; entry: JournalEntry };
+
+/** What Autumn took of a batch, and the tracks it refused alone. */
+type Sent = { taken: Unsent[]; refused: Unsent[] };
 
 /** Up to one request's worth of what the journals hold unsent, journal by journal. */
 const unsentOf = (journals: ForwardedJournal[]): Unsent[] => {
@@ -55,9 +61,14 @@ const unsentOf = (journals: ForwardedJournal[]): Unsent[] => {
 	return taken;
 };
 
+/** Autumn refused the request as unreadable: a bad track in it, or an Atom it cannot read at all. */
+const isRefusal = (error: unknown) =>
+	error instanceof AutumnClientError && error.status === 400;
+
 /**
  * The journal's way to Autumn: what it holds is posted in batches, each customer's in seq order, and marked sent once
- * Autumn holds it. A batch Autumn did not take, for any reason, is sent again, never dropped: Autumn deduplicates.
+ * Autumn holds it. A batch Autumn did not take is sent again, never dropped: Autumn deduplicates. A refused batch is
+ * sent again in halves, and a track Autumn refuses alone while taking others parks its customer behind it.
  */
 export const createJournalForwarder = ({
 	ctx,
@@ -76,6 +87,123 @@ export const createJournalForwarder = ({
 			{ type: "atom_journal_forward_failed", error },
 			"Autumn did not take the Atom's journaled deductions; they are sent again until it does",
 		);
+	}
+
+	async function post(batch: Unsent[]): Promise<void> {
+		const [first] = batch;
+		if (!first) return;
+		await ctx.autumnClient.appendTracks({
+			tokenHash: first.forwarded.tokenHash(),
+			tracks: batch.map(({ forwarded, entry }) => ({
+				writerId: forwarded.journal.writerId,
+				seq: entry.seq,
+				command: entry.command,
+			})),
+		});
+	}
+
+	/** What Autumn took of a batch, and the tracks it refused alone; throws when it took none of it. */
+	async function sendBatch(batch: Unsent[]): Promise<Sent> {
+		try {
+			await post(batch);
+			return { taken: batch, refused: [] };
+		} catch (error) {
+			if (!isRefusal(error) || batch.length === 1) throw error;
+			// Autumn taking any part shows it reads this Atom, so a track it refused alone is that track's own fault.
+			const sent: Sent = { taken: [], refused: [] };
+			const halves = await sendInHalves({ batch, sent }).then(
+				() => sent,
+				() => null,
+			);
+			if (!halves?.taken.length) throw error;
+			return halves;
+		}
+	}
+
+	/** Down to single tracks; a customer refused once has none of its later tracks sent, so its seqs stay in order. */
+	async function sendInHalves({
+		batch,
+		sent,
+	}: {
+		batch: Unsent[];
+		sent: Sent;
+	}): Promise<void> {
+		const half = Math.ceil(batch.length / 2);
+		for (const part of [batch.slice(0, half), batch.slice(half)]) {
+			const sendable = part.filter(
+				({ forwarded, entry }) =>
+					!sent.refused.some(
+						(refused) =>
+							refused.forwarded === forwarded &&
+							refused.entry.customerId === entry.customerId,
+					),
+			);
+			if (sendable.length === 0) continue;
+			try {
+				await post(sendable);
+				sent.taken.push(...sendable);
+			} catch (error) {
+				if (!isRefusal(error)) throw error;
+				if (sendable.length === 1) sent.refused.push(...sendable);
+				else await sendInHalves({ batch: sendable, sent });
+			}
+		}
+	}
+
+	/** Sent alone until Autumn takes it, or it leaves the journal some other way; then the customer's entries go on. */
+	async function retryParked({
+		forwarded,
+		entry,
+		draining: { isStopped, resume },
+	}: Unsent & { draining: Draining }): Promise<void> {
+		for (
+			let retryMs = FIRST_RETRY_MS;
+			;
+			retryMs = Math.min(retryMs * 2, LAST_RETRY_MS)
+		) {
+			await sleep(retryMs);
+			if (isStopped() || !forwarded.journal.parked().includes(entry)) return;
+			const taken = await post([{ forwarded, entry }]).then(
+				() => true,
+				() => false,
+			);
+			if (taken) {
+				markSent({ forwarded, sent: [entry], isStopped });
+				resume();
+				return;
+			}
+		}
+	}
+
+	function park({
+		forwarded,
+		entry,
+		draining,
+	}: Unsent & { draining: Draining }): void {
+		forwarded.journal.park({ entry });
+		ctx.logger.warn(
+			{
+				type: "atom_journal_track_parked",
+				writerId: forwarded.journal.writerId,
+				customerId: entry.customerId,
+				seq: entry.seq,
+			},
+			"Autumn refused one journaled deduction on its own; it is sent alone until Autumn takes it, and its customer's wait behind it",
+		);
+		void retryParked({ forwarded, entry, draining });
+	}
+
+	function markSent({
+		forwarded,
+		sent,
+		isStopped,
+	}: {
+		forwarded: ForwardedJournal;
+		sent: JournalEntry[];
+		isStopped: () => boolean;
+	}): void {
+		forwarded.journal.markSent({ entries: sent });
+		void pullCustomersStillOwing({ forwarded, sent, isStopped });
 	}
 
 	async function pullCustomersStillOwing({
@@ -103,7 +231,8 @@ export const createJournalForwarder = ({
 	}
 
 	/** Until nothing is left to send or the forwarding stops. */
-	async function drain({ journalsOf, isStopped }: Draining): Promise<void> {
+	async function drain(draining: Draining): Promise<void> {
+		const { journalsOf, isStopped } = draining;
 		let retryMs = FIRST_RETRY_MS;
 		while (!isStopped()) {
 			const waiting = unsentOf(journalsOf()).length;
@@ -112,17 +241,10 @@ export const createJournalForwarder = ({
 			if (isStopped()) return;
 			const journals = journalsOf();
 			const batch = unsentOf(journals);
-			const [first] = batch;
-			if (!first) return;
+			if (batch.length === 0) return;
+			let sent: Sent;
 			try {
-				await ctx.autumnClient.appendTracks({
-					tokenHash: first.forwarded.tokenHash(),
-					tracks: batch.map(({ forwarded, entry }) => ({
-						writerId: forwarded.journal.writerId,
-						seq: entry.seq,
-						command: entry.command,
-					})),
-				});
+				sent = await sendBatch(batch);
 			} catch (error) {
 				ctx.counters?.add("journalForwardFailed");
 				if (retryMs === FIRST_RETRY_MS) logFailure({ error });
@@ -132,15 +254,15 @@ export const createJournalForwarder = ({
 			}
 			if (isStopped()) return;
 			retryMs = FIRST_RETRY_MS;
+			for (const unsent of sent.refused) park({ ...unsent, draining });
 			const stillForwarded = new Set(journalsOf());
 			for (const forwarded of journals) {
 				if (!stillForwarded.has(forwarded)) continue;
-				const sent = batch
+				const entries = sent.taken
 					.filter((unsent) => unsent.forwarded === forwarded)
 					.map(({ entry }) => entry);
-				if (sent.length === 0) continue;
-				forwarded.journal.markSent({ entries: sent });
-				void pullCustomersStillOwing({ forwarded, sent, isStopped });
+				if (entries.length > 0)
+					markSent({ forwarded, sent: entries, isStopped });
 			}
 		}
 	}
@@ -153,6 +275,7 @@ export const createJournalForwarder = ({
 		const draining = {
 			journalsOf: () => [...folder.journals],
 			isStopped: () => folder.journals.size === 0,
+			resume: () => void wake(folder),
 		};
 		while (folder.woken && !draining.isStopped()) {
 			folder.woken = false;
@@ -191,15 +314,22 @@ export const createJournalForwarder = ({
 			stopped = true;
 			handed.delete(forwarded.journal);
 		};
+		const { journal } = forwarded;
+		const draining = { journalsOf: () => [forwarded], isStopped, resume() {} };
 		// A journal that holds nothing to send is retired at once.
-		if (forwarded.journal.unsent({ limit: 1 }).length === 0) retired();
+		if (journal.countUnsent() === 0) retired();
 		else {
-			handed.add(forwarded.journal);
-			void drain({ journalsOf: () => [forwarded], isStopped }).then(() => {
+			handed.add(journal);
+			void (async () => {
+				while (!stopped && journal.countUnsent() > 0) {
+					await drain(draining);
+					// Its file goes once retired, so a parked customer is waited on until Autumn takes its refused track.
+					if (journal.countUnsent() > 0) await sleep(LAST_RETRY_MS);
+				}
 				if (stopped) return;
 				stop();
 				retired();
-			});
+			})();
 		}
 		return { stop };
 	}
@@ -208,12 +338,11 @@ export const createJournalForwarder = ({
 	async function drainAll({ deadlineMs }: { deadlineMs: number }) {
 		const deadline = Date.now() + deadlineMs;
 		const holdsUnsent = () =>
-			[...handed].some((journal) => journal.unsent({ limit: 1 }).length > 0);
+			[...handed].some((journal) => journal.countUnsent() > 0);
 		while (holdsUnsent() && Date.now() < deadline)
 			await Bun.sleep(DRAIN_POLL_MS);
 		const unsent = [...handed].reduce(
-			(sum, journal) =>
-				sum + journal.unsent({ limit: Number.MAX_SAFE_INTEGER }).length,
+			(sum, journal) => sum + journal.countUnsent(),
 			0,
 		);
 		const fields = { journals: handed.size, unsent };
