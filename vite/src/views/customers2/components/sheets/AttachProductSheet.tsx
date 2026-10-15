@@ -447,26 +447,26 @@ function SheetContent() {
 	}
 
 	return (
-		<PermissionDenialProvider preview={previewQuery.data}>
-			<LayoutGroup>
-				<SheetBody>
+		<LayoutGroup>
+			<SheetBody>
+				<PermissionDenialProvider preview={previewQuery.data}>
 					<StageContent />
+				</PermissionDenialProvider>
 
-					{planEditorProduct && (
-						<InlinePlanEditor
-							product={planEditorProduct}
-							onSave={handlePlanEditorSave}
-							onCancel={handlePlanEditorCancel}
-							isOpen={showPlanEditor}
-							enableLicenseEditing={!additionalPlans.isMultiPlan}
-							initialAddLicenses={
-								additionalPlans.isMultiPlan ? null : formValues.addLicenses
-							}
-						/>
-					)}
-				</SheetBody>
-			</LayoutGroup>
-		</PermissionDenialProvider>
+				{planEditorProduct && (
+					<InlinePlanEditor
+						product={planEditorProduct}
+						onSave={handlePlanEditorSave}
+						onCancel={handlePlanEditorCancel}
+						isOpen={showPlanEditor}
+						enableLicenseEditing={!additionalPlans.isMultiPlan}
+						initialAddLicenses={
+							additionalPlans.isMultiPlan ? null : formValues.addLicenses
+						}
+					/>
+				)}
+			</SheetBody>
+		</LayoutGroup>
 	);
 }
 

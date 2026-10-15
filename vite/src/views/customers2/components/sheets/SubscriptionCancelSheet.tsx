@@ -31,8 +31,8 @@ import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheet
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-function SheetContent() {
-	const { formContext, previewQuery } = useUpdateSubscriptionFormContext();
+function CancelContent() {
+	const { formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
 	const product = customerProduct.product;
@@ -45,62 +45,69 @@ function SheetContent() {
 	const productName = product?.name ?? "Plan";
 
 	return (
+		<LayoutGroup>
+			<SheetBody>
+				<SheetHeader
+					title="Cancel Subscription"
+					description={`Cancel ${productName} for this customer`}
+					breadcrumbs={[
+						{
+							name: productName,
+							sheet: "subscription-detail",
+						},
+					]}
+					itemId={customerProduct.id}
+				/>
+
+				{isPending && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This plan is waiting on payment. Cancelling will void the payment
+							and remove the plan.
+						</InfoBox>
+					</div>
+				)}
+
+				{isScheduled && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This plan is scheduled to start on{" "}
+							{formatUnixToDateTime(customerProduct.starts_at).date}. Cancelling
+							will remove this schedule.
+						</InfoBox>
+					</div>
+				)}
+
+				{isFreeDefault && (
+					<div className="px-4 pt-4">
+						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+							This is the default plan. Cancelling it means this customer will
+							be left without a plan.
+						</InfoBox>
+					</div>
+				)}
+
+				{!isPending && (
+					<>
+						<PermissionDenial section="plan" />
+						<CancelModeSection />
+						<RefundBehaviorSection />
+						<PermissionDenial section="options" />
+						<CancelAdvancedSection />
+						<CancelPreviewSection />
+					</>
+				)}
+				<CancelFooter />
+			</SheetBody>
+		</LayoutGroup>
+	);
+}
+
+function SheetContent() {
+	const { previewQuery } = useUpdateSubscriptionFormContext();
+	return (
 		<PermissionDenialProvider preview={previewQuery.data}>
-			<LayoutGroup>
-				<SheetBody>
-					<SheetHeader
-						title="Cancel Subscription"
-						description={`Cancel ${productName} for this customer`}
-						breadcrumbs={[
-							{
-								name: productName,
-								sheet: "subscription-detail",
-							},
-						]}
-						itemId={customerProduct.id}
-					/>
-
-					{isPending && (
-						<div className="px-4 pt-4">
-							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-								This plan is waiting on payment. Cancelling will void the
-								payment and remove the plan.
-							</InfoBox>
-						</div>
-					)}
-
-					{isScheduled && (
-						<div className="px-4 pt-4">
-							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-								This plan is scheduled to start on{" "}
-								{formatUnixToDateTime(customerProduct.starts_at).date}.
-								Cancelling will remove this schedule.
-							</InfoBox>
-						</div>
-					)}
-
-					{isFreeDefault && (
-						<div className="px-4 pt-4">
-							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-								This is the default plan. Cancelling it means this customer will
-								be left without a plan.
-							</InfoBox>
-						</div>
-					)}
-
-					{!isPending && (
-						<>
-							<PermissionDenial section="plan" />
-							<CancelModeSection />
-							<RefundBehaviorSection />
-							<PermissionDenial section="options" />
-							<CancelAdvancedSection />
-							<CancelPreviewSection />
-						</>
-					)}
-					<CancelFooter />
-				</SheetBody>
-			</LayoutGroup>
+			<CancelContent />
 		</PermissionDenialProvider>
 	);
 }
