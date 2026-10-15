@@ -1,4 +1,4 @@
-import type { EditorRowIssue } from "@autumn/shared";
+import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { FilterRow } from "@/components/filters/FilterRow";
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
 import type { RuleRowItem } from "./ruleEditorValues";
@@ -47,7 +47,9 @@ export const RuleWhenGroup = ({
 							.operators.map((option) => option.value);
 						const fitted = fitOperatorToValues({ row: next, operators });
 						onChange(
-							rows.map((existing, i) => (i === index ? fitted : existing)),
+							rows.map((existing, i) =>
+								i === index ? { ...fitted, id: existing.id } : existing,
+							),
 						);
 					}}
 					onRemove={() => onChange(rows.filter((_, i) => i !== index))}

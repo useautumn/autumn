@@ -1,12 +1,11 @@
+import { WHEN_FIELD_LABELS, type WhenKey } from "@autumn/shared";
 import {
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorOperator,
 	type EditorRow,
 	PINNED_FIELDS,
-	WHEN_FIELD_LABELS,
-	type WhenKey,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/editor/index";
 import { createFieldRegistry } from "@/components/filters/fieldRegistry";
 import type { FilterOperatorOption } from "@/components/filters/types";
 import { decodeRow, encodeRow, kindOf } from "./ruleRowCodec";

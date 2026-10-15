@@ -1,4 +1,5 @@
-import type { EditorRowIssue, WhenKey } from "@autumn/shared";
+import type { WhenKey } from "@autumn/shared";
+import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { cn } from "@/lib/utils";
 import { AddButton } from "@/views/migrations/migration/shared/AddButton";
 import { PinnedFeatureRow } from "./PinnedFeatureRow";

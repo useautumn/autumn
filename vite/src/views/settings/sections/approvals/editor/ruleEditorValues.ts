@@ -1,14 +1,16 @@
+import type {
+	ApprovalAction,
+	ApprovalRule,
+	CreateApprovalRuleParams,
+	RuleSubject,
+	WhenKey,
+} from "@autumn/shared";
 import {
-	type ApprovalAction,
-	type ApprovalRule,
-	type CreateApprovalRuleParams,
 	type EditorRowIssue,
 	PINNED_FIELDS,
-	type RuleSubject,
 	rowsToWhen,
-	type WhenKey,
 	whenToRows,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/editor/index";
 import { ruleWhenArea } from "./ruleActions";
 import { decodeRow, encodeRow, type RuleRow } from "./ruleRowCodec";
 

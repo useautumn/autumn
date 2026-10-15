@@ -2,8 +2,8 @@ import type {
 	ApprovalAction,
 	ApprovalRule,
 	ApprovalRuleIssue,
-	EditorRowIssue,
 } from "@autumn/shared";
+import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import { useSaveApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";

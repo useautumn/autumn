@@ -1,4 +1,4 @@
-import { EDITOR_FIELDS } from "@autumn/shared";
+import { EDITOR_FIELDS } from "@autumn/shared/api/approvals/editor/index";
 import {
 	Select,
 	SelectContent,
@@ -62,10 +62,12 @@ export const PinnedFeatureRow = ({
 					)
 				}
 			/>
-			<LockSimpleIcon
-				aria-label="Feature is required"
-				className="size-3.5 shrink-0 text-tertiary-foreground"
-			/>
+			<span className="flex size-6 shrink-0 items-center justify-center">
+				<LockSimpleIcon
+					aria-label="Feature is required"
+					className="size-3.5 text-tertiary-foreground"
+				/>
+			</span>
 		</div>
 		{issue && <p className="pl-2 text-destructive text-xs">{issue}</p>}
 	</div>

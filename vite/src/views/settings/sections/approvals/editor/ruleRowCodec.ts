@@ -5,7 +5,7 @@ import type {
 	EditorRowValue,
 	PlanSelection,
 	TrialDuration,
-} from "@autumn/shared";
+} from "@autumn/shared/api/approvals/editor/index";
 import type { FilterRow } from "@/components/filters/types";
 import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
 

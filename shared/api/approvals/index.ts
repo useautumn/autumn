@@ -1,5 +1,4 @@
 export * from "./actions/approvalActions";
-export * from "./editor/index";
 export * from "./schemas/approvalRule";
 export * from "./schemas/ruleSubject";
 export * from "./schemas/when/balanceWhen";
