@@ -9,6 +9,7 @@ import { createJournalForwarder } from "../../../src/journalForwarder/createJour
 import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
 import { PEER_ANNOUNCEMENT_PATH } from "../../../src/replicas/handover/announcementContract.js";
 import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
+import { KEYS_RELAY } from "../../../src/replication/keys/createKeyRelay.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
 	ATOM_TOKEN,
@@ -999,6 +1000,49 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBe("lock_not_held");
 		expect(calls).toEqual(["/v1/balances.finalize"]);
+	});
+});
+
+describe("an idempotency key taken on the leaving owner just before it hands over", () => {
+	const keyedTrack = (key: string) => ({
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			authorization: "Bearer am_sk_test_1",
+			"x-atom-token": ATOM_TOKEN,
+			"x-api-version": LATEST_VERSION,
+		},
+		body: JSON.stringify({
+			customer_id: CUSTOMER,
+			feature_id: "messages",
+			value: 1,
+			idempotency_key: key,
+		}),
+	});
+
+	test("rides the handoff with its owed entry, so its retry is a duplicate on the new owner even when the relay has not landed yet", async () => {
+		const { a, b } = await agreeingPair();
+		// The relay to B does not get through; the handoff does.
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname === KEYS_RELAY.path)
+					throw Object.assign(new TypeError("connect ECONNREFUSED"), {
+						code: "ECONNREFUSED",
+					});
+			},
+		});
+		expect((await a.app.request("/v1/track", keyedTrack("evt_1"))).status).toBe(
+			202,
+		);
+
+		await a.leave();
+
+		const retried = await b.app.request("/v1/track", keyedTrack("evt_1"));
+		expect(retried.status).toBe(409);
+		expect(retried.headers.get("x-atom-forwarded")).toBeNull();
+		const fresh = await b.app.request("/v1/track", keyedTrack("evt_2"));
+		expect(fresh.status).toBe(202);
 	});
 });
 
