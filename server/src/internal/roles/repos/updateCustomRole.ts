@@ -43,13 +43,12 @@ export const updateCustomRole = async ({
 			)
 			.returning();
 
+		// Renamed or deleted since the caller's check: leave every reference alone.
 		const isRename = newName !== name;
-		if (!isRename) return role;
+		if (!role || !isRename) return role;
 
-		await tx
-			.update(member)
-			.set({ role: newName })
-			.where(and(eq(member.organizationId, orgId), eq(member.role, name)));
+		// Invites first: an SSO join holding its invite makes this wait, so the member
+		// update below then sees the member it inserted.
 		await tx
 			.update(invitation)
 			.set({ role: newName })
@@ -60,6 +59,10 @@ export const updateCustomRole = async ({
 					eq(invitation.status, "pending"),
 				),
 			);
+		await tx
+			.update(member)
+			.set({ role: newName })
+			.where(and(eq(member.organizationId, orgId), eq(member.role, name)));
 		// A rule naming both roles keeps one subject row, not two identical keys.
 		await tx
 			.delete(approvalRuleSubjects)
