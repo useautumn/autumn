@@ -7,9 +7,27 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/kafkajs/.bun-tag-9af2d68b0d3bdbc0 b/.bun-tag-9af2d68b0d3bdbc0
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/kafkajs/.bun-tag-d511d1505e6c7f73 b/.bun-tag-d511d1505e6c7f73
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/kafkajs/.bun-tag-f1b111e363a9f75c b/.bun-tag-f1b111e363a9f75c
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/consumer/consumerGroup.js b/src/consumer/consumerGroup.js
+index 442312c1a8ddeabf498060575b70f217c46049c6..4f34da8c71d70a7f27defd8c57669067acf69123 100644
+--- a/src/consumer/consumerGroup.js
++++ b/src/consumer/consumerGroup.js
+@@ -558,8 +558,9 @@ module.exports = class ConsumerGroup {
+         error: e.message,
+       })
+ 
++      // Leadership moved; the assignment did not. A rejoin here restarts the whole group's
++      // rebalance on every leader election, so only the metadata is refreshed.
+       await this.cluster.refreshMetadata()
+-      await this.joinAndSync()
+       return
+     }
+ 
 diff --git a/src/network/connection.js b/src/network/connection.js
 index dded584d8f8f2ccb001939a97f40739f3e51605a..e976117984a30fb1bb82ef6fc488f0314defc0a7 100644
 --- a/src/network/connection.js
