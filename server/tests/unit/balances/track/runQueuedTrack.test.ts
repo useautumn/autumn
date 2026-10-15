@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS } from "@autumn/env/balanceWorkerConstants";
 import {
 	ApiVersion,
 	ApiVersionClass,
@@ -75,6 +76,7 @@ await mockModuleWithRestore(
 	}),
 );
 
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 
 import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
@@ -89,6 +91,7 @@ const ctx = {
 		// warn included: the idempotency path hands this logger to fire-and-forget
 		// Dynamo-mirror work that logs failures after the test completes.
 		warn: mock(() => {}),
+		error: mock(() => {}),
 	},
 } as unknown as AutumnContext;
 
@@ -188,6 +191,78 @@ describe("runQueuedTrack", () => {
 				apiVersion: ApiVersion.V2_1,
 			}),
 		).rejects.toBe(error);
+	});
+});
+
+describe("runQueuedTrack with a spooled worker-path track", () => {
+	const body = {
+		customer_id: "cus_123",
+		feature_id: "messages",
+		value: 2,
+		timestamp: 1_790_000_000_000,
+	};
+	const tokens = {
+		usage: { modelName: "m", inputTokens: 1, outputTokens: 2 },
+		cost: 2,
+	};
+
+	beforeEach(() => {
+		mockState.workerTrackCalls = [];
+		mockState.runTrackV3Calls = [];
+		mockState.runTrackV3Error = null;
+	});
+
+	test("replays on the worker under the original request with its token cost", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			await runQueuedTrack({
+				ctx,
+				body,
+				tokens,
+				validateTrackBodyIdempotencyKey: false,
+				spooledAt: Date.now() - 1_000,
+			});
+			expect(mockState.workerTrackCalls).toHaveLength(1);
+			expect(mockState.workerTrackCalls[0]).toMatchObject({
+				ctx,
+				body,
+				tokens,
+				validateTrackBodyIdempotencyKey: false,
+			});
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("refuses a spool older than the worker's dedup window instead of risking a second deduction", async () => {
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			await expect(
+				runQueuedTrack({
+					ctx,
+					body,
+					validateTrackBodyIdempotencyKey: false,
+					spooledAt:
+						Date.now() - BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS - 1_000,
+				}),
+			).rejects.toBeInstanceOf(SpooledTrackTooOldError);
+			expect(mockState.workerTrackCalls).toHaveLength(0);
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		}
+	});
+
+	test("replays on Redis when the customer moved off the worker before the replay, whatever its age", async () => {
+		await runQueuedTrack({
+			ctx,
+			body,
+			tokens,
+			validateTrackBodyIdempotencyKey: false,
+			spooledAt: Date.now() - BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS - 1_000,
+		});
+		expect(mockState.workerTrackCalls).toHaveLength(0);
+		expect(mockState.runTrackV3Calls).toHaveLength(1);
+		expect(mockState.runTrackV3Calls[0]).toMatchObject({ ctx, body });
 	});
 });
 

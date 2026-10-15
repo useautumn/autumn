@@ -71,18 +71,25 @@ export const finalizeLineItems = ({
 		lineItems = unbilledUsage;
 	}
 
+	// set_plans only: bill_difference on a reset now bills the full new cycle with no unused-time credit.
+	const billsFullCycleOnReset =
+		resetsLikeStripeUnderNone &&
+		resetsCycleNow &&
+		billingContext.requestedProrationBehavior === "bill_difference";
+	const resetCharges = lineItems.filter(
+		({ context }) =>
+			context.direction === "charge" || context.billingTiming === "in_arrear",
+	);
 	const billedLineItems =
 		skipsProration && resetsLikeStripeUnderNone
 			? dropUnchangedSubscriptionItemCharges({
 					ctx,
 					billingContext,
-					lineItems: lineItems.filter(
-						({ context }) =>
-							context.direction === "charge" ||
-							context.billingTiming === "in_arrear",
-					),
+					lineItems: resetCharges,
 				})
-			: lineItems;
+			: billsFullCycleOnReset
+				? resetCharges
+				: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
