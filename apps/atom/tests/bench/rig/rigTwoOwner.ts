@@ -25,6 +25,8 @@ export type SwapWindow = {
 };
 
 const WINDOW_TAIL_MS = 15_000;
+/** A request already being decided at its replica's SIGTERM finishes there (the Atom's IN_FLIGHT_WAIT_MS). */
+const IN_FLIGHT_GRACE_MS = 2_000;
 
 /** The marks of one replica's swaps, k-th with k-th: each swap starts at a SIGTERM (or an unplanned kill9). */
 const swapMarksOf = ({
@@ -71,8 +73,8 @@ export const swapWindowsOf = ({ marks }: { marks: Mark[] }): SwapWindow[] =>
 			...window,
 			joinUntil: Math.max(
 				window.to,
-				sorted.slice(index + 1).find((next) => next.replica === window.replica)
-					?.from ?? Number.POSITIVE_INFINITY,
+				(sorted.slice(index + 1).find((next) => next.replica === window.replica)
+					?.from ?? Number.POSITIVE_INFINITY) + IN_FLIGHT_GRACE_MS,
 			),
 		}));
 
