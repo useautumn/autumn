@@ -37,6 +37,8 @@ import {
 	PREVIEW_REVEAL_TRANSITION,
 	PreviewLoadingSection,
 } from "@/components/forms/shared/PreviewSection";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { scopeLabel } from "@/components/forms/shared/utils/scopeLabel";
 import {
@@ -302,7 +304,9 @@ function ReviewContent() {
 			/>
 
 			{planReview}
+			<PermissionDenial section="plan" />
 			<AttachAdvancedSection />
+			<PermissionDenial section="options" />
 			<ReviewPreviewBlock />
 		</>
 	);
@@ -428,6 +432,7 @@ function SheetContent() {
 		handlePlanEditorCancel,
 		formValues,
 		additionalPlans,
+		previewQuery,
 	} = useAttachFormContext();
 
 	let StageContent = SelectContent;
@@ -442,24 +447,26 @@ function SheetContent() {
 	}
 
 	return (
-		<LayoutGroup>
-			<SheetBody>
-				<StageContent />
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<LayoutGroup>
+				<SheetBody>
+					<StageContent />
 
-				{planEditorProduct && (
-					<InlinePlanEditor
-						product={planEditorProduct}
-						onSave={handlePlanEditorSave}
-						onCancel={handlePlanEditorCancel}
-						isOpen={showPlanEditor}
-						enableLicenseEditing={!additionalPlans.isMultiPlan}
-						initialAddLicenses={
-							additionalPlans.isMultiPlan ? null : formValues.addLicenses
-						}
-					/>
-				)}
-			</SheetBody>
-		</LayoutGroup>
+					{planEditorProduct && (
+						<InlinePlanEditor
+							product={planEditorProduct}
+							onSave={handlePlanEditorSave}
+							onCancel={handlePlanEditorCancel}
+							isOpen={showPlanEditor}
+							enableLicenseEditing={!additionalPlans.isMultiPlan}
+							initialAddLicenses={
+								additionalPlans.isMultiPlan ? null : formValues.addLicenses
+							}
+						/>
+					)}
+				</SheetBody>
+			</LayoutGroup>
+		</PermissionDenialProvider>
 	);
 }
 

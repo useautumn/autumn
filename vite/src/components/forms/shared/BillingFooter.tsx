@@ -1,5 +1,8 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { type ReactNode, useEffect, useState } from "react";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import { PermissionDenial } from "./permission/PermissionDenial";
+import { usePermissionDenial } from "./permission/PermissionDenialContext";
 
 const REVEAL_DELAY_MS = 350;
 const FADE_CLASS = "animate-in fade-in duration-200";
@@ -32,6 +35,7 @@ export function BillingFooter({
 	children: ReactNode;
 }) {
 	const [showFooter, setShowFooter] = useState(false);
+	const permission = usePermissionDenial();
 
 	useEffect(() => {
 		if (!reveal) return;
@@ -45,21 +49,32 @@ export function BillingFooter({
 	if (reveal && !showFooter) return null;
 
 	// Split callers fade each button themselves via BillingFooterButton.
-	if (layout === "split") {
-		return (
+	const footer =
+		layout === "split" ? (
 			<SheetFooter className={LAYOUT_CLASSES.split}>{children}</SheetFooter>
+		) : (
+			<SheetFooter className={LAYOUT_CLASSES[layout]}>
+				<div
+					className={cn(
+						layout === "stacked" && "flex flex-col gap-2 w-full",
+						reveal && FADE_CLASS,
+					)}
+				>
+					{children}
+				</div>
+			</SheetFooter>
 		);
-	}
+	if (!permission) return footer;
 
+	// A disabled fieldset disables every footer action without each footer knowing about rules.
 	return (
-		<SheetFooter className={LAYOUT_CLASSES[layout]}>
-			<div
-				className={`${layout === "stacked" ? "flex flex-col gap-2 w-full" : ""} ${
-					reveal ? FADE_CLASS : ""
-				}`.trim()}
-			>
-				{children}
+		<>
+			<div className="px-4 pt-4">
+				<PermissionDenial section="summary" />
 			</div>
-		</SheetFooter>
+			<fieldset disabled={permission.locksSubmit} className="contents">
+				{footer}
+			</fieldset>
+		</>
 	);
 }

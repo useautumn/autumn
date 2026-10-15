@@ -4,6 +4,7 @@ import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
@@ -143,6 +144,9 @@ export function CustomerProductsTable() {
 		});
 	};
 
+	const canCancel = useCanDo("billing.cancel");
+	const canUpdate = useCanDo("billing.update_subscription");
+
 	const handleUpdateClick = (product: FullCusProduct) => {
 		setSheet({ type: "subscription-update", itemId: product.id });
 	};
@@ -160,7 +164,8 @@ export function CustomerProductsTable() {
 				onUncancelClick: handleUncancelClick,
 				onCancelImmediatelyClick: handleCancelImmediatelyClick,
 				onTransferClick: handleTransferClick,
-				onUpdateClick: handleUpdateClick,
+				onUpdateClick: canUpdate ? handleUpdateClick : undefined,
+				canCancel,
 				hasEntities,
 				nowMs: testClockFrozenTimeMs,
 			},

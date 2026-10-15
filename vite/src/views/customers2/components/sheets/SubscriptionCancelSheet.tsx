@@ -10,6 +10,8 @@ import { CancelFooter } from "@/components/forms/cancel-subscription/components/
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -30,7 +32,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 function SheetContent() {
-	const { formContext } = useUpdateSubscriptionFormContext();
+	const { formContext, previewQuery } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
 	const product = customerProduct.product;
@@ -43,59 +45,63 @@ function SheetContent() {
 	const productName = product?.name ?? "Plan";
 
 	return (
-		<LayoutGroup>
-			<SheetBody>
-				<SheetHeader
-					title="Cancel Subscription"
-					description={`Cancel ${productName} for this customer`}
-					breadcrumbs={[
-						{
-							name: productName,
-							sheet: "subscription-detail",
-						},
-					]}
-					itemId={customerProduct.id}
-				/>
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<LayoutGroup>
+				<SheetBody>
+					<SheetHeader
+						title="Cancel Subscription"
+						description={`Cancel ${productName} for this customer`}
+						breadcrumbs={[
+							{
+								name: productName,
+								sheet: "subscription-detail",
+							},
+						]}
+						itemId={customerProduct.id}
+					/>
 
-				{isPending && (
-					<div className="px-4 pt-4">
-						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-							This plan is waiting on payment. Cancelling will void the payment
-							and remove the plan.
-						</InfoBox>
-					</div>
-				)}
+					{isPending && (
+						<div className="px-4 pt-4">
+							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+								This plan is waiting on payment. Cancelling will void the
+								payment and remove the plan.
+							</InfoBox>
+						</div>
+					)}
 
-				{isScheduled && (
-					<div className="px-4 pt-4">
-						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-							This plan is scheduled to start on{" "}
-							{formatUnixToDateTime(customerProduct.starts_at).date}. Cancelling
-							will remove this schedule.
-						</InfoBox>
-					</div>
-				)}
+					{isScheduled && (
+						<div className="px-4 pt-4">
+							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+								This plan is scheduled to start on{" "}
+								{formatUnixToDateTime(customerProduct.starts_at).date}.
+								Cancelling will remove this schedule.
+							</InfoBox>
+						</div>
+					)}
 
-				{isFreeDefault && (
-					<div className="px-4 pt-4">
-						<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-							This is the default plan. Cancelling it means this customer will
-							be left without a plan.
-						</InfoBox>
-					</div>
-				)}
+					{isFreeDefault && (
+						<div className="px-4 pt-4">
+							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+								This is the default plan. Cancelling it means this customer will
+								be left without a plan.
+							</InfoBox>
+						</div>
+					)}
 
-				{!isPending && (
-					<>
-						<CancelModeSection />
-						<RefundBehaviorSection />
-						<CancelAdvancedSection />
-						<CancelPreviewSection />
-					</>
-				)}
-				<CancelFooter />
-			</SheetBody>
-		</LayoutGroup>
+					{!isPending && (
+						<>
+							<PermissionDenial section="plan" />
+							<CancelModeSection />
+							<RefundBehaviorSection />
+							<PermissionDenial section="options" />
+							<CancelAdvancedSection />
+							<CancelPreviewSection />
+						</>
+					)}
+					<CancelFooter />
+				</SheetBody>
+			</LayoutGroup>
+		</PermissionDenialProvider>
 	);
 }
 

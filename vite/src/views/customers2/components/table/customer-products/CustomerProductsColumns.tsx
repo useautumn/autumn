@@ -113,6 +113,7 @@ export const CustomerProductsColumns = [
 				onCancelImmediatelyClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
+				canCancel?: boolean;
 				hasEntities?: boolean;
 			};
 
@@ -180,16 +181,18 @@ export const CustomerProductsColumns = [
 								</DropdownMenuItem>
 							</>
 						) : (
-							<DropdownMenuItem
-								variant="destructive"
-								className="flex items-center gap-2 text-xs"
-								onClick={(e) => {
-									e.stopPropagation();
-									meta.onCancelClick?.(row.original);
-								}}
-							>
-								<Delete size={16} /> Cancel
-							</DropdownMenuItem>
+							meta.canCancel && (
+								<DropdownMenuItem
+									variant="destructive"
+									className="flex items-center gap-2 text-xs"
+									onClick={(e) => {
+										e.stopPropagation();
+										meta.onCancelClick?.(row.original);
+									}}
+								>
+									<Delete size={16} /> Cancel
+								</DropdownMenuItem>
+							)
 						)}
 					</TableDropdownMenuCell>
 				</div>

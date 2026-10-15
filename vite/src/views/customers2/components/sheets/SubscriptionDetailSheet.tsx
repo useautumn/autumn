@@ -32,6 +32,7 @@ import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { useStripePaymentMethodTypesQuery } from "@/hooks/queries/useStripePaymentMethodTypesQuery";
@@ -64,6 +65,8 @@ export function SubscriptionDetailSheet() {
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
+	const canDoCancel = useCanDo("billing.cancel");
+	const canDoUpdate = useCanDo("billing.update_subscription");
 
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
@@ -117,8 +120,8 @@ export function SubscriptionDetailSheet() {
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
 
-	const canCancel = !isExpired;
-	const canUpdate = !isExpired && !isScheduled;
+	const canCancel = !isExpired && canDoCancel;
+	const canUpdate = !isExpired && !isScheduled && canDoUpdate;
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
