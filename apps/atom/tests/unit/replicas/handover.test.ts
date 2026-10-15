@@ -705,6 +705,36 @@ describe("a lock taken on the leaving owner", () => {
 		});
 	});
 
+	test("finalized on the new owner while its handoff is still on the way waits at the barrier like a check, then settles here", async () => {
+		const calls: string[] = [];
+		const { a, b } = await agreeingPair();
+		connect({ replicas: [a, b] });
+		expect((await lockOn(a)).status).toBe(200);
+		// The handoff takes 20 ms to land; the finalize reaches B the moment B hears A is leaving.
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname === PEER_HANDOFF_PATH)
+					await Bun.sleep(20);
+			},
+			autumn: async (request) => {
+				calls.push(new URL(request.url).pathname);
+				return Response.json({ success: true });
+			},
+		});
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const reply = await finalizeOn(b);
+		await leaving;
+
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(calls).toEqual([]);
+		expect(await remainingAt(b)).toBe(10);
+		expect(b.stats().handoffLate).toBe(0);
+	});
+
 	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
 		const calls: string[] = [];
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
