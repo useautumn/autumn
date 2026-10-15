@@ -28,7 +28,7 @@ const healthOf = (
 		);
 	}) as typeof fetch;
 
-const proberOf = ({
+const proberContextOf = ({
 	membership,
 	thread,
 	threads,
@@ -42,34 +42,34 @@ const proberOf = ({
 	listed: string[];
 	health: typeof fetch;
 	handedOff: string[];
-}) =>
-	startReadinessProber({
+}) => ({
+	ring: createReplicaRing({
 		ctx: {
-			ring: createReplicaRing({
-				ctx: {
-					resolver: { peers: async () => listed },
-					own: () => [B],
-					membership,
-				},
-			}),
+			resolver: { peers: async () => listed },
+			own: () => [B],
 			membership,
-			replication: { peers: async () => listed },
-			folders: {
-				all: () => [
-					{
-						atomId: null,
-						slots: { ownedHandoffs: async () => [] },
-					},
-				],
-			} as never,
-			threads,
-			thread,
-			publicPort: 8001,
-			peer: { port: 8002, secret: "s".repeat(64), fetch: health },
-			logger: quiet,
-			onHandedOff: (peer: string) => handedOff.push(`t${thread}:${peer}`),
 		},
-	});
+	}),
+	membership,
+	replication: { peers: async () => listed },
+	folders: {
+		all: () => [
+			{
+				atomId: null,
+				slots: { ownedHandoffs: async () => [] },
+			},
+		],
+	} as never,
+	threads,
+	thread,
+	publicPort: 8001,
+	peer: { port: 8002, secret: "s".repeat(64), fetch: health },
+	logger: quiet,
+	onHandedOff: (peer: string) => handedOff.push(`t${thread}:${peer}`),
+});
+
+const proberOf = (params: Parameters<typeof proberContextOf>[0]) =>
+	startReadinessProber({ ctx: proberContextOf(params) });
 
 describe("a listed peer becomes an owner", () => {
 	test("the first thread to see it ready counts it, for every thread at once; then each thread hands over to it once", async () => {
@@ -238,5 +238,53 @@ describe("a peer that counts this replica as an owner", () => {
 		expect(membership.isHanding(A)).toBe(true);
 		expect(membership.isHandoffComplete(A)).toBe(false);
 		expect(membership.isBootOf({ address: A, boot: "boot-2" })).toBe(true);
+	});
+});
+
+describe("a flip on one thread wakes the hand-over on every thread", () => {
+	test("a thread that has not probed the peer hands over to it on its next tick, without a probe of its own", async () => {
+		const table = new Int32Array(MEMBERSHIP_INTS);
+		const onT0 = createMembership({ self: B, table });
+		const onT1 = createMembership({ self: B, table });
+		const handedOff: string[] = [];
+		let probes = 0;
+		const health = (async (input: URL | RequestInfo) => {
+			probes++;
+			return healthOf({ [A]: { status: 200, bootedAt: "boot-1" } })(input);
+		}) as typeof fetch;
+		const t0 = proberOf({
+			membership: onT0,
+			thread: 0,
+			threads: 2,
+			listed: [A],
+			health,
+			handedOff,
+		});
+		// t1's loop: one tick, then it is stopped.
+		let ticks = 0;
+		const t1 = startReadinessProber({
+			ctx: {
+				...proberContextOf({
+					membership: onT1,
+					thread: 1,
+					threads: 2,
+					listed: [A],
+					health,
+					handedOff,
+				}),
+				sleep: async () => {
+					if (++ticks > 1) t1.stop();
+				},
+			},
+		});
+
+		await t0.probeOnce();
+		expect(onT1.isMember(A)).toBe(true);
+		const probesBefore = probes;
+		await t1.run();
+
+		expect(handedOff).toEqual([`t0:${A}`, `t1:${A}`]);
+		expect(probes).toBe(probesBefore);
+		expect(onT1.isHandoffComplete(A)).toBe(false);
 	});
 });
