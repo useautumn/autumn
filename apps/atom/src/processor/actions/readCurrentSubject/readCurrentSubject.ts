@@ -17,7 +17,11 @@ import {
 } from "../../../state/types/storedSubject.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
-import { type FoldRebuilt, foldAcrossPush } from "./foldAcrossPush.js";
+import {
+	appliedOf,
+	type FoldRebuilt,
+	foldAcrossPush,
+} from "./foldAcrossPush.js";
 import { freshestCatalog } from "./freshestCatalog.js";
 import { replayOwed } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
@@ -101,16 +105,15 @@ const readStoredParts = ({
 	return { customer, entity };
 };
 
-/** Only appends happened since `previous`: anything else (a drop, a refusal, a restart) replaces an entry before its end. */
+/** Only appends happened since the fold: the journal grew its very array, or the fold applied none (a first entry starts one). */
 const isAppendedTo = ({
 	owed,
-	previous,
+	fold,
 }: {
 	owed: readonly JournalEntry[];
-	previous: readonly JournalEntry[];
+	fold: ViewFold;
 }): boolean =>
-	owed.length > previous.length &&
-	previous.every((entry, index) => owed[index] === entry);
+	(owed === fold.owed || fold.applied === 0) && owed.length > fold.applied;
 
 /** Keyed by the copy the request is for (the entity's, or the customer's), so a copy the store replaces takes its view with it. */
 const subjectJoinCache = new WeakMap<StoredSubject, ViewFold>();
@@ -184,7 +187,7 @@ const countRebuilt = ({
 				pushed: loggedValueOf(difference.right),
 				// Each copy's customer row says how far Autumn had seen each journal; and which entries the push trimmed from the fold.
 				writerId: ctx.journal.writerId,
-				trimmedSeqs: fold?.owed
+				trimmedSeqs: (fold ? appliedOf({ fold }) : [])
 					.filter((entry) => !owed.includes(entry))
 					.map(({ seq }) => seq),
 				owedFirstSeq: owed[0]?.seq ?? null,
@@ -223,9 +226,9 @@ const keepFold = ({
 	fold: ViewFold;
 	previous: ViewFold | null;
 }): void => {
-	const previousLast = previous?.owed.at(-1);
+	const previousLast = previous?.owed[previous.applied - 1];
 	if (previousLast) foldByLastEntry.delete(previousLast);
-	const last = fold.owed.at(-1);
+	const last = fold.owed[fold.applied - 1];
 	if (last) foldByLastEntry.set(last, fold);
 };
 
@@ -249,7 +252,8 @@ export const readCurrentSubject = ({
 	const target = entity ?? customer;
 	const joined = subjectJoinCache.get(target);
 	const isSameCopy = joined?.customer === customer && joined.shared === shared;
-	if (isSameCopy && joined.owed === owed) return joined.current;
+	if (isSameCopy && joined.owed === owed && joined.applied === owed.length)
+		return joined.current;
 	const catalog = joinedCatalogOf({ customer, entity, shared });
 	// A customer's own fold survives a new copy: a push that only acknowledged its deductions replays nothing.
 	const isOwedOnNewCopy = !entity && !isSameCopy && owed.length > 0;
@@ -272,13 +276,13 @@ export const readCurrentSubject = ({
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
 		carriedBase ??
-		(isSameCopy && isAppendedTo({ owed, previous: joined.owed })
+		(isSameCopy && isAppendedTo({ owed, fold: joined })
 			? {
 					state: joined.customerState,
-					applied: joined.owed,
+					applied: joined.applied,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
-			: { state: customer.state, applied: [], fullSubject: null });
+			: { state: customer.state, applied: 0, fullSubject: null });
 	const { current, customerState } = joinSubject({
 		customer,
 		entity,
@@ -288,7 +292,14 @@ export const readCurrentSubject = ({
 		catalog,
 		entityId,
 	});
-	const fold: ViewFold = { customer, shared, owed, customerState, current };
+	const fold: ViewFold = {
+		customer,
+		shared,
+		owed,
+		applied: owed.length,
+		customerState,
+		current,
+	};
 	subjectJoinCache.set(target, fold);
 	if (!entity) keepFold({ fold, previous: isSameCopy ? joined : carried });
 	return current;
@@ -333,7 +344,7 @@ const joinSubject = ({
 	entityId: string | null;
 }): { current: CurrentSubject; customerState: SubjectState } => {
 	// Only a customer's own deductions are owed, and they move only the customer's own rows.
-	const unapplied = owed.slice(base.applied.length);
+	const unapplied = owed.slice(base.applied);
 	const customerState =
 		unapplied.length === 0
 			? base.state

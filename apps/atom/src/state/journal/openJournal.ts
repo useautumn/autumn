@@ -57,7 +57,8 @@ export const openJournal = ({
 	const ctx = { sqliteDb: openJournalDatabase({ databasePath }) };
 	const writerId = readJournalWriterId({ ctx });
 	const lastSeqs = readLastJournalSeqs({ ctx });
-	const owedByCustomer = new Map<string, readonly JournalEntry[]>();
+	/** Grown in place by an append; anything else that changes it replaces it, so a reader can tell the two apart. */
+	const owedByCustomer = new Map<string, JournalEntry[]>();
 	const unsent = new Set<JournalEntry>();
 	unsentByJournal.add(unsent);
 	let notifyCommitted = () => {};
@@ -81,15 +82,23 @@ export const openJournal = ({
 	});
 
 	for (const entry of readOwedJournalEntries({ ctx })) {
-		owedByCustomer.set(entry.customerId, [
-			...owed({ customerId: entry.customerId }),
-			entry,
-		]);
+		owe({ entry });
 		holdUnsent(entry);
 	}
 
-	function owed({ customerId }: { customerId: string }) {
+	function owed({
+		customerId,
+	}: {
+		customerId: string;
+	}): readonly JournalEntry[] {
 		return owedByCustomer.get(customerId) ?? NOTHING_OWED;
+	}
+
+	/** O(1): the customer's array grows, never copied, however much it owes. */
+	function owe({ entry }: { entry: JournalEntry }): void {
+		const entries = owedByCustomer.get(entry.customerId);
+		if (entries) entries.push(entry);
+		else owedByCustomer.set(entry.customerId, [entry]);
 	}
 
 	function setOwed({
@@ -97,7 +106,7 @@ export const openJournal = ({
 		entries,
 	}: {
 		customerId: string;
-		entries: readonly JournalEntry[];
+		entries: JournalEntry[];
 	}): void {
 		if (entries.length === 0) owedByCustomer.delete(customerId);
 		else owedByCustomer.set(customerId, entries);
@@ -114,7 +123,7 @@ export const openJournal = ({
 		const seq = (lastSeqs.get(customerId) ?? 0) + 1;
 		lastSeqs.set(customerId, seq);
 		const entry = { customerId, seq, appendedAt: now(), command };
-		setOwed({ customerId, entries: [...owed({ customerId }), entry] });
+		owe({ entry });
 		try {
 			await groupCommit.add(entry);
 			return entry;
