@@ -12,4 +12,6 @@ export const AtomKeysRequestSchema = z.object({
 
 export const AtomKeysResponseSchema = z.object({
 	invalid_key_hashes: z.array(z.string()),
+	/** The org the token hash belongs to, for the Atom's log lines; an older Autumn sends none. */
+	org: z.object({ id: z.string(), slug: z.string() }).optional(),
 });

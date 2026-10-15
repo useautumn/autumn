@@ -16,5 +16,9 @@ export async function handleCheckAtomKeys(c: Context<AtomHonoEnv>) {
 		env,
 		keyHashes: parsed.data.key_hashes,
 	});
-	return c.json({ invalid_key_hashes: invalid });
+	const { org } = c.get("ctx");
+	return c.json({
+		invalid_key_hashes: invalid,
+		org: { id: org.id, slug: org.slug },
+	});
 }
