@@ -250,14 +250,13 @@ export const startReadinessProber = ({
 			)
 				continue;
 			const switchedAt = Date.now();
+			// Keys first: nothing may wait between the entries' handoff and the flip, or a later seq this replica hands in
+			// itself can pass a handed one at Autumn's watermark. Keys taken meanwhile follow after the sweep.
+			if (!(await handOffKeysTo({ peer, switchedAt }))) continue;
 			const ownerOf = (customerId: string) =>
 				ctx.ring.ownerOnceJoined({ customerId, peer });
 			const session = createHandoffSession();
 			await handOffJournals({ ctx, ownerOf, session });
-			if (!(await handOffKeysTo({ peer, switchedAt }))) {
-				releaseHandoffSession({ session });
-				continue;
-			}
 			ctx.onHandedOff?.(peer);
 			const joined = ctx.membership.handedOff({
 				address: peer,
