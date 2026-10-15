@@ -16,7 +16,7 @@ export const handOverOnce = async ({
 }: {
 	ctx: Pick<
 		HandoverContext,
-		"ring" | "folders" | "thread" | "threads" | "peer" | "logger"
+		"ring" | "boot" | "folders" | "thread" | "threads" | "peer" | "logger"
 	>;
 	peers: string[];
 }): Promise<{ handed: number; kept: number; told: string[] }> => {
@@ -34,6 +34,7 @@ export const handOverOnce = async ({
 				announcement: {
 					kind: "handedOff",
 					address: ctx.ring.self,
+					boot: ctx.boot,
 					thread: ctx.thread,
 					threads: ctx.threads,
 				},

@@ -20,11 +20,11 @@ export const receiveAnnouncement = ({
 			);
 		const announcement = parsed.data;
 		const { membership } = ctx.peer;
-		if (announcement.kind === "leaving")
-			membership?.markLeaving(announcement.address);
-		if (announcement.kind === "joining")
-			membership?.grantedBy(announcement.address);
-		if (announcement.kind === "handedOff")
-			membership?.handoffCompleted(announcement);
-		return context.json({ taken: announcement.kind });
+		const { kind, address, boot } = announcement;
+		// A new boot on the address has everything to hand again; what the old one handed does not count for it.
+		if (kind !== "handedOff") membership?.noteBoot({ address, boot });
+		if (kind === "leaving") membership?.markLeaving(address);
+		if (kind === "joining") membership?.grantedBy(address);
+		if (kind === "handedOff") membership?.handoffCompleted(announcement);
+		return context.json({ taken: kind });
 	};

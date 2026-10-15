@@ -102,7 +102,12 @@ export const createReplica = ({
 	for (const peer of joined) {
 		membership.markJoined({ address: peer, boot: BOOTED_AT });
 		membership.grantedBy(peer);
-		membership.handoffCompleted({ address: peer, thread: 0, threads: 1 });
+		membership.handoffCompleted({
+			address: peer,
+			boot: BOOTED_AT,
+			thread: 0,
+			threads: 1,
+		});
 	}
 	const ring = createReplicaRing({
 		ctx: {
@@ -171,6 +176,7 @@ export const createReplica = ({
 	};
 	const handoverContext = {
 		ring,
+		boot: bootedAt,
 		membership,
 		replication: { peers: async () => ringPeers },
 		folders: createDeployedFolders({ slots: auth.slots }),

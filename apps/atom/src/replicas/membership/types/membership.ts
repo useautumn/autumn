@@ -20,15 +20,18 @@ export type Membership = {
 	bootOf(address: string): number | null;
 	/** Whether the peer was marked joined from this boot: read from the shared table, so every thread tells a leaving peer back at the same address apart. */
 	isBootOf(params: { address: string; boot: string }): boolean;
+	/** The peer speaks from this boot: a new one on the address has everything to hand again. */
+	noteBoot(params: { address: string; boot: string }): void;
 	markLeaving(address: string): void;
 	/** The peer counts this replica as an owner: the customers it owned before are answered here from now on. */
 	grantedBy(address: string): void;
 	isGrantedBy(address: string): boolean;
 	/** The peer is handing this replica the customers that moved here: their first requests wait for the handoff. */
 	isHanding(address: string): boolean;
-	/** One of the peer's threads handed everything it owed; true once all `threads` of them have. */
+	/** One of the peer's threads, from the boot named, handed everything it owed; true once all `threads` of them have. An older boot's word does not count. */
 	handoffCompleted(params: {
 		address: string;
+		boot: string;
 		thread: number;
 		threads: number;
 	}): boolean;

@@ -25,7 +25,11 @@ export const leaveRing = async ({
 			announceTo({
 				ctx,
 				peer,
-				announcement: { kind: "leaving", address: ctx.ring.self },
+				announcement: {
+					kind: "leaving",
+					address: ctx.ring.self,
+					boot: ctx.boot,
+				},
 			}),
 		),
 	);

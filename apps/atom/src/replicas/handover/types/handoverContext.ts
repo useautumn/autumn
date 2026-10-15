@@ -7,6 +7,8 @@ import type { ReplicaRing } from "../../types/replicaRing.js";
 /** What one thread needs to change who owns what: join a peer, or leave. */
 export type HandoverContext = {
 	ring: ReplicaRing;
+	/** This replica's boot, named on every announcement. */
+	boot: string;
 	membership: Membership;
 	/** The peers the service name lists, ready or not. */
 	replication: Pick<Replication, "peers">;

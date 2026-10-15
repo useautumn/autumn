@@ -67,7 +67,7 @@ export const startReadinessProber = ({
 		const granted = await announceTo({
 			ctx,
 			peer,
-			announcement: { kind: "joining", address: ctx.ring.self },
+			announcement: { kind: "joining", address: ctx.ring.self, boot: ctx.boot },
 		});
 		if (!granted)
 			ctx.logger.warn(
