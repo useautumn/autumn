@@ -1,7 +1,11 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import axios from "axios";
 import { bootRequestsForLocation } from "../../src/boot/bootRequests";
-import { bootRequestKey, takeBootResponse } from "../../src/boot/bootResponses";
+import {
+	bootRequestKey,
+	discardBootResponses,
+	takeBootResponse,
+} from "../../src/boot/bootResponses";
 
 const paths = (pathname: string, search = "") =>
 	bootRequestsForLocation({ pathname, search }).requests.map(
@@ -102,6 +106,17 @@ describe("boot response matching", () => {
 			startedAt: Date.now() - 60_000,
 			responses: new Map([["k", response]]),
 		};
+		expect(takeBootResponse("k")).toBeUndefined();
+	});
+
+	test("switching org discards responses fetched for the previous one", () => {
+		window.__autumnBoot = {
+			startedAt: Date.now(),
+			responses: new Map([
+				["k", Promise.resolve({ status: 200, headers: {}, body: "{}" })],
+			]),
+		};
+		discardBootResponses();
 		expect(takeBootResponse("k")).toBeUndefined();
 	});
 });

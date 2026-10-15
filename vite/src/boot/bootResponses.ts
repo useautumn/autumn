@@ -53,3 +53,7 @@ export const takeBootResponse = (key: string) => {
 	boot.responses.delete(key);
 	return response;
 };
+
+/** Boot responses belong to the session's org at page load; a switch makes them another org's data. */
+export const discardBootResponses = () =>
+	window.__autumnBoot?.responses.clear();
