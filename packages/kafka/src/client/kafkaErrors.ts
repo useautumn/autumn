@@ -47,3 +47,29 @@ export class KafkaTopicPartitionsUnavailableError extends Error {
 		this.topic = topic;
 	}
 }
+
+/** Some records of one send were written and others were not; no part of it may be read as refused.
+ *  The failure is kept off `cause` so the error never classifies as the broker's refusal. */
+export class KafkaPartialDeliveryError extends Error {
+	readonly delivered: number;
+	readonly total: number;
+	readonly failure: unknown;
+
+	constructor({
+		delivered,
+		total,
+		failure,
+	}: {
+		delivered: number;
+		total: number;
+		failure: unknown;
+	}) {
+		super(
+			`Kafka wrote ${delivered} of ${total} records of one send: ${String(failure)}`,
+		);
+		this.name = "KafkaPartialDeliveryError";
+		this.delivered = delivered;
+		this.total = total;
+		this.failure = failure;
+	}
+}

@@ -39,6 +39,8 @@ export type RecordMetadata = {
 	partition: number;
 	errorCode: number;
 	baseOffset?: string;
+	/** The highest offset this send wrote to the partition, when the client reports each record's. */
+	lastOffset?: string;
 	offset?: string;
 	timestamp?: string;
 	logAppendTime?: string;

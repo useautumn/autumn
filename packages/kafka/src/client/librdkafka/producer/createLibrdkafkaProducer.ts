@@ -1,4 +1,6 @@
 import type { KafkaJS } from "@autumn/librdkafka";
+import { isKafkaProtocolError } from "../../kafkaErrorClassification.js";
+import { KafkaPartialDeliveryError } from "../../kafkaErrors.js";
 import type { KafkaRequestTiming } from "../../types/kafkaClient.js";
 import {
 	CompressionTypes,
@@ -60,6 +62,8 @@ export function nativeProducerConfigOf({
 			transactional && config.transactionTimeout
 				? Math.min(window, config.transactionTimeout)
 				: window,
+		// The KafkaJS shim would otherwise put its own default of 5 here, whatever the producer asked for.
+		retries: retry.retries,
 		"retry.backoff.ms": retry.initialRetryTime,
 		"retry.backoff.max.ms": retry.maxRetryTime,
 		"allow.auto.create.topics": config.allowAutoTopicCreation ?? false,
@@ -94,6 +98,65 @@ export function requestTimingsOf({
 		});
 	}
 	return timings;
+}
+
+/** One metadata per partition: its lowest offset as `baseOffset` and its highest as `lastOffset`. */
+export function spanOf({
+	outcomes,
+}: {
+	outcomes: PromiseSettledResult<RecordMetadata[]>[];
+}): RecordMetadata[] {
+	const failures: unknown[] = [];
+	let delivered = 0;
+	const byPartition = new Map<string, RecordMetadata & { offsets: bigint[] }>();
+	for (const outcome of outcomes) {
+		if (outcome.status === "rejected") {
+			failures.push(outcome.reason);
+			continue;
+		}
+		delivered += 1;
+		for (const metadata of outcome.value) {
+			const key = `${metadata.topicName}\u0000${metadata.partition}`;
+			const span = byPartition.get(key) ?? { ...metadata, offsets: [] };
+			if (metadata.baseOffset !== undefined)
+				span.offsets.push(BigInt(metadata.baseOffset));
+			byPartition.set(key, span);
+		}
+	}
+	const [failure] = failures;
+	if (failure !== undefined) {
+		if (delivered > 0)
+			throw new KafkaPartialDeliveryError({
+				delivered,
+				total: outcomes.length,
+				failure,
+			});
+		throw failures.find(isLocalFailure) ?? failure;
+	}
+	const spans: RecordMetadata[] = [];
+	for (const { offsets, ...metadata } of byPartition.values()) {
+		if (offsets.length === 0) {
+			spans.push(metadata);
+			continue;
+		}
+		let low = offsets[0] as bigint;
+		let high = low;
+		for (const offset of offsets) {
+			if (offset < low) low = offset;
+			if (offset > high) high = offset;
+		}
+		spans.push({
+			...metadata,
+			baseOffset: low.toString(),
+			lastOffset: high.toString(),
+		});
+	}
+	return spans;
+}
+
+/** A client-side failure (a timeout, a lost connection) leaves a record's fate unknown; it outranks a refusal. */
+function isLocalFailure(cause: unknown): boolean {
+	return !isKafkaProtocolError({ cause });
 }
 
 function messagesOf(record: ProducerRecord): KafkaJS.ProducerRecord {
@@ -146,12 +209,26 @@ export function createLibrdkafkaProducer({
 		return producer.disconnect();
 	}
 
-	function send(record: ProducerRecord): Promise<RecordMetadata[]> {
+	function sendOne(
+		message: ProducerRecord["messages"][number],
+		topic: string,
+	): Promise<RecordMetadata[]> {
+		return producer.send({ topic, messages: [message] }) as Promise<
+			RecordMetadata[]
+		>;
+	}
+
+	/** librdkafka may split one send into several record batches, so each record's outcome is read on its own:
+	 *  a send only some of which landed is never reported as a refusal, and each partition reports its span. */
+	async function send(record: ProducerRecord): Promise<RecordMetadata[]> {
 		if (record.acks !== undefined && record.acks !== -1)
 			throw new RangeError(
 				"Every producer of ours acks with all in-sync replicas",
 			);
-		return producer.send(messagesOf(record)) as Promise<RecordMetadata[]>;
+		const sends: Promise<RecordMetadata[]>[] = [];
+		for (const message of record.messages)
+			sends.push(sendOne(message, record.topic));
+		return spanOf({ outcomes: await Promise.allSettled(sends) });
 	}
 
 	async function transaction(): Promise<Transaction> {

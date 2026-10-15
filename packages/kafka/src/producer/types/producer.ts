@@ -28,6 +28,8 @@ export type ProducerSessionState = {
 	initialized: boolean;
 	connected: boolean;
 	connecting?: Promise<void>;
+	/** Every connect attempt, settled or not: a failed one can still leave a live client behind to close. */
+	connectAttempt?: Promise<void>;
 	closed: boolean;
 	terminal: boolean;
 	transactions: Promise<void>;

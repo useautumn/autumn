@@ -21,3 +21,12 @@ test("an idempotent producer keeps the whole retry window", () => {
 	});
 	expect(config["message.timeout.ms"]).toBe(10_000 + 100 + 200 + 400);
 });
+
+// The KafkaJS shim sets `retries` to 5 unless told otherwise, and librdkafka would honour it.
+test("the producer's own retry count reaches librdkafka", () => {
+	const config = nativeProducerConfigOf({
+		config: { idempotent: true, retry: { retries: 10 } },
+		defaults,
+	});
+	expect(config.retries).toBe(10);
+});

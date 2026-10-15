@@ -265,7 +265,8 @@ async function failedFenceCannotReinitialize(): Promise<void> {
 	delete failures.connect;
 	await expect(session.fence()).rejects.toThrow("unavailable");
 	await session.disconnect();
-	expect(events).toEqual(["connect"]);
+	// The failed connect may have left a native client up (a transactional init timing out); it is closed.
+	expect(events).toEqual(["connect", "disconnect"]);
 }
 
 async function disconnectsWithoutRepeatingTheRuntimeDrain(): Promise<void> {
@@ -397,3 +398,42 @@ test("reports each broker's request latency, and survives a throwing listener", 
 	expect(() => listener?.(timing)).not.toThrow();
 	expect(timings[0]).toEqual(timing);
 });
+
+async function closesAConnectStillRunningAtDisconnect(): Promise<void> {
+	const events: string[] = [];
+	const connected = Promise.withResolvers<void>();
+	const session = createProducerSession({
+		ctx: {
+			kafka: {
+				producer: () =>
+					({
+						async connect() {
+							events.push("connect");
+							await connected.promise;
+							events.push("connected");
+						},
+						async disconnect() {
+							events.push("disconnect");
+						},
+						async send() {
+							return [];
+						},
+						async transaction() {
+							throw new Error("unused");
+						},
+					}) as unknown as KafkaProducerClient,
+			},
+		},
+		config: { ...config, mode: "idempotent" },
+	});
+	const connecting = session.connect();
+	const closing = session.disconnect();
+	connected.resolve();
+	await connecting;
+	await closing;
+	expect(events).toEqual(["connect", "connected", "disconnect"]);
+}
+test(
+	"a disconnect during a connect closes the client the connect brings up",
+	closesAConnectStillRunningAtDisconnect,
+);

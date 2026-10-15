@@ -102,6 +102,9 @@ export function createLibrdkafkaConsumer({
 		assigned: new Map(),
 		generation: new Map(),
 		seekEpoch: new Map(),
+		seekTargets: new Map(),
+		inflightSeeks: new Set(),
+		lastPollAt: performance.now(),
 		paused: new Set(),
 		skippedFrom: new Map(),
 		pendingSeeks: new Map(),
@@ -292,7 +295,9 @@ export function createLibrdkafkaConsumer({
 		state.restartPending = null;
 		for (const key of state.assigned.keys())
 			state.generation.set(key, (state.generation.get(key) ?? 0) + 1);
+		state.inflightSeeks.clear();
 		for (const partitionState of [
+			state.seekTargets,
 			state.assigned,
 			state.paused,
 			state.skippedFrom,
@@ -338,6 +343,7 @@ export function createLibrdkafkaConsumer({
 		const key = partitionKeyOf({ topic, partition });
 		if (state.assigning.has(key) || !state.assigned.has(key)) {
 			state.pendingSeeks.set(key, Number(offset));
+			state.seekTargets.set(key, Number(offset));
 			state.seekEpoch.set(key, (state.seekEpoch.get(key) ?? 0) + 1);
 			return;
 		}

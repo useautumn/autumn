@@ -38,6 +38,8 @@ function createFakeNative() {
 	const commits: NativeTopicPartitionOffset[][] = [];
 	const committed = new Map<string, number>();
 	const watermark = { highOffset: 100 };
+	const committedOutcomes: (NativeKafkaError | null)[] = [];
+	const gate: { held?: Promise<void> } = {};
 	let rebalance: NativeRebalanceCallback | undefined;
 	let consumeWaiter: (() => void) | undefined;
 
@@ -100,6 +102,12 @@ function createFakeNative() {
 		},
 		setDefaultIsTimeoutOnlyForFirstMessage() {},
 		consume(_count, done) {
+			const held = gate.held;
+			if (held) {
+				gate.held = undefined;
+				void held.then(() => done(play(), []));
+				return;
+			}
 			if (chunks.length > 0) {
 				const error = play();
 				queueMicrotask(() => done(error, []));
@@ -151,6 +159,11 @@ function createFakeNative() {
 			done(null);
 		},
 		committed(partitions, _timeout, done) {
+			const failure = committedOutcomes.shift();
+			if (failure) {
+				done(failure, []);
+				return;
+			}
 			done(
 				null,
 				partitions.map(({ topic, partition }) => ({
@@ -190,6 +203,8 @@ function createFakeNative() {
 		committed,
 		watermark,
 		emit,
+		committedOutcomes,
+		gate,
 	};
 }
 
@@ -897,6 +912,121 @@ describe("librdkafka consumer runner", () => {
 			statistics({ fetches: 14, fetchState: "offset-query" }),
 		);
 		expect(fetches).toEqual([1, 0]);
+		await consumer.disconnect();
+	});
+
+	// A poll in flight may hold records from before a seek made meanwhile; delivering them would skip the seek.
+	test("records a poll returns after a seek made while it ran are dropped and the seek asked for again", async () => {
+		const { fake, consumer } = createRunner();
+		const delivered: string[] = [];
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch }) => {
+				delivered.push(...batch.messages.map((m) => m.offset));
+			},
+		});
+		await until(() => fake.assignments.length > 0);
+		const release = Promise.withResolvers<void>();
+		fake.gate.held = release.promise;
+		await until(() => fake.gate.held === undefined);
+		consumer.seek({ topic, partition: 0, offset: "0" });
+		fake.chunks.push([{ kind: "message", partition: 0, offset: 100 }]);
+		release.resolve();
+		await until(() => fake.seeks.length >= 2);
+		fake.chunks.push([{ kind: "message", partition: 0, offset: 0 }]);
+		await until(() => delivered.length > 0);
+		expect(delivered).toEqual(["0"]);
+		expect(fake.seeks).toEqual([
+			{ topic, partition: 0, offset: 0 },
+			{ topic, partition: 0, offset: 0 },
+		]);
+		await consumer.disconnect();
+	});
+
+	test("a batch whose partition was sought while it ran is stale, so nothing it resolves is committed", async () => {
+		const { fake, consumer } = createRunner();
+		let stale: boolean | undefined;
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 5 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatchAutoResolve: false,
+			eachBatch: async (payload) => {
+				consumer.seek({ topic, partition: 0, offset: "100" });
+				payload.resolveOffset("5");
+				stale = payload.isStale();
+				await payload.commitOffsetsIfNecessary();
+			},
+		});
+		await until(() => stale !== undefined);
+		expect(stale).toBe(true);
+		expect(fake.commits).toEqual([]);
+		await consumer.disconnect();
+	});
+
+	test("a restart waits for the committed offsets instead of resuming past the failed batch", async () => {
+		const { fake, consumer, events } = createRunner();
+		fake.committed.set("0", 7);
+		fake.committedOutcomes.push(
+			Object.assign(new Error("Local: Timed out"), { code: -185 }),
+		);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 7 },
+		]);
+		let failures = 0;
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async () => {
+				failures += 1;
+				if (failures === 1) throw new Error("handler failed");
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		await until(() => fake.seeks.length > 0);
+		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 7 });
+		await consumer.disconnect();
+	});
+
+	// librdkafka evicts a member that stops polling for max.poll.interval.ms, heartbeats or not.
+	test("a heartbeat past the poll interval reports the lease lost and the consumer rewinds to its commit", async () => {
+		const { fake, consumer, events } = createRunner({
+			config: { rebalanceTimeout: 60 },
+		});
+		fake.committed.set("0", 3);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 3 },
+		]);
+		let heartbeatError: unknown;
+		let calls = 0;
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ heartbeat }) => {
+				calls += 1;
+				if (calls > 1) return;
+				await heartbeat();
+				await Bun.sleep(80);
+				try {
+					await heartbeat();
+				} catch (cause) {
+					heartbeatError = cause;
+				}
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		expect(heartbeatError).toBeInstanceOf(KafkaConsumerLeaseLostError);
+		await until(() => fake.seeks.length > 0);
+		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 3 });
 		await consumer.disconnect();
 	});
 });

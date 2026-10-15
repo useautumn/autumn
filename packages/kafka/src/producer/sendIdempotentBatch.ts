@@ -73,5 +73,18 @@ export async function sendIdempotentBatch({
 			cause,
 		});
 	}
-	return { baseOffset: metadataToBaseOffset({ metadata, topic, partition }) };
+	const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
+	const lastOffset = metadata[0]?.lastOffset;
+	// Written, but not as one run: another writer's records landed between ours, so no position is ours to infer.
+	if (
+		lastOffset !== undefined &&
+		BigInt(lastOffset) - baseOffset + 1n !== BigInt(messages.length)
+	)
+		throw new KafkaTransactionStateUnknownError({
+			failureStage: "commit",
+			cause: new Error(
+				`Kafka batch of ${messages.length} records spans ${baseOffset}..${lastOffset} on ${topic}[${partition}]`,
+			),
+		});
+	return { baseOffset };
 }
