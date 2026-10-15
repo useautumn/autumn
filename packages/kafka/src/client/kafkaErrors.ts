@@ -36,6 +36,22 @@ export class InvalidKafkaOffsetError extends Error {
 	}
 }
 
+/** A ListOffsets whose partitions kept answering with an error (a moving leader) past every retry. */
+export class KafkaPartitionOffsetsUnansweredError extends Error {
+	readonly retriable = true;
+	readonly topic: string;
+	readonly partitions: number[];
+
+	constructor({ topic, partitions }: { topic: string; partitions: number[] }) {
+		super(
+			`Kafka did not answer the offsets of ${topic} partitions ${partitions.join(", ")}`,
+		);
+		this.name = "KafkaPartitionOffsetsUnansweredError";
+		this.topic = topic;
+		this.partitions = partitions;
+	}
+}
+
 export class KafkaTopicPartitionsUnavailableError extends Error {
 	readonly topic: string;
 
