@@ -3,9 +3,10 @@
  *
  * Contract:
  * - POST /roles creates a custom role with coarse access; GET /roles lists built-ins first.
+ * - Each role reports its member_count and rule_count (enabled rules naming it).
  * - A member with the custom role gets exactly that role's scopes.
  * - PATCH /roles/:name renames it, moving member.role and approval rule subjects in one transaction.
- * - DELETE /roles/:name: 409 role_in_use while members hold it, 204 once free.
+ * - DELETE /roles/:name: 409 role_in_use while members hold it, 204 once free; duplicate names 409 role_exists.
  * - Built-in roles can't be edited or deleted (400 role_built_in); writes need organisation:write.
  */
 
@@ -76,6 +77,7 @@ test(`${chalk.yellowBright("custom roles: create, list, assign and the scopes ap
 		built_in: false,
 		access: supportAccess,
 		member_count: 0,
+		rule_count: 0,
 	});
 	expect(created.data.created_at).toBeNumber();
 
@@ -173,6 +175,7 @@ test(`${chalk.yellowBright("custom roles: rename keeps the member's access and m
 			name: renamed,
 			label: "Support team",
 			member_count: 1,
+			rule_count: 1,
 		});
 
 		const resolved = await getScopesForUserInOrg({
@@ -219,7 +222,7 @@ test(`${chalk.yellowBright("custom roles: in-use, duplicate and built-in guards"
 	);
 	expect(duplicate).toMatchObject({
 		status: 409,
-		data: { code: ErrCode.RoleAlreadyExists },
+		data: { code: ErrCode.RoleExists },
 	});
 
 	const inUse = await dashboardFetch(

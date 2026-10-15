@@ -17,7 +17,7 @@ export const handleRoleNameTakenErrors = async ({
 
 	throw new RecaseError({
 		message: `A role named ${name} already exists. Pick another name.`,
-		code: ErrCode.RoleAlreadyExists,
+		code: ErrCode.RoleExists,
 		statusCode: 409,
 	});
 };
