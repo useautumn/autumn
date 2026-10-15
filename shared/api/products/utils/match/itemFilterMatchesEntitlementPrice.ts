@@ -23,7 +23,7 @@ export const itemFilterMatchesEntitlementPrice = ({
 
 	const featureMatches = stringMatcherMatches({
 		matcher: filter.feature_id,
-		value: entitlement.feature_id,
+		value: entitlement.feature.id,
 	});
 	if (!featureMatches) return false;
 
