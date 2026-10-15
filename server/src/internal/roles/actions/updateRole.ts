@@ -3,6 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleBuiltInRoleErrors } from "../errors/handleBuiltInRoleErrors.js";
 import { handleRoleNameTakenErrors } from "../errors/handleRoleNameTakenErrors.js";
 import { handleRoleNotFoundErrors } from "../errors/handleRoleNotFoundErrors.js";
+import { withRoleNameConflictAsRoleExists } from "../errors/withRoleNameConflictAsRoleExists.js";
 import { roleRepo } from "../repos/index.js";
 import { customRoleToApiRole } from "../utils/customRoleToApiRole.js";
 
@@ -29,7 +30,10 @@ export const updateRole = async ({
 		await handleRoleNameTakenErrors({ db, orgId: org.id, name: newName });
 	}
 
-	const role = await roleRepo.update({ db, orgId: org.id, name, params });
+	const role = await withRoleNameConflictAsRoleExists({
+		name: newName ?? name,
+		write: () => roleRepo.update({ db, orgId: org.id, name, params }),
+	});
 	const usage = await roleRepo.getUsage({ db, orgId: org.id });
 	return customRoleToApiRole({ role, usage });
 };

@@ -5,6 +5,8 @@
  * - A custom role's scopes come from its stored coarse access (write implies read).
  * - Built-in roles keep ROLE_SCOPES.
  * - An unknown role keeps its name and grants no scopes.
+ * - Custom names that are Object prototype keys aren't mistaken for built-ins.
+ * - A role must grant at least one resource (an empty scope set would fail open).
  */
 
 import { describe, expect, test } from "bun:test";
@@ -12,6 +14,7 @@ import {
 	RESOURCES,
 	ROLE_SCOPES,
 	type RoleAccessMap,
+	RoleAccessMapSchema,
 	roleAccessToScopes,
 	scopesToRoleAccess,
 } from "@autumn/shared";
@@ -67,6 +70,22 @@ describe("getScopesForUserInOrg: custom roles", () => {
 			role: "ghost",
 			scopes: [],
 		});
+	});
+
+	test("a custom role named like an Object prototype key is not built-in", async () => {
+		expect(
+			await resolve(
+				fakeDb({ role: "constructor", customRole: { access: supportAccess } }),
+			),
+		).toEqual({
+			role: "constructor",
+			scopes: ["customers:write", "billing:read"],
+		});
+	});
+
+	test("a role must grant at least one resource", () => {
+		expect(RoleAccessMapSchema.safeParse(noAccess).success).toBe(false);
+		expect(RoleAccessMapSchema.safeParse(supportAccess).success).toBe(true);
 	});
 
 	test("access and scopes convert both ways for every built-in role", () => {

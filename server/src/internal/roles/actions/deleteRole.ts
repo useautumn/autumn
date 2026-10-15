@@ -4,6 +4,7 @@ import { handleRoleInUseErrors } from "../errors/handleRoleInUseErrors.js";
 import { handleRoleNotFoundErrors } from "../errors/handleRoleNotFoundErrors.js";
 import { roleRepo } from "../repos/index.js";
 
+/** Deletes an unused custom role and cancels pending invitations to it. */
 export const deleteRole = async ({
 	ctx,
 	name,

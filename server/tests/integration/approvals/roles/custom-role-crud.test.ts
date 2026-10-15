@@ -5,8 +5,8 @@
  * - POST /roles creates a custom role with coarse access; GET /roles lists built-ins first.
  * - Each role reports its member_count and rule_count (enabled rules naming it).
  * - A member with the custom role gets exactly that role's scopes.
- * - PATCH /roles/:name renames it, moving member.role and approval rule subjects in one transaction.
- * - DELETE /roles/:name: 409 role_in_use while members hold it, 204 once free; duplicate names 409 role_exists.
+ * - PATCH /roles/:name renames it, moving member.role and approval rule subjects (merging duplicates) in one transaction.
+ * - DELETE /roles/:name: 409 role_in_use while members hold it, 204 once free (pending invites to it are canceled); duplicate names 409 role_exists.
  * - Built-in roles can't be edited or deleted (400 role_built_in); writes need organisation:write.
  */
 
@@ -16,6 +16,7 @@ import {
 	AppEnv,
 	BUILT_IN_ROLES,
 	ErrCode,
+	invitation,
 	member,
 	RESOURCES,
 	type RoleAccessMap,
@@ -26,6 +27,7 @@ import { autumnAs } from "@tests/utils/testInitUtils/autumnAs.js";
 import { dashboardFetch } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { addDays } from "date-fns";
 import { eq } from "drizzle-orm";
 import { approvalRuleRepo } from "@/internal/approvals/repos/index.js";
 import { auth } from "@/utils/auth.js";
@@ -155,7 +157,11 @@ test(`${chalk.yellowBright("custom roles: rename keeps the member's access and m
 		rule: {
 			id: ruleId,
 			name: "Support refunds",
-			subjects: [{ subject_type: "role", subject_id: name }],
+			// Also naming the target role: the rename must merge, not duplicate, the subject.
+			subjects: [
+				{ subject_type: "role", subject_id: name },
+				{ subject_type: "role", subject_id: renamed },
+			],
 			actions: ["billing.cancel"],
 			when: null,
 			note: null,
@@ -257,6 +263,16 @@ test(`${chalk.yellowBright("custom roles: in-use, duplicate and built-in guards"
 		data: { code: ErrCode.RoleBuiltIn },
 	});
 
+	const inviteId = generateId("inv");
+	await ctx.db.insert(invitation).values({
+		id: inviteId,
+		organizationId: ctx.org.id,
+		email: `${name}@example.com`,
+		role: name,
+		expiresAt: addDays(new Date(), 7),
+		inviterId: owner.userId,
+	});
+
 	await support.cleanup();
 	const deleted = await dashboardFetch(
 		ctx,
@@ -272,5 +288,13 @@ test(`${chalk.yellowBright("custom roles: in-use, duplicate and built-in guards"
 		"/roles",
 	);
 	expect(data.list.some((r) => r.name === name)).toBe(false);
+
+	// Accepting the invite would otherwise hand out the deleted role.
+	const [invite] = await ctx.db
+		.select()
+		.from(invitation)
+		.where(eq(invitation.id, inviteId));
+	expect(invite.status).toBe("canceled");
+	await ctx.db.delete(invitation).where(eq(invitation.id, inviteId));
 	await owner.cleanup();
 });
