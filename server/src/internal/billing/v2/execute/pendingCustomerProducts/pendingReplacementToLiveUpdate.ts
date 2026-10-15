@@ -1,28 +1,46 @@
 import {
 	ACTIVE_STATUSES,
 	cp,
-	type DeferredAutumnBillingPlanData,
-	type FullCusProduct,
+	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
+import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { CusService } from "@/internal/customers/CusService";
 
-/** A pending row replacing a live one (same plan, scope and subscription) is an unpaid change to it: edits update the live plan instead. */
+/** A pending row replacing a live one (same plan, scope and subscription) is an unpaid change to it,
+ * so the request updates the live plan instead and supersedes the pending row. */
 export const pendingReplacementToLiveUpdate = async ({
 	ctx,
 	params,
-	customerProduct,
-	deferredData,
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
-	customerProduct: FullCusProduct;
-	deferredData: DeferredAutumnBillingPlanData;
-}): Promise<UpdateSubscriptionV1Params | undefined> => {
-	const stripeSubscriptionId = customerProduct.subscription_ids?.[0];
-	if (!stripeSubscriptionId) return;
+}): Promise<
+	| {
+			params: UpdateSubscriptionV1Params;
+			contextOverride: UpdateSubscriptionBillingContextOverride;
+	  }
+	| undefined
+> => {
+	const customerProduct = await findPendingCustomerProduct({
+		ctx,
+		customerId: params.customer_id,
+		productId: params.plan_id,
+		entityId: params.entity_id,
+		customerProductId: params.customer_product_id,
+		subscriptionId: params.subscription_id,
+	});
+	const stripeSubscriptionId = customerProduct?.subscription_ids?.[0];
+	if (!customerProduct || !stripeSubscriptionId) return;
+
+	const deferredData = await getDeferredBillingPlanData({
+		ctx,
+		customerProduct,
+	});
+	if (!deferredData) return;
 
 	const { customer_products } = await CusService.getFull({
 		ctx,
@@ -42,10 +60,15 @@ export const pendingReplacementToLiveUpdate = async ({
 	);
 	if (!livePlan) return;
 
-	// Cancelling only discards the pending change, so the live plan previews unchanged.
+	const contextOverride = { supersededPendingCustomerProduct: customerProduct };
+	const { customer_id, entity_id } = params;
+
+	// Cancelling only discards the pending change: the live plan updates to itself.
 	if (params.cancel_action) {
-		const { customer_id, entity_id } = params;
-		return { customer_id, entity_id, customer_product_id: livePlan.id };
+		return {
+			params: { customer_id, entity_id, customer_product_id: livePlan.id },
+			contextOverride,
+		};
 	}
 
 	const pendingChange = buildPendingReattachParams({
@@ -55,10 +78,13 @@ export const pendingReplacementToLiveUpdate = async ({
 		customerProduct,
 	});
 	return {
-		...params,
-		customer_product_id: livePlan.id,
-		feature_quantities: pendingChange.feature_quantities,
-		customize: pendingChange.customize,
-		invoice_mode: params.invoice_mode ?? pendingChange.invoice_mode,
+		params: {
+			...params,
+			customer_product_id: livePlan.id,
+			feature_quantities: pendingChange.feature_quantities,
+			customize: pendingChange.customize,
+			invoice_mode: params.invoice_mode ?? pendingChange.invoice_mode,
+		},
+		contextOverride,
 	};
 };

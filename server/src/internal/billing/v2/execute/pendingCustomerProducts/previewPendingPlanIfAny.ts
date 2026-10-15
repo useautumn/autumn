@@ -3,14 +3,12 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingActions } from "@/internal/billing/v2/actions";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
-import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 
-/** Previews an edit or cancel of a pending plan, mirroring updatePendingPlanIfAny. */
+/** Previews an edit that re-attaches a pending plan, mirroring updatePendingPlanIfAny. */
 export const previewPendingPlanIfAny = async ({
 	ctx,
 	params,
@@ -18,6 +16,8 @@ export const previewPendingPlanIfAny = async ({
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 }) => {
+	if (params.cancel_action) return;
+
 	const customerProduct = await findPendingCustomerProduct({
 		ctx,
 		customerId: params.customer_id,
@@ -33,21 +33,6 @@ export const previewPendingPlanIfAny = async ({
 		customerProduct,
 	});
 	if (!deferredData) return;
-
-	const liveUpdate = await pendingReplacementToLiveUpdate({
-		ctx,
-		params,
-		customerProduct,
-		deferredData,
-	});
-	if (liveUpdate) {
-		return billingActions.previewUpdateSubscription({
-			ctx,
-			params: liveUpdate,
-			contextOverride: { supersededPendingCustomerProduct: customerProduct },
-		});
-	}
-	if (params.cancel_action) return;
 
 	const { replacementPreview, rebills } = await previewPendingReattach({
 		ctx,

@@ -9,7 +9,6 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
 import { inheritPendingCreatedAt } from "@/internal/billing/v2/execute/pendingCustomerProducts/inheritPendingCreatedAt";
-import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingReattach } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingReattach";
 import { relinkPendingPayment } from "@/internal/billing/v2/execute/pendingCustomerProducts/relinkPendingPayment";
 import { checkoutActions } from "@/internal/checkouts/actions";
@@ -36,20 +35,6 @@ export const updatePendingCustomerProduct = async ({
 	if (params.cancel_action || !deferredData) {
 		await discardPendingCustomerProduct({ ctx, customerProduct });
 		return {};
-	}
-
-	const liveUpdate = await pendingReplacementToLiveUpdate({
-		ctx,
-		params,
-		customerProduct,
-		deferredData,
-	});
-	if (liveUpdate) {
-		return billingActions.updateSubscription({
-			ctx,
-			params: liveUpdate,
-			contextOverride: { supersededPendingCustomerProduct: customerProduct },
-		});
 	}
 
 	const { attachParams, longLivedCheckout, rebills } =
