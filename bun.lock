@@ -595,6 +595,7 @@
       "name": "@autumn/balance-engine",
       "version": "0.0.1",
       "dependencies": {
+        "@autumn/ksuid": "workspace:*",
         "@autumn/shared": "workspace:*",
         "decimal.js": "^10.5.0",
         "zod": "^3.25.23",

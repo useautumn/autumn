@@ -2,15 +2,50 @@ import {
 	type CheckCommand,
 	type CheckResult,
 	computeCheck,
+	computeTrackDecision,
 	type TrackCommand,
+	trackResultToCheckResult,
+	UnsupportedCommandError,
 } from "@autumn/balance-engine";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
+import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**
- * One deduction, decided by the engine's check of its value and, when allowed, appended as the worker's `track`. The
- * caller hears once `committed` resolves; one refused appends nothing, and its `committed` is already resolved.
+ * A lock is decided by its track, as the worker decides it: what applies is held, and a lock_id already open is
+ * refused with LockAlreadyExistsError (worker parity, D2).
+ */
+const decideLockedTrack = ({
+	subject,
+	command,
+	track,
+}: {
+	subject: CurrentSubject;
+	command: CheckCommand;
+	track: TrackCommand;
+}): CheckResult => {
+	try {
+		const { result } = computeTrackDecision({
+			fullSubject: subject.fullSubject,
+			command: track,
+		}).mutation;
+		if (result.type !== "track")
+			throw new Error(`Track ${track.commandId} decided a non-track result`);
+		return trackResultToCheckResult({
+			result,
+			requiredBalance: command.requiredBalance,
+		});
+	} catch (error) {
+		if (error instanceof UnsupportedCommandError)
+			throw new CannotAnswerError({ reason: "lock_unsupported" });
+		throw error;
+	}
+};
+
+/**
+ * One deduction, decided by the engine's check of its value (or, for a lock, by its track) and, when allowed, appended as
+ * the worker's `track`. The caller hears once `committed` resolves; one refused appends nothing, already resolved.
  */
 export const deductOnSubject = ({
 	ctx,
@@ -27,10 +62,31 @@ export const deductOnSubject = ({
 	// One that could not be written is left to the API to deduct, as is every one while the journal is backed up.
 	if (ctx.journal.isBackedUp({ customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
-	const result = computeCheck({ fullSubject: subject.fullSubject, command });
+	// D2: a lock_id this slot took is the same lock on its terms (nothing moves or is journaled), a conflict on any other.
+	const lockId = track.lock?.lockId;
+	const held = lockId
+		? ctx.openLocks.trackOf({
+				customerId,
+				lockId,
+				owed: ctx.journal.owed({ customerId }),
+			})
+		: null;
+	if (lockId && held) {
+		if (!isSameLock({ held, retry: track }))
+			throw new LockTermsConflictError({ lockId });
+		const answer = computeCheck({ fullSubject: subject.fullSubject, command });
+		return {
+			result: { ...answer, allowed: true, reason: null, limitType: null },
+			committed: Promise.resolve(),
+		};
+	}
+	const result = track.lock
+		? decideLockedTrack({ subject, command, track })
+		: computeCheck({ fullSubject: subject.fullSubject, command });
 	if (!result.allowed) return { result, committed: Promise.resolve() };
 
 	const committed = ctx.journal.append({ customerId, command: track });
+	ctx.openLocks.hold({ track });
 	return {
 		result,
 		committed: committed.catch(() => {

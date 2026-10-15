@@ -41,6 +41,7 @@ export {
 	checkAfterDeduction,
 } from "./commands/check/checkAfterDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
+export { trackResultToCheckResult } from "./commands/check/trackResultToCheckResult.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
 export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
@@ -94,6 +95,7 @@ export type {
 	TrackLock,
 	TrackUsageEvent,
 } from "./commands/track/types/trackCommand.js";
+export { lockParamsToTrackLock } from "./commands/track/lockParamsToTrackLock.js";
 export type { TrackResult } from "./commands/track/types/trackResult.js";
 export { computeUpdateBalance } from "./commands/updateBalance/computeUpdateBalance.js";
 export type { UpdateBalanceCommand } from "./commands/updateBalance/types/updateBalanceCommand.js";

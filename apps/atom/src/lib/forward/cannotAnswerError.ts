@@ -5,7 +5,12 @@ export type ForwardReason =
 	| "no_api_version"
 	| "product_check"
 	| "send_event"
+	/** An entity's lock: the API deducts an entity's checks. */
 	| "lock"
+	/** A lock taken before 2.6 is finalized without its customer_id, which only the API can route. */
+	| "lock_version"
+	/** A lock the API refuses or answers itself: on an allocated feature, or one nothing funds. */
+	| "lock_unsupported"
 	| "with_preview"
 	| "customer_data"
 	| "skip_cache"

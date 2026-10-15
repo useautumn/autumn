@@ -1,5 +1,6 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { ApiVersion, TrackResponseV3 } from "@autumn/shared";
+import type { AtomError } from "../../../http/handlers/errorHandler/atomErrorOf.js";
 import type { ForwardReason } from "../../../lib/forward/cannotAnswerError.js";
 import type { CheckRequest } from "../../../processor/types/check.js";
 import type { CheckAnswer } from "../../../processor/types/slotProcessor.js";
@@ -98,5 +99,7 @@ export type OwnerReply =
 			invalid: boolean;
 			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
 			unavailable: boolean;
+			/** An answer in the API's shape, such as a lock refused as open: thrown again as AtomApiError. */
+			apiError: AtomError | null;
 			message: string;
 	  };

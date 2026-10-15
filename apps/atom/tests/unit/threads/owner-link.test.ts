@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
+import { LockAlreadyExistsError } from "@autumn/balance-engine";
+import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import type { TrackRequest } from "../../../src/processor/types/track.js";
 import type { Slots } from "../../../src/slots/types/slots.js";
 import { answerOwnerCalls } from "../../../src/threads/owners/answerOwnerCalls.js";
 import { createOwnerLink } from "../../../src/threads/owners/createOwnerLink.js";
 import { OwnerUnavailableError } from "../../../src/threads/owners/ownerUnavailableError.js";
-import { trackRequestFor } from "../utils/atomFixtures.js";
+import { checkRequestFor, trackRequestFor } from "../utils/atomFixtures.js";
 
 test("a full link sheds pushes but still delivers a catalog install", async () => {
 	const { port1, port2 } = new MessageChannel();
@@ -142,6 +144,40 @@ test("a track crosses to the owner with its API version, once the owner has caug
 	});
 	expect(received).toEqual([request]);
 	expect(received[0]?.apiVersion.value).toBe(request.apiVersion.value);
+
+	link.disconnect();
+	port2.close();
+});
+
+test("a lock_id the owner refuses as open crosses back as the API's 409, never a 500", async () => {
+	const { port1, port2 } = new MessageChannel();
+	const slots = {
+		processorFor: () => ({
+			check: async () => {
+				throw new LockAlreadyExistsError({ lockId: "lock_1" });
+			},
+		}),
+	} as unknown as Slots;
+	answerOwnerCalls({
+		ctx: {
+			auth: { slotsFor: () => slots },
+			health: { threadsReady: new Int32Array([1, 1]), thread: 1 },
+		},
+		port: port2,
+	});
+	const link = createOwnerLink({ thread: 1 });
+	link.connect({ port: port1 });
+
+	const refused = await link
+		.processorFor({ atomId: null })
+		.check({ request: checkRequestFor() })
+		.catch((error: Error) => error);
+
+	expect(atomErrorOf({ cause: refused as Error })).toEqual({
+		status: 409,
+		code: "lock_already_exists",
+		message: "A lock with this ID already exists",
+	});
 
 	link.disconnect();
 	port2.close();

@@ -21,10 +21,16 @@ export const setSubject = ({
 	});
 	// The pushed subject's own part is the last: false when a newer read of it is already held.
 	const isStored = stored.at(-1) ?? false;
-	if (isStored)
-		ctx.journal.reconcile({
-			customerId: subject.state.identity.customerId,
-			atomSeqs: subject.state.customer.atom_seqs ?? null,
-		});
-	return isStored;
+	if (!isStored) return false;
+	const { customerId } = subject.state.identity;
+	ctx.journal.reconcile({
+		customerId,
+		atomSeqs: subject.state.customer.atom_seqs ?? null,
+	});
+	ctx.openLocks.settle({
+		customerId,
+		owed: ctx.journal.owed({ customerId }),
+		openLockIds: new Set(customer.openLocks.map(({ lock_id }) => lock_id)),
+	});
+	return true;
 };

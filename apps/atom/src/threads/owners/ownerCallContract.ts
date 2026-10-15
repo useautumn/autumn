@@ -1,4 +1,9 @@
 import { type ApiVersion, ApiVersionClass } from "@autumn/shared";
+import { AtomApiError } from "../../http/handlers/errorHandler/atomApiError.js";
+import {
+	type AtomError,
+	atomErrorOf,
+} from "../../http/handlers/errorHandler/atomErrorOf.js";
 import { InvalidPushError } from "../../lib/contracts/invalidPushError.js";
 import {
 	CannotAnswerError,
@@ -66,6 +71,13 @@ export const wireToTrackRequest = ({
 	apiVersion: apiVersionOf(request.apiVersion),
 });
 
+/** What the API would answer for this failure, when it is one the Atom answers itself rather than a 500. */
+const apiErrorOf = (error: unknown): AtomError | null => {
+	if (!(error instanceof Error)) return null;
+	const answer = atomErrorOf({ cause: error });
+	return answer.status === 500 ? null : answer;
+};
+
 export const errorToReply = ({
 	id,
 	error,
@@ -78,6 +90,7 @@ export const errorToReply = ({
 	cannotAnswer: error instanceof CannotAnswerError ? error.reason : null,
 	invalid: error instanceof InvalidPushError,
 	unavailable: error instanceof OwnerUnavailableError,
+	apiError: apiErrorOf(error),
 	message: error instanceof Error ? error.message : String(error),
 });
 
@@ -86,18 +99,21 @@ export const replyToError = ({
 	cannotAnswer,
 	invalid,
 	unavailable,
+	apiError,
 	message,
 	thread,
 }: {
 	cannotAnswer: ForwardReason | null;
 	invalid: boolean;
 	unavailable: boolean;
+	apiError: AtomError | null;
 	message: string;
 	thread: number;
 }): Error => {
 	if (cannotAnswer) return new CannotAnswerError({ reason: cannotAnswer });
 	if (invalid) return new InvalidPushError(message);
 	if (unavailable) return new OwnerUnavailableError({ thread });
+	if (apiError) return new AtomApiError({ answer: apiError });
 	return new Error(message);
 };
 

@@ -22,6 +22,7 @@ import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
@@ -52,6 +53,7 @@ const createProcessor = () => {
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
 			journal,
+			openLocks: createOpenLocks(),
 		},
 	});
 	return {
@@ -420,6 +422,7 @@ describe("a push the slot could not store", () => {
 					settle: async () => {},
 				},
 				journal,
+				openLocks: createOpenLocks(),
 			},
 		});
 		const request = checkBalance({ requiredBalance: 5 });

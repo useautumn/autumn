@@ -10,6 +10,7 @@ import { readCurrentSubject } from "../../../src/processor/actions/readCurrentSu
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	atomOrg,
@@ -70,6 +71,7 @@ const createContext = ({
 		logger: getAtomLogger(),
 		subjectPulls: noFolderPulls,
 		journal,
+		openLocks: createOpenLocks(),
 	};
 };
 afterEach(() => {

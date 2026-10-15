@@ -3,6 +3,7 @@ import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
@@ -33,6 +34,7 @@ const createProcessor = () => {
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
 			journal,
+			openLocks: createOpenLocks(),
 		},
 	});
 };
