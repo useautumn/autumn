@@ -3,7 +3,11 @@ import { peerRequestHeaders } from "../../replication/transport/peerSignature.js
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
 import type { Membership } from "../membership/types/membership.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
-import { handOffJournals } from "./handOffJournals.js";
+import {
+	createHandoffSession,
+	handOffJournals,
+	releaseHandoffSession,
+} from "./handOffJournals.js";
 import {
 	type LeavingAnnouncement,
 	PEER_LEAVING_PATH,
@@ -76,7 +80,10 @@ export const leaveRing = async ({
 			{ type: "atom_leave_unannounced", data: { peers: unreached } },
 			"Some peers did not take this replica's leaving; they learn it from the service name",
 		);
-	const { handed, kept } = await handOffJournals({ ctx });
+	// Held back from Autumn while handed, released once the new owners have what they took: the rest drains as before.
+	const session = createHandoffSession();
+	const { handed, kept } = await handOffJournals({ ctx, session });
+	releaseHandoffSession({ session });
 	// Told once per thread: the peers release every moved customer's wait once all of this replica's threads have handed off.
 	await Promise.all(
 		peers
