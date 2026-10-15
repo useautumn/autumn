@@ -119,6 +119,61 @@ export const setCachedOrgWithFeatures = async ({
 	});
 };
 
+const readClearToken = ({
+	redis,
+	orgId,
+	env,
+}: {
+	redis: ReturnType<ReadThroughCacheContext["miscCache"]["resolve"]>;
+	orgId: string;
+	env: AppEnv;
+}) =>
+	tryRedisOp({
+		operation: () =>
+			redis.get(buildOrgWithFeaturesClearTokenKey({ orgId, env })),
+		source: "org-features-cache:clear-token",
+		redisInstance: redis,
+		timeoutMs: REDIS_OP_TIMEOUT_MS.orgFeaturesGet,
+	});
+
+/** Loads from the source and caches it, unless a clear landed mid-load and may have been for a write this load missed. */
+const loadAndWriteBack = async <T>({
+	ctx,
+	orgId,
+	env,
+	load,
+	requestId,
+}: {
+	ctx: ReadThroughCacheContext;
+	orgId: string;
+	env: AppEnv;
+	load: () => Promise<T | null>;
+	requestId?: string;
+}): Promise<T | null> => {
+	const redis = ctx.miscCache.resolve({ requestId });
+	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
+
+	// 1. Note the clear token, then load
+	const tokenBeforeLoad = await readClearToken({ redis, orgId, env });
+	const fresh = await load();
+	if (!fresh) return null;
+
+	// 2. Write back to L1 and Redis
+	await setCachedOrgWithFeatures({ ctx, orgId, env, data: fresh, requestId });
+
+	// 3. A clear since step 1 means the write-back may be stale: drop it (the caller still gets this load)
+	const tokenAfterWrite = await readClearToken({ redis, orgId, env });
+	if (tokenAfterWrite !== tokenBeforeLoad) {
+		getOrgWithFeaturesL1().delete(cacheKey);
+		await tryRedisOp({
+			operation: () => redis.del(cacheKey),
+			source: "org-features-cache:discard-stale",
+			redisInstance: redis,
+		});
+	}
+	return fresh;
+};
+
 /** L1, then Redis, then `load` (written back to both); concurrent callers for one org share a single lookup. */
 export const readThroughOrgWithFeatures = <T>({
 	ctx,
@@ -142,51 +197,20 @@ export const readThroughOrgWithFeatures = <T>({
 	const inFlight = inFlightLookups.get(cacheKey);
 	if (inFlight) return inFlight as Promise<T | null>;
 
-	const lookup = (async () => {
-		const cached = await getCachedOrgWithFeatures<T>({
+	const lookup: Promise<T | null> = (async () =>
+		(await getCachedOrgWithFeatures<T>({
 			ctx,
 			orgId,
 			env,
 			requestId,
 			skipL1,
-		});
-		if (cached) return cached;
-
-		const redis = ctx.miscCache.resolve({ requestId });
-		const tokenKey = buildOrgWithFeaturesClearTokenKey({ orgId, env });
-		const readClearToken = () =>
-			tryRedisOp({
-				operation: () => redis.get(tokenKey),
-				source: "org-features-cache:clear-token",
-				redisInstance: redis,
-				timeoutMs: REDIS_OP_TIMEOUT_MS.orgFeaturesGet,
-			});
-
-		const tokenBeforeLoad = await readClearToken();
-		const fresh = await load();
-		if (!fresh) return fresh;
-
-		await setCachedOrgWithFeatures({
-			ctx,
-			orgId,
-			env,
-			data: fresh,
-			requestId,
-		});
-		// A clear landed mid-lookup: this load may predate the write it was clearing for.
-		if ((await readClearToken()) !== tokenBeforeLoad) {
-			getOrgWithFeaturesL1().delete(cacheKey);
-			await tryRedisOp({
-				operation: () => redis.del(cacheKey),
-				source: "org-features-cache:discard-stale",
-				redisInstance: redis,
-			});
-		}
-		return fresh;
-	})().finally(() => {
-		if (inFlightLookups.get(cacheKey) === lookup)
-			inFlightLookups.delete(cacheKey);
-	});
+		})) ?? loadAndWriteBack({ ctx, orgId, env, load, requestId }))().finally(
+		() => {
+			// A clear may already have replaced this lookup; never drop a newer one.
+			if (inFlightLookups.get(cacheKey) === lookup)
+				inFlightLookups.delete(cacheKey);
+		},
+	);
 	inFlightLookups.set(cacheKey, lookup);
 	return lookup;
 };

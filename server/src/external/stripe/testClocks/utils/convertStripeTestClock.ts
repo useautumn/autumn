@@ -45,7 +45,7 @@ export const getTestClockFrozenTimeMs = async ({
 }): Promise<number | undefined> => {
 	if (ctx.env === AppEnv.Live || !stripeCustomerId) return undefined;
 
-	// Most sandbox customers have no clock; caching that skips a Stripe call per customer page load.
+	// 1. Cached answer: most sandbox customers have no clock, so this skips a Stripe call per page load
 	const cachedClockId = await getCachedStripeTestClockId({
 		stripeCustomerId,
 		requestId: ctx.id,
@@ -59,6 +59,7 @@ export const getTestClockFrozenTimeMs = async ({
 		if (clock) return clock.frozen_time * 1000;
 	}
 
+	// 2. Miss, or the cached clock is gone: read the customer and cache what it has
 	const stripeCus = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId,
