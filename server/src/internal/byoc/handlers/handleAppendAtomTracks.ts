@@ -14,7 +14,11 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 		await c.req.json().catch(() => null),
 	);
 	const commands = parsed.success
-		? atomTracksToCommands({ atom: c.get("atom"), request: parsed.data })
+		? atomTracksToCommands({
+				ctx: c.get("ctx"),
+				atom: c.get("atom"),
+				request: parsed.data,
+			})
 		: null;
 	if (!commands)
 		return c.json(
@@ -25,7 +29,8 @@ export async function handleAppendAtomTracks(c: Context<AtomHonoEnv>) {
 			400,
 		);
 	try {
-		await getBalanceWorkerClient().queue.track({ commands });
+		// One append keeps a lock's track ahead of its finalize.
+		await getBalanceWorkerClient().enqueue({ commands });
 	} catch (cause) {
 		rethrowBalanceWorkerError({ cause });
 	}

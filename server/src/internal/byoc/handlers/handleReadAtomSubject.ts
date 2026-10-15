@@ -3,7 +3,6 @@ import {
 	AtomSubjectReadRequestSchema,
 } from "@autumn/byoc";
 import type { Context } from "hono";
-import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
 import { readAtomSubject } from "../actions/subjects/readAtomSubject.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
@@ -26,21 +25,10 @@ export async function handleReadAtomSubject(c: Context<AtomHonoEnv>) {
 	);
 	if (!parsed.success) return c.json({ message: "Invalid request" }, 400);
 	const ctx = c.get("ctx");
-	const atom = c.get("atom");
-	const orgWithFeatures = await getOrgWithFeaturesCached({
-		db: ctx.db,
-		orgId: atom.orgId,
-		env: atom.env,
-	});
-	if (!orgWithFeatures)
-		return c.json(
-			{ code: AtomSubjectReadErrorCode.AtomUnknown, message: "Unknown Atom" },
-			401,
-		);
 	const result = await readAtomSubject({
 		ctx,
-		org: orgWithFeatures.org,
-		atom,
+		org: ctx.org,
+		atom: c.get("atom"),
 		customerId: parsed.data.customer_id,
 		entityId: parsed.data.entity_id,
 	});

@@ -17,6 +17,7 @@ import type {
 import { parseWorkerLock } from "@autumn/balance-engine";
 import { applyBillingPlan as applyBillingPlanPartition } from "./commands/applyBillingPlan/applyBillingPlan.js";
 import { createCustomerPlans } from "./commands/applyBillingPlan/customerPlans/customerPlans.js";
+import { decideAtomFinalize as decideAtomFinalizePartition } from "./commands/atomFinalize.js";
 import { check as checkPartition } from "./commands/check.js";
 import { checkInline as checkInlineCommand } from "./commands/checkInline.js";
 import { confirmExpiredLock as confirmExpiredLockPartition } from "./commands/confirmExpiredLock.js";
@@ -218,6 +219,15 @@ function createProcessor({
 		});
 	}
 
+	function decideAtomFinalize(
+		params: Parameters<PartitionProcessor["decideAtomFinalize"]>[0],
+	) {
+		return acceptCommand({
+			accepted: scope.accepted,
+			operation: decideAtomFinalizePartition({ scope, ...params }),
+		});
+	}
+
 	function confirmExpiredLock({
 		command,
 	}: {
@@ -355,6 +365,7 @@ function createProcessor({
 		flush,
 		finalize,
 		decideFinalize,
+		decideAtomFinalize,
 		confirmExpiredLock,
 		reset,
 		decideReset,

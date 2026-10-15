@@ -29,6 +29,13 @@ export type {
 	BillingPlanUpdateOp,
 	ExpectedProduct,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export { atomFinalizeToFinalize } from "./commands/atomFinalize/atomFinalizeToFinalize.js";
+export { atomFinalizeToTrackOfNothing } from "./commands/atomFinalize/atomFinalizeToTrackOfNothing.js";
+export {
+	computeAtomFinalize,
+	computeAtomFinalizeDecision,
+} from "./commands/atomFinalize/computeAtomFinalize.js";
+export type { AtomFinalizeCommand } from "./commands/atomFinalize/types/atomFinalizeCommand.js";
 export {
 	type CheckAfterDeduction,
 	checkAfterDeduction,
@@ -76,7 +83,10 @@ export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
-export { trackOfNothing } from "./commands/track/trackSourceToRowChange.js";
+export {
+	isLandedSeq,
+	trackOfNothing,
+} from "./commands/track/trackSourceToRowChange.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -122,6 +132,8 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+
+export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
@@ -192,6 +204,7 @@ export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
 export {
 	parseApplyBillingPlanRequest,
+	parseAtomFinalizeCommand,
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,

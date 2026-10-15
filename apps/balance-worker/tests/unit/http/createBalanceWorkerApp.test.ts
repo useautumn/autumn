@@ -183,6 +183,9 @@ const fixture = ({
 			throw new Error("Recalculate balance is not configured in this fixture");
 		},
 		pendingLockRow: () => null,
+		decideAtomFinalize: async () => {
+			throw new Error("Atom finalize is not configured in this fixture");
+		},
 		readLockRows: async () => [],
 		drain: async () => undefined,
 	};

@@ -1,5 +1,5 @@
 import { orgToCommandOrg, type TrackCommand } from "@autumn/balance-engine";
-import { ATOM_TOKEN_HASH_HEADER } from "@autumn/byoc";
+import { ATOM_TOKEN_HASH_HEADER, type AtomFinalize } from "@autumn/byoc";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -9,10 +9,13 @@ export const atomTrack = ({
 	customerId,
 	value,
 	idempotencyKey,
+	lock,
 }: {
 	customerId: string;
 	value: number;
 	idempotencyKey?: string;
+	/** Opens this lock over the deduction, as a check with `lock` does. */
+	lock?: TrackCommand["lock"];
 }): TrackCommand => {
 	const requestId = `atom_req_${crypto.randomUUID()}`;
 	const messages = defaultCtx.features.find(
@@ -42,8 +45,28 @@ export const atomTrack = ({
 			key: idempotencyKey ?? `track:${requestId}`,
 			ttlMs: 86_400_000,
 		},
+		...(lock && { lock }),
 	};
 };
+
+/** The Atom's finalize of a lock it took, named as the API names it: 0 releases it, null confirms what it took. */
+export const atomFinalizeOf = ({
+	customerId,
+	lockId,
+	finalValue = 0,
+}: {
+	customerId: string;
+	lockId: string;
+	finalValue?: number | null;
+}): AtomFinalize => ({
+	requestId: `atom_finalize_${crypto.randomUUID()}`,
+	occurredAt: Date.now(),
+	customer_id: customerId,
+	lock_id: lockId,
+	entity_id: null,
+	feature_id: TestFeature.Messages,
+	finalValue,
+});
 
 /** A request to one of the Atom's own routes on Autumn, proven by its token hash. */
 export const postAsAtom = ({

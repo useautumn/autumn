@@ -1,5 +1,7 @@
 import {
+	type AtomFinalizeCommand,
 	type FinalizeCommand,
+	parseAtomFinalizeCommand,
 	parseFinalizeCommand,
 	parseResetCommand,
 	parseUpdateBalanceCommand,
@@ -134,5 +136,39 @@ export const finalizeOf = ({
 			internalFeatureId: "feat_messages",
 			finalValue,
 			properties: null,
+		},
+	});
+
+/** The Atom's finalize of `lockId` as journal entry `seq`, naming the lock as the API does. */
+export const atomFinalizeOf = ({
+	customerId,
+	lockId,
+	seq,
+	finalValue = 0,
+	featureId = "messages",
+	commandId = `atom_finalize_${seq}`,
+}: {
+	customerId: string;
+	lockId: string;
+	seq: number;
+	finalValue?: number | null;
+	featureId?: string;
+	commandId?: string;
+}): AtomFinalizeCommand =>
+	parseAtomFinalizeCommand({
+		input: {
+			schemaVersion: 1,
+			type: "atomFinalize",
+			commandId,
+			requestId: `req_${commandId}`,
+			identity: identityOf({ customerId }),
+			occurredAt: testOccurredAt,
+			org: testOrg,
+			lockId,
+			featureId,
+			internalFeatureId: "feat_messages",
+			finalValue,
+			properties: null,
+			source: { atomId: "atom_1", writerId: "w_1", seq },
 		},
 	});

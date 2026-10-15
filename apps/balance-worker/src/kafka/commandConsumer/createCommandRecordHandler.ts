@@ -8,6 +8,11 @@ import {
 	type TopicRecordResult,
 	type TopicResumePosition,
 } from "@autumn/kafka";
+import {
+	type PreparedBatch,
+	prepareCommandBatch,
+} from "../../consume/batchPreparers.js";
+import { consumeAtomFinalize } from "../../consume/consumeAtomFinalize.js";
 import { consumeEvict } from "../../consume/consumeEvict.js";
 import { consumeFinalize } from "../../consume/consumeFinalize.js";
 import { consumeReset } from "../../consume/consumeReset.js";
@@ -37,6 +42,29 @@ const isCommittedMutation = (
 /** Where a record sits on the command topic, as its log lines report it. */
 type RecordPosition = { topic: string; partition: number; offset: string };
 
+/** A record's command, or why it could not be read. */
+type ParsedRecord = { command: CommandRecord } | { unreadable: unknown };
+
+/** A batch read once before its records apply: each record parsed by offset, and what each command type prepared for it. */
+type CommandBatch = {
+	parsed: Map<string, ParsedRecord>;
+	prepared: PreparedBatch;
+};
+
+const parseRecord = ({
+	message,
+}: {
+	message: TopicRecord["message"];
+}): ParsedRecord => {
+	try {
+		return {
+			command: parseCommandRecord({ key: message.key, value: message.value }),
+		};
+	} catch (cause) {
+		return { unreadable: cause };
+	}
+};
+
 /** The command stream's transport: a record in, its partition's runtime found, the `consume/` layer called. No business logic here. */
 export function createCommandRecordHandler({
 	ctx,
@@ -64,6 +92,28 @@ export function createCommandRecordHandler({
 		return logs;
 	}
 
+	const batchesByPartition = new Map<number, CommandBatch>();
+
+	/** Parses the batch once and lets each command type prepare for it, before any record applies. */
+	async function beginBatch({
+		partition,
+		messages,
+	}: Parameters<NonNullable<TopicRecordHandler["beginBatch"]>>[0]) {
+		const runtime = ctx.findOwnedRuntime({ partition });
+		if (!runtime) return;
+		const parsed = new Map(
+			messages.map((message) => [message.offset, parseRecord({ message })]),
+		);
+		const commands = [...parsed.values()].flatMap((record) =>
+			"command" in record ? [record.command] : [],
+		);
+		const prepared = await prepareCommandBatch({
+			commands,
+			process: (run) => runtime.process(run),
+		});
+		batchesByPartition.set(partition, { parsed, prepared });
+	}
+
 	async function settleBatch({
 		topic,
 		partition,
@@ -71,6 +121,7 @@ export function createCommandRecordHandler({
 		topic: string;
 		partition: number;
 	}): Promise<void> {
+		batchesByPartition.delete(partition);
 		const deferred = deferredLogsByPartition.get(partition);
 		if (!deferred) return;
 		deferredLogsByPartition.delete(partition);
@@ -111,7 +162,13 @@ export function createCommandRecordHandler({
 			const decided = await runtime.process((processor) =>
 				processor.execute({
 					source: { commandOffset: position.offset },
-					run: (processor) => decideRecord({ processor, message, position }),
+					run: (processor) =>
+						decideRecord({
+							processor,
+							message,
+							position,
+							batch: batchesByPartition.get(partition),
+						}),
 					deferredLogs,
 				}),
 			);
@@ -126,22 +183,25 @@ export function createCommandRecordHandler({
 		processor,
 		message,
 		position,
+		batch,
 	}: {
 		processor: PartitionProcessor;
 		message: TopicRecord["message"];
 		position: RecordPosition;
+		/** Absent for a record applied outside a batch the handler began. */
+		batch?: CommandBatch;
 	}): Promise<{ command: CommandRecord; queued: QueuedCommand } | null> {
-		let command: CommandRecord;
-		try {
-			command = parseCommandRecord({ key: message.key, value: message.value });
-		} catch (cause) {
-			// A record nobody can read must not take the partition down with it.
+		const parsed =
+			batch?.parsed.get(message.offset) ?? parseRecord({ message });
+		// A record nobody can read must not take the partition down with it.
+		if ("unreadable" in parsed) {
 			ctx.logger?.warn("Queued command skipped: unreadable", {
 				...position,
-				error: cause,
+				error: parsed.unreadable,
 			});
 			return null;
 		}
+		const { command } = parsed;
 		const consumeCtx = {
 			processor,
 			idempotencyKeys: ctx.idempotencyKeys,
@@ -164,6 +224,13 @@ export function createCommandRecordHandler({
 					break;
 				case "finalize":
 					queued = await consumeFinalize({ ctx: consumeCtx, command });
+					break;
+				case "atomFinalize":
+					queued = await consumeAtomFinalize({
+						ctx: consumeCtx,
+						command,
+						batch: batch?.prepared.atomFinalize,
+					});
 					break;
 				default:
 					ctx.logger?.warn("Queued command skipped: not consumable yet", {
@@ -242,5 +309,5 @@ export function createCommandRecordHandler({
 		return undefined;
 	}
 
-	return { readResumeOffset, applyRecord, settleBatch };
+	return { readResumeOffset, beginBatch, applyRecord, settleBatch };
 }
