@@ -321,7 +321,7 @@ const main = async () => {
 			afterInternalId: cursor,
 		});
 		processed += result.processed;
-		failed += result.summary.failed;
+		failed += result.summary.failed ?? 0;
 		for (const [phase, ms] of Object.entries(result.summary.phases ?? {}))
 			phaseTotals[phase] = (phaseTotals[phase] ?? 0) + ms;
 		cursor = result.cursor ?? undefined;
