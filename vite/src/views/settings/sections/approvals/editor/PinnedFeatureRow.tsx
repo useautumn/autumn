@@ -18,52 +18,57 @@ const OPERATORS = operatorOptions(EDITOR_FIELDS.balance_create.feature);
 export const PinnedFeatureRow = ({
 	row,
 	label,
+	issue,
 	onChange,
 }: {
 	row: RuleRow;
 	label: string;
+	issue?: string;
 	onChange: (row: RuleRow) => void;
 }) => (
-	<div className="flex items-center gap-2.5">
-		<span className="flex h-8 min-w-28 shrink-0 items-center px-3 text-sm">
-			{label}
-		</span>
-		<Select
-			value={row.operator}
-			onValueChange={(operator) =>
-				onChange({ ...row, operator: operator as RuleRow["operator"] })
-			}
-			items={OPERATORS}
-		>
-			<SelectTrigger className="h-8 min-w-16 shrink-0 px-3 text-sm">
-				<SelectValue />
-			</SelectTrigger>
-			<SelectContent>
-				{OPERATORS.map((option) => (
-					<SelectItem key={option.value} value={option.value}>
-						{option.label}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
-		<FilterRowValue
-			valueInput="feature"
-			valueInputs={RULE_VALUE_INPUTS}
-			values={row.values}
-			onChange={(values) =>
-				onChange(
-					fitOperatorToValues({
-						row: { ...row, values },
-						operators: EDITOR_FIELDS.balance_create.feature,
-					}),
-				)
-			}
-		/>
-		<span className="flex size-6 shrink-0 items-center justify-center">
-			<LockSimpleIcon
-				aria-label="Feature is required"
-				className="size-3.5 text-tertiary-foreground"
+	<div className="flex flex-col gap-1">
+		<div className="flex items-center gap-2.5">
+			<span className="flex h-8 min-w-28 shrink-0 items-center px-3 text-sm">
+				{label}
+			</span>
+			<Select
+				value={row.operator}
+				onValueChange={(operator) =>
+					onChange({ ...row, operator: operator as RuleRow["operator"] })
+				}
+				items={OPERATORS}
+			>
+				<SelectTrigger className="h-8 min-w-16 shrink-0 px-3 text-sm">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{OPERATORS.map((option) => (
+						<SelectItem key={option.value} value={option.value}>
+							{option.label}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<FilterRowValue
+				valueInput="feature"
+				valueInputs={RULE_VALUE_INPUTS}
+				values={row.values}
+				onChange={(values) =>
+					onChange(
+						fitOperatorToValues({
+							row: { ...row, values },
+							operators: EDITOR_FIELDS.balance_create.feature,
+						}),
+					)
+				}
 			/>
-		</span>
+			<span className="flex size-6 shrink-0 items-center justify-center">
+				<LockSimpleIcon
+					aria-label="Feature is required"
+					className="size-3.5 text-tertiary-foreground"
+				/>
+			</span>
+		</div>
+		{issue && <p className="pl-2 text-destructive text-xs">{issue}</p>}
 	</div>
 );

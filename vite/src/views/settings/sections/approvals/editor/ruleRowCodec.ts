@@ -54,7 +54,7 @@ const ONE: Partial<Record<EditorOperator, EditorOperator>> = {
 	is_none_of: "is_not",
 };
 
-const DEFAULT_TRIAL_UNIT = "month";
+export const DEFAULT_TRIAL_UNIT = "month";
 
 const toNumber = (value: string | undefined) =>
 	value === undefined || value.trim() === "" || Number.isNaN(Number(value))

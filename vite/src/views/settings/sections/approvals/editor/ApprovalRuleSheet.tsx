@@ -1,4 +1,8 @@
-import { APPROVAL_AREAS, type ApprovalRule } from "@autumn/shared";
+import {
+	APPROVAL_AREAS,
+	type ApprovalAction,
+	type ApprovalRule,
+} from "@autumn/shared";
 import {
 	Button,
 	Input,
@@ -10,6 +14,7 @@ import {
 	Switch,
 } from "@autumn/ui";
 import { ChipMultiSelect } from "./ChipMultiSelect";
+import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
 import { RuleWhenSection } from "./RuleWhenSection";
@@ -40,11 +45,26 @@ export const ApprovalRuleSheet = ({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
-	const { form, isSaving, serverIssue, changeActions } = useApprovalRuleForm({
+	const {
+		form,
+		readOnly,
+		isSaving,
+		serverIssue,
+		whenError,
+		rowIssues,
+		clearRowIssues,
+		changeActions,
+	} = useApprovalRuleForm({
 		rule,
 		onSaved: () => onOpenChange(false),
 	});
 	const subjectGroups = useRuleSubjectGroups();
+	// With no When section to show it on, a `when` issue reads under Can.
+	const whenIssueWithoutSection = ({
+		actions,
+	}: {
+		actions: ApprovalAction[];
+	}) => (ruleWhenArea({ actions }) ? undefined : serverIssue("when"));
 
 	return (
 		<Sheet
@@ -58,7 +78,11 @@ export const ApprovalRuleSheet = ({
 					<SheetDescription>Billing → Approvals</SheetDescription>
 				</SheetHeader>
 
-				<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+				<fieldset
+					disabled={readOnly}
+					className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4"
+				>
+					{readOnly && <ReadOnlyNotice />}
 					<form.Field
 						name="name"
 						validators={{ onSubmit: required({ message: "Name the rule." }) }}
@@ -120,7 +144,7 @@ export const ApprovalRuleSheet = ({
 									error={
 										field.state.meta.errors[0] ??
 										serverIssue("actions") ??
-										serverIssue("when")
+										whenIssueWithoutSection({ actions: field.state.value })
 									}
 								>
 									<RuleActionsPicker
@@ -140,7 +164,7 @@ export const ApprovalRuleSheet = ({
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
 							const area = ruleWhenArea({ actions });
-							if (!area) return null;
+							if (!area || readOnly) return null;
 							return (
 								<form.Field name="pinned">
 									{(pinned) => (
@@ -150,8 +174,16 @@ export const ApprovalRuleSheet = ({
 													area={area}
 													pinned={pinned.state.value}
 													groups={groups.state.value}
-													onPinnedChange={pinned.handleChange}
-													onGroupsChange={groups.handleChange}
+													issues={rowIssues}
+													error={whenError}
+													onPinnedChange={(row) => {
+														clearRowIssues();
+														pinned.handleChange(row);
+													}}
+													onGroupsChange={(next) => {
+														clearRowIssues();
+														groups.handleChange(next);
+													}}
 												/>
 											)}
 										</form.Field>
@@ -190,7 +222,7 @@ export const ApprovalRuleSheet = ({
 							</div>
 						)}
 					</form.Field>
-				</div>
+				</fieldset>
 
 				<div className="flex gap-2 border-t px-4 pt-4 pb-4">
 					<Button
@@ -201,14 +233,16 @@ export const ApprovalRuleSheet = ({
 					>
 						Close
 					</Button>
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={() => form.handleSubmit()}
-						isLoading={isSaving}
-					>
-						Save
-					</Button>
+					{!readOnly && (
+						<Button
+							variant="primary"
+							className="flex-1"
+							onClick={() => form.handleSubmit()}
+							isLoading={isSaving}
+						>
+							Save
+						</Button>
+					)}
 				</div>
 			</SheetContent>
 		</Sheet>

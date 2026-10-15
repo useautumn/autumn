@@ -1,6 +1,7 @@
 /**
  * Contract: each complex case in approvals-api-schema.md §4 (plus a checkout
- * rule) opens in the editor as rows and saves back to the same rule.
+ * rule) opens in the editor as rows and saves back to the same rule. A stored
+ * `when` the rows can't rebuild opens read-only instead of throwing.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -207,5 +208,28 @@ describe("complex rules round-trip through the editor", () => {
 			ok: true,
 			params,
 		});
+	});
+});
+
+describe("stored rules the editor can't show as rows", () => {
+	test.each<[string, object]>([
+		["a bare array filter", { incoming: { $some: { plan_id: "pro" } } }],
+		["an unknown field", { paid: false, mystery: true }],
+		[
+			"a trial with no day branch",
+			{
+				incoming: {
+					$every: { $or: [{ free_trial: { duration_type: "week" } }] },
+				},
+			},
+		],
+	])("%s opens read-only", (_label, when) => {
+		const rule = storedRule({
+			name: "Hand-written",
+			subjects: [sales],
+			actions: ["billing.attach"],
+			when: when as unknown as CreateApprovalRuleParams["when"],
+		});
+		expect(ruleToEditorValues({ rule }).editable).toBe(false);
 	});
 });
