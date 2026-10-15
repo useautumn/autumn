@@ -36,6 +36,21 @@ const stale = () =>
 		workerCode: "STALE_SUBJECT",
 	});
 
+const refusedWith = (workerCode: "NOT_READY" | "OVERLOADED") => () =>
+	new BalanceWorkerClientError({
+		code: "WORKER_ERROR",
+		outcome: "not_submitted",
+		message: "refused",
+		workerCode,
+	});
+
+const noOwner = () =>
+	new BalanceWorkerClientError({
+		code: "NO_OWNER",
+		outcome: "not_submitted",
+		message: "no owner",
+	});
+
 const unreachable = () =>
 	new BalanceWorkerClientError({
 		code: "TRANSPORT",
@@ -81,6 +96,8 @@ const run = ({
 		rows: ["grant_selected"],
 		toPlan,
 		reselect,
+		signal: new AbortController().signal,
+		retryDelaysMs: [0, 0, 0],
 		client,
 	});
 
@@ -171,5 +188,62 @@ describe("applyCustomerRowsOnWorker", () => {
 		}).catch((cause: unknown) => cause);
 		expect(error).toBeInstanceOf(Error);
 		expect((error as Error).message).toBe("Postgres went away");
+	});
+
+	test("NOT_READY, OVERLOADED and NO_OWNER are sent again, each under a fresh command id", async () => {
+		const client = scriptedClient([
+			() => {
+				throw refusedWith("NOT_READY")();
+			},
+			() => {
+				throw refusedWith("OVERLOADED")();
+			},
+			() => {
+				throw noOwner();
+			},
+			applied,
+		]);
+		expect(await run({ client })).toEqual({
+			status: "applied",
+			rows: ["grant_selected"],
+		});
+		const commandIds = client.requests.map(({ command }) => command.commandId);
+		expect(new Set(commandIds).size).toBe(4);
+	});
+
+	test("a refusal that outlasts the backoff fails the customer as unavailable", async () => {
+		const refused = () => {
+			throw refusedWith("OVERLOADED")();
+		};
+		const client = scriptedClient([refused, refused, refused, refused]);
+		expect(await run({ client })).toEqual({
+			status: "failed",
+			reason: "OVERLOADED",
+			unavailable: true,
+		});
+		expect(client.requests).toHaveLength(4);
+	});
+
+	test("a refusal the worker may have run is not sent again", async () => {
+		const client = scriptedClient([
+			() => {
+				throw new BalanceWorkerClientError({
+					code: "WORKER_ERROR",
+					outcome: "unknown",
+					message: "internal",
+					workerCode: "INTERNAL",
+				});
+			},
+			() => {
+				throw new BalanceWorkerClientError({
+					code: "WORKER_ERROR",
+					outcome: "unknown",
+					message: "internal",
+					workerCode: "INTERNAL",
+				});
+			},
+		]);
+		expect(await run({ client })).toMatchObject({ status: "failed" });
+		expect(client.requests).toHaveLength(2);
 	});
 });

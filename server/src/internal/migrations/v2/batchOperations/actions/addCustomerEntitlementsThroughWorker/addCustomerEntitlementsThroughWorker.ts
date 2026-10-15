@@ -8,6 +8,7 @@ import type { BatchMigrationExecutionPatch } from "@/internal/migrations/v2/batc
 import { toAddedItem } from "../addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
 import { isHeldByWorker } from "../throughWorker/isHeldByWorker.js";
 import { runRowsOnWorker } from "../throughWorker/runRowsOnWorker.js";
+import type { WorkerPageGate } from "../throughWorker/types/workerPageGate.js";
 import {
 	emptyWorkerPhaseResult,
 	type WorkerPhaseResult,
@@ -19,6 +20,7 @@ import { selectPatchAddRows } from "./selectPatchAddRows.js";
 export const addCustomerEntitlementsThroughWorker = async ({
 	ctx,
 	migrationRunId,
+	gate,
 	patch,
 	customers,
 	now,
@@ -26,6 +28,7 @@ export const addCustomerEntitlementsThroughWorker = async ({
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
+	gate: WorkerPageGate;
 	patch: BatchMigrationExecutionPatch;
 	customers: RoutedPageCustomer[];
 	now: number;
@@ -64,6 +67,7 @@ export const addCustomerEntitlementsThroughWorker = async ({
 				runRowsOnWorker({
 					ctx,
 					migrationRunId,
+					gate,
 					commandScope: `${patch.opIndex}_add`,
 					customers,
 					rows: selected.rows.filter((row) => isHeldByWorker({ row })),

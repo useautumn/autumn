@@ -13,3 +13,14 @@ export const isStaleSubject = (cause: unknown): boolean =>
 export const isDuplicateCommand = (cause: unknown): boolean =>
 	cause instanceof BalanceWorkerClientError &&
 	cause.workerCode === "DUPLICATE_COMMAND";
+
+const TRANSIENT_WORKER_CODES: ReadonlySet<string> = new Set([
+	"NOT_READY",
+	"OVERLOADED",
+]);
+
+export const isTransientRefusal = (cause: unknown): boolean =>
+	cause instanceof BalanceWorkerClientError &&
+	cause.outcome === "not_submitted" &&
+	(cause.code === "NO_OWNER" ||
+		TRANSIENT_WORKER_CODES.has(cause.workerCode ?? ""));

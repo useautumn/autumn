@@ -9,6 +9,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { customerPriceIdsSql } from "@/internal/migrations/v2/batchOperations/actions/utils/customerPriceIdsSql.js";
 import { pageCustomerIdsCte } from "@/internal/migrations/v2/batchOperations/actions/utils/pageCustomerIdsSql.js";
+import { productLoadedByWorkerSql } from "@/internal/migrations/v2/batchOperations/actions/utils/productLoadedByWorkerSql.js";
 import { entitlementPriceFilterSql } from "@/internal/migrations/v2/batchOperations/actions/utils/resolveFilterEntitlementIds.js";
 import { rowIsUnpaidSql } from "@/internal/migrations/v2/batchOperations/actions/utils/rowIsUnpaidSql.js";
 import {
@@ -29,6 +30,7 @@ export const LiveFilterCandidateCoreSchema = z.object({
 	internalCustomerId: z.string(),
 	entityId: z.string().nullable(),
 	status: z.enum(CusProductStatus),
+	productLoadedByWorker: z.boolean(),
 	startsAt: nullableNumeric,
 	canceledAt: nullableNumeric,
 	endedAt: nullableNumeric,
@@ -61,6 +63,7 @@ const liveFilterCandidateCoreSelectSql = sql`
 	cp.internal_customer_id AS "internalCustomerId",
 	entity.id AS "entityId",
 	cp.status AS "status",
+	${productLoadedByWorkerSql} AS "productLoadedByWorker",
 	cp.starts_at AS "startsAt",
 	cp.canceled_at AS "canceledAt",
 	cp.ended_at AS "endedAt",

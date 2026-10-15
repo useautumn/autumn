@@ -20,6 +20,7 @@ import {
 	toAddCandidate,
 } from "../addCustomerEntitlementsForPage/selectAddCandidateRows.js";
 import { customerPriceIdsSql } from "../utils/customerPriceIdsSql.js";
+import { productLoadedByWorkerSql } from "../utils/productLoadedByWorkerSql.js";
 import type { AddWorkerRow } from "./types/addWorkerRow.js";
 
 export type PatchAddRows = {
@@ -32,6 +33,7 @@ const AddTargetRowSchema = AddCandidateRowSchema.extend({
 	owner_internal_entity_id: z.string().nullable(),
 	internal_product_id: z.string(),
 	product_is_custom: z.boolean(),
+	product_loaded_by_worker: z.boolean(),
 	customer_price_ids: z.array(z.string()),
 	feature_grants: z.record(z.string(), z.string()),
 });
@@ -40,6 +42,7 @@ type AddTarget = ReturnType<typeof toAddCandidate> & {
 	ownerInternalEntityId: string | null;
 	internalProductId: string;
 	productIsCustom: boolean;
+	productLoadedByWorker: boolean;
 	customerPriceIds: string[];
 	featureGrants: Record<string, string>;
 };
@@ -79,6 +82,7 @@ const selectAddTargets = async ({
 						cp.internal_entity_id AS owner_internal_entity_id,
 						cp.internal_product_id AS internal_product_id,
 						cp.is_custom AS product_is_custom,
+						${productLoadedByWorkerSql} AS product_loaded_by_worker,
 						${customerPriceIdsSql} AS customer_price_ids,
 						(
 							SELECT COALESCE(
@@ -99,6 +103,7 @@ const selectAddTargets = async ({
 					ownerInternalEntityId: parsed.owner_internal_entity_id,
 					internalProductId: parsed.internal_product_id,
 					productIsCustom: parsed.product_is_custom,
+					productLoadedByWorker: parsed.product_loaded_by_worker,
 					customerPriceIds: parsed.customer_price_ids,
 					featureGrants: parsed.feature_grants,
 				};

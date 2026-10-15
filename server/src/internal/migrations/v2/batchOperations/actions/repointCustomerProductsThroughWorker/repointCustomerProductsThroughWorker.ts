@@ -7,6 +7,7 @@ import {
 import type { BatchMigrationExecutionPatch } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import { isHeldByWorker } from "../throughWorker/isHeldByWorker.js";
 import { runRowsOnWorker } from "../throughWorker/runRowsOnWorker.js";
+import type { WorkerPageGate } from "../throughWorker/types/workerPageGate.js";
 import {
 	emptyWorkerPhaseResult,
 	type WorkerPhaseResult,
@@ -18,12 +19,14 @@ import { selectRepointRows } from "./selectRepointRows.js";
 export const repointCustomerProductsThroughWorker = async ({
 	ctx,
 	migrationRunId,
+	gate,
 	patch,
 	customers,
 	phases,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
+	gate: WorkerPageGate;
 	patch: BatchMigrationExecutionPatch;
 	customers: RoutedPageCustomer[];
 	phases?: BatchMigrationPagePhases;
@@ -66,6 +69,7 @@ export const repointCustomerProductsThroughWorker = async ({
 				runRowsOnWorker({
 					ctx,
 					migrationRunId,
+					gate,
 					commandScope: `${patch.opIndex}_repoint`,
 					customers,
 					rows: rows.filter((row) => isHeldByWorker({ row })),

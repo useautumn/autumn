@@ -9,6 +9,7 @@ import type { BatchMigrationExecutionPatch } from "@/internal/migrations/v2/batc
 import type { RemoveCandidateRow } from "../removeCustomerEntitlementsForPage/selectRemoveCandidateRows.js";
 import { isHeldByWorker } from "../throughWorker/isHeldByWorker.js";
 import { runRowsOnWorker } from "../throughWorker/runRowsOnWorker.js";
+import type { WorkerPageGate } from "../throughWorker/types/workerPageGate.js";
 import {
 	emptyWorkerPhaseResult,
 	type WorkerPhaseResult,
@@ -40,12 +41,14 @@ const rowsToRemovedItems = ({
 export const removeCustomerEntitlementsThroughWorker = async ({
 	ctx,
 	migrationRunId,
+	gate,
 	patch,
 	customers,
 	phases,
 }: {
 	ctx: AutumnContext;
 	migrationRunId: string;
+	gate: WorkerPageGate;
 	patch: BatchMigrationExecutionPatch;
 	customers: RoutedPageCustomer[];
 	phases?: BatchMigrationPagePhases;
@@ -81,6 +84,7 @@ export const removeCustomerEntitlementsThroughWorker = async ({
 				runRowsOnWorker({
 					ctx,
 					migrationRunId,
+					gate,
 					commandScope: `${patch.opIndex}_remove`,
 					customers,
 					rows: candidates.filter((row) => isHeldByWorker({ row })),

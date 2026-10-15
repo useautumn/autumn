@@ -1,4 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { WorkerPageGate } from "../../../actions/throughWorker/types/workerPageGate.js";
 import type { BatchMigrationExecutionPatch } from "../../../types/index.js";
 import type { RoutedPageCustomer } from "../../routing/types/routedPageCustomer.js";
 import type {
@@ -14,6 +15,7 @@ export type PatchPhaseArgs = {
 	patch: BatchMigrationExecutionPatch;
 	sqlInternalCustomerIds: string[];
 	workerCustomers: RoutedPageCustomer[];
+	workerGate: WorkerPageGate;
 	now: number;
 	phases?: BatchMigrationPagePhases;
 };

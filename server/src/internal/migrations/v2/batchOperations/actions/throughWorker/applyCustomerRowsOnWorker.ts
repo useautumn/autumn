@@ -5,10 +5,15 @@ import {
 import { getBalanceWorkerClient } from "@/external/balanceWorker/getBalanceWorkerClient.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isBalanceWorkerUnconfirmed } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
-import { applyMigrationPlanOnWorker } from "@/internal/balanceWorker/migrationPlan/applyMigrationPlanOnWorker.js";
+import { isTransientRefusal } from "@/internal/balanceWorker/billingPlan/planSendErrors.js";
+import {
+	applyMigrationPlanOnWorker,
+	type MigrationPlanOutcome,
+} from "@/internal/balanceWorker/migrationPlan/applyMigrationPlanOnWorker.js";
 import type { WorkerMigrationPlan } from "@/internal/balanceWorker/migrationPlan/types/workerMigrationPlan.js";
 import type { RoutedPageCustomer } from "@/internal/migrations/v2/batchOperations/execute/routing/types/routedPageCustomer.js";
-import { generateId } from "@/utils/genUtils.js";
+import { BATCH_MIGRATION_WORKER_TRANSIENT_RETRY_DELAYS_MS } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
+import { generateId, timeout } from "@/utils/genUtils.js";
 
 export type CustomerRowsOutcome<Row> =
 	| { status: "applied"; rows: Row[] }
@@ -20,8 +25,29 @@ const failureOf = (
 ): CustomerRowsOutcome<never> => ({
 	status: "failed",
 	reason: error.workerCode ?? error.code,
-	unavailable: isBalanceWorkerUnconfirmed(error),
+	unavailable: isBalanceWorkerUnconfirmed(error) || isTransientRefusal(error),
 });
+
+const sendThroughTransientRefusals = async ({
+	signal,
+	retryDelaysMs,
+	send,
+}: {
+	signal: AbortSignal;
+	retryDelaysMs: number[];
+	send: () => Promise<MigrationPlanOutcome>;
+}): Promise<MigrationPlanOutcome> => {
+	for (let attempt = 0; ; attempt++) {
+		signal.throwIfAborted();
+		try {
+			return await send();
+		} catch (error) {
+			const delayMs = retryDelaysMs[attempt];
+			if (!isTransientRefusal(error) || delayMs === undefined) throw error;
+			await timeout(delayMs);
+		}
+	}
+};
 
 export const applyCustomerRowsOnWorker = async <Row>({
 	ctx,
@@ -29,6 +55,8 @@ export const applyCustomerRowsOnWorker = async <Row>({
 	rows,
 	toPlan,
 	reselect,
+	signal,
+	retryDelaysMs = BATCH_MIGRATION_WORKER_TRANSIENT_RETRY_DELAYS_MS,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
@@ -36,15 +64,23 @@ export const applyCustomerRowsOnWorker = async <Row>({
 	rows: Row[];
 	toPlan: ({ rows }: { rows: Row[] }) => WorkerMigrationPlan;
 	reselect: () => Promise<Row[] | null>;
+	signal: AbortSignal;
+	retryDelaysMs?: number[];
 	client?: Pick<BalanceWorkerClient, "applyBillingPlan">;
 }): Promise<CustomerRowsOutcome<Row>> => {
 	const send = ({ sentRows }: { sentRows: Row[] }) =>
-		applyMigrationPlanOnWorker({
-			ctx,
-			customerId: customer.id,
-			plan: toPlan({ rows: sentRows }),
-			commandId: generateId("mig"),
-			client,
+		sendThroughTransientRefusals({
+			signal,
+			retryDelaysMs,
+			send: () =>
+				applyMigrationPlanOnWorker({
+					ctx,
+					customerId: customer.id,
+					plan: toPlan({ rows: sentRows }),
+					commandId: generateId("mig"),
+					signal,
+					client,
+				}),
 		});
 
 	try {

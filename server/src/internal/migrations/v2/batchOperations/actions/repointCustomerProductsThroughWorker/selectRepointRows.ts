@@ -9,6 +9,7 @@ import {
 import type { RepointedCustomerProductRow } from "../repointCustomerProductsForPage/repointCustomerProductRows.js";
 import { customerPriceIdsSql } from "../utils/customerPriceIdsSql.js";
 import { pageCustomerIdsCte } from "../utils/pageCustomerIdsSql.js";
+import { productLoadedByWorkerSql } from "../utils/productLoadedByWorkerSql.js";
 
 const RepointRowSchema = z.object({
 	customer_product_id: z.string(),
@@ -19,6 +20,7 @@ const RepointRowSchema = z.object({
 	is_custom: z.boolean(),
 	customer_price_ids: z.array(z.string()),
 	status: z.enum(CusProductStatus),
+	product_loaded_by_worker: z.boolean(),
 	starts_at: z.coerce.number().nullable(),
 	canceled_at: z.coerce.number().nullable(),
 	ended_at: z.coerce.number().nullable(),
@@ -28,6 +30,7 @@ const RepointRowSchema = z.object({
 export type RepointRow = RepointedCustomerProductRow & {
 	internalProductId: string;
 	productIsCustom: boolean;
+	productLoadedByWorker: boolean;
 	customerPriceIds: string[];
 	ownerInternalEntityId: string | null;
 	ownerEntityId: string | null;
@@ -54,6 +57,7 @@ export const selectRepointRows = async ({
 			cp.is_custom,
 			${customerPriceIdsSql} AS customer_price_ids,
 			cp.status,
+			${productLoadedByWorkerSql} AS product_loaded_by_worker,
 			cp.starts_at,
 			cp.canceled_at,
 			cp.ended_at,
@@ -80,6 +84,7 @@ export const selectRepointRows = async ({
 			trialEndsAt: parsed.trial_ends_at,
 			internalProductId: parsed.internal_product_id,
 			productIsCustom: parsed.is_custom,
+			productLoadedByWorker: parsed.product_loaded_by_worker,
 			customerPriceIds: parsed.customer_price_ids,
 			ownerInternalEntityId: parsed.internal_entity_id,
 			ownerEntityId: parsed.entity_id,

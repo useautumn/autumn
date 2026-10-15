@@ -42,6 +42,10 @@ export const BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT = Number(
 	process.env.BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT ?? 25,
 );
 
+export const BATCH_MIGRATION_WORKER_TRANSIENT_RETRY_DELAYS_MS = [
+	250, 1_000, 3_000,
+];
+
 /** Concurrent applyReplacePatches groups (distinct grant deltas) on one page. */
 export const BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY = Number(
 	process.env.BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY ?? 50,

@@ -10,6 +10,7 @@ import {
 export const runPatchRepoint = async ({
 	ctx,
 	migrationRunId,
+	workerGate,
 	patch,
 	sqlInternalCustomerIds,
 	workerCustomers,
@@ -36,6 +37,7 @@ export const runPatchRepoint = async ({
 		repointCustomerProductsThroughWorker({
 			ctx,
 			migrationRunId,
+			gate: workerGate,
 			patch,
 			customers: workerCustomers,
 			phases,

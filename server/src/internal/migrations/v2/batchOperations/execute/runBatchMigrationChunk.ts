@@ -554,6 +554,7 @@ const runNextBatchMigrationPage = async ({
 		plan,
 		customers: page.customers,
 		phases: pagePhases,
+		signal: pageDb.signal,
 	});
 
 	const label = `page ${pageNumber}`;

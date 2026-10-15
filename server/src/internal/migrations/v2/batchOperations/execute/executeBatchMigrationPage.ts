@@ -2,6 +2,7 @@ import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
+import { createWorkerPageGate } from "../actions/throughWorker/createWorkerPageGate.js";
 import type {
 	BatchMigrationExecutionPatch,
 	BatchMigrationExecutionPlan,
@@ -16,6 +17,7 @@ import type {
 	PatchPhaseArgs,
 	PatchPhaseResult,
 } from "./patchPhases/types/patchPhase.js";
+import { evictSqlWrittenWorkerCustomers } from "./routing/evictSqlWrittenWorkerCustomers.js";
 import { splitPageByRouting } from "./routing/splitPageByRouting.js";
 import type {
 	BatchMigrationInsertedItem,
@@ -49,6 +51,7 @@ export const executeBatchMigrationPage = async ({
 	plan,
 	customers,
 	phases,
+	signal,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -56,6 +59,7 @@ export const executeBatchMigrationPage = async ({
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
 	phases?: BatchMigrationPagePhases;
+	signal: AbortSignal;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0)
 		return {
@@ -75,6 +79,7 @@ export const executeBatchMigrationPage = async ({
 	const workerIds = new Set(
 		workerCustomers.map(({ internalId }) => internalId),
 	);
+	const workerGate = createWorkerPageGate({ signal });
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
@@ -99,6 +104,15 @@ export const executeBatchMigrationPage = async ({
 		for (const id of result.sqlWrittenWorkerCustomerIds)
 			sqlWrittenWorkerIds.add(id);
 	};
+	const runPhase = async (phase: Promise<PatchPhaseResult>) => {
+		const result = await phase;
+		merge(result);
+		await evictSqlWrittenWorkerCustomers({
+			ctx,
+			workerCustomers,
+			sqlWrittenInternalCustomerIds: result.sqlWrittenWorkerCustomerIds,
+		});
+	};
 	const phaseArgs = ({
 		patch,
 		leaveOut = new Set(),
@@ -118,17 +132,20 @@ export const executeBatchMigrationPage = async ({
 			({ internalId }) =>
 				!failedIds.has(internalId) && !leaveOut.has(internalId),
 		),
+		workerGate,
 	});
 
 	for (const patch of plan.patches) {
 		// Removes run first: an add landing before its sibling remove would be
 		// dropped again by a filter matching the same feature.
-		merge(await runPatchRemoves(phaseArgs({ patch })));
+		await runPhase(runPatchRemoves(phaseArgs({ patch })));
 		// Replaces run before adds so the add dedup sees post-replace definitions.
-		merge(await runPatchReplaces(phaseArgs({ patch })));
-		merge(await runPatchAdds(phaseArgs({ patch })));
-		merge(await runPatchLicenseOps(phaseArgs({ patch })));
-		merge(await runPatchRepoint(phaseArgs({ patch, leaveOut: excludedIds })));
+		await runPhase(runPatchReplaces(phaseArgs({ patch })));
+		await runPhase(runPatchAdds(phaseArgs({ patch })));
+		await runPhase(runPatchLicenseOps(phaseArgs({ patch })));
+		await runPhase(
+			runPatchRepoint(phaseArgs({ patch, leaveOut: excludedIds })),
+		);
 	}
 
 	// A repointed pool or a dropped row is a real change even with nothing

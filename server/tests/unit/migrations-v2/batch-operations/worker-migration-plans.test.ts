@@ -61,6 +61,7 @@ const lifecycle = {
 	ownerEntityId: null,
 	internalProductId: "prod_internal_free",
 	productIsCustom: false,
+	productLoadedByWorker: true,
 	customerPriceIds: ["cus_price_base"],
 };
 
@@ -260,6 +261,7 @@ describe("repointRowsToMigrationPlan", () => {
 			trialEndsAt: null,
 			internalProductId: "prod_internal_pro_v1",
 			productIsCustom: false,
+			productLoadedByWorker: true,
 			customerPriceIds: ["cus_price_pro_base"],
 			ownerInternalEntityId: null,
 			ownerEntityId: null,

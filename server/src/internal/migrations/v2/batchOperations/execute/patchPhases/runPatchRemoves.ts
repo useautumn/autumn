@@ -11,6 +11,7 @@ import {
 export const runPatchRemoves = async ({
 	ctx,
 	migrationRunId,
+	workerGate,
 	patch,
 	sqlInternalCustomerIds,
 	workerCustomers,
@@ -41,6 +42,7 @@ export const runPatchRemoves = async ({
 		removeCustomerEntitlementsThroughWorker({
 			ctx,
 			migrationRunId,
+			gate: workerGate,
 			patch,
 			customers: workerCustomers,
 			phases,

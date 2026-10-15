@@ -1,16 +1,13 @@
 import type { BalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { WorkerMigrationPlan } from "@/internal/balanceWorker/migrationPlan/types/workerMigrationPlan.js";
-import { BatchMigrationWorkerUnavailableError } from "@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js";
 import type { RoutedPageCustomer } from "@/internal/migrations/v2/batchOperations/execute/routing/types/routedPageCustomer.js";
-import {
-	BATCH_MIGRATION_WORKER_SEND_CONCURRENCY,
-	BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT,
-} from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
+import { BATCH_MIGRATION_WORKER_SEND_CONCURRENCY } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import { mapWithConcurrency } from "@/internal/migrations/v2/batchOperations/execute/utils/mapWithConcurrency.js";
 import { applyCustomerRowsOnWorker } from "./applyCustomerRowsOnWorker.js";
 import { isHeldByWorker } from "./isHeldByWorker.js";
 import type { HeldRow } from "./types/heldRow.js";
+import type { WorkerPageGate } from "./types/workerPageGate.js";
 
 export type RowsOnWorkerResult<Row> = {
 	appliedRows: Row[];
@@ -40,6 +37,8 @@ export const runRowsOnWorker = async <Row extends HeldRow>({
 	rows,
 	toPlan,
 	reselect,
+	gate,
+	retryDelaysMs,
 	client,
 }: {
 	ctx: AutumnContext;
@@ -49,6 +48,8 @@ export const runRowsOnWorker = async <Row extends HeldRow>({
 	rows: Row[];
 	toPlan: ({ rows }: { rows: Row[] }) => WorkerMigrationPlan;
 	reselect: ({ customer }: { customer: RoutedPageCustomer }) => Promise<Row[]>;
+	gate: WorkerPageGate;
+	retryDelaysMs?: number[];
 	client?: Pick<BalanceWorkerClient, "applyBillingPlan">;
 }): Promise<RowsOnWorkerResult<Row>> => {
 	const rowsByCustomer = rowsByCustomerOf({ rows });
@@ -56,7 +57,6 @@ export const runRowsOnWorker = async <Row extends HeldRow>({
 		rowsByCustomer.has(internalId),
 	);
 
-	let unavailableInARow = 0;
 	const outcomes = await mapWithConcurrency({
 		items: customersWithRows,
 		concurrency: BATCH_MIGRATION_WORKER_SEND_CONCURRENCY,
@@ -71,15 +71,13 @@ export const runRowsOnWorker = async <Row extends HeldRow>({
 					const allHeld = freshRows.every((row) => isHeldByWorker({ row }));
 					return allHeld ? freshRows : null;
 				},
+				signal: gate.signal,
+				retryDelaysMs,
 				client,
 			});
-			const workerUnavailable =
-				outcome.status === "failed" && outcome.unavailable;
-			unavailableInARow = workerUnavailable ? unavailableInARow + 1 : 0;
-			if (unavailableInARow >= BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT)
-				throw new BatchMigrationWorkerUnavailableError({
-					failures: unavailableInARow,
-				});
+			gate.recordOutcome({
+				unavailable: outcome.status === "failed" && outcome.unavailable,
+			});
 			return { customer, outcome };
 		},
 	});

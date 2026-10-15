@@ -23,6 +23,7 @@ const candidate = (
 	ownerEntityId: null,
 	internalProductId: "prod_internal_free",
 	productIsCustom: false,
+	productLoadedByWorker: true,
 	customerPriceIds: [],
 	...overrides,
 });
@@ -98,10 +99,38 @@ describe("isHeldByWorker", () => {
 		).toBe(true);
 	});
 
-	test("a grant on a paused product isn't loaded by the worker", () => {
+	test("a grant on a product the worker doesn't load isn't held, whatever the product's own status", () => {
 		expect(
-			isHeldByWorker({ row: candidate({ status: CusProductStatus.Paused }) }),
+			isHeldByWorker({
+				row: candidate({
+					status: CusProductStatus.Paused,
+					productLoadedByWorker: false,
+				}),
+			}),
 		).toBe(false);
+		expect(
+			isHeldByWorker({
+				row: candidate({
+					ownerInternalEntityId: "ent_internal_seat_1",
+					ownerEntityId: "seat_1",
+					status: CusProductStatus.Active,
+					productLoadedByWorker: false,
+				}),
+			}),
+		).toBe(false);
+	});
+
+	test("a seat the worker loads through its live parent is held even when its own status lags", () => {
+		expect(
+			isHeldByWorker({
+				row: candidate({
+					ownerInternalEntityId: "ent_internal_seat_1",
+					ownerEntityId: "seat_1",
+					status: CusProductStatus.Expired,
+					productLoadedByWorker: true,
+				}),
+			}),
+		).toBe(true);
 	});
 
 	test("a grant of an entity with no external id has no subject on the worker", () => {

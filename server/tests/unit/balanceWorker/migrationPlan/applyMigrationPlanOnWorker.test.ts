@@ -115,6 +115,28 @@ describe("applyMigrationPlanOnWorker", () => {
 		]);
 	});
 
+	test("an unknown outcome on a fenced page is not sent again, and the request carries the page's signal", async () => {
+		const controller = new AbortController();
+		const signals: (AbortSignal | undefined)[] = [];
+		const client = {
+			applyBillingPlan: async ({ signal }: { signal?: AbortSignal }) => {
+				signals.push(signal);
+				controller.abort(new Error("page stalled"));
+				throw timedOut();
+			},
+		};
+		const error = await applyMigrationPlanOnWorker({
+			ctx,
+			customerId: "cus_1",
+			plan,
+			commandId: "mrun_1_0_cus_internal_1",
+			signal: controller.signal,
+			client: client as unknown as ReturnType<typeof scriptedClient>,
+		}).catch((cause: unknown) => cause);
+		expect((error as Error).message).toBe("page stalled");
+		expect(signals).toEqual([controller.signal]);
+	});
+
 	test("a command the worker already holds landed earlier: applied", async () => {
 		const client = scriptedClient([
 			() => {

@@ -8,6 +8,7 @@ export type AddWorkerRow = EnrichedCycleCandidate & {
 	ownerEntityId: string | null;
 	internalProductId: string;
 	productIsCustom: boolean;
+	productLoadedByWorker: boolean;
 	customerPriceIds: string[];
 	featureGrants: Record<string, string>;
 };

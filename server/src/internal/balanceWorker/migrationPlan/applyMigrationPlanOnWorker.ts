@@ -21,12 +21,14 @@ const sendPlan = async ({
 	customerId,
 	plan,
 	commandId,
+	signal,
 }: {
 	ctx: AutumnContext;
 	client: PlanClient;
 	customerId: string;
 	plan: WorkerMigrationPlan;
 	commandId: string;
+	signal?: AbortSignal;
 }): Promise<void> => {
 	throwOnSimulatedBalanceWorkerOutage({ ctx });
 	const request = parseApplyBillingPlanRequest({
@@ -41,7 +43,7 @@ const sendPlan = async ({
 			catalogRows: plan.catalogRows,
 		},
 	});
-	await client.applyBillingPlan({ request });
+	await client.applyBillingPlan({ request, signal });
 };
 
 export const applyMigrationPlanOnWorker = async ({
@@ -49,19 +51,23 @@ export const applyMigrationPlanOnWorker = async ({
 	customerId,
 	plan,
 	commandId,
+	signal,
 	client = getBalanceWorkerClient(),
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	plan: WorkerMigrationPlan;
 	commandId: string;
+	signal?: AbortSignal;
 	client?: PlanClient;
 }): Promise<MigrationPlanOutcome> => {
-	const send = () => sendPlan({ ctx, client, customerId, plan, commandId });
+	const send = () =>
+		sendPlan({ ctx, client, customerId, plan, commandId, signal });
 	try {
 		await send().catch((cause: unknown) => {
-			if (isUnknownOutcome(cause)) return send();
-			throw cause;
+			if (!isUnknownOutcome(cause)) throw cause;
+			signal?.throwIfAborted();
+			return send();
 		});
 		return "applied";
 	} catch (cause) {

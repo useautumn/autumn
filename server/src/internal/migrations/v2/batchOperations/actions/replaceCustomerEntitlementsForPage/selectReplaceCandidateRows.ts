@@ -34,6 +34,7 @@ export type ReplaceCandidateRow = CycleEnrichmentCandidate & {
 	ownerEntityId: string | null;
 	internalProductId: string;
 	productIsCustom: boolean;
+	productLoadedByWorker: boolean;
 	customerPriceIds: string[];
 	liveDefinition?: EntitlementWithFeature;
 };
