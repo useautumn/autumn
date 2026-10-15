@@ -116,15 +116,18 @@ export const buildOperationScope = ({
 });
 
 /**
- * The plan filter with row-decidable fields stripped — safe for catalog
- * matching (planFilterMatchesProduct throws on `price` and cannot see rows);
- * the scope SQL enforces the stripped fields per row instead.
+ * The plan filter with row-decidable fields and `item` stripped — safe for
+ * catalog matching (planFilterMatchesProduct cannot see rows); the scope SQL
+ * or the per-customer lane enforces the stripped fields per row instead.
  */
 export const toCatalogPlanFilter = (filter: PlanFilter): PlanFilter => {
 	const catalogFilter = { ...filter };
 	for (const field of OPERATION_SCOPE_FIELDS) {
 		delete catalogFilter[field.filterKey];
 	}
+	// Customers can carry custom items the catalog plan lacks, so `item` can't narrow
+	// the catalog; the batch lane rejects it and the per-customer lane matches each row.
+	delete catalogFilter.item;
 	if (catalogFilter.$or) {
 		catalogFilter.$or = catalogFilter.$or.map(toCatalogPlanFilter);
 	}
