@@ -1,21 +1,15 @@
 /**
- * TDD contract for pool identity across createSchedule.
+ * Pool identity across createSchedule.
  *
  * Contract under test:
- *   New behaviors:
- *     - One createSchedule phase carrying a FREE pooled plan and a PAID recurring
- *       pooled plan produces TWO pools: their identities differ on reset_mode and
- *       stripe_subscription_id (lazy/no-sub vs subscription/sub).
- *     - Re-declaring those plans alongside entity-scoped copies routes every
- *       contribution to the pool matching its identity rather than minting new
- *       pools per source.
+ *   - One createSchedule phase carrying a FREE pooled plan and a PAID recurring
+ *     pooled plan with the same feature and cycle produces ONE subscription pool:
+ *     the free source joins the paid plan's pool instead of opening a lazy one.
+ *   - Re-declaring those plans alongside entity-scoped copies routes every
+ *     contribution to that pool rather than minting new pools per source.
  *   Side effects:
- *     - pooled_balances: one row per distinct identity, granted summed per pool
+ *     - pooled_balances: one row, granted summed across every source
  *     - pooled_balance_contributions: one row per contributing source
- *
- * Pre-impl red: identity is not consulted across schedule phases, so either one
- * pool absorbs both plans or every source mints its own.
- * Post-impl green: pools are keyed by identity and reused when it matches.
  *
  * A schedule is customer-level: a later one replaces the earlier one outright,
  * so each call declares every plan it wants to keep.
@@ -40,7 +34,7 @@ const pooledItem = ({ grant }: { grant: number }) => ({
 
 test(
 	chalk.yellowBright(
-		"pooled createSchedule: free and paid pooled plans form two pools, added entity sources join by identity",
+		"pooled createSchedule: free and paid pooled plans share one subscription pool, added entity sources join it",
 	),
 	async () => {
 		const customerId = "pooled-schedule-identities";
@@ -76,25 +70,17 @@ test(
 		};
 		await autumnV1.billing.createSchedule(customerLevelParams);
 
-		// ── Contract: distinct identities produce distinct pools ─────────
+		// ── Contract: the free source joins the paid plan's subscription pool ──
 		const afterCustomerLevel = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
 		});
-		expect(afterCustomerLevel.pools).toHaveLength(2);
+		expect(afterCustomerLevel.pools).toHaveLength(1);
 		expect(afterCustomerLevel.contributions).toHaveLength(2);
 
-		const lazyPool = afterCustomerLevel.pools.find(
-			(pool) => pool.stripe_subscription_id === null,
-		);
-		const subscriptionPool = afterCustomerLevel.pools.find(
-			(pool) => pool.stripe_subscription_id !== null,
-		);
-		if (!(lazyPool && subscriptionPool)) {
-			throw new Error("expected one lazy pool and one subscription pool");
-		}
-		expect(lazyPool.granted).toBe(FREE_GRANT);
-		expect(subscriptionPool.granted).toBe(PRO_GRANT);
+		const [subscriptionPool] = afterCustomerLevel.pools;
+		expect(subscriptionPool.stripe_subscription_id).not.toBeNull();
+		expect(subscriptionPool.granted).toBe(FREE_GRANT + PRO_GRANT);
 
 		// ── Same plans again, plus an entity-scoped copy of each ─────────
 		const entityLevelParams: CreateScheduleParamsV0Input = {
@@ -119,26 +105,15 @@ test(
 			customerId,
 		});
 		expect(afterEntityLevel.contributions).toHaveLength(4);
-		// No new pools: both entity sources matched an existing identity.
-		expect(afterEntityLevel.pools).toHaveLength(2);
+		// No new pools: every entity source joined the existing subscription pool.
+		expect(afterEntityLevel.pools).toHaveLength(1);
 
-		const lazyPoolAfter = afterEntityLevel.pools.find(
-			(pool) => pool.id === lazyPool.id,
-		);
-		const subscriptionPoolAfter = afterEntityLevel.pools.find(
-			(pool) => pool.id === subscriptionPool.id,
-		);
-		expect(lazyPoolAfter?.granted).toBe(FREE_GRANT * 2);
-		expect(subscriptionPoolAfter?.granted).toBe(PRO_GRANT * 2);
-
-		const contributionsByPool = new Map<string, number>();
+		const [subscriptionPoolAfter] = afterEntityLevel.pools;
+		expect(subscriptionPoolAfter.id).toBe(subscriptionPool.id);
+		expect(subscriptionPoolAfter.granted).toBe((FREE_GRANT + PRO_GRANT) * 2);
 		for (const contribution of afterEntityLevel.contributions) {
-			contributionsByPool.set(
-				contribution.pooled_balance_id,
-				(contributionsByPool.get(contribution.pooled_balance_id) ?? 0) + 1,
-			);
+			expect(contribution.pooled_balance_id).toBe(subscriptionPool.id);
 		}
-		expect(contributionsByPool.get(lazyPool.id)).toBe(2);
 
 		// Every pool's granted equals the sum of the contributions feeding it.
 		for (const pool of afterEntityLevel.pools) {
