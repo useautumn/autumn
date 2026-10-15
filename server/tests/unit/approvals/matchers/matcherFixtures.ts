@@ -1,5 +1,6 @@
 import {
 	AllowanceType,
+	CusProductStatus,
 	type EntitlementWithFeature,
 	type Feature,
 	type FullCusProduct,
@@ -7,6 +8,8 @@ import {
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
+import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { entitlements } from "@tests/utils/fixtures/db/entitlements";
@@ -136,3 +139,37 @@ export const planToCustomerProduct = ({
 		})),
 	});
 };
+
+/** Customers for the customer-filter tests; the downgraded customer's pro plan is expired. */
+export const customers = {
+	paying: {
+		id: "paying",
+		customer_products: [planToCustomerProduct({ product: plans.pro })],
+	},
+	downgraded: {
+		id: "downgraded",
+		customer_products: [
+			planToCustomerProduct({ product: plans.free }),
+			planToCustomerProduct({
+				product: plans.pro,
+				status: CusProductStatus.Expired,
+			}),
+		],
+	},
+	unlimited: {
+		id: "unlimited",
+		customer_products: [planToCustomerProduct({ product: plans.unlimited })],
+	},
+	noPlan: { id: "noPlan", customer_products: [] },
+};
+
+export type CustomerName = keyof typeof customers;
+export const CUSTOMER_NAMES = Object.keys(customers) as CustomerName[];
+
+export const matchingCustomers = ({ filter }: { filter: CustomerFilter }) =>
+	CUSTOMER_NAMES.filter((customerName) =>
+		customerFilterMatchesFullCustomer({
+			filter,
+			fullCustomer: customers[customerName],
+		}),
+	);
