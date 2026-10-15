@@ -6,7 +6,7 @@ import { RoleFormSheet } from "./RoleFormSheet";
 import { RoleRow } from "./RoleRow";
 import { RolesLoadError } from "./RolesLoadError";
 import type { RoleBody } from "./roleAccess";
-import { getRoleInUseCount } from "./rolesClient";
+import { getRoleInUseCount } from "./roleErrors";
 import type { RoleDialogs } from "./useRoleDialogs";
 
 const COLUMNS = [

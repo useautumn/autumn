@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { RESOURCES, type ScopeString } from "@autumn/shared";
+import { AxiosError, AxiosHeaders } from "axios";
 import {
 	type ApiRole,
+	accessError,
 	accessToScopes,
 	canEditRole,
 	emptyAccess,
@@ -12,10 +14,10 @@ import {
 	summarizeAccess,
 	summarizeRules,
 } from "@/views/settings/sections/roles/roleAccess";
-import {
-	getMockRolesClient,
-	getRoleInUseCount,
-} from "@/views/settings/sections/roles/rolesClient";
+import { getRoleInUseCount } from "@/views/settings/sections/roles/roleErrors";
+
+// Mirrors RoleNameSchema in D4's shared/api/roles/apiRole.ts.
+const D4_ROLE_NAME = /^[a-z0-9][a-z0-9_-]{0,62}$/;
 
 const access = (overrides: Partial<RoleAccessRecord>): RoleAccessRecord => ({
 	...emptyAccess(),
@@ -102,7 +104,10 @@ describe("form values ⇄ role", () => {
 		{ label: "Support", name: "support" },
 		{ label: "  Finance team ", name: "finance_team" },
 		{ label: "R&D ops", name: "rd_ops" },
+		{ label: "_ops team", name: "ops_team" },
+		{ label: "a".repeat(80), name: "a".repeat(63) },
 	])("label '$label' → name '$name'", ({ label, name }) => {
+		expect(name).toMatch(D4_ROLE_NAME);
 		const body = formValuesToRoleBody({
 			values: { label, access: emptyAccess() },
 		});
@@ -118,6 +123,13 @@ describe("form values ⇄ role", () => {
 			label: existing.label,
 			access: existing.access,
 		});
+	});
+
+	test.each([
+		{ value: emptyAccess(), error: "Choose access to at least one resource" },
+		{ value: access({ analytics: "read" }), error: undefined },
+	])("access error: $error", ({ value, error }) => {
+		expect(accessError({ access: value })).toBe(error);
 	});
 
 	test("a new role starts with no access", () => {
@@ -169,23 +181,29 @@ describe("approval rules column", () => {
 	});
 });
 
-describe("mock roles client matches §R", () => {
-	test("lists built-in roles first, in §R order", async () => {
-		const roles = await getMockRolesClient({ storeKey: "order" }).list();
-		expect(roles.filter((r) => r.built_in).map((r) => r.name)).toEqual([
-			"owner",
-			"admin",
-			"developer",
-			"sales",
-			"member",
-		]);
-		expect(roles.findIndex((r) => !r.built_in)).toBe(5);
-	});
+describe("delete errors", () => {
+	const httpError = (data: unknown) =>
+		new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, {
+			status: 409,
+			statusText: "Conflict",
+			data,
+			headers: {},
+			config: { headers: new AxiosHeaders() },
+		});
 
-	test("an in-use delete carries details.member_count", async () => {
-		const error = await getMockRolesClient({ storeKey: "in-use" })
-			.remove({ name: "support" })
-			.catch((caught: unknown) => caught);
-		expect(getRoleInUseCount({ error })).toBe(4);
+	test.each([
+		{
+			case: "role_in_use with details.member_count",
+			error: httpError({ code: "role_in_use", details: { member_count: 4 } }),
+			count: 4,
+		},
+		{
+			case: "another conflict",
+			error: httpError({ code: "role_exists" }),
+			count: null,
+		},
+		{ case: "not an HTTP error", error: new Error("boom"), count: null },
+	])("$case → $count", ({ error, count }) => {
+		expect(getRoleInUseCount({ error })).toBe(count);
 	});
 });

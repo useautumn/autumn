@@ -3,58 +3,52 @@ import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import type { RoleBody } from "@/views/settings/sections/roles/roleAccess";
-import {
-	createHttpRolesClient,
-	getMockRolesClient,
-	getRoleInUseCount,
-	ROLES_MOCKED,
-} from "@/views/settings/sections/roles/rolesClient";
+import type {
+	ApiRole,
+	RoleBody,
+} from "@/views/settings/sections/roles/roleAccess";
+import { getRoleInUseCount } from "@/views/settings/sections/roles/roleErrors";
 
 const ROLES_KEY = ["roles"] as const;
 
-const useRolesClient = () => {
-	const axios = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
-	if (ROLES_MOCKED)
-		return getMockRolesClient({ storeKey: buildKey(ROLES_KEY).join(":") });
-	return createHttpRolesClient({ axios });
-};
-
 export const useRolesQuery = () => {
-	const client = useRolesClient();
+	const axios = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error, refetch } = useQuery({
 		queryKey: buildKey(ROLES_KEY),
-		queryFn: client.list,
+		queryFn: async () =>
+			(await axios.get<{ list: ApiRole[] }>("/roles")).data.list,
 	});
 
 	return { roles: data ?? [], isLoading, error, refetch };
 };
 
 export const useRoleMutations = () => {
-	const client = useRolesClient();
+	const axios = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const invalidate = () =>
 		queryClient.invalidateQueries({ queryKey: ROLES_KEY });
 
 	const save = useMutation({
 		mutationFn: ({ name, body }: { name: string | null; body: RoleBody }) =>
-			name === null ? client.create({ body }) : client.update({ name, body }),
-		onSuccess: (_role, { name }) => {
-			invalidate();
+			name === null
+				? axios.post<ApiRole>("/roles", body)
+				: axios.patch<ApiRole>(`/roles/${name}`, body),
+		// Returning the refetch keeps the sheet open until the list shows the change.
+		onSuccess: async (_role, { name }) => {
 			toast.success(name === null ? "Role created" : "Role updated");
+			await invalidate();
 		},
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to save role")),
 	});
 
 	const remove = useMutation({
-		mutationFn: client.remove,
-		onSuccess: () => {
-			invalidate();
+		mutationFn: ({ name }: { name: string }) => axios.delete(`/roles/${name}`),
+		onSuccess: async () => {
 			toast.success("Role deleted");
+			await invalidate();
 		},
 		onError: (error) => {
 			if (getRoleInUseCount({ error }) !== null) return;

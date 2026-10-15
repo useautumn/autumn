@@ -11,6 +11,7 @@ import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useAppForm } from "@/hooks/form/form";
 import {
 	type ApiRole,
+	accessError,
 	accessToScopes,
 	canEditRole,
 	formValuesToRoleBody,
@@ -90,16 +91,28 @@ export const RoleFormSheet = ({
 							)}
 						</form.AppField>
 					)}
-					<form.Field name="access">
+					<form.Field
+						name="access"
+						validators={{
+							onSubmit: ({ value }) => accessError({ access: value }),
+						}}
+					>
 						{(field) => (
-							<ScopeSelector
-								value={accessToScopes({ access: field.state.value })}
-								onChange={(scopes) =>
-									field.handleChange(scopesToAccess({ scopes }))
-								}
-								allowUnrestricted={false}
-								disabled={!editable || isSaving}
-							/>
+							<div className="flex flex-col gap-2">
+								<ScopeSelector
+									value={accessToScopes({ access: field.state.value })}
+									onChange={(scopes) =>
+										field.handleChange(scopesToAccess({ scopes }))
+									}
+									allowUnrestricted={false}
+									disabled={!editable || isSaving}
+								/>
+								{field.state.meta.errors.length > 0 && (
+									<em className="text-destructive text-xs">
+										{field.state.meta.errors[0]}
+									</em>
+								)}
+							</div>
 						)}
 					</form.Field>
 				</div>

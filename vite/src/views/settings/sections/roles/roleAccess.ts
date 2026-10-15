@@ -5,7 +5,7 @@ import {
 	type ScopeString,
 } from "@autumn/shared";
 
-// Mirrors §R of approvals-api-schema.md until D4 exports these from @autumn/shared.
+// Mirrors ApiRole in @autumn/shared; swap for the shared import once #4992 merges.
 export type RoleAccess = "none" | "read" | "write";
 export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
 
@@ -69,6 +69,11 @@ export const scopesToAccess = ({
 	});
 };
 
+export const accessError = ({ access }: { access: RoleAccessRecord }) =>
+	Object.values(access).some((value) => value !== "none")
+		? undefined
+		: "Choose access to at least one resource";
+
 export const canEditRole = ({ role }: { role: ApiRole }) => !role.built_in;
 
 export const roleToFormValues = ({
@@ -80,12 +85,16 @@ export const roleToFormValues = ({
 	access: role?.access ?? emptyAccess(),
 });
 
+const ROLE_NAME_MAX_LENGTH = 63;
+
 export const labelToName = ({ label }: { label: string }) =>
 	label
 		.trim()
 		.toLowerCase()
 		.replace(/[^a-z0-9\s_]/g, "")
-		.replace(/\s+/g, "_");
+		.replace(/\s+/g, "_")
+		.replace(/^_+/, "")
+		.slice(0, ROLE_NAME_MAX_LENGTH);
 
 export const formValuesToRoleBody = ({
 	values,
