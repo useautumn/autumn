@@ -1,37 +1,42 @@
 import {
 	type CusProduct,
 	customerEntitlementToNextResetAt,
-	EntInterval,
+	type EntInterval,
 	type FullCustomer,
+	type FullCustomerEntitlement,
+	isLifetimeEntitlement,
 } from "@autumn/shared";
 
-/** Each reset due by `at`, run one at a time as the reset job would, on the plan's billing anchor. */
-const nextResetAfter = ({
-	resetAt,
-	interval,
-	intervalCount,
+/** Runs each reset due by `at` as the reset job would, on the plan's billing anchor. */
+const rollResetPast = ({
+	customerEntitlement,
 	customerProduct,
 	at,
 }: {
-	resetAt: number;
-	interval: EntInterval;
-	intervalCount: number;
+	customerEntitlement: FullCustomerEntitlement;
 	customerProduct: CusProduct | null;
 	at: number;
 }) => {
-	let nextResetAt = resetAt;
-	while (nextResetAt <= at) {
-		nextResetAt = customerEntitlementToNextResetAt({
+	const { entitlement } = customerEntitlement;
+	if (isLifetimeEntitlement({ entitlement })) return;
+
+	while (
+		customerEntitlement.next_reset_at &&
+		customerEntitlement.next_reset_at <= at
+	) {
+		customerEntitlement.next_reset_at = customerEntitlementToNextResetAt({
 			customerEntitlement: {
-				next_reset_at: nextResetAt,
-				entitlement: { interval, interval_count: intervalCount },
+				next_reset_at: customerEntitlement.next_reset_at,
+				entitlement: {
+					interval: entitlement.interval as EntInterval,
+					interval_count: entitlement.interval_count ?? 1,
+				},
 				customer_product: customerProduct,
 			},
 			billingCycleAnchor: customerProduct?.billing_cycle_anchor ?? undefined,
-			now: nextResetAt,
+			now: customerEntitlement.next_reset_at,
 		});
 	}
-	return nextResetAt;
 };
 
 /** The customer at `at`: resets due by then have run, so each next reset is the first after it. */
@@ -43,30 +48,14 @@ export const customerAsOf = ({
 	at: number;
 }): FullCustomer => {
 	const customer = structuredClone(fullCustomer);
-	const customerEntitlements = [
-		...customer.customer_products.flatMap((customerProduct) =>
-			customerProduct.customer_entitlements.map((customerEntitlement) => ({
-				customerEntitlement,
-				customerProduct: customerProduct as CusProduct | null,
-			})),
-		),
-		...(customer.extra_customer_entitlements ?? []).map(
-			(customerEntitlement) => ({ customerEntitlement, customerProduct: null }),
-		),
-	];
-	for (const { customerEntitlement, customerProduct } of customerEntitlements) {
-		const { next_reset_at: nextResetAt, entitlement } = customerEntitlement;
-		if (!nextResetAt || nextResetAt > at) continue;
-		if (!entitlement.interval || entitlement.interval === EntInterval.Lifetime)
-			continue;
-
-		customerEntitlement.next_reset_at = nextResetAfter({
-			resetAt: nextResetAt,
-			interval: entitlement.interval,
-			intervalCount: entitlement.interval_count ?? 1,
-			customerProduct,
-			at,
-		});
+	for (const customerProduct of customer.customer_products) {
+		for (const customerEntitlement of customerProduct.customer_entitlements) {
+			rollResetPast({ customerEntitlement, customerProduct, at });
+		}
+	}
+	for (const customerEntitlement of customer.extra_customer_entitlements ??
+		[]) {
+		rollResetPast({ customerEntitlement, customerProduct: null, at });
 	}
 	return customer;
 };

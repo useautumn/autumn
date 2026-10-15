@@ -54,35 +54,24 @@ export const setPlansPhaseBalanceChanges = async ({
 		originalFullCustomer,
 		phaseCustomers,
 	});
-	const [phaseBalances, previousPhaseBalances, savedBalances] =
-		await Promise.all([
-			Promise.all(carriedPhaseCustomers.map(toBalances)),
-			Promise.all(
-				carriedPhaseCustomers.map((_, phaseIndex) => {
-					const previousCustomer = carriedPhaseCustomers[phaseIndex - 1];
-					return toBalances(
-						previousCustomer
-							? customerAsOf({
-									fullCustomer: previousCustomer,
-									at: phaseStarts[phaseIndex],
-								})
-							: originalFullCustomer,
-					);
-				}),
-			),
-			Promise.all(
-				savedComparisonCustomers.map((savedCustomer) =>
-					savedCustomer ? toBalances(savedCustomer) : undefined,
-				),
-			),
-		]);
+	const comparedCustomers = carriedPhaseCustomers.map(
+		(_, phaseIndex) =>
+			savedComparisonCustomers[phaseIndex] ??
+			(phaseIndex === 0
+				? originalFullCustomer
+				: customerAsOf({
+						fullCustomer: carriedPhaseCustomers[phaseIndex - 1],
+						at: phaseStarts[phaseIndex],
+					})),
+	);
+	const [phaseBalances, comparedBalances] = await Promise.all([
+		Promise.all(carriedPhaseCustomers.map(toBalances)),
+		Promise.all(comparedCustomers.map(toBalances)),
+	]);
 
 	return withoutRepeatsOfPreviousPhase({
 		phases: phaseBalances.map((after, phaseIndex) =>
-			diffScopedBalances({
-				before: savedBalances[phaseIndex] ?? previousPhaseBalances[phaseIndex],
-				after,
-			}),
+			diffScopedBalances({ before: comparedBalances[phaseIndex], after }),
 		),
 		signature: balanceChangeSignature,
 	});
