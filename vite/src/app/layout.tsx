@@ -3,7 +3,7 @@ import { SandboxBanner, SandboxBannerAction } from "@autumn/ui";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxFavicon } from "@/components/general/SandboxFavicon";
@@ -27,13 +27,11 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { LeafPanel } from "@/views/chat/LeafPanel";
-import CommandBar from "@/views/command-bar/CommandBar";
 import { CustomersListPrefetch } from "@/views/customers/CustomersListPrefetch";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import { CustomerFiltersProvider } from "@/views/customers/hooks/useCustomerFilters";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
-import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { useEnvChange } from "@/views/main-sidebar/EnvDropdown";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { MobileSidebar } from "@/views/main-sidebar/MobileSidebar";
@@ -41,6 +39,14 @@ import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
 import { SettingsViewSkeleton } from "@/views/settings/SettingsView";
 import { AppContext } from "./AppContext";
 import { usePrefetchCurrentRoute } from "./usePrefetchCurrentRoute";
+
+// Closed until the user asks for them, so they load beside the page instead of in the entry.
+const CommandBar = lazy(() => import("@/views/command-bar/CommandBar"));
+const DeployToProdDialog = lazy(() =>
+	import(
+		"@/views/main-sidebar/components/deploy-button/DeployToProdDialog"
+	).then((module) => ({ default: module.DeployToProdDialog })),
+);
 
 export function MainLayout() {
 	const { handleApiError } = useGlobalErrorHandler();
@@ -125,7 +131,9 @@ const DashboardShell = ({
 				containerRef={containerRef}
 				onOpenMobileSidebar={() => onMobileSidebarOpenChange(true)}
 			/>
-			<CommandBar />
+			<Suspense fallback={null}>
+				<CommandBar />
+			</Suspense>
 			<LeafPanel />
 		</>
 	);
@@ -213,10 +221,12 @@ const MainContent = ({
 							)}
 						</SandboxBanner>
 					)}
-					<DeployToProdDialog
-						open={showDeployDialog}
-						onOpenChange={setShowDeployDialog}
-					/>
+					<Suspense fallback={null}>
+						<DeployToProdDialog
+							open={showDeployDialog}
+							onOpenChange={setShowDeployDialog}
+						/>
+					</Suspense>
 					<MobileTopBar onMenuClick={onOpenMobileSidebar} />
 					<div
 						data-main-content

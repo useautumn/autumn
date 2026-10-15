@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { useCallback } from "react";
+import { productDataUrl } from "@/boot/bootRequests";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { PERSIST_META } from "@/lib/queryPersistence";
 import type { PlanVariant } from "@/services/products/ProductService";
@@ -35,8 +36,10 @@ export const useProductDataQueryOptions = () => {
 				queryFn: async () => {
 					try {
 						const { data } = await axiosInstance.get<ProductQueryResponse>(
-							`/products/${productId}/data`,
-							{ params: version ? { version } : undefined },
+							productDataUrl({
+								productId: productId as string,
+								version: version ?? null,
+							}),
 						);
 						return data;
 					} catch (error) {

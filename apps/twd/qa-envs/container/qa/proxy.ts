@@ -24,6 +24,8 @@ const toApi = ({ req, path }: { req: Request; path: string }) => {
 		headers,
 		body: req.body,
 		redirect: "manual",
+		// Pass compressed bodies through untouched; Bun would inflate them but keep Content-Encoding.
+		decompress: false,
 		// @ts-expect-error Bun streams request bodies
 		duplex: "half",
 	});

@@ -99,6 +99,9 @@ export interface UpdateSubscriptionBillingContextOverride
 		customEnts?: Entitlement[];
 	};
 
+	/** An unpaid pending change to the plan being updated: its invoice doesn't count, and it is discarded when the update executes. */
+	supersededPendingCustomerProduct?: FullCusProduct;
+
 	/** Build the context against this customer instead of fetching from DB.
 	 * For fold-style callers (multiUpdate) whose customer carries prior updates. */
 	projectedFullCustomer?: FullCustomer;

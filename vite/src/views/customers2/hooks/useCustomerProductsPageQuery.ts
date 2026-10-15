@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { customerProductsPageUrl } from "@/boot/bootRequests";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -52,16 +53,14 @@ export function useCustomerProductsPageQuery({
 	const fetcher = async (): Promise<CustomerProductsPage> => {
 		try {
 			const { data } = await axiosInstance.get(
-				`/customers/${customer_id}/products`,
-				{
-					params: {
-						start_cursor: cursor,
-						limit: pageSize,
-						status,
-						...(kind !== "all" ? { kind } : {}),
-						...(entityId ? { entity_id: entityId } : {}),
-					},
-				},
+				customerProductsPageUrl({
+					customerId: customer_id as string,
+					cursor,
+					pageSize,
+					status,
+					kind,
+					entityId,
+				}),
 			);
 			return data as CustomerProductsPage;
 		} catch (error) {
