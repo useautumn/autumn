@@ -20,6 +20,11 @@ import { Hono } from "hono";
 import { getRouteGroup } from "@/honoMiddlewares/routeGroupRegistry.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
+import {
+	isAtomForwardedRequest,
+	markAtomForwardedRequest,
+} from "@/internal/misc/idempotency/atomForwardedRequest.js";
 import { resolveIdempotencyTtlMs } from "@/internal/misc/idempotency/resolveIdempotencyTtl.js";
 
 const ctxWithConfig = (
@@ -28,6 +33,7 @@ const ctxWithConfig = (
 	({
 		org: { id: "org_123", idempotency_config: idempotencyConfig },
 		env: "sandbox",
+		state: {},
 	}) as unknown as AutumnContext;
 
 describe("resolveIdempotencyTtlMs", () => {
@@ -71,6 +77,43 @@ describe("resolveIdempotencyTtlMs", () => {
 			ms.hours(DEFAULT_IDEMPOTENCY_TTL_HOURS),
 		);
 	});
+});
+
+describe("resolveIdempotencyTtlMs for a request the Atom forwarded", () => {
+	test.concurrent(
+		"claims with the Atom's 90 minutes, whatever TTL the org configured for the route group",
+		() => {
+			const ctx = ctxWithConfig([
+				{ routeGroup: RouteGroup.Balances, idempotencyTtl: 24 },
+			]);
+			markAtomForwardedRequest({
+				ctx,
+				header: (name) =>
+					name === "x-atom-forwarded-by" ? "track_denied" : undefined,
+			});
+
+			expect(isAtomForwardedRequest({ ctx })).toBe(true);
+			expect(
+				resolveIdempotencyTtlMs({ ctx, routeGroup: RouteGroup.Balances }),
+			).toBe(ATOM_IDEMPOTENCY_TTL_MS);
+			expect(ATOM_IDEMPOTENCY_TTL_MS).toBe(ms.minutes(90));
+		},
+	);
+
+	test.concurrent(
+		"a request without the Atom's header keeps the org's TTL",
+		() => {
+			const ctx = ctxWithConfig([
+				{ routeGroup: RouteGroup.Balances, idempotencyTtl: 24 },
+			]);
+			markAtomForwardedRequest({ ctx, header: () => undefined });
+
+			expect(isAtomForwardedRequest({ ctx })).toBe(false);
+			expect(
+				resolveIdempotencyTtlMs({ ctx, routeGroup: RouteGroup.Balances }),
+			).toBe(ms.hours(24));
+		},
+	);
 });
 
 describe("IdempotencyConfigEntrySchema bounds", () => {
