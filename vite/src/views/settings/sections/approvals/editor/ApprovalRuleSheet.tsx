@@ -67,11 +67,12 @@ export const ApprovalRuleSheet = ({
 	}) => (ruleWhenArea({ actions }) ? undefined : serverIssue("when"));
 
 	return (
-		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent
-				side="right"
-				className="!w-[34rem] !max-w-[34rem] sm:!w-[34rem] sm:!max-w-[34rem]"
-			>
+		<Sheet
+			open={open}
+			// A save in flight closes this sheet when it lands, so it can't close another one.
+			onOpenChange={(next) => !isSaving && onOpenChange(next)}
+		>
+			<SheetContent side="right" className="!w-full !max-w-[34rem]">
 				<SheetHeader>
 					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
 					<SheetDescription>Billing → Approvals</SheetDescription>

@@ -79,7 +79,7 @@ export const useApprovalRuleForm = ({
 				]
 			: issues.rows,
 		clearRowIssues: () => setIssues((prev) => ({ ...prev, rows: [] })),
-		/** A different set of `when` fields starts the conditions over. */
+		/** A different set of `when` fields starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,
 			actions,
