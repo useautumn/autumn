@@ -20,6 +20,8 @@ export type ConsumerRunnerState = {
 	/** Set while leaving the group: group changes are no longer the caller's business. */
 	leaving: boolean;
 	loop: Promise<void> | null;
+	/** Aborted by `stop`: the loop's waits end at once instead of running out their time. */
+	wake: AbortController;
 	/** "topic\0partition" → partition, for everything currently assigned. */
 	assigned: Map<string, { topic: string; partition: number }>;
 	/** Bumped on revoke and on crash: a batch from an older generation is stale and its heartbeat throws. */
