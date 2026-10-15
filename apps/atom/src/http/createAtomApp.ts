@@ -40,24 +40,11 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	// The customer's app checks with its secret key on an org's own Atom; Autumn's pushes carry the Atom token.
 	const pushAuth = atomTokenMiddleware({ ctx });
 	const authorized = new Hono<AtomHttpEnv>();
-	authorized.post(
-		"/balances.check",
-		checkHopMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveCheck,
-	);
-	authorized.post(
-		"/track",
-		checkHopMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveTrack,
-	);
-	authorized.post(
-		"/balances.finalize",
-		checkHopMiddleware({ ctx }),
-		clientAuthMiddleware({ ctx }),
-		receiveFinalize,
-	);
+	const toOwner = checkHopMiddleware({ ctx });
+	const authed = clientAuthMiddleware({ ctx });
+	authorized.post("/balances.check", toOwner, authed, receiveCheck);
+	authorized.post("/track", toOwner, authed, receiveTrack);
+	authorized.post("/balances.finalize", toOwner, authed, receiveFinalize);
 	authorized.post("/subjects.set", pushAuth, receiveSetSubject({ ctx }));
 	authorized.post("/subjects.delete", pushAuth, receiveDeleteSubject({ ctx }));
 	authorized.post("/catalog.set", pushAuth, receiveSetCatalog({ ctx }));

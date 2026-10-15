@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 
 export const PEER_HANDOFF_PATH = "/v1/_peer/journal.handoff";
+/** On a request hopped to a customer's owner: the peer the customer came from, whose handoff its first requests wait for. */
+export const MOVED_FROM_HEADER = "x-atom-moved-from";
 
 /** How long the new owner holds a moved customer's first requests for its handoff before answering from its own copy. */
 export const HANDOFF_BARRIER_MS = 50;

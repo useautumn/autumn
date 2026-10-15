@@ -87,10 +87,19 @@ export const createReplica = ({
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const membership = createMembership({ self: address });
+	// Settled members: counted, this replica granted by them, nothing left to hand over.
 	for (const peer of joined) {
-		membership.markReady({ address: peer, boot: "fixture" });
-		membership.markJoined(peer);
+		membership.markJoined({ address: peer, boot: "fixture" });
+		membership.grantedBy(peer);
+		membership.handoffCompleted({ address: peer, thread: 0, threads: 1 });
 	}
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => ringPeers },
+			own: () => [address],
+			membership,
+		},
+	});
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const auth = createDeployedAuth({
 		journalForwarder,
@@ -102,6 +111,7 @@ export const createReplica = ({
 		now,
 		subjectPulls: noSubjectPulls,
 		barrier,
+		ring,
 	});
 	const replication = createReplication({
 		ctx: {
@@ -116,13 +126,6 @@ export const createReplica = ({
 		},
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
-	const ring = createReplicaRing({
-		ctx: {
-			resolver: { peers: async () => ringPeers },
-			own: () => [address],
-			membership,
-		},
-	});
 	const httpContext = {
 		auth,
 		logger: quiet,
@@ -154,6 +157,17 @@ export const createReplica = ({
 		now,
 		isStopping: () => false,
 	};
+	const handoverContext = {
+		ring,
+		membership,
+		replication: { peers: async () => ringPeers },
+		folders: createDeployedFolders({ slots: auth.slots }),
+		thread: 0,
+		threads: 1,
+		publicPort: PUBLIC_PORT,
+		peer: { port: PEER_PORT, secret },
+		logger: quiet,
+	};
 	cleanups.push(() => {
 		void replication.stop();
 		auth.close();
@@ -167,33 +181,10 @@ export const createReplica = ({
 		replication,
 		ring,
 		membership,
-		/** The first step of a planned stop: owner of nothing, and every peer told. */
-		leave: () =>
-			leaveRing({
-				ctx: {
-					ring,
-					membership,
-					folders: createDeployedFolders({ slots: auth.slots }),
-					threads: 1,
-					peer: { port: PEER_PORT, secret },
-					logger: quiet,
-				},
-			}),
-		/** One pass over the listed peers: a ready one gets its customers' entries and then counts as an owner. */
-		probeOnce: () =>
-			startReadinessProber({
-				ctx: {
-					ring,
-					membership,
-					replication: { peers: async () => ringPeers },
-					folders: createDeployedFolders({ slots: auth.slots }),
-					thread: 0,
-					threads: 1,
-					publicPort: PUBLIC_PORT,
-					peer: { port: PEER_PORT, secret },
-					logger: quiet,
-				},
-			}).probeOnce(),
+		/** The first step of a planned stop: owner of nothing, every ready peer told and handed its customers' entries. */
+		leave: () => leaveRing({ ctx: handoverContext }),
+		/** One pass over the listed peers: a ready one counts as an owner, is granted and handed its customers' entries. */
+		probeOnce: () => startReadinessProber({ ctx: handoverContext }).probeOnce(),
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),

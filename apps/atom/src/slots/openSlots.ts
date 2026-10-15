@@ -7,6 +7,7 @@ import type {
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import type { ReplicaRing } from "../replicas/types/replicaRing.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
@@ -59,6 +60,7 @@ export const openSlots = ({
 	pulls,
 	journalForwarder,
 	barrier,
+	ring,
 }: {
 	folder: string;
 	slotCount: number;
@@ -75,6 +77,8 @@ export const openSlots = ({
 	journalForwarder: JournalForwarder;
 	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
 	barrier?: HandoffBarrier;
+	/** Who owns each customer across the replicas: a request for one that moved away is refused, not decided here. */
+	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -127,6 +131,7 @@ export const openSlots = ({
 					journal,
 					openLocks: createOpenLocks(),
 					barrier,
+					ring,
 				},
 			}),
 		};

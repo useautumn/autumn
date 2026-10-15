@@ -1,32 +1,33 @@
-/** What this replica knows of a peer beyond the service name: ready to serve, counted as an owner, or on its way out. */
-export type MemberState = "ready" | "joined" | "leaving";
+/** What this replica knows of a peer beyond the service name: counted as an owner, or on its way out. */
+export type MemberState = "joined" | "leaving";
 
 /**
  * Which of the service name's addresses count as ring members, shared by every thread of the replica so all of them
- * flip at once: a peer counts once it is ready and every thread of this replica has handed it its customers' entries
- * (`joined`), and stops counting the moment it announces leaving; this replica itself stops counting when it leaves.
+ * flip at once: a peer counts from the moment it is marked joined and stops counting the moment it announces leaving;
+ * this replica itself stops counting when it leaves. Beside the state, what each peer has told this replica: that it
+ * counts it as an owner (the grant), and how far it is through handing it the customers that moved.
  */
 export type Membership = {
 	self: string;
 	isMember(address: string): boolean;
 	isLeaving(address: string): boolean;
 	stateOf(address: string): MemberState | null;
-	/** The peer answered ready from the boot named: counted from nothing, or again after leaving when the boot is a new one. */
-	markReady(params: { address: string; boot: string }): void;
-	/** Whether the peer was marked ready from this boot: read from the shared table, so every thread tells a leaving peer back at the same address apart. */
+	/** The peer answers ready from the boot named: counted as an owner from now on, for every thread at once. True when this call flipped it. */
+	markJoined(params: { address: string; boot: string }): boolean;
+	/** Whether the peer was marked joined from this boot: read from the shared table, so every thread tells a leaving peer back at the same address apart. */
 	isBootOf(params: { address: string; boot: string }): boolean;
-	markJoined(address: string): void;
-	/** Whether this thread has handed the peer its entries since it was marked ready. */
-	hasHandedOff(params: { address: string; thread: number }): boolean;
-	/** This thread has handed the peer its entries; true once every one of `threads` has, which is when the peer is joined. */
-	handedOff(params: {
+	markLeaving(address: string): void;
+	/** The peer counts this replica as an owner: the customers it owned before are answered here from now on. */
+	grantedBy(address: string): void;
+	isGrantedBy(address: string): boolean;
+	/** The peer is handing this replica the customers that moved here: their first requests wait for the handoff. */
+	isHanding(address: string): boolean;
+	/** One of the peer's threads handed everything it owed; true once all `threads` of them have. */
+	handoffCompleted(params: {
 		address: string;
 		thread: number;
 		threads: number;
 	}): boolean;
-	markLeaving(address: string): void;
-	/** One of the leaver's threads handed everything it owed; true once all `threads` of them have. */
-	handoffCompleted(params: { address: string; threads: number }): boolean;
 	isHandoffComplete(address: string): boolean;
 	/** Forgotten once the service name has dropped it and it answers no more, so a replica back at the address starts over. */
 	forget(address: string): void;

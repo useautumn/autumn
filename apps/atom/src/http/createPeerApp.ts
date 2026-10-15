@@ -3,8 +3,8 @@ import { receiveDeleteAtom } from "../multiTenant/receiveDeleteAtom.js";
 import { receiveListAtoms } from "../multiTenant/receiveListAtoms.js";
 import { receivePutAtom } from "../multiTenant/receivePutAtom.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
+import { PEER_ANNOUNCEMENT_PATH } from "../replicas/handover/announcementContract.js";
 import { PEER_HANDOFF_PATH } from "../replicas/handover/handoffContract.js";
-import { PEER_LEAVING_PATH } from "../replicas/handover/leavingContract.js";
 import {
 	PEER_ATOMS_LIST_PATH,
 	PEER_CATALOG_SINCE_PATH,
@@ -13,11 +13,11 @@ import {
 	PEER_SUBJECTS_SINCE_PATH,
 } from "../replication/catchUp/fetchSince.js";
 import { createAtomErrorHandler } from "./handlers/errorHandler/createAtomErrorHandler.js";
+import { receiveAnnouncement } from "./handlers/receiveAnnouncement.js";
 import { receiveCheck } from "./handlers/receiveCheck.js";
 import { receiveDeleteSubject } from "./handlers/receiveDeleteSubject.js";
 import { receiveFinalize } from "./handlers/receiveFinalize.js";
 import { receiveJournalHandoff } from "./handlers/receiveJournalHandoff.js";
-import { receiveLeaving } from "./handlers/receiveLeaving.js";
 import {
 	receiveCatalogSince,
 	receiveSubjectsDigest,
@@ -61,23 +61,14 @@ export function createPeerApp({
 		requestBodyMiddleware,
 		peerRequestMiddleware({ secret }),
 	);
-	// A check another replica handed on is answered here, whoever this replica's ring says owns it: one hop at most.
+	// A request another replica handed on is answered here, unless its customer moved on since: then one hop more (the error handler).
 	const ready = peerReadyMiddleware({ ctx });
-	app.post(
-		"/v1/balances.check",
-		ready,
-		clientAuthMiddleware({ ctx }),
-		receiveCheck,
-	);
-	app.post("/v1/track", ready, clientAuthMiddleware({ ctx }), receiveTrack);
-	app.post(
-		"/v1/balances.finalize",
-		ready,
-		clientAuthMiddleware({ ctx }),
-		receiveFinalize,
-	);
+	const authed = clientAuthMiddleware({ ctx });
+	app.post("/v1/balances.check", ready, authed, receiveCheck);
+	app.post("/v1/track", ready, authed, receiveTrack);
+	app.post("/v1/balances.finalize", ready, authed, receiveFinalize);
 	app.post(PEER_ATOMS_LIST_PATH, receiveListAtoms({ ctx: ctx.multiTenant }));
-	app.post(PEER_LEAVING_PATH, receiveLeaving({ ctx }));
+	app.post(PEER_ANNOUNCEMENT_PATH, receiveAnnouncement({ ctx }));
 	if (ctx.multiTenant) {
 		const tenants = { ...ctx.multiTenant, replication: ctx.replication };
 		app.post(ATOM_PUT.path, receivePutAtom({ ctx: tenants }));

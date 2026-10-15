@@ -8,7 +8,6 @@ import { createPeerApp } from "../http/createPeerApp.js";
 import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
-import { createReplicaRing } from "../replicas/createReplicaRing.js";
 import { leaveRing } from "../replicas/handover/leaveRing.js";
 import { startReadinessProber } from "../replicas/membership/startReadinessProber.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
@@ -60,31 +59,20 @@ export const createAtomServer = ({
 			: undefined;
 	const loop = startLoopWatch();
 	let stopping = false;
-	const { membership } = ctx;
-	const ring = createReplicaRing({
-		ctx: {
-			resolver: ctx.replication,
-			own: () => [membership.self],
-			membership,
-		},
-	});
+	const { membership, ring } = ctx;
 	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
 	const handoverContext = {
 		ring,
 		membership,
 		folders: ctx.folders,
+		replication: ctx.replication,
+		thread: ctx.health.thread,
 		threads: env.ATOM_THREADS,
+		publicPort: env.ATOM_PORT,
 		peer,
 		logger: ctx.logger,
 	};
-	const prober = startReadinessProber({
-		ctx: {
-			...handoverContext,
-			replication: ctx.replication,
-			thread: ctx.health.thread,
-			publicPort: env.ATOM_PORT,
-		},
-	});
+	const prober = startReadinessProber({ ctx: handoverContext });
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,

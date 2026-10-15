@@ -78,7 +78,7 @@ const proberOf = ({
 	});
 
 describe("a listed peer becomes an owner", () => {
-	test("once every thread of this replica has handed it its customers' entries, each thread once", async () => {
+	test("the first thread to see it ready counts it, for every thread at once; then each thread hands over to it once", async () => {
 		const membership = createMembership({ self: B });
 		const handedOff: string[] = [];
 		const health = healthOf({ [A]: { status: 200, bootedAt: "boot-1" } });
@@ -100,16 +100,16 @@ describe("a listed peer becomes an owner", () => {
 		});
 
 		await t0.probeOnce();
-		expect(membership.stateOf(A)).toBe("ready");
+		expect(membership.stateOf(A)).toBe("joined");
+		expect(handedOff).toEqual([`t0:${A}`]);
 		await t0.probeOnce();
-		expect(membership.stateOf(A)).toBe("ready");
+		expect(handedOff).toEqual([`t0:${A}`]);
 		await t1.probeOnce();
 
-		expect(membership.stateOf(A)).toBe("joined");
 		expect(handedOff).toEqual([`t0:${A}`, `t1:${A}`]);
 	});
 
-	test("a thread that missed the peer's absence from the service name still hands off to the peer that came back: its boot is new", async () => {
+	test("a thread that missed the peer's absence from the service name still hands over to the peer that came back: its boot is new", async () => {
 		const membership = createMembership({ self: B });
 		const handedOff: string[] = [];
 		const first = healthOf({ [A]: { status: 200, bootedAt: "boot-1" } });
@@ -143,7 +143,7 @@ describe("a listed peer becomes an owner", () => {
 		expect(handedOff).toEqual([`t0:${A}`, `t0:${A}`]);
 	});
 
-	test("a leaving peer that still answers from its old boot is not counted again by a thread that never marked it ready: the boot is read from the shared table", async () => {
+	test("a leaving peer that still answers from its old boot is not counted again by a thread that never flipped it: the boot is read from the shared table", async () => {
 		// Two threads, one table: as deployed, each thread holds its own membership over the shared Int32Array.
 		const table = new Int32Array(MEMBERSHIP_INTS);
 		const onT0 = createMembership({ self: B, table });
@@ -200,5 +200,49 @@ describe("a listed peer becomes an owner", () => {
 
 		expect(membership.stateOf(A)).toBe("leaving");
 		expect(handedOff).toHaveLength(1);
+	});
+});
+
+describe("a peer that counts this replica as an owner", () => {
+	test("grants it with its joining announcement, hands over from each of its threads, and the handoff is complete once every one has", () => {
+		const membership = createMembership({ self: B });
+		expect(membership.isGrantedBy(A)).toBe(false);
+
+		membership.grantedBy(A);
+
+		expect(membership.isGrantedBy(A)).toBe(true);
+		expect(membership.isHanding(A)).toBe(true);
+		expect(membership.isHandoffComplete(A)).toBe(false);
+		expect(
+			membership.handoffCompleted({ address: A, thread: 1, threads: 2 }),
+		).toBe(false);
+		// Told twice by one thread, as a retried announcement is: still one thread.
+		expect(
+			membership.handoffCompleted({ address: A, thread: 1, threads: 2 }),
+		).toBe(false);
+		expect(membership.isHanding(A)).toBe(true);
+		expect(
+			membership.handoffCompleted({ address: A, thread: 0, threads: 2 }),
+		).toBe(true);
+		expect(membership.isHanding(A)).toBe(false);
+		expect(membership.isHandoffComplete(A)).toBe(true);
+	});
+
+	test("keeps the grant when the peer leaves and comes back: its new boot hands over again before it counts", () => {
+		const membership = createMembership({ self: B });
+		membership.grantedBy(A);
+		membership.handoffCompleted({ address: A, thread: 0, threads: 1 });
+		membership.markJoined({ address: A, boot: "boot-1" });
+		membership.markLeaving(A);
+		expect(membership.isHandoffComplete(A)).toBe(false);
+		membership.handoffCompleted({ address: A, thread: 0, threads: 1 });
+
+		membership.grantedBy(A);
+		membership.markJoined({ address: A, boot: "boot-2" });
+
+		expect(membership.isGrantedBy(A)).toBe(true);
+		expect(membership.isHanding(A)).toBe(true);
+		expect(membership.isHandoffComplete(A)).toBe(false);
+		expect(membership.isBootOf({ address: A, boot: "boot-2" })).toBe(true);
 	});
 });

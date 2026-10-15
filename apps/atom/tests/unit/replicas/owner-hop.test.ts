@@ -270,7 +270,7 @@ describe("a check handed to an owner that has not caught up yet", () => {
 });
 
 describe("a check that reached the owner from another replica", () => {
-	test("is answered there even when that replica's ring names someone else: one hop, never a loop", async () => {
+	test("is hopped on once when that replica's ring names someone else, and goes to the API when that one cannot be reached: never a loop, never a second owner", async () => {
 		const autumn = countingAutumn();
 		const a = createReplica({ address: A, peers: [B], ringPeers: [GONE] });
 		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
@@ -292,9 +292,9 @@ describe("a check that reached the owner from another replica", () => {
 		);
 
 		expect(viaB.headers.get("x-atom-proxied")).toBe("owner");
-		expect((await viaB.json()).balance.remaining).toBe(7);
+		expect(viaB.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
 		expect(onA.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
-		expect(autumn.calls).toEqual(["/v1/balances.check"]);
+		expect(autumn.calls).toEqual(["/v1/balances.check", "/v1/balances.check"]);
 	});
 });
 

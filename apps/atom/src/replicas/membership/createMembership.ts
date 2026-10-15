@@ -5,19 +5,17 @@ const MAX_PEERS = 8;
 const INTS_PER_PEER = 5;
 /** After the peer's address, in each row. */
 const STATE = 1;
-/** Which of this replica's threads have handed the peer its entries since it was marked ready, as a bitmask. */
-const HANDED_OFF = 2;
-/** The leaver's threads that have handed everything; HANDOFF_COMPLETE once all of them have. */
-const HANDOFF_DONE = 3;
-/** A hash of the boot the peer was marked ready from. */
-const BOOT = 4;
-const HANDOFF_COMPLETE = 1 << 30;
+/** A hash of the boot the peer was marked joined from. */
+const BOOT = 2;
+/** 1 once the peer has said it counts this replica as an owner. */
+const GRANTED = 3;
+/** One bit per thread of the peer that has handed everything it owed; ALL_HANDED once every one has. */
+const HANDED_THREADS = 4;
+const ALL_HANDED = -1;
 const SELF_LEAVING_INDEX = MAX_PEERS * INTS_PER_PEER;
 export const MEMBERSHIP_INTS = SELF_LEAVING_INDEX + 1;
-/** The bitmask's width. */
-export const MAX_THREADS = 31;
 
-const STATES: Record<MemberState, number> = { ready: 1, joined: 2, leaving: 3 };
+const STATES: Record<MemberState, number> = { joined: 1, leaving: 2 };
 const STATE_NAMES = Object.fromEntries(
 	Object.entries(STATES).map(([name, code]) => [code, name]),
 ) as Record<number, MemberState>;
@@ -40,6 +38,8 @@ const codeOf = (address: string): number => {
 
 /** A boot as an Int32: never 0, so a row holding one is told from a row holding none. */
 const bootCodeOf = (boot: string): number => Bun.hash.xxHash32(boot) | 0 || 1;
+
+const allThreads = (threads: number): number => (1 << threads) - 1;
 
 /** Backed by `table`, a SharedArrayBuffer's Int32Array on a deployed replica, so every thread reads one view. */
 export const createMembership = ({
@@ -76,11 +76,19 @@ export const createMembership = ({
 			: (STATE_NAMES[Atomics.load(table, at + STATE)] ?? null);
 	};
 
-	const clearRow = (at: number): void => {
-		Atomics.store(table, at + STATE, 0);
-		Atomics.store(table, at + HANDED_OFF, 0);
-		Atomics.store(table, at + HANDOFF_DONE, 0);
-		Atomics.store(table, at + BOOT, 0);
+	/** The peer's threads have everything to hand again: a moved customer's first requests wait for them anew. */
+	const expectHandoff = (at: number): void => {
+		Atomics.store(table, at + HANDED_THREADS, 0);
+	};
+
+	const isHandoffComplete = (address: string): boolean => {
+		const at = rowOf(address);
+		return at >= 0 && Atomics.load(table, at + HANDED_THREADS) === ALL_HANDED;
+	};
+
+	const isGrantedBy = (address: string): boolean => {
+		const at = rowOf(address);
+		return at >= 0 && Atomics.load(table, at + GRANTED) === 1;
 	};
 
 	return {
@@ -88,65 +96,49 @@ export const createMembership = ({
 		stateOf,
 		isMember: (address) => stateOf(address) === "joined",
 		isLeaving: (address) => stateOf(address) === "leaving",
-		markReady: ({ address, boot }) => {
+		markJoined: ({ address, boot }) => {
 			const at = rowFor(address);
-			// Back after leaving, from a new boot: its customers' entries are handed to it again before it owns them.
-			clearRow(at);
-			Atomics.store(table, at + BOOT, bootCodeOf(boot));
-			Atomics.store(table, at + STATE, STATES.ready);
+			const before = Atomics.exchange(table, at + BOOT, bootCodeOf(boot));
+			// Back from a new boot: what its old one handed is not what this one holds.
+			if (before !== 0 && before !== bootCodeOf(boot)) expectHandoff(at);
+			return (
+				Atomics.exchange(table, at + STATE, STATES.joined) !== STATES.joined
+			);
 		},
 		isBootOf: ({ address, boot }) => {
 			const at = rowOf(address);
 			return at >= 0 && Atomics.load(table, at + BOOT) === bootCodeOf(boot);
 		},
-		markJoined: (address) =>
-			Atomics.store(table, rowFor(address) + STATE, STATES.joined),
-		hasHandedOff: ({ address, thread }) => {
-			const at = rowOf(address);
-			return (
-				at >= 0 && (Atomics.load(table, at + HANDED_OFF) & (1 << thread)) !== 0
-			);
-		},
-		handedOff: ({ address, thread, threads }) => {
-			if (thread >= MAX_THREADS || threads > MAX_THREADS)
-				throw new Error(
-					`The membership table counts up to ${MAX_THREADS} threads`,
-				);
-			const at = rowFor(address);
-			const mask =
-				Atomics.or(table, at + HANDED_OFF, 1 << thread) | (1 << thread);
-			const everyThread = (1 << threads) - 1;
-			const done = (mask & everyThread) === everyThread;
-			if (done) Atomics.store(table, at + STATE, STATES.joined);
-			return done;
-		},
 		markLeaving: (address) => {
 			const at = rowFor(address);
-			if (Atomics.load(table, at + STATE) !== STATES.leaving)
-				Atomics.store(table, at + HANDOFF_DONE, 0);
-			Atomics.store(table, at + STATE, STATES.leaving);
+			if (
+				Atomics.exchange(table, at + STATE, STATES.leaving) !== STATES.leaving
+			)
+				expectHandoff(at);
 		},
-		handoffCompleted: ({ address, threads }) => {
+		grantedBy: (address) => {
+			Atomics.store(table, rowFor(address) + GRANTED, 1);
+		},
+		isGrantedBy,
+		isHanding: (address) => isGrantedBy(address) && !isHandoffComplete(address),
+		handoffCompleted: ({ address, thread, threads }) => {
 			const at = rowFor(address);
-			const done = Atomics.add(table, at + HANDOFF_DONE, 1) + 1;
-			if (done < threads) return false;
-			Atomics.or(table, at + HANDOFF_DONE, HANDOFF_COMPLETE);
+			const handed =
+				Atomics.or(table, at + HANDED_THREADS, 1 << thread) | (1 << thread);
+			if (handed !== allThreads(threads)) return false;
+			Atomics.store(table, at + HANDED_THREADS, ALL_HANDED);
 			return true;
 		},
-		isHandoffComplete: (address) => {
-			const at = rowOf(address);
-			return (
-				at >= 0 &&
-				(Atomics.load(table, at + HANDOFF_DONE) & HANDOFF_COMPLETE) !== 0
-			);
-		},
+		isHandoffComplete,
 		forget: (address) => {
 			const at = rowOf(address);
 			if (at < 0) return;
-			clearRow(at);
-			Atomics.store(table, at, 0);
+			for (let field = INTS_PER_PEER - 1; field >= 0; field--)
+				Atomics.store(table, at + field, 0);
 		},
-		leaveSelf: () => Atomics.store(table, SELF_LEAVING_INDEX, 1),
+		leaveSelf: () => {
+			Atomics.store(table, SELF_LEAVING_INDEX, 1);
+		},
 		isSelfLeaving: () => Atomics.load(table, SELF_LEAVING_INDEX) === 1,
 	};
 };
