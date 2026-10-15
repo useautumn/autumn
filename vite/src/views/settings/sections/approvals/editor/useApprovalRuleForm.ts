@@ -6,8 +6,10 @@ import type {
 import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
-import { useSaveApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
-import { invalidRuleIssues } from "./invalidRuleIssues";
+import {
+	invalidRuleIssues,
+	useSaveApprovalRule,
+} from "@/hooks/queries/useApprovalRulesMutations";
 import { ruleWhenArea } from "./ruleActions";
 import {
 	editorValuesToParams,

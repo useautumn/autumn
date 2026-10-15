@@ -8,16 +8,12 @@ import {
 } from "@autumn/shared/api/approvals/editor/index";
 import { createFieldRegistry } from "@/components/filters/fieldRegistry";
 import type { FilterOperatorOption } from "@/components/filters/types";
-import { decodeRow, encodeRow, kindOf } from "./ruleRowCodec";
+import { decodeRow, encodeRow, valueInputOf } from "./ruleRowCodec";
 
-// Each editor field's dot path in S3's WHEN_FIELD_LABELS, the one label source.
-const LABEL_PATHS: Record<EditorField, string> = {
+// Dot paths into S3's WHEN_FIELD_LABELS where they aren't the field's own name.
+const LABEL_PATHS: Partial<Record<EditorField, string>> = {
 	customer: "customer.customer_id",
 	customer_plan: "customer.plan",
-	current_plan: "customer.plan",
-	paid: "paid",
-	checkout: "checkout",
-	total: "total",
 	next_cycle_total: "next_cycle.total",
 	incoming_plan: "incoming.plan_id",
 	outgoing_plan: "outgoing.plan_id",
@@ -32,27 +28,12 @@ const LABEL_PATHS: Record<EditorField, string> = {
 	discount: "discounts.reward_id",
 	discount_percent_off: "discounts.percent_off",
 	discount_amount_off: "discounts.amount_off",
-	plan_schedule: "plan_schedule",
-	proration_behavior: "proration_behavior",
-	starts_at: "starts_at",
 	invoice_mode: "invoice_mode.enabled",
-	cancel_action: "cancel_action",
 	refund: "refund.amount",
 	feature: "feature_id",
-	included_grant: "included_grant",
-	unlimited: "unlimited",
-	expires_at: "expires_at",
 	reset_interval: "reset.interval",
-	add_to_balance: "add_to_balance",
-	remaining: "remaining",
-	usage: "usage",
 	reward: "reward_id",
 	plan: "plan_id",
-};
-
-// S3 has no label for "Current plan"; it shares `customer.plan` with "Customer has plan".
-const UNLABELLED: Partial<Record<EditorField, string>> = {
-	current_plan: "Current plan",
 };
 
 const OPERATOR_LABELS: Record<EditorOperator, string> = {
@@ -71,26 +52,6 @@ const OPERATOR_LABELS: Record<EditorOperator, string> = {
 	gte: "at least",
 };
 
-// Value inputs by key; ids with fixed choices use the field name as their key.
-const INPUTS: Partial<Record<EditorField, string>> = {
-	customer: "customer",
-	discount: "reward",
-	reward: "reward",
-	feature: "feature",
-	plan: "catalog_plan",
-	discount_percent_off: "percent",
-	starts_at: "days",
-	expires_at: "days",
-};
-
-const valueInputFor = (field: EditorField) => {
-	const input = INPUTS[field];
-	if (input) return input;
-	const kind = kindOf(field);
-	if (kind === "boolean") return "yes_no";
-	return kind === "id" ? field : kind;
-};
-
 export const fieldLabel = ({
 	area,
 	field,
@@ -99,7 +60,9 @@ export const fieldLabel = ({
 	field: EditorField;
 }) => {
 	const labels: Record<string, string> = WHEN_FIELD_LABELS[area];
-	return UNLABELLED[field] ?? labels[LABEL_PATHS[field]] ?? field;
+	// S3 has no "Current plan"; it shares `customer.plan` with "Customer has plan".
+	if (field === "current_plan") return "Current plan";
+	return labels[LABEL_PATHS[field] ?? field] ?? field;
 };
 
 export const operatorOptions = (
@@ -124,7 +87,7 @@ export const ruleFieldRegistry = ({ area }: { area: WhenKey }) => {
 		fields: groupFields.map(([field, operators]) => ({
 			path: field,
 			label: fieldLabel({ area, field }),
-			valueInput: valueInputFor(field),
+			valueInput: valueInputOf(field),
 			operators: operatorOptions(operators),
 			toFilter: decodeRow,
 			fromFilter: (row) => (row.field === field ? encodeRow(row) : null),

@@ -1,10 +1,11 @@
-import type {
-	EditorField,
-	EditorOperator,
-	EditorRow,
-	EditorRowValue,
-	PlanSelection,
-	TrialDuration,
+import {
+	EDITOR_FIELDS,
+	type EditorField,
+	type EditorOperator,
+	type EditorRow,
+	type EditorRowValue,
+	type PlanSelection,
+	type TrialDuration,
 } from "@autumn/shared/api/approvals/editor/index";
 import type { FilterRow } from "@/components/filters/types";
 import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
@@ -12,46 +13,37 @@ import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
 /** A When row as U1's filter builder holds it: every value is a string. */
 export type RuleRow = FilterRow<EditorField, EditorOperator>;
 
-type ValueKind = "id" | "plan" | "number" | "boolean" | "trial" | "quantity";
-
-const KINDS: Record<EditorField, ValueKind> = {
-	customer: "id",
-	customer_plan: "plan",
-	current_plan: "plan",
-	paid: "boolean",
-	checkout: "boolean",
-	total: "number",
-	next_cycle_total: "number",
-	incoming_plan: "plan",
-	outgoing_plan: "plan",
-	incoming_paid: "boolean",
-	incoming_recurring: "boolean",
-	incoming_addon: "boolean",
+// Fields whose input the operators alone don't tell apart.
+const NAMED_INPUTS: Partial<Record<EditorField, string>> = {
+	customer: "customer",
+	discount: "reward",
+	reward: "reward",
+	feature: "feature",
+	plan: "catalog_plan",
+	discount_percent_off: "percent",
+	starts_at: "days",
+	expires_at: "days",
 	free_trial: "trial",
-	trial_card_required: "boolean",
-	trial_on_end: "id",
 	feature_quantity: "quantity",
-	customized: "boolean",
-	discount: "id",
-	discount_percent_off: "number",
-	discount_amount_off: "number",
-	plan_schedule: "id",
-	proration_behavior: "id",
-	starts_at: "number",
-	invoice_mode: "boolean",
-	cancel_action: "id",
-	refund: "number",
-	feature: "id",
-	included_grant: "number",
-	unlimited: "boolean",
-	expires_at: "number",
-	reset_interval: "id",
-	add_to_balance: "number",
-	remaining: "number",
-	usage: "number",
-	reward: "id",
-	plan: "id",
 };
+
+const OPERATORS_BY_FIELD = new Map(
+	Object.values(EDITOR_FIELDS).flatMap(
+		(fields) => Object.entries(fields) as [EditorField, readonly string[]][],
+	),
+);
+
+/** The U1 `valueInput` key a field renders, from S5's operators; enum fields use their own name. */
+export const valueInputOf = (field: EditorField) => {
+	const operators = OPERATORS_BY_FIELD.get(field) ?? [];
+	if (NAMED_INPUTS[field]) return NAMED_INPUTS[field];
+	if (field.endsWith("_plan")) return "plan";
+	if (operators.includes("lt")) return "number";
+	if (operators.length === 1) return "yes_no";
+	return field;
+};
+
+const NUMBER_INPUTS = ["number", "percent", "days"];
 
 const MANY: Partial<Record<EditorOperator, EditorOperator>> = {
 	is: "is_any_of",
@@ -63,8 +55,6 @@ const ONE: Partial<Record<EditorOperator, EditorOperator>> = {
 };
 
 export const DEFAULT_TRIAL_UNIT = "month";
-
-export const kindOf = (field: EditorField) => KINDS[field];
 
 const toNumber = (value: string | undefined) =>
 	value === undefined || value.trim() === "" || Number.isNaN(Number(value))
@@ -99,18 +89,15 @@ export const fitOperatorToValues = ({
 const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 	if (operator === "has_none") return null;
 	const [first, second] = values;
-	switch (kindOf(field)) {
-		case "id":
-			if (isMany(operator)) return values.length > 0 ? values : null;
-			return first ?? null;
+	const input = valueInputOf(field);
+	if (NUMBER_INPUTS.includes(input)) return toNumber(first);
+	switch (input) {
 		case "plan":
 			// "has" takes several plans too ("has any of"); S5 stores them as one `$in`.
 			if (isMany(operator) || values.length > 1)
 				return values.length > 0 ? values.map(toPlan) : null;
 			return first ? toPlan(first) : null;
-		case "number":
-			return toNumber(first);
-		case "boolean":
+		case "yes_no":
 			return first === "true";
 		case "trial": {
 			const length = toNumber(first);
@@ -127,12 +114,15 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 				? { feature_id: first, quantity }
 				: null;
 		}
+		default:
+			if (isMany(operator)) return values.length > 0 ? values : null;
+			return first ?? null;
 	}
 };
 
 const encodeValue = ({ field, value }: EditorRow): string[] => {
 	if (value === null) return [];
-	switch (kindOf(field)) {
+	switch (valueInputOf(field)) {
 		case "plan":
 			return [value].flat().map((plan) => {
 				const { plan_id, version } = plan as PlanSelection;
