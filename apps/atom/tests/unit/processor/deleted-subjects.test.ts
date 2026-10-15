@@ -127,7 +127,7 @@ describe("a customer Autumn deleted", () => {
 			customerAt({ balance: 10, readAt: 1500 }),
 		);
 
-		expect(stored).toBe(false);
+		expect(stored.stored).toBe(false);
 		expect(await forwardReasonOf(checkCustomer)).toBe("customer_deleted");
 	});
 
@@ -216,7 +216,7 @@ describe("an entity Autumn deleted, of a customer it still holds", () => {
 
 		const stored = await processor.setSubject(entityPush({ readAt: 1500 }));
 
-		expect(stored).toBe(false);
+		expect(stored.stored).toBe(false);
 		expect(await forwardReasonOf(checkEntity())).toBe("entity_deleted");
 	});
 });
