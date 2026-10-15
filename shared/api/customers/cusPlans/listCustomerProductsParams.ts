@@ -11,8 +11,6 @@ import {
 	CUSTOMER_PRODUCTS_MAX_LIMIT,
 } from "./customerProductsLimits.js";
 
-export { CUSTOMER_PRODUCTS_DEFAULT_LIMIT, CUSTOMER_PRODUCTS_MAX_LIMIT };
-
 export enum CustomerProductKind {
 	Subscription = "subscription",
 	OneOff = "one_off",

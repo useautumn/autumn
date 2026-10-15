@@ -1,10 +1,7 @@
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
 import axios from "axios";
-import {
-	bootRequestKey,
-	bootRequestsForLocation,
-	takeBootResponse,
-} from "../../src/boot/bootRequests";
+import { bootRequestsForLocation } from "../../src/boot/bootRequests";
+import { bootRequestKey, takeBootResponse } from "../../src/boot/bootResponses";
 
 const paths = (pathname: string, search = "") =>
 	bootRequestsForLocation({ pathname, search }).requests.map(

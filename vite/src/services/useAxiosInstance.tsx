@@ -2,6 +2,7 @@ import { type ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
 import { bootAwareAxiosAdapter } from "@/boot/bootAwareFetch";
+import { DASHBOARD_API_VERSION } from "@/boot/bootRequests";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
@@ -20,7 +21,7 @@ export function useAxiosInstance(params?: {
 	const currentEnv = useEnv();
 	const activeSandbox = useActiveSandbox();
 	const envToUse = params?.env ?? currentEnv;
-	const version = params?.version ?? "1.2";
+	const version = params?.version ?? DASHBOARD_API_VERSION;
 	const sandboxOrgId = params?.skipSandbox ? null : (activeSandbox?.id ?? null);
 
 	const axiosInstance = useMemo(() => {

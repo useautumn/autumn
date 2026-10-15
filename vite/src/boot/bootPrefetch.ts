@@ -1,11 +1,10 @@
 import { sandboxSlug as slugOf } from "../../../shared/models/orgModels/sandboxName";
 import {
 	ACTIVE_SANDBOX_STORAGE_KEY,
-	type BootResponse,
-	bootRequestKey,
 	bootRequestsForLocation,
 	DASHBOARD_API_VERSION,
 } from "./bootRequests";
+import { type BootResponse, bootRequestKey } from "./bootResponses";
 
 declare const __BOOT_ROUTE_ASSETS__: Partial<Record<string, string[]>>;
 
@@ -19,7 +18,27 @@ const preloadModules = (files: string[]) => {
 	}
 };
 
-/** Inlined into index.html: fires the session check, the landing page's data and its chunks while the entry bundle downloads. */
+const readActiveSandbox = () => {
+	try {
+		const raw = localStorage.getItem(ACTIVE_SANDBOX_STORAGE_KEY);
+		return raw ? (JSON.parse(raw) as { id: string; name: string }) : null;
+	} catch {
+		return null;
+	}
+};
+
+const fetchForBoot = (url: string, init: RequestInit = {}) =>
+	fetch(url, { ...init, credentials: "include" })
+		.then(
+			async (response): Promise<BootResponse> => ({
+				status: response.status,
+				headers: Object.fromEntries(response.headers),
+				body: await response.text(),
+			}),
+		)
+		.catch(() => null);
+
+/** Inlined into index.html: starts the session check, the landing page's data and its chunks while the entry bundle downloads. */
 const startBootRequests = () => {
 	const backendUrl = import.meta.env.VITE_BACKEND_URL as string;
 	const authBaseUrl = backendUrl.startsWith("/")
@@ -28,49 +47,31 @@ const startBootRequests = () => {
 	const responses = new Map<string, Promise<BootResponse | null>>();
 	window.__autumnBoot = { startedAt: Date.now(), responses };
 
-	const request = (url: string, init: RequestInit = {}) =>
-		fetch(url, { ...init, credentials: "include" })
-			.then(
-				async (response): Promise<BootResponse> => ({
-					status: response.status,
-					headers: Object.fromEntries(response.headers),
-					body: await response.text(),
-				}),
-			)
-			.catch(() => null);
-
 	const sessionUrl = `${authBaseUrl}/api/auth/get-session`;
-	responses.set(bootRequestKey({ url: sessionUrl }), request(sessionUrl));
+	responses.set(bootRequestKey({ url: sessionUrl }), fetchForBoot(sessionUrl));
 
 	const { env, sandboxSlug, route, requests } = bootRequestsForLocation(
 		window.location,
 	);
 	if (route) preloadModules(__BOOT_ROUTE_ASSETS__[route] ?? []);
-	const activeSandbox = (() => {
-		try {
-			const raw = localStorage.getItem(ACTIVE_SANDBOX_STORAGE_KEY);
-			return raw ? (JSON.parse(raw) as { id: string; name: string }) : null;
-		} catch {
-			return null;
-		}
-	})();
-	// A slug we can't resolve offline is settled by the app; its requests carry a header we can't guess.
-	if (sandboxSlug && slugOf(activeSandbox?.name ?? "") !== sandboxSlug) return;
-	const sandboxOrgId =
-		env === "sandbox" && sandboxSlug ? activeSandbox?.id : undefined;
+
+	// A named sandbox the app hasn't resolved yet sends a header we can't guess, so leave its data to the app.
+	const sandbox = sandboxSlug ? readActiveSandbox() : null;
+	if (sandboxSlug && slugOf(sandbox?.name ?? "") !== sandboxSlug) return;
 
 	for (const { path, method = "GET", body } of requests) {
 		const url = `${backendUrl}${path}`;
+		const key = bootRequestKey({
+			method,
+			url,
+			body,
+			env,
+			sandboxOrgId: sandbox?.id,
+			apiVersion: DASHBOARD_API_VERSION,
+		});
 		responses.set(
-			bootRequestKey({
-				method,
-				url,
-				body,
-				env,
-				sandboxOrgId,
-				apiVersion: DASHBOARD_API_VERSION,
-			}),
-			request(url, {
+			key,
+			fetchForBoot(url, {
 				method,
 				body,
 				headers: {
@@ -78,7 +79,7 @@ const startBootRequests = () => {
 					"x-api-version": DASHBOARD_API_VERSION,
 					"x-client-type": "dashboard",
 					...(body && { "content-type": "application/json" }),
-					...(sandboxOrgId && { "x-sandbox-org-id": sandboxOrgId }),
+					...(sandbox && { "x-sandbox-org-id": sandbox.id }),
 				},
 			}),
 		);
