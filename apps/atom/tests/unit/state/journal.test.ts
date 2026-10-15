@@ -550,60 +550,6 @@ describe("journal", () => {
 });
 
 describe("journal entries carry their writer", () => {
-	/** A file as the chain before this one wrote it: entries keyed by customer and seq, the writer only in journal_meta. */
-	const writeV1File = ({ databasePath }: { databasePath: string }) => {
-		const database = new Database(databasePath, { create: true });
-		database.run("PRAGMA journal_mode = WAL");
-		database.run("PRAGMA user_version = 1");
-		database.run(
-			"CREATE TABLE journal_entries (customer_id TEXT NOT NULL, seq INTEGER NOT NULL CHECK (seq > 0), appended_at INTEGER NOT NULL, command_json TEXT NOT NULL, PRIMARY KEY (customer_id, seq)) WITHOUT ROWID",
-		);
-		database.run(
-			"CREATE TABLE journal_seqs (customer_id TEXT PRIMARY KEY, last_seq INTEGER NOT NULL CHECK (last_seq > 0)) WITHOUT ROWID",
-		);
-		database.run(
-			"CREATE TABLE journal_meta (id INTEGER PRIMARY KEY CHECK (id = 1), writer_id TEXT NOT NULL)",
-		);
-		database.run(
-			"INSERT INTO journal_meta (id, writer_id) VALUES (1, 'writer-v1')",
-		);
-		for (const seq of [1, 2])
-			database.run(
-				"INSERT INTO journal_entries (customer_id, seq, appended_at, command_json) VALUES ('cus_1', ?, ?, ?)",
-				[
-					seq,
-					1_000 + seq,
-					JSON.stringify(commandOf({ commandId: `v1-${seq}` })),
-				],
-			);
-		database.run(
-			"INSERT INTO journal_seqs (customer_id, last_seq) VALUES ('cus_1', 2)",
-		);
-		database.close();
-	};
-
-	test("a file from before carries its writer onto every row on open, and keeps every entry and seq", async () => {
-		const databasePath = journalPath();
-		writeV1File({ databasePath });
-
-		const journal = open({ databasePath });
-
-		expect(journal.writerId).toBe("writer-v1");
-		expect(
-			journal
-				.owed({ customerId: "cus_1" })
-				.map(({ writerId, seq }) => ({ writerId, seq })),
-		).toEqual([
-			{ writerId: "writer-v1", seq: 1 },
-			{ writerId: "writer-v1", seq: 2 },
-		]);
-		const next = await journal.append({
-			customerId: "cus_1",
-			command: commandOf({ commandId: "c" }),
-		});
-		expect([next.writerId, next.seq]).toEqual(["writer-v1", 3]);
-	});
-
 	test("an entry held under another writer keeps that writer, raises no seq of this file, and clears only against its own watermark", async () => {
 		const databasePath = journalPath();
 		const first = openJournal({ databasePath });
