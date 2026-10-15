@@ -16,12 +16,16 @@ const lockIdOf = ({ command }: JournalEntry): string | null =>
  */
 export const createOpenLocks = () => {
 	const locksByCustomer = new Map<string, Map<string, OpenLock>>();
+	/** Each hold's place in order, so a handoff can read only the locks taken since its last read. */
+	const heldAt = new Map<OpenLock, number>();
+	let holds = 0;
 
 	function hold(lock: OpenLock): void {
 		const { customerId } = lock.track.identity;
 		const locks = locksByCustomer.get(customerId) ?? new Map();
 		locks.set(lock.row.lock_id, lock);
 		locksByCustomer.set(customerId, locks);
+		heldAt.set(lock, ++holds);
 	}
 
 	function lockOf({
@@ -64,18 +68,29 @@ export const createOpenLocks = () => {
 		const locks = locksByCustomer.get(customerId);
 		if (!locks) return;
 		const owedLockIds = new Set(owed.map(lockIdOf));
-		for (const lockId of locks.keys())
-			if (!owedLockIds.has(lockId) && !openLockIds.has(lockId))
+		for (const [lockId, lock] of locks)
+			if (!owedLockIds.has(lockId) && !openLockIds.has(lockId)) {
 				locks.delete(lockId);
+				heldAt.delete(lock);
+			}
 		if (locks.size === 0) locksByCustomer.delete(customerId);
 	}
 
-	/** Every lock held, by customer: what a leaving replica hands the new owner beside the customer's owed entries. */
-	function all(): { customerId: string; locks: OpenLock[] }[] {
-		return [...locksByCustomer].map(([customerId, locks]) => ({
-			customerId,
-			locks: [...locks.values()],
-		}));
+	/**
+	 * The locks held since `heldAfter` (every lock from 0), by customer, and the mark to read from next time: what a
+	 * replica hands a customer's new owner beside the owed entries, round by round until nothing new was taken.
+	 */
+	function all({ heldAfter = 0 }: { heldAfter?: number } = {}): {
+		customers: { customerId: string; locks: OpenLock[] }[];
+		heldThrough: number;
+	} {
+		const customers = [...locksByCustomer].flatMap(([customerId, locks]) => {
+			const since = [...locks.values()].filter(
+				(lock) => (heldAt.get(lock) ?? 0) > heldAfter,
+			);
+			return since.length > 0 ? [{ customerId, locks: since }] : [];
+		});
+		return { customers, heldThrough: holds };
 	}
 	return { hold, lockOf, trackOf, settle, all };
 };

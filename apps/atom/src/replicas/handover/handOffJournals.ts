@@ -8,7 +8,10 @@ import type {
 	HandedEntry,
 	Journal,
 } from "../../state/journal/types/journal.js";
-import type { OpenLock } from "../../state/openLocks/createOpenLocks.js";
+import type {
+	OpenLock,
+	OpenLocks,
+} from "../../state/openLocks/createOpenLocks.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import {
 	type HandoffBatch,
@@ -20,6 +23,8 @@ import {
 const BATCHES_IN_FLIGHT = 4;
 /** A new owner that has not taken a batch by then keeps answering from its copy; those entries drain to Autumn instead. */
 const HANDOFF_TIMEOUT_MS = 2_000;
+/** Rounds of reading and sending before the caller counts the new owner anyway: each round is only what arrived during the last. */
+const MAX_HANDOFF_ROUNDS = 4;
 
 export type HandOffContext = {
 	ring: ReplicaRing;
@@ -135,17 +140,26 @@ const pendingEntriesOf = async ({
 		)
 	).flat();
 
-/** The folder's open locks joined onto their customer's pending handoff, or a handoff of their own when nothing is owed. */
+/** Where each slot's lock reads left off, so a later round hands only the locks taken since. */
+type LockMarks = Map<OpenLocks, number>;
+
+/** The folder's open locks taken since the marks, joined onto their customer's pending handoff or a handoff of their own. */
 const withPendingLocks = ({
 	folder: { atomId, slots },
 	pending,
+	marks,
 }: {
 	folder: ReplicaFolder;
 	pending: Pending[];
+	marks: LockMarks;
 }): Pending[] => {
 	const byCustomer = new Map(pending.map((item) => [item.customerId, item]));
-	for (const openLocks of slots.ownedOpenLocks())
-		for (const { customerId, locks } of openLocks.all()) {
+	for (const openLocks of slots.ownedOpenLocks()) {
+		const { customers, heldThrough } = openLocks.all({
+			heldAfter: marks.get(openLocks) ?? 0,
+		});
+		marks.set(openLocks, heldThrough);
+		for (const { customerId, locks } of customers) {
 			const item = byCustomer.get(customerId);
 			if (item) item.locks.push(...locks);
 			else
@@ -157,36 +171,55 @@ const withPendingLocks = ({
 					locks,
 				});
 		}
+	}
 	return [...byCustomer.values()];
 };
 
-/**
- * Every customer this thread's slots owe anything for or hold a lock of, handed to the replica that owns it now: the
- * entries into its journal under the original writer and seq, the locks into its open locks; what the new owner
- * acknowledges leaves this journal, the rest drains to Autumn as before.
- */
-export const handOffJournals = async ({
+/** What the slots hold for other owners now: owed entries not yet handed, and locks taken since the last read. */
+const pendingOf = async ({
 	ctx,
-	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
+	marks,
 }: {
 	ctx: HandOffContext;
-	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
-	ownerOf?: (customerId: string) => Promise<string>;
-}): Promise<{ handed: number; kept: number; locks: number }> => {
-	const pending = (
+	marks: LockMarks;
+}): Promise<Pending[]> =>
+	(
 		await Promise.all(
 			ctx.folders.all().map(async (folder) =>
 				withPendingLocks({
 					folder,
 					pending: await pendingEntriesOf(folder),
+					marks,
 				}),
 			),
 		)
 	).flat();
+
+type Round = {
+	customers: number;
+	batches: number;
+	handed: number;
+	kept: number;
+	locks: number;
+};
+
+const sendRound = async ({
+	ctx,
+	pending,
+	ownerOf,
+}: {
+	ctx: HandOffContext;
+	pending: Pending[];
+	ownerOf: (customerId: string) => Promise<string>;
+}): Promise<Round> => {
 	const { batches, kept: ownKept } = await batchesOf({ ctx, pending, ownerOf });
-	let handed = 0;
-	let locks = 0;
-	let kept = ownKept;
+	const round: Round = {
+		customers: pending.length,
+		batches: batches.length,
+		handed: 0,
+		kept: ownKept,
+		locks: 0,
+	};
 	let next = 0;
 	const lane = async () => {
 		while (next < batches.length) {
@@ -198,25 +231,59 @@ export const handOffJournals = async ({
 					),
 				);
 				for (const item of batch.items) {
-					handed += item.entries.length;
-					locks += item.locks.length;
+					round.handed += item.entries.length;
+					round.locks += item.locks.length;
 				}
-			} else for (const item of batch.items) kept += item.entries.length;
+			} else for (const item of batch.items) round.kept += item.entries.length;
 		}
 	};
 	await Promise.all(Array.from({ length: BATCHES_IN_FLIGHT }, lane));
+	return round;
+};
+
+/**
+ * Every customer this thread's slots owe anything for or hold a lock of, handed to the replica that owns it now: the
+ * entries into its journal under the original writer and seq, the locks into its open locks; what the new owner
+ * acknowledges leaves this journal, the rest drains to Autumn as before. Handed in rounds: a request answered here while
+ * a batch was in flight may have taken a lock or appended an entry for a customer that moves, so the slots are read again
+ * until a round finds nothing to send, and the caller counts the new owner only after the last round.
+ */
+export const handOffJournals = async ({
+	ctx,
+	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
+}: {
+	ctx: HandOffContext;
+	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
+	ownerOf?: (customerId: string) => Promise<string>;
+}): Promise<{ handed: number; kept: number; locks: number }> => {
+	const marks: LockMarks = new Map();
+	const first = await sendRound({
+		ctx,
+		pending: await pendingOf({ ctx, marks }),
+		ownerOf,
+	});
+	let { customers, batches, handed, kept, locks } = first;
+	let rounds = 1;
+	// Entries this thread keeps stay pending every round; only sent batches mean another round can find something new.
+	while (rounds < MAX_HANDOFF_ROUNDS && batches > 0) {
+		const pending = await pendingOf({ ctx, marks });
+		const {
+			batches: sent,
+			handed: more,
+			locks: moreLocks,
+		} = await sendRound({ ctx, pending, ownerOf });
+		rounds++;
+		batches = sent;
+		handed += more;
+		locks += moreLocks;
+		customers += sent > 0 ? pending.length : 0;
+	}
 	ctx.logger.info(
 		{
 			type: "atom_handoff",
-			data: {
-				customers: pending.length,
-				batches: batches.length,
-				handed,
-				kept,
-				locks,
-			},
+			data: { customers, batches: first.batches, rounds, handed, kept, locks },
 		},
-		`Handed ${handed} owed entries and ${locks} open locks to the new owners in ${batches.length} batches; ${kept} entries stay to drain to Autumn`,
+		`Handed ${handed} owed entries and ${locks} open locks to the new owners in ${rounds} round(s); ${kept} entries stay to drain to Autumn`,
 	);
 	return { handed, kept, locks };
 };
