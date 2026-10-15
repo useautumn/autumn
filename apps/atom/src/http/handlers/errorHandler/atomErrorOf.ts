@@ -4,8 +4,8 @@ import {
 } from "@autumn/balance-engine";
 import { ErrCode, InsufficientBalanceError } from "@autumn/shared";
 import { isUnreadableRequest } from "../../../lib/contracts/invalidPushError.js";
-import { DuplicateIdempotencyKeyError } from "../../../processor/actions/track/duplicateIdempotencyKeyError.js";
 import { LockTermsConflictError } from "../../../processor/actions/track/lockTerms.js";
+import { DuplicateIdempotencyKeyError } from "../../../processor/callerKeys/duplicateIdempotencyKeyError.js";
 import { OwnerUnavailableError } from "../../../threads/owners/ownerUnavailableError.js";
 import { AtomApiError } from "./atomApiError.js";
 

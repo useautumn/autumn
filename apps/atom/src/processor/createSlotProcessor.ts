@@ -5,6 +5,11 @@ import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { finalize } from "./actions/finalize/finalize.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
 import { track } from "./actions/track/track.js";
+import { createCallerKeyClaims } from "./callerKeys/createCallerKeyClaims.js";
+import {
+	checkCallerKeyOf,
+	trackCallerKeyOf,
+} from "./callerKeys/requestCallerKeyOf.js";
 import type {
 	SlotProcessor,
 	SlotProcessorContext,
@@ -17,6 +22,8 @@ export const createSlotProcessor = ({
 }): SlotProcessor => {
 	/** Customers whose latest push failed to store (a full or failing disk): their rows are older than what Autumn sent. */
 	const unwritten = new Set<string>();
+	// A caller's key is claimed here, around the request, as the API's middleware claims it around the route.
+	const callerKeys = createCallerKeyClaims({ journal: ctx.journal });
 
 	const refuseUnwritten = ({
 		customer_id: customerId,
@@ -33,18 +40,28 @@ export const createSlotProcessor = ({
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
-			const { response, result } = await check({ ctx, request });
-			return {
-				json: checkResponseToJson({ response }),
-				allowed: response.allowed,
-				denial: response.allowed
-					? null
-					: { reason: result.reason, limitType: result.limitType },
-			};
+			return callerKeys.run({
+				customerId: request.params.customer_id,
+				key: checkCallerKeyOf({ request }),
+				run: async () => {
+					const { response, result } = await check({ ctx, request });
+					return {
+						json: checkResponseToJson({ response }),
+						allowed: response.allowed,
+						denial: response.allowed
+							? null
+							: { reason: result.reason, limitType: result.limitType },
+					};
+				},
+			});
 		},
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
-			return track({ ctx, request });
+			return callerKeys.run({
+				customerId: request.params.customer_id,
+				key: trackCallerKeyOf({ request }),
+				run: () => track({ ctx, request }),
+			});
 		},
 		finalize: async ({ request }) => {
 			refuseUnwritten(request.params);
