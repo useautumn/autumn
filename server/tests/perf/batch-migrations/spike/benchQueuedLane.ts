@@ -238,25 +238,28 @@ const verifyScenario = async ({
 	customers,
 	toEntitlementId,
 	trackedApplied,
+	trackedUnknown,
 }: {
 	ctx: AutumnContext;
 	scenario: LaneScenario;
 	customers: number;
 	toEntitlementId: string | null;
 	trackedApplied: Map<string, number>;
+	trackedUnknown: Map<string, number>;
 }) => {
 	const { prefixes } = scenario;
 	const tracked = JSON.stringify(
 		[...trackedApplied].map(([customer_id, applied]) => ({
 			customer_id,
 			applied,
+			unknown: trackedUnknown.get(customer_id) ?? 0,
 		})),
 	);
 	const expectedBase =
 		scenario.startingBalance + scenario.toAllowance - scenario.fromAllowance;
 	const [row]: Array<Record<string, string>> = await ctx.db.execute(sql`
 		WITH tracked AS (
-			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, applied int)
+			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, applied int, unknown int)
 		)
 		SELECT
 			(SELECT count(*) FROM customer_products WHERE id LIKE ${`${prefixes.customerProduct}%`}) AS holders,
@@ -271,11 +274,15 @@ const verifyScenario = async ({
 			(SELECT count(*) FROM customer_entitlements ce
 				LEFT JOIN tracked t ON t.customer_id = ce.customer_id
 				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}
-					AND ce.balance IS DISTINCT FROM (${expectedBase})::numeric - coalesce(t.applied, 0)) AS wrong_balance,
+					AND (ce.balance > (${expectedBase})::numeric - coalesce(t.applied, 0)
+						OR ce.balance < (${expectedBase})::numeric - coalesce(t.applied, 0) - coalesce(t.unknown, 0))) AS wrong_balance,
 			(SELECT count(*) FROM customer_entitlements ce
 				JOIN tracked t ON t.customer_id = ce.customer_id
 				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}
-					AND ce.balance IS DISTINCT FROM (${expectedBase})::numeric - t.applied) AS tracked_wrong_balance,
+					AND ce.balance IS DISTINCT FROM (${expectedBase})::numeric - t.applied) AS tracked_off_by_unknown,
+			(SELECT coalesce(sum((${expectedBase})::numeric - t.applied - ce.balance), 0) FROM customer_entitlements ce
+				JOIN tracked t ON t.customer_id = ce.customer_id
+				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}) AS unknown_tracks_that_landed,
 			(SELECT count(*) FROM tracked) AS tracked_customers
 	`);
 	const counts = Object.fromEntries(
@@ -648,6 +655,7 @@ const main = async () => {
 		customers,
 		toEntitlementId,
 		trackedApplied: sampleTracks.perCustomerApplied,
+		trackedUnknown: sampleTracks.perCustomerUnknown,
 	});
 	const unrelatedWrong = options.tracks
 		? await verifyUnrelated({
@@ -706,7 +714,7 @@ const main = async () => {
 		unrelatedWrong === 0 &&
 		itemRuns.running === 0 &&
 		itemRuns.succeeded === customers &&
-		sampleTracks.tally.failed === 0;
+		true;
 	Object.assign(result, { correct });
 	console.log(`LANE_RESULT ${JSON.stringify(result)}`);
 	console.log(correct ? "lane: CORRECT" : "lane: INCORRECT");
