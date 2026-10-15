@@ -41,6 +41,7 @@ export const pooledBalances = pgTable(
 		stripe_subscription_id: text(),
 		customer_license_link_id: text(),
 		rollover_signature: text().notNull().default("none"),
+		feature_override_signature: text().notNull().default("none"),
 		customer_entitlement_id: text().notNull(),
 		last_applied_reset_at: numeric({ mode: "number" }),
 		/** Mirrors the synthetic cusEnt's expiry. Scopes uniqueness to live pools
@@ -81,6 +82,7 @@ export const pooledBalances = pgTable(
 				table.stripe_subscription_id,
 				table.customer_license_link_id,
 				table.rollover_signature,
+				table.feature_override_signature,
 				table.expires_at,
 			)
 			.nullsNotDistinct(),
@@ -124,6 +126,10 @@ export const pooledBalanceContributions = pgTable(
 		current_contribution: numeric({ mode: "number" }).notNull().default(0),
 		next_cycle_contribution: numeric({ mode: "number" }).notNull().default(0),
 		effective_at: numeric({ mode: "number" }),
+		/** Competes with the pool's other competing shares under a `max`/`min` feature instead of adding up. */
+		competes: boolean().notNull().default(false),
+		/** An unlimited competing share: no amount, but it decides the pool's unlimited flag. */
+		unlimited: boolean().notNull().default(false),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	},

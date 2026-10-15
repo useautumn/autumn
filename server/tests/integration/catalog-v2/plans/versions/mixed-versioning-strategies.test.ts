@@ -13,15 +13,15 @@ import chalk from "chalk";
 import { expectCatalogResultsCorrect } from "../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
+	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
+} from "../preview/utils/expectPlanPreview.js";
+import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
 	expectDbPlansCorrect,
 	expectPlanVersionsCorrect,
 } from "../utils/expectCatalogPlans.js";
-import {
-	expectPlanPreviewRowCorrect,
-	parsePlanPreview,
-} from "../preview/utils/expectPlanPreview.js";
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
@@ -96,7 +96,8 @@ test.concurrent(
 					{
 						plan_id: planA,
 						name: "A V3",
-						versioning: "new_version", active: true as const,
+						versioning: "new_version",
+						active: true as const,
 					},
 					{
 						plan_id: planB,
@@ -214,7 +215,8 @@ test.concurrent(
 						{
 							plan_id: planA,
 							name: "A V3",
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 						},
 						{
 							plan_id: planB,

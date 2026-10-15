@@ -43,8 +43,8 @@ export function BalanceDeleteSheet() {
 	const selectedCusEntId = useCustomerBalanceSheetStore(
 		(s) => s.selectedCusEntId,
 	);
-	const { customer, refetch } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const { refetch } = useCusQuery();
+	const { customer, entityId } = useCustomerContext();
 	const axiosInstance = useAxiosInstance();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [deleteMode, setDeleteMode] = useState<DeleteMode>("keep");

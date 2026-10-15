@@ -19,11 +19,7 @@ import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../utils/expectPlanPreview.js";
-import {
-	messagesItem,
-	seedTwoPlanVersions,
-	wordsItem,
-} from "./utils.js";
+import { messagesItem, seedTwoPlanVersions, wordsItem } from "./utils.js";
 
 const year200 = { amount: 200, interval: BillingInterval.Year };
 const month20 = { amount: 20, interval: BillingInterval.Month };

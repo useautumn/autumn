@@ -3,7 +3,7 @@ import {
 	ModelMarkupsSchema,
 	ProviderMarkupsSchema,
 } from "../../models/featureModels/featureConfig/creditConfig.js";
-import { ApiCreditSchemaItemSchema } from "./creditRateCard.js";
+import { ApiCreditSchemaOverrideItemSchema } from "./creditRateCard.js";
 
 const ApiFeatureMarkupsOverrideSchema = z.strictObject({
 	default_markup: z.number().min(-100).optional().meta({
@@ -19,9 +19,9 @@ const ApiFeatureMarkupsOverrideSchema = z.strictObject({
 });
 
 export const ApiFeatureOverrideSchema = z.strictObject({
-	credit_schema: z.array(ApiCreditSchemaItemSchema).optional().meta({
+	credit_schema: z.array(ApiCreditSchemaOverrideItemSchema).optional().meta({
 		description:
-			"For credit system features: replaces the feature's credit_schema entirely for customers on this plan.",
+			"For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.",
 	}),
 	markups: ApiFeatureMarkupsOverrideSchema.optional().meta({
 		description:

@@ -31,6 +31,7 @@ export * from "./setPlans/setPlansErrorCopy";
 export * from "./setPlans/setPlansErrorDetails";
 export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
+export * from "./setPlans/setPlansPreviewReview";
 export * from "./setPlans/setPlansTextParts";
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";

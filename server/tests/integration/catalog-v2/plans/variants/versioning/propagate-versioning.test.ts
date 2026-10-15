@@ -18,12 +18,12 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
@@ -165,11 +165,10 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: {
-								variants: [
-									{ plan_id: variantId, new_version_slug: "eu-mint" },
-								],
+								variants: [{ plan_id: variantId, new_version_slug: "eu-mint" }],
 							},
 						},
 					],
@@ -254,9 +253,9 @@ test.concurrent(
 					planId: variantId,
 					version: 3,
 				});
-				expect(
-					frozen.entitlements.map((row) => row.feature_id),
-				).not.toContain(TestFeature.Dashboard);
+				expect(frozen.entitlements.map((row) => row.feature_id)).not.toContain(
+					TestFeature.Dashboard,
+				);
 				expect(minted.entitlements.map((row) => row.feature_id)).toContain(
 					TestFeature.Dashboard,
 				);
@@ -292,7 +291,8 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: {
 								variants: [{ plan_id: variantId }],
 							},
@@ -428,11 +428,7 @@ test.concurrent(
 					plans: [
 						{
 							plan_id: baseId,
-							items: [
-								messagesItem(100),
-								workflowsItem(200),
-								dashboardItem(),
-							],
+							items: [messagesItem(100), workflowsItem(200), dashboardItem()],
 							versioning: "all_versions",
 							propagate: {
 								variants: [

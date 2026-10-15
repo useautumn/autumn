@@ -3,14 +3,12 @@ import {
 	BillingMethod,
 	FeatureType,
 	formatInterval,
+	intervalSuffix,
+	isAbbreviatedInterval,
 	type Operations,
 	ResetInterval,
 	type UpdatePlanOp,
 } from "@autumn/shared";
-import {
-	intervalSuffix,
-	isAbbreviatedInterval,
-} from "@/utils/formatUtils/intervalSuffix";
 import type { RateChange } from "@/utils/product/featureOverrideRates";
 import { planIdsFromFilter } from "../../migration/operations/UpdatePlanOpForm";
 import {

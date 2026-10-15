@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { FeatureUsageType } from "../featureEnums";
+import { FeatureCombine, FeatureUsageType } from "../featureEnums";
 
 export interface Expression {
 	property: string;
@@ -27,6 +27,7 @@ export const MeteredConfigSchema = z.object({
 	filters: z.array(ExpressionSchema),
 	aggregate: AggregateSchema,
 	usage_type: z.enum([FeatureUsageType.Single, FeatureUsageType.Continuous]),
+	combine: z.enum(FeatureCombine).optional(),
 });
 
 export type MeteredConfig = z.infer<typeof MeteredConfigSchema>;

@@ -210,10 +210,7 @@ test.concurrent(
 							filter: {
 								customer: {
 									plan: orVersionPinnedFilter({
-										branches: [
-											{ planId: childId },
-											{ planId: parentId },
-										],
+										branches: [{ planId: childId }, { planId: parentId }],
 									}),
 								},
 							},
@@ -245,9 +242,8 @@ test.concurrent(
 						featureIds: [TestFeature.Dashboard],
 					});
 					expectFlagCorrect({
-						customer: await autumnV2_3.customers.get<ApiCustomerV5>(
-							childCustomerId,
-						),
+						customer:
+							await autumnV2_3.customers.get<ApiCustomerV5>(childCustomerId),
 						featureId: TestFeature.Dashboard,
 						planId: childId,
 					});
@@ -319,9 +315,8 @@ test.concurrent(
 						internalProductId: assigned.internalProductId,
 					});
 					expectFlagCorrect({
-						customer: await autumnV2_3.customers.get<ApiCustomerV5>(
-							childCustomerId,
-						),
+						customer:
+							await autumnV2_3.customers.get<ApiCustomerV5>(childCustomerId),
 						featureId: TestFeature.Dashboard,
 						planId: childId,
 					});

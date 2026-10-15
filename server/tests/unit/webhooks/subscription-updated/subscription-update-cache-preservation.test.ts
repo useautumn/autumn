@@ -84,6 +84,7 @@ beforeEach(() => {
 		updatedCustomerProducts: [],
 		insertedCustomerProducts: [],
 		deletedCustomerProducts: [],
+		pooledTransitionedCustomerProductIds: new Set<string>(),
 	} as unknown as StripeSubscriptionUpdatedContext;
 });
 

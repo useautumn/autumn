@@ -1,25 +1,22 @@
 import { expect, test } from "bun:test";
+import type { SetPlansReviewRow, SetPlansReviewSection } from "@autumn/shared";
 import { reviewValueColumnWidth } from "@/components/forms/create-schedule/utils/review/reviewValueColumnWidth";
-import type {
-	ReviewChangeRow,
-	ReviewChangeSection,
-} from "@/components/forms/create-schedule/utils/review/types/reviewChange";
 
 const row = (
 	key: string,
 	amount: string,
 	suffix?: string,
-): ReviewChangeRow => ({
+): SetPlansReviewRow => ({
 	key,
 	title: key,
 	value: { amount, suffix },
 });
 
-const section = (rows: ReviewChangeRow[][]): ReviewChangeSection => ({
-	summary: "",
+const section = (rows: SetPlansReviewRow[][]): SetPlansReviewSection => ({
+	summary: [],
 	phases: rows.map((phaseRows, index) => ({
 		key: `phase-${index}`,
-		label: `Phase ${index}`,
+		label: [`Phase ${index}`],
 		rows: phaseRows,
 	})),
 });
@@ -33,19 +30,4 @@ test("every phase shares the width of the section's longest value", () => {
 			]),
 		),
 	).toBe("max(104px, 23ch)");
-});
-
-test("nested item values count toward the width", () => {
-	expect(
-		reviewValueColumnWidth(
-			section([
-				[
-					{
-						...row("plan", "$20", "/mo"),
-						items: [row("item", "$1,250.00", "per 1,000 credits")],
-					},
-				],
-			]),
-		),
-	).toBe("max(104px, 27ch)");
 });

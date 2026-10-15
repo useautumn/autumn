@@ -6,7 +6,7 @@ import {
 	orgToFeaturesByOrgEnv,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
-import { and, asc, count, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
@@ -63,27 +63,31 @@ export const runClearCreditSystemCacheTask = async ({
 		`Clearing cache for customers with credit system feature: ${internalFeatureId}`,
 	);
 
+	// Loose grants have no customer product but still cache the credit schema.
+	const holdsCreditSystem = and(
+		sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
+		or(
+			isNull(customerEntitlements.customer_product_id),
+			inArray(customerProducts.status, RELEVANT_STATUSES),
+		),
+		eq(customers.org_id, orgId),
+		eq(customers.env, env),
+	);
+
 	// First get the total count to check if we should proceed
 	const MAX_CUSTOMERS = 300000;
 	const [countResult] = await db
 		.select({ count: count() })
 		.from(customerEntitlements)
-		.innerJoin(
+		.leftJoin(
 			customerProducts,
 			eq(customerEntitlements.customer_product_id, customerProducts.id),
 		)
 		.innerJoin(
 			customers,
-			eq(customerProducts.internal_customer_id, customers.internal_id),
+			eq(customerEntitlements.internal_customer_id, customers.internal_id),
 		)
-		.where(
-			and(
-				sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
-				inArray(customerProducts.status, RELEVANT_STATUSES),
-				eq(customers.org_id, orgId),
-				eq(customers.env, env),
-			),
-		);
+		.where(holdsCreditSystem);
 
 	const totalCount = countResult?.count ?? 0;
 	logger.info(`Total customers to clear cache for: ${totalCount}`);
@@ -111,20 +115,17 @@ export const runClearCreditSystemCacheTask = async ({
 					internalCustomerId: customers.internal_id,
 				})
 				.from(customerEntitlements)
-				.innerJoin(
+				.leftJoin(
 					customerProducts,
 					eq(customerEntitlements.customer_product_id, customerProducts.id),
 				)
 				.innerJoin(
 					customers,
-					eq(customerProducts.internal_customer_id, customers.internal_id),
+					eq(customerEntitlements.internal_customer_id, customers.internal_id),
 				)
 				.where(
 					and(
-						sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
-						inArray(customerProducts.status, RELEVANT_STATUSES),
-						eq(customers.org_id, orgId),
-						eq(customers.env, env),
+						holdsCreditSystem,
 						cursor ? gt(customers.internal_id, cursor) : undefined,
 					),
 				)

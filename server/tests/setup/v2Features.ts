@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-import { AppEnv, FeatureUsageType } from "@autumn/shared";
+import { AppEnv, FeatureCombine, FeatureUsageType } from "@autumn/shared";
 import {
 	constructAiCreditSystem,
 	constructBooleanFeature,
@@ -44,7 +44,18 @@ export enum TestFeature {
 	SharedAction1 = "shared_action1", // single use, tracked by "shared-credit-event" beside SharedAction2
 	SharedAction2 = "shared_action2", // single use, tracked by "shared-credit-event" beside SharedAction1
 	SharedCredits = "shared_credits", // credit system funding both shared actions
+
+	CombineMaxMessages = "combine_max_messages", // single use, combine: max
+	CombineMaxSeats = "combine_max_seats", // cont use, combine: max
+	CombineMinHours = "combine_min_hours", // cont use, combine: min
+	CombineAction = "combine_action", // single use, funded by CombineMaxCredits
+	CombineMaxCredits = "combine_max_credits", // credit system, combine: max
 }
+
+const withCombine = <T extends { config: Record<string, unknown> }>(
+	feature: T,
+	combine: FeatureCombine,
+): T => ({ ...feature, config: { ...feature.config, combine } });
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
 	[TestFeature.Dashboard]: constructBooleanFeature({
@@ -370,4 +381,48 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			},
 		],
 	}),
+	[TestFeature.CombineMaxMessages]: withCombine(
+		constructMeteredFeature({
+			featureId: TestFeature.CombineMaxMessages,
+			orgId,
+			env: AppEnv.Sandbox,
+			usageType: FeatureUsageType.Single,
+		}),
+		FeatureCombine.Max,
+	),
+	[TestFeature.CombineMaxSeats]: withCombine(
+		constructMeteredFeature({
+			featureId: TestFeature.CombineMaxSeats,
+			orgId,
+			env: AppEnv.Sandbox,
+			usageType: FeatureUsageType.Continuous,
+		}),
+		FeatureCombine.Max,
+	),
+	[TestFeature.CombineMinHours]: withCombine(
+		constructMeteredFeature({
+			featureId: TestFeature.CombineMinHours,
+			orgId,
+			env: AppEnv.Sandbox,
+			usageType: FeatureUsageType.Continuous,
+		}),
+		FeatureCombine.Min,
+	),
+	[TestFeature.CombineAction]: constructMeteredFeature({
+		featureId: TestFeature.CombineAction,
+		orgId,
+		env: AppEnv.Sandbox,
+		usageType: FeatureUsageType.Single,
+	}),
+	[TestFeature.CombineMaxCredits]: withCombine(
+		constructCreditSystem({
+			featureId: TestFeature.CombineMaxCredits,
+			orgId,
+			env: AppEnv.Sandbox,
+			schema: [
+				{ metered_feature_id: TestFeature.CombineAction, credit_cost: 1 },
+			],
+		}),
+		FeatureCombine.Max,
+	),
 });

@@ -126,7 +126,8 @@ test.concurrent(
 						{
 							plan_id: childId,
 							items: [messagesItem(200)],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 						},
 					],
 					expected: [],

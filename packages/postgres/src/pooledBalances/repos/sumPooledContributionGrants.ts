@@ -25,16 +25,36 @@ export const sumPooledContributionGrants = async ({
 	dueBy: number;
 }): Promise<Record<string, number>> => {
 	if (pooledBalanceIds.length === 0) return {};
+	// Competing shares (a max / min feature) count once, as their best; the rest add up.
 	const result = await ctx.db.execute(sql`
-		SELECT c.pooled_balance_id,
-			SUM(CASE
-				WHEN c.effective_at IS NOT NULL AND c.effective_at <= ${dueBy}
-				THEN c.next_cycle_contribution
-				ELSE c.current_contribution
-			END)::float8 AS granted
-		FROM pooled_balance_contributions c
-		WHERE c.pooled_balance_id IN ${idList(pooledBalanceIds)}
-		GROUP BY c.pooled_balance_id
+		WITH shares AS (
+			SELECT c.pooled_balance_id,
+				c.competes,
+				c.unlimited,
+				CASE
+					WHEN c.effective_at IS NOT NULL AND c.effective_at <= ${dueBy}
+					THEN c.next_cycle_contribution
+					ELSE c.current_contribution
+				END AS amount,
+				f.config ->> 'combine' AS combine
+			FROM pooled_balance_contributions c
+			JOIN pooled_balances pb ON pb.id = c.pooled_balance_id
+			JOIN features f ON f.internal_id = pb.internal_feature_id
+			WHERE c.pooled_balance_id IN ${idList(pooledBalanceIds)}
+		)
+		SELECT pooled_balance_id,
+			(
+				COALESCE(SUM(amount) FILTER (WHERE NOT competes), 0)
+				+ COALESCE(
+					CASE WHEN MAX(combine) = 'min'
+						THEN MIN(amount) FILTER (WHERE competes AND NOT unlimited)
+						ELSE MAX(amount) FILTER (WHERE competes AND NOT unlimited)
+					END,
+					0
+				)
+			)::float8 AS granted
+		FROM shares
+		GROUP BY pooled_balance_id
 	`);
 	const rows = parseRows({
 		table: "pooled_balance_contributions",

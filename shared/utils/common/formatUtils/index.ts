@@ -2,3 +2,4 @@ export * from "./formatAmount";
 export * from "./formatInterval";
 export * from "./formatUnix";
 export * from "./formatVolumeTierRule";
+export * from "./intervalSuffix";

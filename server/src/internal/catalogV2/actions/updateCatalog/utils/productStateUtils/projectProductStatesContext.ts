@@ -2,8 +2,8 @@ import type { FullProduct, RewardProgram } from "@autumn/shared";
 import type { ProductStatesContext } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogContext";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import type { CustomerProductVersioningFlags } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
-import { buildProductStatesContext } from "./buildProductStatesContext";
 import { activeFullProductForPlan } from "./activeFullProductForPlan";
+import { buildProductStatesContext } from "./buildProductStatesContext";
 
 /**
  * Pure projection: product state after `upsertProducts` apply (projectCatalog

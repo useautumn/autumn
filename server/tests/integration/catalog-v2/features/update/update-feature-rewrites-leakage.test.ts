@@ -8,8 +8,8 @@ import { afterAll, describe, expect, it } from "bun:test";
 import {
 	AllowanceType,
 	AppEnv,
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	EntInterval,
 	entitlements,
 	FeatureType,
@@ -203,15 +203,9 @@ const cleanup = async () => {
 			sql`, `,
 		)})
 	`);
-	await db
-		.delete(features)
-		.where(inArray(features.org_id, orgIds));
-	await db
-		.delete(products)
-		.where(inArray(products.org_id, orgIds));
-	await db
-		.delete(organizations)
-		.where(inArray(organizations.id, orgIds));
+	await db.delete(features).where(inArray(features.org_id, orgIds));
+	await db.delete(products).where(inArray(products.org_id, orgIds));
+	await db.delete(organizations).where(inArray(organizations.id, orgIds));
 };
 
 const targetCtx = (): AutumnContext =>

@@ -9,6 +9,10 @@ import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceS
 import { applyLicensePooledBalances } from "./applyLicensePooledBalances/applyLicensePooledBalances";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
+import {
+	competingFeatureIdsOf,
+	staleCompetingCustomerProducts,
+} from "./competing/staleCompetingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
 
@@ -41,6 +45,7 @@ export const computePooledBalanceTransitionPlan = ({
 	}
 	const computeContext = setupPooledBalanceComputeContext({
 		pooledCustomerEntitlements: fullCustomer.pooled_customer_entitlements ?? [],
+		customerProducts: fullCustomer.customer_products,
 	});
 
 	const outgoingCustomerProductIds = new Set<string>();
@@ -69,6 +74,34 @@ export const computePooledBalanceTransitionPlan = ({
 				stripeSubscriptionId ??
 				customerProduct.subscription_ids?.[0] ??
 				pendingSubscriptionId,
+			customerCreatedAt: fullCustomer.created_at,
+			now,
+		});
+	}
+
+	for (const customerProduct of staleCompetingCustomerProducts({
+		fullCustomer,
+		featureIds: competingFeatureIdsOf({
+			incomingCustomerProducts,
+			outgoingCustomerProducts,
+		}),
+		excludedCustomerProductIds: new Set([
+			...incomingCustomerProductIds,
+			...outgoingCustomerProductIds,
+		]),
+	})) {
+		// An additive share from before the switch leaves first, then rejoins as a competing one.
+		applyOutgoingPooledBalanceSources({
+			computeContext,
+			customerProduct,
+			convertingToCompeting: true,
+		});
+		applyIncomingPooledBalanceSources({
+			ctx,
+			computeContext,
+			customerProduct,
+			stripeSubscriptionId:
+				customerProduct.subscription_ids?.[0] ?? customerProduct.id,
 			customerCreatedAt: fullCustomer.created_at,
 			now,
 		});

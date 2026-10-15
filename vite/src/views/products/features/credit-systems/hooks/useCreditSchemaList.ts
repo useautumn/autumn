@@ -18,12 +18,9 @@ import { createSchemaItem } from "../utils/creditSchemaUtils";
 export function useCreditSchemaList({
 	schema,
 	onChange,
-	onRemoveLast,
 }: {
 	schema: CreditSchemaItem[];
 	onChange: (schema: CreditSchemaItem[]) => void;
-	/** Called instead of onChange when removing the only remaining item. */
-	onRemoveLast?: () => void;
 }) {
 	const { features } = useFeaturesQuery();
 	const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -81,10 +78,6 @@ export function useCreditSchemaList({
 	};
 
 	const removeSchemaItem = (index: number) => {
-		if (schema.length === 1 && onRemoveLast) {
-			onRemoveLast();
-			return;
-		}
 		const next = removeSchemaItemAt({
 			schema,
 			keys: schemaKeysRef.current,

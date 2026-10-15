@@ -1,17 +1,16 @@
+import type { SetPlansReviewPhase } from "@autumn/shared";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@autumn/ui";
 import { uniq } from "lodash";
 import { cn } from "@/lib/utils";
-import type {
-	ReviewChangePhase,
-	ReviewChangeSystem,
-} from "../../utils/review/types/reviewChange";
+import { formatReviewText } from "../../utils/review/formatReviewText";
+import type { ReviewGroupSystem } from "../../utils/review/types/reviewGroup";
 
-const DOT_COLOR: Record<ReviewChangeSystem, string> = {
+const DOT_COLOR: Record<ReviewGroupSystem, string> = {
 	stripe: "border-indigo-500 bg-indigo-500",
 	autumn: "border-primary bg-primary",
 };
 
-const phaseDetail = (phase: ReviewChangePhase) =>
+const phaseDetail = (phase: SetPlansReviewPhase) =>
 	[
 		...(phase.removed ? ["Removed"] : []),
 		...uniq(phase.rows.map((row) => row.title)),
@@ -21,8 +20,8 @@ export function ReviewPhaseTimeline({
 	phases,
 	system,
 }: {
-	phases: ReviewChangePhase[];
-	system: ReviewChangeSystem;
+	phases: SetPlansReviewPhase[];
+	system: ReviewGroupSystem;
 }) {
 	return (
 		<HoverCard>
@@ -57,7 +56,7 @@ export function ReviewPhaseTimeline({
 									className={cn("flex min-w-0 flex-col", !isLast && "pb-2.5")}
 								>
 									<span className="text-[13px] leading-5 font-medium text-foreground">
-										{phase.label}
+										{formatReviewText(phase.label)}
 									</span>
 									<span className="truncate text-xs leading-[18px] text-tertiary-foreground">
 										{phaseDetail(phase)}
