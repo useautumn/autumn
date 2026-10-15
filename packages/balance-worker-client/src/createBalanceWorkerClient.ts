@@ -61,6 +61,10 @@ export function createBalanceWorkerClient({
 		timeoutMs: config.timeoutMs,
 		routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 	};
+	const trackCtx = {
+		...ctx,
+		timeoutMs: config.trackTimeoutMs ?? config.timeoutMs,
+	};
 	const appendTimeoutMs = config.appendTimeoutMs ?? DEFAULT_APPEND_TIMEOUT_MS;
 	const queue = {
 		commandLog: dependencies.commandLog,
@@ -72,11 +76,14 @@ export function createBalanceWorkerClient({
 	const trackBatcher =
 		config.batchTracks === false
 			? undefined
-			: createTrackBatcher({ ctx, maxBatchSize: config.maxTrackBatchSize });
+			: createTrackBatcher({
+					ctx: trackCtx,
+					maxBatchSize: config.maxTrackBatchSize,
+				});
 
 	function track(params: TrackParams) {
 		if (trackBatcher) return trackBatcher.track(params);
-		return sendTrack({ ctx, ...params });
+		return sendTrack({ ctx: trackCtx, ...params });
 	}
 
 	function check(params: CheckParams) {

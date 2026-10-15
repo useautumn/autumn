@@ -76,6 +76,7 @@ export function createKafkaBalanceWorkerClient({
 		config: {
 			partitionCount: config.partitionCount,
 			timeoutMs: config.timeoutMs,
+			trackTimeoutMs: config.trackTimeoutMs,
 			appendTimeoutMs: config.appendTimeoutMs,
 			routeRefreshTimeoutMs: config.routeRefreshTimeoutMs,
 			batchTracks: config.batchTracks,

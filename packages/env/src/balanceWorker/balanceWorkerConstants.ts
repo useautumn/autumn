@@ -10,6 +10,9 @@ export const BALANCE_WORKER_MAX_REQUEST_BYTES = 1_048_576;
  *  quickly rather than wait out. The refresh below is what kept the retry from
  *  fitting, so that is bounded separately instead of widening this. */
 export const BALANCE_WORKER_REQUEST_TIMEOUT_MS = 1_000;
+/** A track (and a deducting check) is answered only once Kafka acks its record, so a broker stall of a
+ *  second or two lands on it in full; reads never wait on Kafka and keep the tighter budget. */
+export const BALANCE_WORKER_TRACK_REQUEST_TIMEOUT_MS = 2_500;
 export const BALANCE_WORKER_FETCH_MAX_WAIT_MS = 250;
 /** A queued track whose command-log append has not acked by this is also written to SQS, and answered once either
  *  write lands. Prod's queued tracks run under 170ms end to end at p99.99, so a healthy append never gets here. */

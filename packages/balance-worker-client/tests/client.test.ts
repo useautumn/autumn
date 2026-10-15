@@ -643,6 +643,38 @@ test(
 	preservesBodyTimeoutAmbiguity,
 );
 
+async function givesTracksTheirOwnBudget(): Promise<void> {
+	// A worker whose replies take 80ms, as a track's do while its Kafka append is held.
+	async function receive(request: Request): Promise<Response> {
+		await Bun.sleep(80);
+		if (new URL(request.url).pathname === "/v1/track-batch")
+			return Response.json({ results: [{ ok: true, reply: trackReply }] });
+		return Response.json({ error: { code: "INTERNAL" } }, { status: 500 });
+	}
+	const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: receive });
+	function findOwner() {
+		return { partition: 0, endpoint: server.url.origin, routeEpoch: "1" };
+	}
+	async function refresh(): Promise<void> {}
+	try {
+		const client = createBalanceWorkerClient({
+			ctx: { owners: { findOwner, refresh } },
+			config: { partitionCount: 1, timeoutMs: 30, trackTimeoutMs: 1_000 },
+		});
+		expect(await client.track({ command })).toEqual(trackReply);
+		await expect(client.check({ command: checkCommand })).rejects.toMatchObject(
+			{ code: "DEADLINE" },
+		);
+	} finally {
+		await server.stop(true);
+	}
+}
+
+test(
+	"a track waits out its own budget while a check keeps the shorter one",
+	givesTracksTheirOwnBudget,
+);
+
 async function boundsTheRouteRefreshBelowTheDeadline(): Promise<void> {
 	// A partition mid-move: nothing owns it, and ownership never settles.
 	const stuck = Promise.withResolvers<void>();

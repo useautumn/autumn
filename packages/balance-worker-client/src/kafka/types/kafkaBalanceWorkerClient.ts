@@ -53,6 +53,7 @@ export type KafkaBalanceWorkerClientConfig = {
 	groupIdPrefix: string;
 	partitionCount: number;
 	timeoutMs: number;
+	trackTimeoutMs?: number;
 	appendTimeoutMs?: number;
 	routeRefreshTimeoutMs?: number;
 	batchTracks?: boolean;

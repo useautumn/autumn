@@ -124,6 +124,8 @@ export type BalanceWorkerClientDependencies = {
 export type BalanceWorkerClientConfig = {
 	partitionCount: number;
 	timeoutMs: number;
+	/** A track's budget, `timeoutMs` when unset: its reply waits on the worker's Kafka append, which a broker stall holds. */
+	trackTimeoutMs?: number;
 	/** The budget over a Kafka append (queued commands, catalog invalidations); nobody's request waits on these, so it is looser than `timeoutMs`. Default 3s. */
 	appendTimeoutMs?: number;
 	/** Caps what an ownership refresh may take out of `timeoutMs`, so a rebalance
