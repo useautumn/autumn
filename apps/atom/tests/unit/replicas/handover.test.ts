@@ -6,6 +6,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { PEER_ANNOUNCEMENT_PATH } from "../../../src/replicas/handover/announcementContract.js";
 import { PEER_HANDOFF_PATH } from "../../../src/replicas/handover/handoffContract.js";
 import { peerRequestHeaders } from "../../../src/replication/transport/peerSignature.js";
 import {
@@ -101,22 +103,38 @@ const agreeingPair = async ({
 	return { a, b };
 };
 
-/** A deducts `times` on CUSTOMER: that many entries owed in A's journal. */
-const deductOnA = async ({ a, times }: { a: Replica; times: number }) => {
+/** The replica deducts `times` on the customer itself: that many entries owed in its journal. */
+const deductOn = async ({
+	replica,
+	times,
+	customerId = CUSTOMER,
+}: {
+	replica: Replica;
+	times: number;
+	customerId?: string;
+}) => {
 	for (let i = 0; i < times; i++) {
-		const reply = await a.app.request(
+		const reply = await replica.app.request(
 			"/v1/balances.check",
-			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+			checkFor({ customerId, sendEvent: true }),
 		);
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(reply.headers.get("x-atom-proxied")).toBeNull();
 	}
 };
+const deductOnA = ({ a, times }: { a: Replica; times: number }) =>
+	deductOn({ replica: a, times });
 
-const journalOwing = (replica: Replica) =>
+const journalOwing = (replica: Replica, customerId = CUSTOMER) =>
 	replica.slots
 		.ownedJournals()
-		.find((journal) => journal.owed({ customerId: CUSTOMER }).length > 0);
+		.find((journal) => journal.owed({ customerId }).length > 0);
+
+const owedSeqs = (replica: Replica, customerId = CUSTOMER) =>
+	journalOwing(replica, customerId)
+		?.owed({ customerId })
+		.map(({ seq }) => seq) ?? [];
 
 const remainingAt = async (replica: Replica) =>
 	(
@@ -277,12 +295,14 @@ describe("a replica leaving the ring", () => {
 	test("names, before it leaves, the member that takes each of its customers, and nobody when it is alone", async () => {
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
 		expect(await a.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
-		expect(await a.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(B);
+		expect(await a.ring.ownerWithout({ customerId: CUSTOMER, member: A })).toBe(
+			B,
+		);
 
 		const alone = createReplica({ address: A, peers: [], ringPeers: [] });
-		expect(await alone.ring.ownerAfterLeaving({ customerId: CUSTOMER })).toBe(
-			null,
-		);
+		expect(
+			await alone.ring.ownerWithout({ customerId: CUSTOMER, member: A }),
+		).toBe(null);
 	});
 });
 
@@ -469,7 +489,7 @@ describe("a replica leaving with nobody to hand to", () => {
 });
 
 describe("a replica joining the ring", () => {
-	test("H6: a listed peer that answers ready is handed its customers' entries, then counted: a check for them hops to it and sees them", async () => {
+	test("H6: a listed peer that answers ready is counted first, then granted and handed its customers' entries once: a check for them hops to it and sees them", async () => {
 		const bAutumn = toggledAutumn();
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
 		const b = createReplica({
@@ -483,24 +503,17 @@ describe("a replica joining the ring", () => {
 			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
 		connect({ replicas: [a, b] });
 		// B owned everything while A was away and deducted twice on CUSTOMER.
-		for (let i = 0; i < 2; i++)
-			await b.app.request(
-				"/v1/balances.check",
-				checkFor({ customerId: CUSTOMER, sendEvent: true }),
-			);
+		await deductOn({ replica: b, times: 2 });
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
 
 		await b.probeOnce();
 
 		expect(b.membership.isMember(A)).toBe(true);
+		expect(a.membership.isGrantedBy(B)).toBe(true);
+		expect(a.membership.isHandoffComplete(B)).toBe(true);
 		// B keeps what it copied to A and hands it in itself; A holds the copies for its view.
-		expect(
-			journalOwing(b)
-				?.owed({ customerId: CUSTOMER })
-				.map(({ seq }) => seq),
-		).toEqual([1, 2]);
-		const held = journalOwing(a)?.owed({ customerId: CUSTOMER }) ?? [];
-		expect(held.map(({ seq }) => seq)).toEqual([1, 2]);
+		expect(owedSeqs(b)).toEqual([1, 2]);
+		expect(owedSeqs(a)).toEqual([1, 2]);
 		const reply = await b.app.request(
 			"/v1/balances.check",
 			checkFor({ customerId: CUSTOMER }),
@@ -530,7 +543,7 @@ describe("a replica joining the ring", () => {
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
 	});
 
-	test("A1: a peer the service name lists owns nothing until it has answered ready and taken its customers' entries", async () => {
+	test("A1: a peer the service name lists owns nothing until it has answered ready: the flip is one shared store", async () => {
 		const b = createReplica({
 			address: B,
 			peers: [A],
@@ -539,9 +552,7 @@ describe("a replica joining the ring", () => {
 		});
 
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
-		b.membership.markReady({ address: A, boot: "boot-1" });
-		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
-		b.membership.markJoined(A);
+		b.membership.markJoined({ address: A, boot: "boot-1" });
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
 	});
 
@@ -550,11 +561,179 @@ describe("a replica joining the ring", () => {
 		b.membership.markLeaving(A);
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(B);
 
-		b.membership.markReady({ address: A, boot: "boot-2" });
-		b.membership.markJoined(A);
+		b.membership.markJoined({ address: A, boot: "boot-2" });
 
 		expect(b.membership.stateOf(A)).toBe("joined");
 		expect(await b.ring.ownerOf({ customerId: CUSTOMER })).toBe(A);
+	});
+});
+
+/** Owned by GONE among {B, GONE} and by A among {A, B}: it moves to B when GONE leaves, and on to A when A joins. */
+const GONE = "10.0.0.9";
+const twiceMovedCustomer = async () => {
+	const ringOf = (peers: string[]) =>
+		createReplicaRing({
+			ctx: { resolver: { peers: async () => peers }, own: () => [B] },
+		});
+	const viaGone = ringOf([GONE]);
+	const viaA = ringOf([A]);
+	for (let i = 0; i < 1_000; i++) {
+		const customerId = `cus_moved_${i}`;
+		if (
+			(await viaGone.ownerOf({ customerId })) === GONE &&
+			(await viaA.ownerOf({ customerId })) === A
+		)
+			return customerId;
+	}
+	throw new Error("no customer id moves twice");
+};
+
+describe("ownership changes hands by grant: the old owner stops first, the new one answers once told", () => {
+	test("a booting replica answers no public request itself until the peer it took the customer from has granted it", async () => {
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			joined: [],
+		});
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+		// A counts B, so CUSTOMER is A's by its own ring; B has not said so yet.
+		a.membership.markJoined({ address: B, boot: "fixture" });
+
+		const before = await a.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+		expect(before.status).toBe(200);
+		expect(before.headers.get("x-atom-proxied")).toBe("owner");
+		expect(owedSeqs(b)).toEqual([1]);
+		expect(owedSeqs(a)).toEqual([]);
+
+		// B notices A ready: counts it, grants it, hands it the one entry.
+		await b.probeOnce();
+
+		const after = await a.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+		expect(after.status).toBe(200);
+		expect(after.headers.get("x-atom-proxied")).toBeNull();
+		expect((await after.json()).balance.remaining).toBe(8);
+		expect(owedSeqs(b)).toEqual([1]);
+	});
+
+	test("a straggler on the stand-in after the flip is re-hopped to the new owner, not journaled", async () => {
+		const customerId = await twiceMovedCustomer();
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A, GONE],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId, readAt: 1700 });
+		connect({ replicas: [a, b] });
+		// GONE is leaving: the customer is B's, and its first request on B waits a little for GONE's handoff.
+		b.membership.markLeaving(GONE);
+
+		const straggler = b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId, sendEvent: true }),
+		);
+		await Bun.sleep(5);
+		// While it waits, A joins: the customer is A's now.
+		await b.probeOnce();
+		expect(await b.ring.ownerOf({ customerId })).toBe(A);
+
+		const reply = await straggler;
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		expect(owedSeqs(b, customerId)).toEqual([]);
+		expect(owedSeqs(a, customerId)).toEqual([1]);
+	});
+
+	test("the leaver grants and hands to a ready peer it never counted", async () => {
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			joined: [],
+		});
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+		await deductOn({ replica: b, times: 2 });
+
+		await b.leave();
+
+		expect(a.membership.isLeaving(B)).toBe(true);
+		expect(owedSeqs(a)).toEqual([1, 2]);
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		expect((await reply.json()).balance.remaining).toBe(8);
+	});
+
+	test("a request the stand-in hops over before its announcement lands still waits for the handoff: the hop names where the customer came from", async () => {
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			joined: [],
+		});
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+		await deductOn({ replica: b, times: 2 });
+		// A has probed B; B's announcements never reach A and its handoff is slow on the way.
+		a.membership.markJoined({ address: B, boot: "fixture" });
+		disconnect();
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				const { pathname } = new URL(request.url);
+				if (pathname === PEER_ANNOUNCEMENT_PATH)
+					throw Object.assign(new TypeError("connect ECONNREFUSED"), {
+						code: "ECONNREFUSED",
+					});
+				if (pathname === PEER_HANDOFF_PATH) await Bun.sleep(20);
+			},
+		});
+
+		const joining = b.probeOnce();
+		await Bun.sleep(1);
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+		await joining;
+
+		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
+		expect((await reply.json()).balance.remaining).toBe(8);
+		expect(owedSeqs(a)).toEqual([1, 2]);
 	});
 });
 
