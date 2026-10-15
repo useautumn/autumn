@@ -63,8 +63,10 @@ const lastKeyOf = new Map<string, string>();
 /** How each key's first send ended, so a replay deducted twice names its cause (bench diagnosis). */
 const firstOutcomeOf = new Map<string, Record<string, unknown>>();
 const doublesFile = process.env.RIG_REPLAY_DOUBLES_FILE;
-/** Keys any send of which the Atom left to the API: the stub claims nothing, so a later Atom hand-in applies them again. */
-const forwardedKeys = new Set<string>();
+/** Every keyed send's outcome, so P1 can say how each key applied twice got there (bench diagnosis). */
+const sendsOf = new Map<string, Record<string, unknown>[]>();
+const noteSend = (key: string, send: Record<string, unknown>) =>
+	sendsOf.set(key, [...(sendsOf.get(key) ?? []), send]);
 
 const send = async ({
 	customerId,
@@ -107,6 +109,17 @@ const send = async ({
 			code?: string;
 		} | null;
 		into.histogram[bucketOf(performance.now() - startedAt)]++;
+		if (key)
+			noteSend(key, {
+				second,
+				owner: ownerClassOf.get(customerId) ?? "a",
+				to,
+				replay: isReplay,
+				status: reply.status,
+				allowed: body?.allowed ?? null,
+				proxied: reply.headers.get("x-atom-proxied"),
+				forwarded: reply.headers.get("x-atom-forwarded"),
+			});
 		if (isReplay) {
 			const first = firstOutcomeOf.get(key as string);
 			// A first send shed or refused never deducted, so its replay is the caller's first deduction.
@@ -150,7 +163,6 @@ const send = async ({
 		const proxied = reply.headers.get("x-atom-proxied");
 		if (proxied) add(into.proxied, proxied);
 		const forwarded = reply.headers.get("x-atom-forwarded");
-		if (forwarded && key) forwardedKeys.add(key);
 		if (forwarded) {
 			into.forwarded++;
 			add(into.forwardReasons, forwarded);
@@ -173,7 +185,16 @@ const send = async ({
 				? "timeout"
 				: "error",
 		);
-		if (key) keys.ambiguous.push(key);
+		if (key) {
+			noteSend(key, {
+				second,
+				owner: ownerClassOf.get(customerId) ?? "a",
+				to,
+				replay: isReplay,
+				status: "timeout",
+			});
+			keys.ambiguous.push(key);
+		}
 	}
 };
 
@@ -248,7 +269,16 @@ for (const second of [...seconds.keys()].sort((x, y) => x - y)) {
 	if (held) console.log(JSON.stringify({ type: "second", second, ...held }));
 }
 console.log(
-	JSON.stringify({ type: "keys", ...keys, forwarded: [...forwardedKeys] }),
+	JSON.stringify({
+		type: "keys",
+		...keys,
+		// Only keys sent more than once or left to the API: a key applied twice is one of them, or was sent once.
+		sends: Object.fromEntries(
+			[...sendsOf].filter(
+				([, sends]) => sends.length > 1 || sends.some((send) => send.forwarded),
+			),
+		),
+	}),
 );
 console.log(JSON.stringify({ type: "done" }));
 process.exit(0);
