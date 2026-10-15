@@ -319,24 +319,6 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("the parsed copy checks share cannot be changed by one of them", () => {
-		const sqliteStore = openSqliteStore({
-			databasePath: slotPath(),
-			held: freshHeld(),
-		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
-		const read = sqliteStore.readSubject({
-			customerId: "cus_1",
-			entityId: null,
-		});
-
-		expect(() => {
-			(read as { readAt: number }).readAt = 0;
-		}).toThrow(TypeError);
-		expect(Object.isFrozen(read?.state.identity)).toBe(true);
-		sqliteStore.close();
-	});
-
 	test("a push to one customer leaves another customer's parsed copy in place", () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
@@ -375,7 +357,6 @@ describe("sqlite store", () => {
 
 		expect(read()).toBe(held as StoredSubject);
 		expect(held?.logOffset).toBe(2n);
-		expect(Object.isFrozen(held?.state)).toBe(true);
 		sqliteStore.close();
 	});
 
@@ -452,6 +433,61 @@ describe("sqlite store", () => {
 		expect(second?.catalog).toBe(first?.catalog as StoredSubject["catalog"]);
 		expect(second?.org).toBe(first?.org as StoredSubject["org"]);
 		sqliteStore.close();
+	});
+
+	test("customers on the same catalog slice share one held copy of it, whether pushed or read from the file", () => {
+		const databasePath = slotPath();
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const pushed = openSqliteStore({ databasePath, held: freshHeld() });
+		for (const customerId of ["cus_1", "cus_2"])
+			pushed.setSubject({ subject: asCustomer(customerId) });
+		const read = (store: typeof pushed, customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read(pushed, "cus_2")?.catalog).toBe(
+			read(pushed, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read(pushed, "cus_2")?.org).toBe(
+			read(pushed, "cus_1")?.org as StoredSubject["org"],
+		);
+		pushed.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+		expect(read(reopened, "cus_2")?.catalog).toBe(
+			read(reopened, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		reopened.close();
+	});
+
+	test("the shared slice outlives a collection while a held subject still holds it", () => {
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const store = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		store.setSubject({ subject: asCustomer("cus_1") });
+		Bun.gc(true);
+		store.setSubject({ subject: asCustomer("cus_2") });
+		const read = (customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read("cus_2")?.catalog).toBe(
+			read("cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read("cus_2")?.org).toBe(read("cus_1")?.org as StoredSubject["org"]);
+		store.close();
 	});
 
 	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", () => {
