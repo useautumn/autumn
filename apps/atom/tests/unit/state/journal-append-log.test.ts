@@ -34,6 +34,7 @@ const reshapedJournalPath = () => {
 			seq INTEGER NOT NULL CHECK (seq > 0),
 			appended_at INTEGER NOT NULL,
 			command_json TEXT NOT NULL,
+			reshaped_by TEXT NOT NULL,
 			PRIMARY KEY (customer_id, writer_id, seq)
 		) WITHOUT ROWID
 	`);
@@ -73,11 +74,11 @@ describe("a journal that cannot write", () => {
 		const lines = errorLines();
 
 		await expect(append(1)).rejects.toThrow(
-			"NOT NULL constraint failed: journal_entries.writer_id",
+			"NOT NULL constraint failed: journal_entries.reshaped_by",
 		);
 		expect(lines()).toHaveLength(1);
 		expect(lines()[0]?.message).toContain(
-			"NOT NULL constraint failed: journal_entries.writer_id",
+			"NOT NULL constraint failed: journal_entries.reshaped_by",
 		);
 		expect(lines()[0]?.fields.data).toMatchObject({
 			entries: 1,
