@@ -49,6 +49,7 @@ const typeRankSql = sql`(
 // scheduled, then one-off, then everything else (expired/past_due/paused).
 const statusRankSql = sql`(
 	CASE
+		WHEN phase_row.phase_starts_at IS NOT NULL THEN 1
 		WHEN cp.status = 'scheduled' THEN 1
 		WHEN ${oneOffPredicate} THEN 2
 		WHEN cp.status = 'active' THEN 0
@@ -60,6 +61,7 @@ const statusRankSql = sql`(
 // without disturbing the rest of the ordering.
 const scheduledStartSql = sql`(
 	CASE
+		WHEN phase_row.phase_starts_at IS NOT NULL THEN phase_row.phase_starts_at
 		WHEN cp.status = 'scheduled' THEN COALESCE(cp.starts_at, cp.created_at, 0)
 		ELSE 0
 	END
@@ -142,14 +144,13 @@ export const freeTrialLateral = sql`
 		WHERE ft.id = cp.free_trial_id
 	) ft_data ON true`;
 
-// Identical consecutive phases share one row, so every phase running it after
-// the one it started in is a repeat the row alone can't show.
-export const repeatedPhaseStartsLateral = sql`
-	LEFT JOIN LATERAL (
-		SELECT COALESCE(
-			json_agg(later.starts_at ORDER BY later.starts_at),
-			'[]'::json
-		) AS repeated_phase_starts
+// Identical consecutive phases share one row, so each later future phase it runs
+// becomes a row of its own, as Set Plans lists it. Every query using the ranks joins this.
+export const phaseRowsLateral = sql`
+	CROSS JOIN LATERAL (
+		SELECT NULL::numeric AS phase_starts_at
+		UNION ALL
+		SELECT later.starts_at
 		FROM (
 			SELECT ph.starts_at
 			FROM schedules sch
@@ -159,7 +160,9 @@ export const repeatedPhaseStartsLateral = sql`
 			ORDER BY ph.starts_at
 			OFFSET 1
 		) later
-	) rp_data ON true`;
+		WHERE cp.status <> 'expired'
+			AND later.starts_at > EXTRACT(EPOCH FROM now()) * 1000
+	) phase_row`;
 
 const statusFilterSql = (status: CustomerProductsStatusFilter) => {
 	switch (status) {
@@ -226,13 +229,13 @@ export const getCustomerProductsPageQuery = ({
 			cpr_data.customer_prices,
 			ce_data.customer_entitlements,
 			ft_data.free_trial,
-			rp_data.repeated_phase_starts
+			phase_row.phase_starts_at
 		FROM customer_products cp
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
+		${phaseRowsLateral}
 		${customerPricesLateral}
 		${customerEntitlementsLateral}
 		${freeTrialLateral}
-		${repeatedPhaseStartsLateral}
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
 		${cursorPredicate}
@@ -254,6 +257,7 @@ export const getCustomerProductsCountQuery = ({
 		SELECT COUNT(*)::int AS total_count
 		FROM customer_products cp
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
+		${phaseRowsLateral}
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
 		${planetScaleTag({ query: "getCustomerProductsCount" })}
@@ -281,6 +285,7 @@ export const customerProductsSeedCte = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				phase_row.phase_starts_at,
 				${statusRankSql} AS status_rank,
 				${scheduledStartSql} AS scheduled_start,
 				${entityRankSql} AS entity_rank,
@@ -293,6 +298,7 @@ export const customerProductsSeedCte = ({
 			FROM cr
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
+			${phaseRowsLateral}
 			WHERE TRUE ${statusFilter}
 				AND ${sql.raw(notLicenseAssignmentSql("cp"))}
 		),
@@ -307,14 +313,13 @@ export const customerProductsSeedCte = ({
 				cpr_data.customer_prices,
 				ce_data.customer_entitlements,
 				ft_data.free_trial,
-				rp_data.repeated_phase_starts
+				ranked.phase_starts_at
 			FROM products_seed_ranked ranked
 			JOIN customer_products cp ON cp.id = ranked.id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			${customerPricesLateral}
 			${customerEntitlementsLateral}
 			${freeTrialLateral}
-			${repeatedPhaseStartsLateral}
 			WHERE ranked.rn <= ${fetchLimit}
 		)`;
 };

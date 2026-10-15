@@ -1,4 +1,9 @@
-import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
+import {
+	AppEnv,
+	type CustomerProductsPageItem,
+	type Entity,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { Button, IconButton } from "@autumn/ui";
 import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
@@ -59,6 +64,12 @@ function createScopeColumn(
 		},
 	};
 }
+
+/** A later phase row shares its customer product's id, so the phase start keeps it unique. */
+const customerProductRowId = (
+	row: FullCusProduct &
+		Partial<Pick<CustomerProductsPageItem, "phase_starts_at">>,
+) => (row.phase_starts_at ? `${row.id}:${row.phase_starts_at}` : row.id);
 
 export function CustomerProductsTable() {
 	const env = useEnv();
@@ -153,6 +164,7 @@ export function CustomerProductsTable() {
 		data: products,
 		columns,
 		options: {
+			getRowId: customerProductRowId,
 			meta: {
 				onCancelClick: handleCancelClick,
 				onUncancelClick: handleUncancelClick,

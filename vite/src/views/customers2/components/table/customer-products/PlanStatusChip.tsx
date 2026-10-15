@@ -1,8 +1,4 @@
-import {
-	type CustomerProductsPageItem,
-	type FullCusProduct,
-	isCustomerProductTrialing,
-} from "@autumn/shared";
+import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 import {
 	StatusChip,
 	Tooltip,
@@ -10,16 +6,18 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { differenceInCalendarDays, format, formatDistance } from "date-fns";
+import {
+	differenceInCalendarDays,
+	format,
+	formatDistance,
+	isSameYear,
+} from "date-fns";
 import { cn } from "@/lib/utils";
 import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { type PlanStatus, resolvePlanStatus } from "./resolvePlanStatus";
 
 const SHORT_DATE = "d MMM";
 const LONG_DATE = "d MMM yyyy";
-
-type ChipCustomerProduct = FullCusProduct &
-	Partial<Pick<CustomerProductsPageItem, "repeated_phase_starts">>;
 
 type StatusDetail = {
 	shortText: string | null;
@@ -28,7 +26,7 @@ type StatusDetail = {
 };
 
 /** Short text sits inside the chip; the tooltip carries the full date. */
-function getBaseStatusDetail({
+function getStatusDetail({
 	planStatus,
 	customerProduct,
 	nowMs,
@@ -73,7 +71,10 @@ function getBaseStatusDetail({
 	}
 	if (planStatus === "scheduled" && starts_at) {
 		return {
-			shortText: format(starts_at, SHORT_DATE),
+			shortText: format(
+				starts_at,
+				isSameYear(starts_at, nowMs) ? SHORT_DATE : LONG_DATE,
+			),
 			tooltipText: `Starts ${format(starts_at, LONG_DATE)}`,
 		};
 	}
@@ -89,31 +90,6 @@ function getBaseStatusDetail({
 	return { shortText: showsLabel ? label : null, tooltipText: label };
 }
 
-/** A repeated schedule phase keeps this row running, so its renewals ride on the row. */
-function getStatusDetail({
-	planStatus,
-	customerProduct,
-	nowMs,
-}: {
-	planStatus: PlanStatus;
-	customerProduct: ChipCustomerProduct;
-	nowMs: number;
-}): StatusDetail {
-	const detail = getBaseStatusDetail({ planStatus, customerProduct, nowMs });
-	const renewals = customerProduct.repeated_phase_starts ?? [];
-	if (renewals.length === 0) return detail;
-	if (planStatus !== "active" && planStatus !== "scheduled") return detail;
-
-	const renewalText = `+${renewals.length} renewal${renewals.length === 1 ? "" : "s"}`;
-	return {
-		shortText: detail.shortText
-			? `${detail.shortText} · ${renewalText}`
-			: renewalText,
-		tooltipText: detail.tooltipText,
-		tooltipSubtext: `Renews ${renewals.map((startsAt) => format(startsAt, LONG_DATE)).join(", ")}`,
-	};
-}
-
 /** "icon" hides the status text; "status" drops the plan name for tables that show it elsewhere. */
 type ChipDisplay = "full" | "icon" | "status";
 
@@ -123,7 +99,7 @@ export function PlanStatusChip({
 	display = "full",
 	className,
 }: {
-	customerProduct: ChipCustomerProduct;
+	customerProduct: FullCusProduct;
 	nowMs?: number;
 	display?: ChipDisplay;
 	className?: string;

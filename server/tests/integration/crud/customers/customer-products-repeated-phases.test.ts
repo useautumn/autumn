@@ -1,10 +1,10 @@
 /**
- * A schedule phase that repeats the one before it keeps the same customer_products
- * row running, so the products page carries that row's later phase starts.
+ * Identical consecutive schedule phases share one customer_products row, but the
+ * dashboard products page lists each phase the row runs as its own row, like Set Plans.
  *
- * Contract: each products-page row has `repeated_phase_starts: number[]`, the
- * starts of every later schedule phase still running it (empty when none), on
- * both the customer products page and the customer list's seeded page.
+ * Contract: a later future phase running a row adds a scheduled row with that row's id
+ * and `phase_starts_at` set to the phase start (null on the row itself), ordered with
+ * the scheduled rows, counted in `total_count`, paged by the cursor and in the seed page.
  */
 
 import { expect, test } from "bun:test";
@@ -45,13 +45,15 @@ const renewal = ({
 	],
 });
 
-const repeatedStartsByStatus = (list: CustomerProductsPageItem[]) =>
-	Object.fromEntries(
-		list.map((row) => [row.status, row.repeated_phase_starts]),
-	);
+const pageRows = (list: CustomerProductsPageItem[]) =>
+	list.map((row) => ({
+		id: row.id,
+		status: row.status,
+		phase_starts_at: row.phase_starts_at,
+	}));
 
 test.concurrent(
-	`${chalk.yellowBright("customer products page: a scheduled row lists the later phases that repeat it")}`,
+	`${chalk.yellowBright("customer products page: a phase repeating a scheduled row is its own scheduled row")}`,
 	async () => {
 		const customerId = "cpp-repeated-scheduled";
 		const enterprise = enterprisePlan("cpp-repeated-scheduled-ent");
@@ -65,27 +67,61 @@ test.concurrent(
 		});
 
 		const renewalStart = advancedTo + ms.days(110);
-		const repeatStart = renewalStart + ms.days(365);
 		const params: SetPlansParamsV0Input = {
 			customer_id: customerId,
 			phases: [
 				{ starts_at: "now", plans: [{ plan_id: enterprise.id }] },
 				renewal({ planId: enterprise.id, startsAt: renewalStart }),
-				renewal({ planId: enterprise.id, startsAt: repeatStart }),
+				renewal({
+					planId: enterprise.id,
+					startsAt: renewalStart + ms.days(365),
+				}),
 			],
 		};
 		const { phases } = await autumnV2_4.billing.setPlans(params);
-		const savedRepeatStart = phases[2].starts_at;
+		const [activeId, scheduledId] = phases.map(
+			(phase) => phase.customer_product_ids[0],
+		);
+		const expectedRows = [
+			{ id: activeId, status: CusProductStatus.Active, phase_starts_at: null },
+			{
+				id: scheduledId,
+				status: CusProductStatus.Scheduled,
+				phase_starts_at: null,
+			},
+			{
+				id: scheduledId,
+				status: CusProductStatus.Scheduled,
+				phase_starts_at: phases[2].starts_at,
+			},
+		];
 
 		const page = await CusService.getProductsPage({
 			ctx,
 			idOrInternalId: customerId,
 			params: { start_cursor: "", limit: 10, status: "active" },
 		});
-		expect(repeatedStartsByStatus(page.list)).toEqual({
-			[CusProductStatus.Active]: [],
-			[CusProductStatus.Scheduled]: [savedRepeatStart],
+		expect(pageRows(page.list)).toEqual(expectedRows);
+		expect(page.total_count).toBe(3);
+
+		const firstPage = await CusService.getProductsPage({
+			ctx,
+			idOrInternalId: customerId,
+			params: { start_cursor: "", limit: 2, status: "active" },
 		});
+		const secondPage = await CusService.getProductsPage({
+			ctx,
+			idOrInternalId: customerId,
+			params: {
+				start_cursor: firstPage.next_cursor ?? "",
+				limit: 2,
+				status: "active",
+			},
+		});
+		expect(pageRows([...firstPage.list, ...secondPage.list])).toEqual(
+			expectedRows,
+		);
+		expect(secondPage.next_cursor).toBeNull();
 
 		const { fullCustomers } = await CusBatchService.getDashboardCursorPage({
 			ctx,
@@ -96,15 +132,13 @@ test.concurrent(
 		const seededPage = fullCustomers.find(
 			(customer) => customer.id === customerId,
 		)?.products_page;
-		expect(repeatedStartsByStatus(seededPage?.list ?? [])).toEqual({
-			[CusProductStatus.Active]: [],
-			[CusProductStatus.Scheduled]: [savedRepeatStart],
-		});
+		expect(pageRows(seededPage?.list ?? [])).toEqual(expectedRows);
+		expect(seededPage?.total_count).toBe(3);
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("customer products page: an active row lists the next phase when it repeats the current one")}`,
+	`${chalk.yellowBright("customer products page: a phase repeating the active row is a scheduled row")}`,
 	async () => {
 		const customerId = "cpp-repeated-active";
 		const enterprise = enterprisePlan("cpp-repeated-active-ent");
@@ -127,14 +161,20 @@ test.concurrent(
 				},
 			],
 		});
+		const activeId = phases[0].customer_product_ids[0];
 
 		const page = await CusService.getProductsPage({
 			ctx,
 			idOrInternalId: customerId,
 			params: { start_cursor: "", limit: 10, status: "active" },
 		});
-		expect(repeatedStartsByStatus(page.list)).toEqual({
-			[CusProductStatus.Active]: [phases[1].starts_at],
-		});
+		expect(pageRows(page.list)).toEqual([
+			{ id: activeId, status: CusProductStatus.Active, phase_starts_at: null },
+			{
+				id: activeId,
+				status: CusProductStatus.Scheduled,
+				phase_starts_at: phases[1].starts_at,
+			},
+		]);
 	},
 );

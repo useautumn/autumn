@@ -40,9 +40,9 @@ export type ListCustomerProductsParams = z.infer<
 	typeof ListCustomerProductsParamsSchema
 >;
 
-/** Later schedule phases that keep this row running carry no row of their own. */
+/** Set on a row standing for a later schedule phase its customer product also runs. */
 export type CustomerProductsPageItem = FullCusProduct & {
-	repeated_phase_starts: number[];
+	phase_starts_at: number | null;
 };
 
 export type CustomerProductsPage =
