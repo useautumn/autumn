@@ -6,14 +6,6 @@ export const apiBalanceBreakdownV1ToOverage = ({
 }: {
 	apiBalanceBreakdown: ApiBalanceBreakdownV1;
 }) => {
-	// const overage = Math.max(
-	// 	0,
-	// 	new Decimal(apiBalanceBreakdown.usage)
-	// 		.sub(apiBalanceBreakdown.included_grant)
-	// 		.sub(apiBalanceBreakdown.prepaid_grant)
-	// 		.toNumber(),
-	// );
-
 	return apiBalanceBreakdown.overage ?? 0;
 };
 

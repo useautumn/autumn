@@ -39,9 +39,6 @@ if (cluster.isPrimary) {
 	await initInfisical();
 	getAutumnEnv();
 
-	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
-	// await initHatchetWorker();
-
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
 	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL_V2}`);
 

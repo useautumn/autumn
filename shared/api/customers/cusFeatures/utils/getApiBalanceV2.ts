@@ -129,9 +129,6 @@ export const customerEntitlementsToApiBalance = ({
 }): { data: ApiBalanceWithAllocationCheck } => {
 	const entityId = fullSubject.entity?.id ?? fullSubject.entity?.internal_id;
 
-	// console.log("customerEntitlements", customerEntitlements);
-	// console.log("aggregatedFeatureBalance", aggregatedFeatureBalance);
-
 	if (customerEntitlements.length === 0) {
 		return {
 			data: mergeAggregatedBalanceIntoApiBalanceV2({

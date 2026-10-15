@@ -19,65 +19,90 @@ function handler(webhook) {
   var payload = webhook.payload || {};
   var data = payload.data || payload;
 
-  // ============ customer.products.updated ============
-  if (webhook.eventType === "customer.products.updated") {
-    var scenario = data.scenario || "updated";
-    var customer = data.customer || {};
-    var entity = data.entity || null;
-    var product = data.updated_product || {};
+  // ============ billing.updated ============
+  if (webhook.eventType === "billing.updated") {
+    var customerId = data.customer_id || "";
+    var entityId = data.entity_id || null;
+    var planChanges = data.plan_changes || [];
+    var reasonTags = data.tags || [];
 
-    var customerName = customer.name || customer.email || customer.id || "Customer";
-    var customerEmail = customer.email || null;
-    var customerId = customer.id || "";
-
-    var productName = product.name || "their plan";
-    if (product.version && product.version !== 1) {
-      productName = productName + " V" + product.version;
+    // Tag-only events (no plan changed) have nothing worth posting.
+    if (planChanges.length === 0) {
+      webhook.cancel = true;
+      return webhook;
     }
 
-    var entityLabel = null;
-    if (entity) {
-      entityLabel = entity.name || entity.id || null;
+    // "updated" covers several in-place changes; previous_attributes tells them apart.
+    function classifyPlanChange(change) {
+      var previous = change.previous_attributes || {};
+      if (change.action !== "updated") return change.action;
+      if (previous.canceled_at === null) return "cancelled";
+      if (typeof previous.canceled_at === "number") return "uncancelled";
+      if (previous.past_due === false) return "past_due";
+      return "updated";
     }
 
-    var meta = {
-      "new":        { emoji: "🎉", header: "New Subscription",         verb: "subscribed to" },
-      "upgrade":    { emoji: "🚀", header: "Customer Upgraded",        verb: "upgraded to" },
-      "downgrade":  { emoji: "📉", header: "Customer Downgraded",      verb: "downgraded to" },
-      "cancel":     { emoji: "⚠️",  header: "Subscription Cancelled",   verb: "cancelled" },
-      "renew":      { emoji: "🔄", header: "Subscription Uncancelled", verb: "uncancelled" },
-      "expired":    { emoji: "💀", header: "Subscription Expired",     verb: "expired on" },
-      "scheduled":  { emoji: "📅", header: "Change Scheduled",         verb: "scheduled a change to" }
-    }[scenario] || { emoji: "🔔", header: "Subscription Updated", verb: "updated" };
+    var changeMeta = {
+      "activated":   { emoji: "🎉", verb: "activated" },
+      "scheduled":   { emoji: "📅", verb: "scheduled" },
+      "expired":     { emoji: "💀", verb: "expired" },
+      "cancelled":   { emoji: "⚠️",  verb: "cancelled" },
+      "uncancelled": { emoji: "🔄", verb: "uncancelled" },
+      "past_due":    { emoji: "💳", verb: "is past due" },
+      "updated":     { emoji: "🔔", verb: "updated" }
+    };
 
-    var sentence;
-    if (scenario === "expired") {
-      sentence = "*" + customerName + "*'s *" + productName + "* expired";
-    } else {
-      sentence = "*" + customerName + "* " + meta.verb + " *" + productName + "*";
+    var kinds = {};
+    var changeLines = [];
+    for (var i = 0; i < planChanges.length; i++) {
+      var change = planChanges[i];
+      var kind = classifyPlanChange(change);
+      var changeInfo = changeMeta[kind] || changeMeta.updated;
+      var snapshot = change.subscription || change.purchase || {};
+      var line = changeInfo.emoji + " *" + (snapshot.plan_id || "plan") + "* " + changeInfo.verb;
+      if (change.entity_id && change.entity_id !== entityId) {
+        line += " (entity `" + change.entity_id + "`)";
+      }
+      kinds[kind] = true;
+      changeLines.push(line);
     }
 
-    var previewText = meta.emoji + " " + customerName + " " + meta.verb + " " + productName;
+    var meta = { emoji: "🔔", header: "Plans Updated" };
+    if (kinds.activated && kinds.expired) {
+      meta = { emoji: "🔀", header: "Plan Changed" };
+    } else if (kinds.activated) {
+      meta = { emoji: "🎉", header: "New Subscription" };
+    } else if (kinds.scheduled) {
+      meta = { emoji: "📅", header: "Change Scheduled" };
+    } else if (kinds.cancelled) {
+      meta = { emoji: "⚠️", header: "Subscription Cancelled" };
+    } else if (kinds.uncancelled) {
+      meta = { emoji: "🔄", header: "Subscription Uncancelled" };
+    } else if (kinds.expired) {
+      meta = { emoji: "💀", header: "Subscription Expired" };
+    } else if (kinds.past_due) {
+      meta = { emoji: "💳", header: "Payment Past Due" };
+    }
+
+    var customerLink = customerId
+      ? "<" + AUTUMN_BASE + customerId + "|`" + customerId + "`>"
+      : "`unknown`";
+
+    var previewText = meta.emoji + " " + meta.header + ": " + (customerId || "unknown customer");
 
     var fields = [
-      { type: "mrkdwn", text: "*Customer:*\n" + customerName }
+      { type: "mrkdwn", text: "*Customer:*\n" + customerLink }
     ];
-    if (customerEmail) {
-      fields.push({ type: "mrkdwn", text: "*Email:*\n" + customerEmail });
+    if (entityId) {
+      fields.push({ type: "mrkdwn", text: "*Entity:*\n`" + entityId + "`" });
     }
-    fields.push({ type: "mrkdwn", text: "*Product:*\n" + productName });
-    fields.push({ type: "mrkdwn", text: "*Scenario:*\n`" + scenario + "`" });
-    if (entityLabel) {
-      fields.push({ type: "mrkdwn", text: "*Entity:*\n" + entityLabel });
+    if (reasonTags.length > 0) {
+      fields.push({ type: "mrkdwn", text: "*Tags:*\n`" + reasonTags.join("`, `") + "`" });
     }
 
     var contextParts = [];
-    if (customerId) {
-      contextParts.push("Customer ID: `" + customerId + "`");
-    }
-    if (entity && entity.id) {
-      contextParts.push("Entity: `" + entity.id + "`");
-    }
+    if (customerId) contextParts.push("Customer ID: `" + customerId + "`");
+    if (entityId) contextParts.push("Entity: `" + entityId + "`");
 
     var blocks = [
       {
@@ -86,7 +111,7 @@ function handler(webhook) {
       },
       {
         type: "section",
-        text: { type: "mrkdwn", text: sentence }
+        text: { type: "mrkdwn", text: changeLines.join("\n") }
       },
       {
         type: "section",

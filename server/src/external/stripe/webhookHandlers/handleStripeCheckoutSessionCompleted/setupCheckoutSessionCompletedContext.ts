@@ -39,7 +39,6 @@ export const setupCheckoutSessionCompletedContext = async ({
 		expand: ["line_items"],
 	});
 
-	// Get metadata from checkout session
 	const metadata = await getMetadataFromCheckoutSession(
 		stripeCheckoutSession,
 		db,

@@ -17,12 +17,12 @@ import {
 	expectCatalogResultsCorrect,
 } from "../../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
 import {
 	deleteDbPlans,
 	expectCatalogPlansCorrect,
 	expectDbPlansAbsent,
 } from "../../utils/expectCatalogPlans.js";
-import { messagesItem } from "../../licenses/utils/seedLicensePlans.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,

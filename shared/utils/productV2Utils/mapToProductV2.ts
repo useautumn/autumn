@@ -23,7 +23,6 @@ export const mapToProductItems = ({
 	entitlements ??= [];
 
 	for (const ent of entitlements) {
-		// const relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
 		const relatedPrice = entToPrice({ ent, prices });
 		const item = toProductItem({ ent, price: relatedPrice });
 		items.push(item);

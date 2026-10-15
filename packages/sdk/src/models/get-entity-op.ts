@@ -177,6 +177,19 @@ export const GetEntityType = {
  */
 export type GetEntityType = OpenEnum<typeof GetEntityType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const GetEntityCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type GetEntityCombine = OpenEnum<typeof GetEntityCombine>;
+
 export type GetEntityDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -545,6 +558,10 @@ export type GetEntityFeature = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: GetEntityCombine | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -1104,6 +1121,12 @@ export const GetEntityType$inboundSchema: z.ZodMiniType<
   GetEntityType,
   unknown
 > = openEnums.inboundSchema(GetEntityType);
+
+/** @internal */
+export const GetEntityCombine$inboundSchema: z.ZodMiniType<
+  GetEntityCombine,
+  unknown
+> = openEnums.inboundSchema(GetEntityCombine);
 
 /** @internal */
 export const GetEntityDimensions6$inboundSchema: z.ZodMiniType<
@@ -1836,6 +1859,7 @@ export const GetEntityFeature$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: GetEntityType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(GetEntityCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => GetEntityCreditSchema1$inboundSchema),

@@ -2,7 +2,7 @@ import type {
 	ApiVersion,
 	AppEnv,
 	EventInsert,
-	FinalizeLockParamsV0,
+	FinalizeLockParamsV1,
 	Price,
 	TrackParams,
 	UpdateBalanceParamsV0,
@@ -71,6 +71,8 @@ export interface Payloads {
 		/** False when the sync request path already claimed the body
 		 *  idempotency key at accept time — the worker must not re-claim. */
 		validateTrackBodyIdempotencyKey?: boolean;
+		/** Epoch ms a worker-path track was spooled; its replay is refused past the worker's dedup window. */
+		spooledAt?: number;
 	};
 	[JobName.UpdateBalance]: {
 		orgId: string;
@@ -122,7 +124,7 @@ export interface Payloads {
 		env: AppEnv;
 		customerId?: string;
 		requestId: string;
-		params: FinalizeLockParamsV0;
+		params: FinalizeLockParamsV1;
 	};
 	[key: string]: unknown;
 }

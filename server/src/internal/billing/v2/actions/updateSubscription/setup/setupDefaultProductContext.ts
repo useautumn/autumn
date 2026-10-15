@@ -31,12 +31,6 @@ export const setupDefaultProductContext = async ({
 	});
 
 	if (!valid) return undefined;
-	// const { valid: isMainCustomerScopedAndRecurring } = cp(customerProduct)
-	// 	.main()
-	// 	.recurring()
-	// 	.customerScoped();
-
-	// if (!isMainCustomerScopedAndRecurring) return undefined;
 
 	const defaultProduct = await getFreeDefaultProductByGroup({
 		ctx,

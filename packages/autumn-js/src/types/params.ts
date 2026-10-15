@@ -2,7 +2,6 @@ import type {
 	AttachParams,
 	CheckParams,
 	CreateReferralCodeParams,
-	// CustomerExpand,
 	EventsAggregateParams,
 	EventsListParams,
 	GetEntityParams,

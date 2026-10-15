@@ -1,4 +1,4 @@
-import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
+import { LicenseCustomizeResponseSchema } from "@models/licenseModels/licenseModels.js";
 import { z } from "zod/v4";
 import { ApiPlanV1Schema } from "./apiPlanV1.js";
 
@@ -21,7 +21,7 @@ export const ApiPlanLicenseV1Schema = z.object({
 		description:
 			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
 	}),
-	customize: LicenseCustomizeSchema.optional().meta({
+	customize: LicenseCustomizeResponseSchema.optional().meta({
 		internal: true,
 		description: "The item and price diff applied to this parent-plan link.",
 	}),

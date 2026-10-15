@@ -16,7 +16,9 @@ import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/pro
 import { validateStripeSubscriptionActionOwnership } from "@/internal/billing/v2/providers/stripe/utils/connect/validateStripeSubscriptionActionOwnership";
 import { filterUnbilledUsageLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/filterUnbilledUsageLineItems";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
+import { willStripeSubscriptionUpdateCreateInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/willStripeSubscriptionUpdateCreateInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
+import { buildAddedLinesInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildAddedLinesInvoiceItemsAction";
 import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
 import { buildStripeInvoiceAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceAction";
 import { buildStripeInvoiceItemsAction } from "../../../providers/stripe/actionBuilders/buildStripeInvoiceItemsAction";
@@ -141,6 +143,26 @@ export const evaluateStripeBillingPlan = async ({
 			lineItems: filterUnbilledUsageLineItems({ autumnBillingPlan }),
 			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 			stripeDiscounts: billingContext.stripeDiscounts ?? [],
+		});
+	}
+
+	// Stripe bills a new subscription or an ended trial itself, so add_lines wait for that invoice as pending items.
+	const stripeBillsNow =
+		stripeSubscriptionAction?.type === "create" ||
+		(stripeSubscriptionAction?.type === "update" &&
+			willStripeSubscriptionUpdateCreateInvoice({
+				billingContext,
+				stripeSubscriptionAction,
+			}));
+	if (
+		!createManualInvoice &&
+		!stripeCheckoutSessionAction &&
+		stripeBillsNow &&
+		autumnBillingPlan.lineItems
+	) {
+		stripeInvoiceItemsAction = buildAddedLinesInvoiceItemsAction({
+			lineItems: autumnBillingPlan.lineItems,
+			billingContext,
 		});
 	}
 

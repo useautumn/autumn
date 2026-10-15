@@ -61,7 +61,6 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 
 	const { subscriptionScheduleAction } = stripeBillingPlan;
 	if (subscriptionScheduleAction?.type === "update") {
-		// Get old schedule ID
 		const oldScheduleId =
 			subscriptionScheduleAction.stripeSubscriptionScheduleId;
 		const newScheduleId = stripeSubscriptionScheduleId;

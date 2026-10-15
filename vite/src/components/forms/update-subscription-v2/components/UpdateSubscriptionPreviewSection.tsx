@@ -3,7 +3,7 @@ import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionF
 import { CollectionMethodSwitchNotice } from "./CollectionMethodSwitchNotice";
 
 export function UpdateSubscriptionPreviewSection() {
-	const { previewQuery, hasChanges, collectionMethodSwitch } =
+	const { previewQuery, hasChanges, collectionMethodSwitch, lineEdits } =
 		useUpdateSubscriptionFormContext();
 
 	return (
@@ -12,6 +12,7 @@ export function UpdateSubscriptionPreviewSection() {
 			<PreviewSection
 				previewQuery={previewQuery}
 				hidden={!hasChanges && !collectionMethodSwitch.isActive}
+				lineEdits={lineEdits.enabled ? lineEdits : undefined}
 			/>
 		</>
 	);

@@ -13,7 +13,6 @@ export function planParamsV1ToProductItems({
 	currentFullProduct,
 }: {
 	ctx: SharedContext;
-	// params: CreatePlanParams | UpdatePlanParams;
 	params: {
 		price?: BasePriceParams | null;
 		items?: CreatePlanItemParamsV1[];

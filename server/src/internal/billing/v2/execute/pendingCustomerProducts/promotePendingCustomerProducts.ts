@@ -27,6 +27,23 @@ export const promotePendingCustomerProducts = async ({
 		env: ctx.env,
 		inStatuses: [CusProductStatus.Pending],
 	});
+	// A deferral that replaced another may run before the replaced one's pending rows move across.
+	const pendingIds = new Set(pendingCustomerProducts.map(({ id }) => id));
+	const plannedIds = new Set(
+		(autumnBillingPlan.insertCustomerProducts ?? []).map(({ id }) => id),
+	);
+	if (plannedIds.size > pendingIds.size) {
+		const customerPendingRows = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		pendingCustomerProducts.push(
+			...customerPendingRows.filter(
+				({ id }) => plannedIds.has(id) && !pendingIds.has(id),
+			),
+		);
+	}
 
 	if (!pendingCustomerProducts.length) return autumnBillingPlan;
 

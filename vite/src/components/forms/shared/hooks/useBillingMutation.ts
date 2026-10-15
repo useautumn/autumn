@@ -12,7 +12,14 @@ type BillingMutationResponse = {
 		hosted_invoice_url?: string | null;
 	} | null;
 	payment_url?: string | null;
+	required_action?: unknown;
 };
+
+/** An open invoice sent on its subscription's terms needs no payment step, unlike a charge awaiting one. */
+const isSentInvoice = (data: BillingMutationResponse) =>
+	!data.required_action &&
+	Boolean(data.invoice?.hosted_invoice_url) &&
+	data.payment_url === data.invoice?.hosted_invoice_url;
 
 export type BillingMutationParams = BillingStageParams & {
 	skipDefaultSuccess?: boolean;
@@ -85,6 +92,8 @@ export function useBillingMutation<
 					toast.success("Subscription started");
 					onSuccess?.();
 				}
+			} else if (isSentInvoice(data)) {
+				toast.success("Invoice created successfully");
 			} else if (data.payment_url) {
 				onCheckoutRedirect?.(data.payment_url);
 			} else {

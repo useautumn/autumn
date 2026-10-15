@@ -129,6 +129,7 @@ describe(chalk.yellowBright("diffTimelines: audit cases"), () => {
 
 		expect(describeOperations(diff)).toEqual([]);
 		expect(describeReview(review)).toEqual([
+			"B:kept:pro:h1",
 			"now:kept:pro:h1",
 			"now:kept:sso:h1",
 		]);
@@ -439,6 +440,7 @@ describe(chalk.yellowBright("diffTimelines: audit matrix failures"), () => {
 
 		expect(describeOperations(diff)).toEqual(["retime:sso_row:C"]);
 		expect(describeReview(review)).toEqual([
+			"C:kept:pro:h1",
 			"now:kept:pro:h1",
 			"now:kept:sso:h1",
 		]);

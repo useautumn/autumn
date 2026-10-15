@@ -10,7 +10,7 @@ Autumn is your source of truth for billing and entitlements between your applica
 
 It manages subscription state, credit balances, feature entitlements, and usage enforcement — the logic you'd otherwise build and maintain across your codebase, database, and Stripe webhooks.
 
-Your app can query Autumn inline to determine what a customer is allowed to do (send an AI message, access SSO, add a seat) and to track usage against their balance.
+Your app can query Autumn inline to determine what a customer is allowed to do (send an AI message, access SSO, add a seat) and to track usage against their balance. For latency-sensitive paths, checks and tracking can also run through an [edge cache](/documentation/edge-cache) in your own cloud.
 
 Because billing logic lives in Autumn, pricing changes and custom deals become a simple configuration change. No migrations or rebuild.
 
@@ -48,7 +48,7 @@ You can choose to build this yourself, or use Autumn to offload all this logic o
 
 Other billing tools are designed for post-hoc invoicing: you send usage events, they generate invoices at end of period. Your app still owns access control, usage limits, and plan change logic.
 
-Autumn is a real-time system of record. You can query it for the current state of any customer (plan, entitlements, balances) inline, via cache, or via webhooks. Because Autumn owns the state (not your code or database), edge cases like proration, failed payments, and concurrency are handled automatically. Pricing changes become config, not code.
+Autumn is a real-time system of record. You can query it for the current state of any customer (plan, entitlements, balances) inline, via [cache](/documentation/edge-cache), or via webhooks. Because Autumn owns the state (not your code or database), edge cases like proration, failed payments, and concurrency are handled automatically. Pricing changes become config, not code.
 
 Autumn builds on top of Stripe rather than replacing it. Your subscriptions, customers, and payment details stay in your own Stripe account.
 
@@ -74,15 +74,19 @@ Your subscriptions live in Stripe. You're never locked in.
 </Accordion>
 
 <Accordion title="Do I need to call Autumn before every action?">
-For latency-sensitive operations, you may not want to make an `autumn.check()` network call before every action.
+For most apps, calling `check` before each action is fine. For latency-sensitive paths, you have three options:
 
-You can either cache the Autumn customer data on your end, or use the `customer.products.updated` webhook to replicate Autumn state into your own system.
+- **Deploy the edge cache.** It runs in your own AWS account and answers `check` and records usage from inside your network, with no round trip to Autumn. Your code stays the same: point the SDK at it and it falls back to Autumn on its own. [Learn more](/documentation/edge-cache).
+- **Cache the customer object yourself**, and refresh it when you track usage or change plans.
+- **Copy Autumn state into your own database** using the `billing.updated` webhook.
 </Accordion>
 
 <Accordion title="What if Autumn goes down?">
-Not being able to reach Autumn does not mean your app goes down. The SDKs default to fail-open and fail-fast, meaning in a worst case, some users get temporary additional access.
+Not being able to reach Autumn does not mean your app goes down. The SDKs default to [fail-open](/documentation/fail-open) and fail-fast, meaning in a worst case, some users get temporary additional access.
 
-We can help reconcile usage tracking and balances afterward if needed.
+If you run the [edge cache](/documentation/edge-cache), checks keep working through an Autumn outage, because it answers from the last balances Autumn sent it. If the edge cache itself goes down, the SDK sends checks straight to Autumn instead.
+
+Tracked usage is queued on our side and replayed automatically, so balances catch up on their own once Autumn recovers.
 </Accordion>
 
 <Accordion title="How is Autumn different from Orb or Metronome?">
@@ -105,6 +109,8 @@ For larger companies, we provide a forward-deployed service: dual-write to your 
 
 <Accordion title="Can you handle our event volume?">
 Autumn supports 10,000+ events per second per end customer. If you have specific throughput requirements, reach out and we'll walk through the architecture.
+
+For very hot paths, the [edge cache](/documentation/edge-cache) handles checks and tracks from inside your own cloud.
 </Accordion>
 
 </AccordionGroup>

@@ -17,6 +17,17 @@ describe("Miscellaneous edge config admin defaults", () => {
 		).toMatchObject({ axiomResponseBodyReduction: true });
 	});
 
+	test("keeps expired metadata cleanup off by default", () => {
+		expect(MISCELLANEOUS_DEFAULT_CONFIG.expiredMetadataCleanup).toBe(false);
+		expect(
+			JSON.parse(
+				buildMiscellaneousJsonText({
+					config: MISCELLANEOUS_DEFAULT_CONFIG,
+				}),
+			),
+		).toMatchObject({ expiredMetadataCleanup: false });
+	});
+
 	test("describes missing S3 config as using defaults", () => {
 		expect(
 			getStatusMessage({ config: MISCELLANEOUS_DEFAULT_CONFIG }),

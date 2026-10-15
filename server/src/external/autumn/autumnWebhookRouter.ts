@@ -60,18 +60,6 @@ autumnWebhookRouter.post("", async (c) => {
 
 		console.log("EVENT:", JSON.stringify(evt, null, 2));
 
-		// switch (type) {
-		// 	case WebhookEventType.CustomerProductsUpdated:
-		// 		console.log(
-		// 			`Type: ${type}, Scenario: ${data?.scenario}, Product: ${(data?.updated_product as { id?: string })?.id}`,
-		// 		);
-		// 		break;
-		// 	case WebhookEventType.CustomerThresholdReached:
-		// 		console.log(`Type: ${type}`);
-		// 		console.log(`Feature: `, data?.feature);
-		// 		break;
-		// }
-
 		return c.json({ success: true, message: "Webhook received" }, 200);
 	} catch (_error) {
 		return c.json(

@@ -43,7 +43,6 @@ export const initFullCustomerProductFromProduct = ({
 
 	const freeTrial = fullProduct.free_trial ?? null;
 	let trialEndsAt: number | undefined;
-	// const now = initOptions?.currentEpochMs ?? Date.now();
 
 	if (freeTrial) {
 		trialEndsAt = addDuration({

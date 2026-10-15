@@ -90,7 +90,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Mint V2",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -164,7 +165,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						items: [messagesItem(200), dashboardItem],
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -232,7 +234,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Carry V2",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -308,7 +311,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "Default V2",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});
@@ -347,7 +351,8 @@ test.concurrent(
 					{
 						plan_id: planId,
 						name: "No Cus V2",
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});

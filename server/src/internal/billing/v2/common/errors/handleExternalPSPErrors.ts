@@ -81,7 +81,6 @@ export const handleExternalPSPErrors = ({
 		return;
 	}
 
-	// action === "attach"
 	if (!customerProducts || customerProducts.length === 0) return;
 
 	// Safe path: a true one-off attach (no recurring prices) can mix across

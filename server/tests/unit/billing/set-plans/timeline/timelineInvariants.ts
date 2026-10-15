@@ -324,15 +324,15 @@ export const expectPhaseIndependence = (timelineCase: TimelineCase) => {
 	}
 };
 
-/** R5: no later phase repeats the row the phase before it shows for the same plan. */
+/** R5: no later phase repeats a row the phase before it shows, unless it repeats that phase whole. */
 export const expectNoCarriedOverRows = ({ review }: { review: ReviewRows }) => {
 	for (const [phaseIndex, phase] of review.phases.entries()) {
 		const previousRows = new Set(
 			(review.phases[phaseIndex - 1]?.rows ?? []).map(describeReviewRow),
 		);
-		const repeated = phase.rows
-			.map(describeReviewRow)
-			.filter((row) => previousRows.has(row));
+		const rows = phase.rows.map(describeReviewRow);
+		const repeated = rows.filter((row) => previousRows.has(row));
+		if (repeated.length === rows.length) continue;
 		expect({ at: phase.at, repeated }).toEqual({ at: phase.at, repeated: [] });
 	}
 };

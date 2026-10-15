@@ -814,6 +814,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.",
 			},
 			{
+				name: "combine",
+				type: "string",
+				required: false,
+				description:
+					"How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.",
+			},
+			{
 				name: "display",
 				type: "json",
 				required: false,
@@ -910,6 +917,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.",
+			},
+			{
+				name: "combine",
+				type: "string",
+				required: false,
+				description:
+					"How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.",
 			},
 			{
 				name: "display",
@@ -1053,7 +1067,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1137,6 +1151,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "processor_subscription_id",
@@ -1302,7 +1330,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.",
+					"Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).",
 			},
 			{
 				name: "no_billing_changes",
@@ -1412,7 +1440,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1532,7 +1560,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1616,6 +1644,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "processor_subscription_id",
@@ -1774,7 +1816,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "billing_cycle_anchor",
@@ -1895,7 +1937,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -1931,6 +1973,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "cancel_action",
@@ -2055,7 +2111,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "redirect_mode",
@@ -2091,6 +2147,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "cancel_action",
@@ -2324,7 +2394,7 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description:
-					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+					"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 			},
 			{
 				name: "subscription_id",
@@ -2380,6 +2450,20 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",
+			},
+			{
+				name: "remove_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.",
+			},
+			{
+				name: "add_lines",
+				type: "json",
+				required: false,
+				description:
+					"Lines to add to the invoice this request creates. Never changes the subscription or later invoices.",
 			},
 			{
 				name: "processor_subscription_id",
@@ -3232,6 +3316,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 					"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
 			},
 			{
+				name: "measure",
+				type: "string",
+				required: false,
+				description:
+					'What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.',
+			},
+			{
 				name: "aggregate_on",
 				type: "string",
 				required: false,
@@ -3342,6 +3433,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "string",
 				required: false,
 				description: "Stripe tax rate ID (txr_...) applied to every line.",
+			},
+			{
+				name: "payment_method_types",
+				type: "json",
+				required: false,
+				description:
+					"Payment method types the customer can pay the invoice with, e.g. card and us_bank_account. Defaults to the org's allowed payment methods.",
 			},
 			{
 				name: "period_start",
@@ -3615,6 +3713,29 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				type: "json",
 				required: false,
 				description: "Add, change or drop lines relative to the original.",
+			},
+		],
+	},
+	{
+		group: "invoices",
+		method: "update",
+		path: "/v1/invoices.update",
+		description:
+			"Changes which payment methods a draft or open Stripe invoice accepts. The customer sees the change on the hosted invoice page straight away.",
+		body: "object",
+		fields: [
+			{
+				name: "invoice_id",
+				type: "string",
+				required: true,
+				description: "The Autumn invoice ID to update.",
+			},
+			{
+				name: "payment_method_types",
+				type: "json",
+				required: true,
+				description:
+					"Payment method types the customer can pay the invoice with. Only draft and open Stripe invoices can be updated.",
 			},
 		],
 	},

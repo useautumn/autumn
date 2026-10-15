@@ -1,4 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
+import { type FrontendProduct, PRICE_VARIES_LABEL } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import {
 	type AdminPlanIds,
@@ -10,10 +10,7 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import {
-	getBasePriceDisplay,
-	PRICE_VARIES_LABEL,
-} from "@/utils/product/basePriceDisplayUtils";
+import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { AdditionalCurrenciesHint } from "./AdditionalCurrenciesHint";
 

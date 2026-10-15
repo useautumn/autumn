@@ -95,6 +95,7 @@ packages/autumn-js/src/generated/
 packages/atmn/src/generated/
 packages/agent-docs/generated/
 packages/agent-docs/src/generated/
+apps/website/public/SKILL.md
 
 # Committed by the bot, but PRs may edit them (dependencies). Keep this section last.
 # sync-only

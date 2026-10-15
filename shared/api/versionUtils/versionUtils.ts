@@ -35,6 +35,7 @@ export {
 	type VersionChangeConstructor,
 } from "./versionChangeUtils/VersionChange.js";
 export { VersionChangeRegistryClass } from "./versionChangeUtils/VersionChangeRegistryClass.js";
+export * from "./versionChangeUtils/versionChangeRegistry.js";
 // Version registry
 export type { VersionMetadata } from "./versionRegistry.js";
 export { VERSION_REGISTRY } from "./versionRegistry.js";
@@ -46,8 +47,3 @@ export {
 	getVersionsSorted,
 	isValidVersion,
 } from "./versionRegistryUtils.js";
-
-// Auto-register all version changes
-import "./versionChangeUtils/versionChangeRegistry.js";
-
-export * from "./versionChangeUtils/versionChangeRegistry.js";

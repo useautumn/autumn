@@ -50,7 +50,9 @@ export const expectAttachedPlanVersionCorrect = async ({
 		entityId === undefined
 			? rows
 			: rows.filter((row) =>
-					entityId === true ? Boolean(row.entity_id) : row.entity_id === entityId,
+					entityId === true
+						? Boolean(row.entity_id)
+						: row.entity_id === entityId,
 				);
 
 	if (count !== undefined) {

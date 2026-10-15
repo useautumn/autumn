@@ -123,6 +123,36 @@ export const ApiCreditSchemaItemSchema = z.union([
 	ApiFlatCreditSchemaItemSchema,
 ]);
 
+export const ApiExcludedCreditSchemaItemSchema = z.strictObject({
+	metered_feature_id: z.string().nonempty().meta({
+		description: "ID of the metered feature to remove from the credit system.",
+	}),
+	excluded: z.literal(true).meta({
+		description:
+			"Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.",
+	}),
+});
+
+const isExcludedRowInput = (input: unknown) =>
+	typeof input === "object" &&
+	input !== null &&
+	"excluded" in input &&
+	input.excluded === true;
+
+export const ApiCreditSchemaOverrideItemSchema = z.union(
+	[
+		ApiGraduatedCreditSchemaItemSchema,
+		ApiFlatCreditSchemaItemSchema,
+		ApiExcludedCreditSchemaItemSchema,
+	],
+	{
+		error: (issue) =>
+			isExcludedRowInput(issue.input)
+				? "An excluded credit_schema row only takes metered_feature_id and excluded; remove its rate"
+				: undefined,
+	},
+);
+
 const ApiLegacyFlatCreditSchemaItemSchema =
 	ApiFlatCreditSchemaItemSchema.extend({
 		metered_feature_id: z.literal(""),
@@ -135,6 +165,9 @@ export const ApiCreditSchemaResponseItemSchema = z.union([
 ]);
 
 export type ApiCreditSchemaItem = z.infer<typeof ApiCreditSchemaItemSchema>;
+export type ApiCreditSchemaOverrideItem = z.infer<
+	typeof ApiCreditSchemaOverrideItemSchema
+>;
 export type ApiCreditSchemaResponseItem = z.infer<
 	typeof ApiCreditSchemaResponseItemSchema
 >;

@@ -5,7 +5,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { viteHmrClient } from "../packages/env/src/viteDev.js";
+import { bootPrefetch } from "./viteBootPrefetch.ts";
 import { sharedBundle } from "./viteSharedBundle.ts";
+
+const SHARED_DIR = path.resolve(__dirname, "../shared");
 
 // Defaults so the app works when no .env.local is present
 // (e.g. after `bun dw disable`). Real values from .env / infisical /
@@ -60,9 +63,8 @@ export default defineConfig({
 		pure: ["console.log"],
 	},
 	plugins: [
-		...(isCapyDev
-			? [sharedBundle({ sharedDir: path.resolve(__dirname, "../shared") })]
-			: []),
+		...(isCapyDev ? [sharedBundle({ sharedDir: SHARED_DIR })] : []),
+		bootPrefetch(),
 		react(),
 		tailwindcss(), // Automatically reads paths from tsconfig.json
 		tsconfigPaths(),
@@ -213,5 +215,18 @@ export default defineConfig({
 	build: {
 		// Disable sourcemaps in CI to reduce memory usage during build
 		sourcemap: !process.env.CI,
+		rollupOptions: {
+			treeshake: {
+				// @autumn/shared builds every zod schema at import time; treating its modules as
+				// pure drops the ones the dashboard never uses from the startup bundle.
+				moduleSideEffects: (id) =>
+					!id.startsWith(SHARED_DIR) || id.includes("versionChangeRegistry"),
+			},
+			output: {
+				// Without this, every icon shared by two lazy pages becomes its own
+				// chunk, so opening a page costs ~150 tiny requests and import hops.
+				experimentalMinChunkSize: 20_000,
+			},
+		},
 	},
 });

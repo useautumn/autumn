@@ -330,7 +330,6 @@ async function main() {
 		);
 		console.log();
 
-		// Insert events
 		console.log(chalk.cyan("Inserting events into database..."));
 		let successCount = 0;
 		let errorCount = 0;

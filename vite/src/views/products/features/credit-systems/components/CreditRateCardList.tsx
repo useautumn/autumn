@@ -1,15 +1,12 @@
 import { IconButton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
 import { useCreditSchemaListContext } from "../hooks/CreditSchemaListContext";
 import { CreditRateCardRow } from "./CreditRateCardRow";
 
 export function CreditRateCardList({
 	addLabel = "Add feature",
-	renderRowLabel,
 }: {
 	addLabel?: string;
-	renderRowLabel?: (index: number) => ReactNode;
 }) {
 	const {
 		schema,
@@ -29,19 +26,17 @@ export function CreditRateCardList({
 				const rowKey = schemaKeys[index];
 
 				return (
-					<div key={rowKey} className="flex flex-col gap-1">
-						{renderRowLabel?.(index)}
-						<CreditRateCardRow
-							item={item}
-							availableFeatures={availableFeaturesFor(item)}
-							allFeatures={allSchemaCandidateFeatures}
-							onChange={(next) => setSchemaItem({ index, item: next })}
-							onRemove={() => removeSchemaItem(index)}
-							isExpanded={expandedKey === rowKey}
-							onToggle={() => toggleExpandedKey(rowKey)}
-							showRateCardControls
-						/>
-					</div>
+					<CreditRateCardRow
+						key={rowKey}
+						item={item}
+						availableFeatures={availableFeaturesFor(item)}
+						allFeatures={allSchemaCandidateFeatures}
+						onChange={(next) => setSchemaItem({ index, item: next })}
+						onRemove={() => removeSchemaItem(index)}
+						isExpanded={expandedKey === rowKey}
+						onToggle={() => toggleExpandedKey(rowKey)}
+						showRateCardControls
+					/>
 				);
 			})}
 

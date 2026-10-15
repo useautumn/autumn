@@ -76,7 +76,6 @@ export const freeTrialToStripeTimestamp = ({
 		});
 	}
 
-	// trialEnd = addMinutes(trialEnd, 5);
 	trialEnd = addMinutes(trialEnd, 10);
 
 	return Math.ceil(trialEnd.getTime() / 1000);

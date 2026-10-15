@@ -47,19 +47,12 @@ export const setupFeatureQuantitiesContext = ({
 		if (isLosingPrepaidQuantityPrice({ price, prices: fullProduct.prices }))
 			continue;
 
-		// const feature = priceToFeature({
-		// 	price,
-		// 	features: ctx.features,
-		// 	errorOnNotFound: true,
-		// });
-
 		const entitlement = priceToEnt({
 			price,
 			entitlements: fullProduct.entitlements,
 			errorOnNotFound: true,
 		});
 
-		// Get new feature quantity from params
 		const newFeatureQuantity = paramsToFeatureOptions({
 			params: featureQuantitiesParams,
 			price,

@@ -1,4 +1,8 @@
-import { type Feature, FeatureType } from "@autumn/shared";
+import {
+	type Feature,
+	FeatureType,
+	leavesCompetingCombine,
+} from "@autumn/shared";
 
 /** Which blockable dimensions a resolved current → next update touches. */
 export const featureChangeFlags = ({
@@ -14,4 +18,5 @@ export const featureChangeFlags = ({
 		current.type !== FeatureType.Boolean &&
 		next.type !== FeatureType.Boolean &&
 		current.config?.usage_type !== next.config?.usage_type,
+	isLeavingCompetingCombine: leavesCompetingCombine({ current, next }),
 });

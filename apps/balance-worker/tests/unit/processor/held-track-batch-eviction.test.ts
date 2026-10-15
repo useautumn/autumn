@@ -72,6 +72,7 @@ test("a batch member cleared by the pre-check is not evicted by an earlier membe
 				subjectMapBudget: {
 					totalBytes: 1 << 30,
 					members: () => 1,
+					usedBytes: () => 0,
 					join: () => ({ maxBytes: () => bound, leave: () => {} }),
 				},
 			},

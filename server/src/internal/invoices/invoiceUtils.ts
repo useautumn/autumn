@@ -177,10 +177,5 @@ export const attachToInvoiceResponse = ({
 		hosted_invoice_url: invoice.hosted_invoice_url,
 		total: invoice.total,
 		currency: invoice.currency,
-		// id: invoice.id,
-		// stripe_id: invoice.stripe_id,
-		// status: invoice.status,
-		// created_at: invoice.created_at,
-		// updated_at: invoice.updated_at,
 	};
 };

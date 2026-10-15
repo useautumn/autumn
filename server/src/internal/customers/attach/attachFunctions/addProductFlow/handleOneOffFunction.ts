@@ -135,7 +135,6 @@ export const handleOneOffFunction = async ({
 		});
 	}
 
-	// Create invoice
 	logger.info("1. Creating invoice");
 
 	// Skip auto_tax in invoice mode: send_invoice has no
@@ -276,7 +275,6 @@ export const handleOneOffFunction = async ({
 	const customerName = getCustomerDisplay({ customer });
 	const productNames = products.map((p) => p.name).join(", ");
 	return AttachFunctionResponseSchema.parse({
-		// success: true,
 		message: `Successfully purchased product(s) ${productNames} and attached to customer ${customerName}`,
 		invoice: invoiceOnly ? stripeInvoice : undefined,
 		code: SuccessCode.OneOffProductAttached,

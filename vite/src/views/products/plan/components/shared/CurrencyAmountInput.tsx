@@ -1,5 +1,5 @@
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
-import { useState } from "react";
+import { useFormattedNumberInput } from "@/hooks/common/useFormattedNumberInput";
 
 export const amountDisplayValue = (amount: number) =>
 	amount === 0 ? "" : amount.toString();
@@ -15,30 +15,14 @@ export const CurrencyAmountInput = ({
 	onRawChange: (raw: string) => void;
 	className?: string;
 }) => {
-	const [editingValue, setEditingValue] = useState<string | undefined>();
-
-	const handleChange = (raw: string) => {
-		const cleaned = raw.replace(/-/g, "");
-		if (cleaned !== "" && Number.isNaN(Number(cleaned))) return;
-		setEditingValue(cleaned);
-		onRawChange(cleaned);
-	};
+	const numberInputProps = useFormattedNumberInput({
+		value: displayValue,
+		onValueChange: onRawChange,
+	});
 
 	return (
 		<InputGroup className={className}>
-			<InputGroupInput
-				inputMode="decimal"
-				onBlur={() => setEditingValue(undefined)}
-				onChange={(e) => handleChange(e.target.value)}
-				onFocus={() => setEditingValue(displayValue)}
-				onKeyDown={(e) => {
-					if (e.key === "-" || e.key === "Minus") {
-						e.preventDefault();
-					}
-				}}
-				placeholder="0.00"
-				value={editingValue ?? displayValue}
-			/>
+			<InputGroupInput {...numberInputProps} placeholder="0.00" />
 			<InputGroupAddon align="inline-end">
 				<span className="text-tertiary-foreground text-xs uppercase">
 					{currencyCode}

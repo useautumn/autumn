@@ -224,6 +224,7 @@ export const noHandoffPublication: Pick<
 	| "awaitDraining"
 	| "awaitForeignClaim"
 	| "awaitClaim"
+	| "awaitRouteClaim"
 > = {
 	announceReady: announceNothing,
 	announcePreparing: announceNothing,
@@ -235,6 +236,7 @@ export const noHandoffPublication: Pick<
 	awaitDraining: awaitSignal,
 	awaitForeignClaim: awaitSignal,
 	awaitClaim: awaitSignal,
+	awaitRouteClaim: awaitSignal,
 };
 export type KafkaOwnedPartitionGroupConsumerPort = KafkaConsumerClient;
 export type KafkaPartitionRuntimeFactory = (

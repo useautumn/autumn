@@ -4,11 +4,13 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	Switch,
 } from "@autumn/ui";
 import { Leaf, Monitor, Moon, Scissors, Skull, Sun } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { SettingsRow } from "../SettingsRow";
 import { SettingsSection } from "../SettingsSection";
 
 interface PreviewColors {
@@ -192,7 +194,8 @@ const systemPrefersDark = () =>
 	window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 export const AppearanceSection = () => {
-	const { mode, setMode, preset, setPreset, isDark } = useTheme();
+	const { mode, setMode, preset, setPreset, isDark, noisy, setNoisy } =
+		useTheme();
 	const { isAdmin } = useAdmin();
 	const presetOptions = PRESET_OPTIONS.filter(
 		(p) => !["cursed", "scraps"].includes(p.id) || isAdmin,
@@ -283,6 +286,21 @@ export const AppearanceSection = () => {
 					</div>
 				</CardContent>
 			</Card>
+
+			{isAdmin && (
+				<div className="rounded-lg border bg-interactive-secondary px-4 py-3.5">
+					<SettingsRow
+						label="Noisy"
+						description="Play interface sounds as you click, type, and select"
+					>
+						<Switch
+							aria-label="Noisy"
+							checked={noisy}
+							onCheckedChange={setNoisy}
+						/>
+					</SettingsRow>
+				</div>
+			)}
 		</SettingsSection>
 	);
 };

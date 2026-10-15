@@ -82,7 +82,6 @@ export async function generateSdkTypes(options: {
 		formattedCode = code;
 	}
 
-	// Write file
 	writeFileSync(outputPath, formattedCode, "utf-8");
 
 	return outputPath;

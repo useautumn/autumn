@@ -7,6 +7,10 @@ When you create a plan in Autumn, you define what features your customers on tha
 
 The `check` method returns the `allowed` field in real-time to check if a customer should have access to a feature. You can use this to block access and prompt an upsell.
 
+<Tip>
+On a latency-sensitive path? The [edge cache](/documentation/edge-cache) answers `check` from inside your own cloud.
+</Tip>
+
 ## The `allowed` field
 
 The `allowed` field will return `true` for a given feature if:

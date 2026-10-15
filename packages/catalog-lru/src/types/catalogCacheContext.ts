@@ -19,6 +19,8 @@ export type CatalogCacheConfig = {
 	mutableRowTtlMs: number;
 	/** Sum of JSON lengths across cached rows; LRU eviction keeps the cache under it. */
 	maxSizeBytes: number;
+	/** A row neither read nor put for this long is purged, whatever its freshness ttl. Must exceed the freshness ttl. */
+	idleExpiryMs: number;
 };
 
 /** Invalidation scope (an org, or an org in one env) to the cached keys it expires. */
@@ -43,14 +45,18 @@ export type CatalogCacheState = {
 	catalogVersions: Map<string, number>;
 	/** The version of its scope each cached row was read under; older than the scope's current version means stale. */
 	rowVersions: WeakMap<CatalogRow, number>;
+	/** When each cached row was last read or put; the idle clock, separate from its freshness ttl. */
+	lastUsedAt: WeakMap<CatalogRow, number>;
+	lastIdleSweepAt: number;
 };
 
 export type CatalogCacheContext = {
 	db: CatalogRowsSource;
 	config: CatalogCacheConfig;
+	now?: () => number;
 };
 
 export type CatalogCacheScope = {
-	ctx: CatalogCacheContext;
+	ctx: CatalogCacheContext & { now: () => number };
 	state: CatalogCacheState;
 };

@@ -28,6 +28,9 @@ export const MiscellaneousEdgeConfigSchema = z.object({
 	/** Deletes loose purchase grants (metadata.source set) whose expires_at has
 	 *  passed. Dark by default — the sweep touches the largest table we have. */
 	expiredGrantCleanup: z.boolean().default(false),
+	/** Deletes checkout_session_completed metadata rows 31+ days past expiry,
+	 *  1k per 10-minute tick. Dark by default. */
+	expiredMetadataCleanup: z.boolean().default(false),
 });
 
 export type MiscellaneousEdgeConfig = z.infer<

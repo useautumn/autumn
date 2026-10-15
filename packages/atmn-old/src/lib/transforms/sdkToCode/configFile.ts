@@ -49,7 +49,6 @@ export function buildConfigFile(
 	);
 	sections.push("");
 
-	// Add features
 	if (features.length > 0) {
 		sections.push("// Features");
 		for (const feature of features) {
@@ -58,7 +57,6 @@ export function buildConfigFile(
 		}
 	}
 
-	// Add plans
 	if (plans.length > 0) {
 		sections.push("// Plans");
 		for (const plan of plans) {

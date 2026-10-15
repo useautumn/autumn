@@ -55,7 +55,6 @@ export const billingIntervalToStripe = ({
 				interval_count: finalCount,
 			};
 		default:
-			// throw new Error(`billingIntervalToStripe: invalid interval ${interval}`);
 			return {};
 	}
 };

@@ -1,5 +1,6 @@
 import { formatMs, type MultiAttachBillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { invoiceModeToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 /**
@@ -47,7 +48,7 @@ export const logMultiAttachContext = ({
 				timestamps: `Current: ${formatMs(currentEpochMs)} | Billing Anchor: ${billingCycleAnchorMs === "now" ? "now" : formatMs(billingCycleAnchorMs)} | Reset: ${formatMs(resetCycleAnchorMs)}`,
 
 				invoiceMode: invoiceMode
-					? `enable immediately: ${invoiceMode.enableProductImmediately} | finalize invoice: ${invoiceMode.finalizeInvoice}`
+					? `enable immediately: ${invoiceMode.enableProductImmediately} | issue method: ${invoiceModeToIssueMethod({ invoiceMode })}`
 					: "default",
 
 				stripe: `${stripeSubscription?.id ?? "no sub"} | ${stripeSubscriptionSchedule?.id ?? "no schedule"}`,

@@ -4,6 +4,7 @@ import {
 	cusProductsToCusPrices,
 	ErrCode,
 	type Feature,
+	FeatureCombine,
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
@@ -66,6 +67,16 @@ export const validateCreditSystem = (
 	if (isAiCreditSystem(featureType) && schema.length > 0) {
 		invalidCreditSystem(
 			"AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.",
+		);
+	}
+
+	if (
+		isAiCreditSystem(featureType) &&
+		config?.combine &&
+		config.combine !== FeatureCombine.Sum
+	) {
+		invalidCreditSystem(
+			"combine 'max' and 'min' are not supported on AI credit systems.",
 		);
 	}
 

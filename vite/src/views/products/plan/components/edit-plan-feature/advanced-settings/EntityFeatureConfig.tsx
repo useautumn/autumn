@@ -29,7 +29,6 @@ export function EntityFeatureConfig() {
 	return (
 		<AreaCheckbox
 			title="Per entity feature"
-			// description="Link this item to a specific feature entity in your app"
 			checked={item.entity_feature_id != null}
 			onCheckedChange={(checked) => {
 				setItem({

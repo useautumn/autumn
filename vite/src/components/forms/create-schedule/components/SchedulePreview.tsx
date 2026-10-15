@@ -1,4 +1,5 @@
 import type { SetPlansErrorAction } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { useMemo } from "react";
 import { useCustomerStateContext } from "@/components/forms/customer-state/CustomerStateProvider";
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
@@ -8,7 +9,8 @@ import { previewErrorToSetPlansErrorCopy } from "../utils/previewErrorToSetPlans
 import { SetPlansErrorAlert } from "./errors/SetPlansErrorAlert";
 
 export function SchedulePreview() {
-	const { preview, isPreviewLoading, error } = useCreateScheduleFormContext();
+	const { preview, isPreviewLoading, error, lineEdits } =
+		useCreateScheduleFormContext();
 	const { subscriptionLinks } = useCustomerStateContext();
 
 	const previewQuery = useMemo(
@@ -24,13 +26,22 @@ export function SchedulePreview() {
 				: subscriptionLinks?.pick();
 		return (
 			<SheetSection title="Pricing Preview" withSeparator={false}>
-				<SetPlansErrorAlert
-					copy={errorCopy}
-					onAction={subscriptionLinks ? runAction : undefined}
-				/>
+				<div className="flex flex-col gap-2">
+					<SetPlansErrorAlert
+						copy={errorCopy}
+						onAction={subscriptionLinks ? runAction : undefined}
+					/>
+					{lineEdits.hasEdits && (
+						<div>
+							<Button onClick={lineEdits.clear} size="sm" variant="secondary">
+								Clear line edits
+							</Button>
+						</div>
+					)}
+				</div>
 			</SheetSection>
 		);
 	}
 
-	return <PreviewSection previewQuery={previewQuery} />;
+	return <PreviewSection previewQuery={previewQuery} lineEdits={lineEdits} />;
 }

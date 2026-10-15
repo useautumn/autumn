@@ -10,6 +10,7 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	freshHeld,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -25,6 +26,7 @@ const newFolder = () => {
 };
 const open = ({ folder, slotCount }: { folder: string; slotCount: number }) => {
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount,
 		owners: allSlotsOwnedHere,
@@ -195,6 +197,7 @@ describe("a replica catching up from a peer", () => {
 				);
 			},
 			catalog: async () => catalog,
+			recentKeys: async () => [],
 		};
 		return { source, asked };
 	};
@@ -266,6 +269,7 @@ describe("a replica catching up from a peer", () => {
 	test("answers a peer's listSince, digestSince and fetchSubjects from the slot's file, and knows its own newest write", async () => {
 		const now = 1_700;
 		const slots = openSlots({
+			journalForwarder: forwardingNowhere,
 			folder: newFolder(),
 			slotCount: 2,
 			owners: allSlotsOwnedHere,
@@ -322,5 +326,35 @@ describe("a replica catching up from a peer", () => {
 		).toEqual(["cus_1"]);
 		expect(nothingNewer).toEqual([]);
 		expect(slots.maxAppliedAt()).toBe(1_700);
+	});
+});
+
+describe("a slot's journal", () => {
+	const sendEvent = checkRequestFor({
+		params: { send_event: true, required_balance: 10 },
+	});
+
+	test("each slot this thread owns journals beside its file, and a send_event check is deducted here", async () => {
+		const folder = newFolder();
+		const slots = open({ folder, slotCount: 2 });
+		await slots
+			.processorFor({ customerId: "cus_1" })
+			.setSubject(
+				subjectPushOf({ subject: storedSubjectWith({ balance: 1000 }) }),
+			);
+
+		const reply = await checkResponseOf({
+			processor: slots.processorFor({ customerId: "cus_1" }),
+			request: sendEvent,
+		});
+
+		expect(reply.balance?.remaining).toBe(990);
+		expect(
+			readdirSync(folder)
+				.filter(
+					(name) => name.startsWith("journal-") && name.endsWith(".sqlite"),
+				)
+				.sort(),
+		).toEqual(["journal-000-of-002.sqlite", "journal-001-of-002.sqlite"]);
 	});
 });

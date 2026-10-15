@@ -13,8 +13,8 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findBasePrice,
 	findFeaturePrice,

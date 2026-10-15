@@ -3,11 +3,13 @@
 import {
 	AllowanceType,
 	type CreditSchemaItem,
+	type CreditSchemaOverrideItem,
 	creditDimensionRulesEqual,
 	EntInterval,
 	type Entitlement,
 	type FeatureConfigOverride,
 	type FeatureMarkupsOverride,
+	isExcludedCreditSchemaItem,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
@@ -52,15 +54,32 @@ export const creditSchemaItemsAreSame = ({
 
 /** Entries are keyed by metered_feature_id (rate lookup is a find over the
  * array), so ordering is not semantic — compare as a keyed set. */
+const overrideRowsAreSame = ({
+	left,
+	right,
+}: {
+	left: CreditSchemaOverrideItem;
+	right: CreditSchemaOverrideItem;
+}) => {
+	if (isExcludedCreditSchemaItem(left) || isExcludedCreditSchemaItem(right)) {
+		return (
+			isExcludedCreditSchemaItem(left) && isExcludedCreditSchemaItem(right)
+		);
+	}
+	return creditSchemaItemsAreSame({ left, right });
+};
+
 const creditSchemasAreSame = ({
 	schema1,
 	schema2,
 }: {
-	schema1?: CreditSchemaItem[] | null;
-	schema2?: CreditSchemaItem[] | null;
+	schema1?: CreditSchemaOverrideItem[] | null;
+	schema2?: CreditSchemaOverrideItem[] | null;
 }) => {
-	if (!schema1 && !schema2) return true;
-	if (!schema1 || !schema2) return false;
+	// No rows patches nothing, so [] is the same as absent.
+	if (!schema1?.length || !schema2?.length) {
+		return !schema1?.length && !schema2?.length;
+	}
 	if (schema1.length !== schema2.length) return false;
 
 	return schema1.every((item1) => {
@@ -68,7 +87,7 @@ const creditSchemasAreSame = ({
 			(candidate) => candidate.metered_feature_id === item1.metered_feature_id,
 		);
 		if (!item2) return false;
-		return creditSchemaItemsAreSame({ left: item1, right: item2 });
+		return overrideRowsAreSame({ left: item1, right: item2 });
 	});
 };
 

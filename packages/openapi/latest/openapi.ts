@@ -153,7 +153,6 @@ async function generateOpenApiDocument({
 		},
 		servers: [
 			{
-				// url: "http://localhost:8080",
 				url: "https://api.useautumn.com",
 				description: "Production server",
 			},

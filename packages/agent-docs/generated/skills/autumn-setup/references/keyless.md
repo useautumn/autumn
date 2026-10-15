@@ -14,7 +14,7 @@ Back comes `organization_id`, `organization_slug`, `api_key`, `claim_token`, and
 
 - Write `api_key` into `.env` as `AUTUMN_SECRET_KEY`. It is a sandbox secret key — never print it or read it back into the chat.
 - `claim_token` works only on `/agent.start_claim`, as an alternative to the key for that one call. It is not an API credential — it can't read or write catalogs, customers, or anything else. Claiming with the key is simpler, so normally you can ignore it. It is still as secret as the key.
-- `claim_expires_at` is the deadline for linking — a few days out. Read it from the response instead of assuming; after it passes, the org can't be linked to anyone.
+- `claim_expires_at` is `null`: an unclaimed org can be linked at any time.
 - Provisioning is rate limited per machine. If it fails, tell the user and offer sign-in — never loop on it.
 
 ## Claim the org
@@ -33,4 +33,4 @@ Notes that matter:
 - Never ask the user for a verification code; completion happens in the browser.
 - The same URL is emailed, so the user still has it if the agent session is lost.
 - The provisioned key keeps working after linking. Don't rotate it, don't provision a second org.
-- Linking an org that's already linked, or past its deadline, fails on purpose. These errors are deliberately vague so they can't be probed — don't guess at what went wrong, just tell the user it didn't go through and what you'll try next.
+- Linking an org that's already linked fails on purpose. These errors are deliberately vague so they can't be probed — don't guess at what went wrong, just tell the user it didn't go through and what you'll try next.

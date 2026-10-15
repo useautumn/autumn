@@ -156,10 +156,3 @@ export const initCustomerProduct = ({
 // 			: isFuture
 // 				? CusProductStatus.Scheduled
 // 				: CusProductStatus.Active
-
-// {
-//   type: ProcessorType.Stripe,
-//   // subscription_id: subscriptionId,
-//   // subscription_schedule_id: subscriptionScheduleId,
-//   // last_invoice_id: lastInvoiceId,
-// },

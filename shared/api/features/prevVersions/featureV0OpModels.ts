@@ -16,7 +16,6 @@ const featureDescriptions = {
 		"Whether the feature is archived. Archived features are hidden from the dashboard and list features endpoint.",
 };
 
-// Create Feature Params
 export const CreateFeatureV0ParamsSchema = z.object({
 	id: z.string().regex(idRegex).meta({ description: featureDescriptions.id }),
 	name: z.string().nullish().meta({ description: featureDescriptions.name }),
@@ -40,7 +39,6 @@ export const CreateFeatureV0ParamsSchema = z.object({
 		.meta({ description: featureDescriptions.credit_schema }),
 });
 
-// Update Feature Params
 export const UpdateFeatureV0ParamsSchema = z.object({
 	id: z
 		.string()

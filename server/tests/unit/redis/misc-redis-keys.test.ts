@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildCustomerInvoicesCacheKey,
 	buildOrgWithFeaturesCacheKey,
+	buildOrgWithFeaturesClearTokenKey,
 	buildSubscriptionCacheKey,
 	CUSTOMER_INVOICES_CACHE_TTL_SECONDS,
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,
@@ -35,6 +36,7 @@ import {
 	buildSecretKeyCacheKey,
 	SECRET_KEY_CACHE_TTL_SECONDS,
 } from "@/external/redis/actions/secretKeyCache/secretKeyCache.js";
+import { buildStripeTestClockCacheKey } from "@/external/redis/actions/stripeTestClockCache/stripeTestClockCache.js";
 import {
 	buildTrmnlDeviceKey,
 	buildTrmnlOrgKey,
@@ -58,6 +60,9 @@ describe("misc redis key formats", () => {
 		expect(
 			buildOrgWithFeaturesCacheKey({ orgId: "org_1", env: AppEnv.Live }),
 		).toBe("org_with_features:org_1:live");
+		expect(
+			buildOrgWithFeaturesClearTokenKey({ orgId: "org_1", env: AppEnv.Live }),
+		).toBe("org_with_features_cleared:org_1:live");
 		expect(ORG_WITH_FEATURES_CACHE_TTL_SECONDS).toBe(60);
 	});
 
@@ -80,6 +85,12 @@ describe("misc redis key formats", () => {
 
 	test("customer JWT auth", () => {
 		expect(buildCustomerJwtAuthCacheKey("icus_1")).toBe("cjwt_auth:icus_1");
+	});
+
+	test("stripe test clock", () => {
+		expect(buildStripeTestClockCacheKey("cus_1")).toBe(
+			"stripe_test_clock:cus_1",
+		);
 	});
 
 	test("stripe webhook idempotency", () => {

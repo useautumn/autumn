@@ -5,8 +5,9 @@ import {
 } from "@autumn/balance-engine";
 import type { CatalogCacheScope } from "../types/catalogCacheContext.js";
 import { catalogVersionOf } from "./catalogVersions.js";
+import { markCatalogRowUsed, purgeIdleCatalogRows } from "./idleExpiry.js";
 
-/** Entitlements are retired and re-minted on edit, so a referenced row is never wrong; only LRU evicts them. */
+/** Entitlements are retired and re-minted on edit, so a referenced row is never stale; only idle expiry and the cap remove them. */
 const ttlOf = ({
 	row,
 	scope,
@@ -28,10 +29,12 @@ export const putCatalogRows = ({
 }): void => {
 	for (const row of rows) {
 		scope.state.rowVersions.set(row, versionOf({ row }));
+		markCatalogRowUsed({ scope, row });
 		scope.state.entries.set(
 			catalogKeyToString({ key: catalogRowToCatalogKey({ row }) }),
 			row,
 			{ ttl: ttlOf({ row, scope }) },
 		);
 	}
+	purgeIdleCatalogRows({ scope });
 };

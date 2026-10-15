@@ -1,4 +1,4 @@
-import type { ChartConfig } from "@autumn/ui";
+import type { ChartConfig } from "@autumn/ui/components/ui/chart";
 import { X } from "lucide-react";
 import { memo, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";

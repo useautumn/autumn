@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isAutumnManagedBillTrialContext } from "@/internal/billing/v2/setup/trialContext/isAutumnManagedBillTrialContext";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { DEFAULT_INVOICE_MODE_NET_TERMS_DAYS } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeDefaults";
+import { invoiceModeParamsToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 
 /** Only the intent is stored on the trial, so options that differ from the defaults can't reach the invoice sent at trial end. */
 const hasCustomInvoiceOptions = ({
@@ -26,8 +27,12 @@ const hasCustomInvoiceOptions = ({
 		invoiceModeParams?.net_terms_days !== undefined &&
 		invoiceModeParams.net_terms_days !== defaultNetTermsDays;
 
+	const issuesSilently =
+		invoiceModeParams !== undefined &&
+		invoiceModeParamsToIssueMethod({ invoiceModeParams }) !== "send";
+
 	return (
-		invoiceModeParams?.finalize === false ||
+		issuesSilently ||
 		invoiceModeParams?.invoice_template_id !== undefined ||
 		hasCustomNetTerms
 	);
@@ -40,7 +45,7 @@ const hasCustomInvoiceOptions = ({
  * - Deferred invoice-mode activation is used for a downgrade
  *   (planTiming="end_of_cycle"): there is no immediate invoice to pay, so deferral makes no sense.
  * - A no-card trial Autumn bills at trial end is combined with custom invoice options
- *   (finalize: false, invoice_template_id, non-default net_terms_days).
+ *   (a draft or silent issue method, invoice_template_id, non-default net_terms_days).
  */
 export const handleAttachInvoiceModeErrors = ({
 	ctx,
@@ -58,7 +63,7 @@ export const handleAttachInvoiceModeErrors = ({
 	if (invoicesAtTrialEnd && hasCustomInvoiceOptions({ ctx, params })) {
 		throw new RecaseError({
 			message:
-				"Invoice mode with a no-card free trial sends a finalized invoice with the default invoice settings when the trial ends, so finalize: false, invoice_template_id and custom net_terms_days aren't supported. Drop those options, or require a card for the trial.",
+				"Invoice mode with a no-card free trial sends a finalized invoice with the default invoice settings when the trial ends, so finalize: false, issue_method draft or finalize, invoice_template_id and custom net_terms_days aren't supported. Drop those options, or require a card for the trial.",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

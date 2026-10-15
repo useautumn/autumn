@@ -25,7 +25,6 @@ export const modifyStripeSubscriptionFromCheckout = async ({
 		autumnBillingPlan: billingPlan.autumn,
 	});
 
-	// Get update action
 	const updateAction =
 		subscriptionAction?.type === "update" ? subscriptionAction : undefined;
 

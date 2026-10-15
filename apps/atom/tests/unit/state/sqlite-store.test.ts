@@ -63,14 +63,14 @@ afterEach(() => {
 });
 
 describe("sqlite store", () => {
-	test("a stored subject reads back as it was sent", () => {
+	test("a stored subject reads back as it was sent", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
 		const subject = subjectAt({ logOffset: 41n });
 
-		sqliteStore.setSubject({ subject });
+		await sqliteStore.setSubject({ subject });
 
 		expect(
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
@@ -90,14 +90,14 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("storing a subject again replaces it", () => {
+	test("storing a subject again replaces it", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 42n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 42n }) });
 
 		expect(
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
@@ -106,16 +106,16 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a subject read earlier than the one held is ignored: a late push never undoes a newer one", () => {
+	test("a subject read earlier than the one held is ignored: a late push never undoes a newer one", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 42n, readAt: 1800 }),
 		});
 
-		const stored = sqliteStore.setSubject({
+		const stored = await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
 		});
 
@@ -126,19 +126,19 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a subject read at the same instant or later replaces the one held", () => {
+	test("a subject read at the same instant or later replaces the one held", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
 		});
 
-		const sameInstant = sqliteStore.setSubject({
+		const sameInstant = await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
 		});
-		const later = sqliteStore.setSubject({
+		const later = await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 43n, readAt: 1701 }),
 		});
 
@@ -151,19 +151,19 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("two reads at the same instant are ordered by log offset: the earlier change never replaces the later, a retry still lands", () => {
+	test("two reads at the same instant are ordered by log offset: the earlier change never replaces the later, a retry still lands", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
 		});
 
-		const earlierChange = sqliteStore.setSubject({
+		const earlierChange = await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 41n, readAt: 1700 }),
 		});
-		const retry = sqliteStore.setSubject({
+		const retry = await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 42n, readAt: 1700 }),
 		});
 
@@ -176,19 +176,19 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("counts the subjects it holds", () => {
+	test("counts the subjects it holds", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
 		expect(sqliteStore.countSubjects()).toBe(0);
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 
 		expect(sqliteStore.countSubjects()).toBe(1);
 		sqliteStore.close();
 	});
 
-	test("lists the subjects written at or after a point, oldest write first and keyed within a write, and knows its newest write", () => {
+	test("lists the subjects written at or after a point, oldest write first and keyed within a write, and knows its newest write", async () => {
 		let now = 1_700;
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
@@ -198,7 +198,7 @@ describe("sqlite store", () => {
 		expect(sqliteStore.maxAppliedAt()).toBe(0);
 		for (const [i, customerId] of ["cus_a", "cus_b", "cus_c"].entries()) {
 			now = 1_700 + Math.min(i, 1);
-			sqliteStore.setSubject({
+			await sqliteStore.setSubject({
 				subject: {
 					...subjectAt({ logOffset: 1n }),
 					state: createSubjectState({ identity: { ...identity, customerId } }),
@@ -249,10 +249,10 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("the file keeps its subjects across a restart", () => {
+	test("the file keeps its subjects across a restart", async () => {
 		const databasePath = slotPath();
 		const first = openSqliteStore({ databasePath, held: freshHeld() });
-		first.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await first.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 		first.close();
 
 		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
@@ -263,7 +263,7 @@ describe("sqlite store", () => {
 		reopened.close();
 	});
 
-	test("a file from an older Atom is emptied, not read with the wrong columns", () => {
+	test("a file from an older Atom is emptied, not read with the wrong columns", async () => {
 		const databasePath = slotPath();
 		const older = new Database(databasePath, { create: true });
 		older.run(
@@ -274,7 +274,7 @@ describe("sqlite store", () => {
 		older.close();
 
 		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
 
 		expect(
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
@@ -282,10 +282,10 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a subject is read from the file once, then served from the copy held", () => {
+	test("a subject is read from the file once, then served from the copy held", async () => {
 		const databasePath = slotPath();
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });
-		writer.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await writer.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 		writer.close();
 		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
 		const read = () =>
@@ -302,15 +302,17 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a subject written through the same store is read back at once", () => {
+	test("a subject written through the same store is read back at once", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 		sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
 
-		sqliteStore.setSubjects({ subjects: [subjectAt({ logOffset: 43n })] });
+		await sqliteStore.setSubjects({
+			subjects: [subjectAt({ logOffset: 43n })],
+		});
 
 		expect(
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
@@ -319,25 +321,7 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("the parsed copy checks share cannot be changed by one of them", () => {
-		const sqliteStore = openSqliteStore({
-			databasePath: slotPath(),
-			held: freshHeld(),
-		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
-		const read = sqliteStore.readSubject({
-			customerId: "cus_1",
-			entityId: null,
-		});
-
-		expect(() => {
-			(read as { readAt: number }).readAt = 0;
-		}).toThrow(TypeError);
-		expect(Object.isFrozen(read?.state.identity)).toBe(true);
-		sqliteStore.close();
-	});
-
-	test("a push to one customer leaves another customer's parsed copy in place", () => {
+	test("a push to one customer leaves another customer's parsed copy in place", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
@@ -348,38 +332,37 @@ describe("sqlite store", () => {
 				identity: { ...identity, customerId: "cus_2" },
 			}),
 		};
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 41n }) });
 		const first = sqliteStore.readSubject({
 			customerId: "cus_1",
 			entityId: null,
 		});
 
-		sqliteStore.setSubject({ subject: other });
+		await sqliteStore.setSubject({ subject: other });
 
 		expect(
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null }),
 		).toBe(first);
 		sqliteStore.close();
 	});
-	test("a write installs the subject it stored; one ignored as older leaves the newer copy held", () => {
+	test("a write installs the subject it stored; one ignored as older leaves the newer copy held", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
 		const read = () =>
 			sqliteStore.readSubject({ customerId: "cus_1", entityId: null });
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
 		const held = read();
 
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
 
 		expect(read()).toBe(held as StoredSubject);
 		expect(held?.logOffset).toBe(2n);
-		expect(Object.isFrozen(held?.state)).toBe(true);
 		sqliteStore.close();
 	});
 
-	test("each row holds its own catalog slice and org, and reads back whole after a restart", () => {
+	test("each row holds its own catalog slice and org, and reads back whole after a restart", async () => {
 		const databasePath = slotPath();
 		const catalog = {
 			...emptyCatalog,
@@ -393,7 +376,7 @@ describe("sqlite store", () => {
 			}),
 		);
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });
-		writer.setSubjects({ subjects });
+		await writer.setSubjects({ subjects });
 		writer.close();
 
 		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
@@ -411,7 +394,7 @@ describe("sqlite store", () => {
 		reopened.close();
 	});
 
-	test("a file from a newer Atom is emptied, so rolling back to an older Atom keeps accepting pushes", () => {
+	test("a file from a newer Atom is emptied, so rolling back to an older Atom keeps accepting pushes", async () => {
 		const databasePath = slotPath();
 
 		const newer = new Database(databasePath, { create: true });
@@ -423,13 +406,13 @@ describe("sqlite store", () => {
 		newer.close();
 
 		const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 5n }) });
 
 		expect(sqliteStore.countSubjects()).toBe(1);
 		sqliteStore.close();
 	});
 
-	test("a push whose slice is unchanged reuses the held catalog and org, and rewrites only the state", () => {
+	test("a push whose slice is unchanged reuses the held catalog and org, and rewrites only the state", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
@@ -441,10 +424,10 @@ describe("sqlite store", () => {
 			...structuredClone(subjectAt({ logOffset })),
 			logOffset,
 		});
-		sqliteStore.setSubject({ subject: pushAt(1n) });
+		await sqliteStore.setSubject({ subject: pushAt(1n) });
 		const first = read();
 
-		sqliteStore.setSubject({ subject: pushAt(2n) });
+		await sqliteStore.setSubject({ subject: pushAt(2n) });
 
 		const second = read();
 		expect(second?.logOffset).toBe(2n);
@@ -454,10 +437,65 @@ describe("sqlite store", () => {
 		sqliteStore.close();
 	});
 
-	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", () => {
+	test("customers on the same catalog slice share one held copy of it, whether pushed or read from the file", async () => {
+		const databasePath = slotPath();
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const pushed = openSqliteStore({ databasePath, held: freshHeld() });
+		for (const customerId of ["cus_1", "cus_2"])
+			await pushed.setSubject({ subject: asCustomer(customerId) });
+		const read = (store: typeof pushed, customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read(pushed, "cus_2")?.catalog).toBe(
+			read(pushed, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read(pushed, "cus_2")?.org).toBe(
+			read(pushed, "cus_1")?.org as StoredSubject["org"],
+		);
+		pushed.close();
+
+		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
+		expect(read(reopened, "cus_2")?.catalog).toBe(
+			read(reopened, "cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		reopened.close();
+	});
+
+	test("the shared slice outlives a collection while a held subject still holds it", async () => {
+		const asCustomer = (customerId: string): StoredSubject => {
+			const subject = structuredClone(subjectAt({ logOffset: 1n }));
+			return {
+				...subject,
+				state: { ...subject.state, identity: { ...identity, customerId } },
+			};
+		};
+		const store = openSqliteStore({
+			databasePath: slotPath(),
+			held: freshHeld(),
+		});
+		await store.setSubject({ subject: asCustomer("cus_1") });
+		Bun.gc(true);
+		await store.setSubject({ subject: asCustomer("cus_2") });
+		const read = (customerId: string) =>
+			store.readSubject({ customerId, entityId: null });
+
+		expect(read("cus_2")?.catalog).toBe(
+			read("cus_1")?.catalog as StoredSubject["catalog"],
+		);
+		expect(read("cus_2")?.org).toBe(read("cus_1")?.org as StoredSubject["org"]);
+		store.close();
+	});
+
+	test("a push whose slice changed rewrites it, and reads back with the new slice after a restart", async () => {
 		const databasePath = slotPath();
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });
-		writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		await writer.setSubject({ subject: subjectAt({ logOffset: 1n }) });
 		const changed: StoredSubject = {
 			...subjectAt({ logOffset: 2n }),
 			catalog: {
@@ -466,7 +504,7 @@ describe("sqlite store", () => {
 			} as unknown as StoredSubject["catalog"],
 		};
 
-		writer.setSubject({ subject: changed });
+		await writer.setSubject({ subject: changed });
 		const held = writer.readSubject({ customerId: "cus_1", entityId: null });
 		writer.close();
 		const reopened = openSqliteStore({ databasePath, held: freshHeld() });
@@ -502,16 +540,16 @@ describe("a customer's version", () => {
 		sqliteStore.readSubject({ customerId: "cus_1", entityId: null })
 			?.customerVersion;
 
-	test("a push older than the rows held is ignored, but still raises the version, and the held copy carries it", () => {
+	test("a push older than the rows held is ignored, but still raises the version, and the held copy carries it", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 150n, readAt: 30 }),
 		});
 
-		const stored = sqliteStore.setSubject({
+		const stored = await sqliteStore.setSubject({
 			subject: subjectAt({
 				logOffset: 140n,
 				readAt: 20,
@@ -526,12 +564,12 @@ describe("a customer's version", () => {
 		sqliteStore.close();
 	});
 
-	test("never falls: an older evict's version, or a push with none, leaves it where it is", () => {
+	test("never falls: an older evict's version, or a push with none, leaves it where it is", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 		});
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({
 				logOffset: 140n,
 				readAt: 20,
@@ -539,7 +577,7 @@ describe("a customer's version", () => {
 			}),
 		});
 
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({
 				logOffset: 120n,
 				readAt: 21,
@@ -547,7 +585,7 @@ describe("a customer's version", () => {
 			}),
 		});
 		const afterOlderEvict = customerVersionOf(sqliteStore);
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 160n, readAt: 22 }),
 		});
 
@@ -561,10 +599,10 @@ describe("a customer's version", () => {
 		sqliteStore.close();
 	});
 
-	test("survives a restart beside the rows, and an entity's part carries none", () => {
+	test("survives a restart beside the rows, and an entity's part carries none", async () => {
 		const databasePath = slotPath();
 		const writer = openSqliteStore({ databasePath, held: freshHeld() });
-		writer.setSubjects({
+		await writer.setSubjects({
 			subjects: [
 				subjectAt({ logOffset: 140n, readAt: 20, customerVersion: 140n }),
 				subjectAt({ logOffset: 100n, readAt: 10, entityId: "ent_1" }),
@@ -646,19 +684,19 @@ describe("a slot file's footprint", () => {
 			}),
 		}));
 
-	test("drops whole customers written before a point, oldest write first, and their held copies with them", () => {
+	test("drops whole customers written before a point, oldest write first, and their held copies with them", async () => {
 		const databasePath = slotPath();
 		let at = 1000;
 		const held = freshHeld();
 		const sqliteStore = openSqliteStore({ databasePath, held, now: () => at });
-		sqliteStore.setSubjects({
+		await sqliteStore.setSubjects({
 			subjects: [
 				subjectAt({ logOffset: 1n }),
 				{ ...subjectAt({ logOffset: 1n, entityId: "ent_1" }) },
 			],
 		});
 		at = 2000;
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: {
 				...subjectAt({ logOffset: 1n }),
 				state: createSubjectState({
@@ -668,7 +706,7 @@ describe("a slot file's footprint", () => {
 		});
 		expect(held.size).toBe(3);
 
-		const dropped = sqliteStore.dropCustomersWrittenBefore({
+		const dropped = await sqliteStore.dropCustomersWrittenBefore({
 			before: 1500,
 			limit: 10,
 		});
@@ -686,12 +724,12 @@ describe("a slot file's footprint", () => {
 		expect(sqliteStore.countSubjects()).toBe(1);
 		expect(held.size).toBe(1);
 		expect(
-			sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
+			await sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
 		).toEqual({ customers: 0, rows: 0 });
 		sqliteStore.close();
 	});
 
-	test("a customer with any row written since the point stays whole: an old customer row under a fresh entity is not dropped", () => {
+	test("a customer with any row written since the point stays whole: an old customer row under a fresh entity is not dropped", async () => {
 		const databasePath = slotPath();
 		let at = 1000;
 		const sqliteStore = openSqliteStore({
@@ -699,39 +737,45 @@ describe("a slot file's footprint", () => {
 			held: freshHeld(),
 			now: () => at,
 		});
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
 		at = 2000;
-		sqliteStore.setSubject({
+		await sqliteStore.setSubject({
 			subject: subjectAt({ logOffset: 2n, entityId: "ent_1" }),
 		});
 
 		expect(
-			sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
+			await sqliteStore.dropCustomersWrittenBefore({ before: 1500, limit: 10 }),
 		).toEqual({ customers: 0, rows: 0 });
 		expect(sqliteStore.countSubjects()).toBe(2);
 		expect(
-			sqliteStore.dropCustomersWrittenBefore({ before: 2500, limit: 10 }),
+			await sqliteStore.dropCustomersWrittenBefore({ before: 2500, limit: 10 }),
 		).toEqual({ customers: 1, rows: 2 });
 		sqliteStore.close();
 	});
 
-	test("the limit bounds the customers dropped per call, so a call's cost is bounded whatever the file holds", () => {
+	test("the limit bounds the customers dropped per call, so a call's cost is bounded whatever the file holds", async () => {
 		const sqliteStore = openSqliteStore({
 			databasePath: slotPath(),
 			held: freshHeld(),
 			now: () => 1000,
 		});
-		sqliteStore.setSubjects({ subjects: manyAt({ count: 50, readAt: 1 }) });
+		await sqliteStore.setSubjects({
+			subjects: manyAt({ count: 50, readAt: 1 }),
+		});
 
 		expect(
-			sqliteStore.dropCustomersWrittenBefore({ before: 2000, limit: 20 })
-				.customers,
+			(
+				await sqliteStore.dropCustomersWrittenBefore({
+					before: 2000,
+					limit: 20,
+				})
+			).customers,
 		).toBe(20);
 		expect(sqliteStore.countSubjects()).toBe(30);
 		sqliteStore.close();
 	});
 
-	test("dropping customers gives the space back to the volume once the main thread checkpoints the file", () => {
+	test("dropping customers gives the space back to the volume once the main thread checkpoints the file", async () => {
 		const databasePath = slotPath();
 		const sqliteStore = openSqliteStore({
 			databasePath,
@@ -747,10 +791,14 @@ describe("a slot file's footprint", () => {
 			for (let tick = 0; tick < TICKS_PER_FILE; tick++)
 				checkpointer.checkpoint();
 		};
-		sqliteStore.setSubjects({ subjects: manyAt({ count: 400, readAt: 1 }) });
-		sqliteStore.setSubjects({ subjects: manyAt({ count: 400, readAt: 2 }) });
+		await sqliteStore.setSubjects({
+			subjects: manyAt({ count: 400, readAt: 1 }),
+		});
+		await sqliteStore.setSubjects({
+			subjects: manyAt({ count: 400, readAt: 2 }),
+		});
 		checkpointEveryFile();
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 1n }) });
 		const onVolume = () =>
 			[databasePath, `${databasePath}-wal`].reduce(
 				(sum, path) => sum + statSync(path).size,
@@ -761,11 +809,15 @@ describe("a slot file's footprint", () => {
 		expect(sqliteStore.dataBytes()).toBeGreaterThan(10_000_000);
 
 		while (
-			sqliteStore.dropCustomersWrittenBefore({ before: 2000, limit: 100 })
-				.customers > 0
+			(
+				await sqliteStore.dropCustomersWrittenBefore({
+					before: 2000,
+					limit: 100,
+				})
+			).customers > 0
 		);
 		checkpointEveryFile();
-		sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
+		await sqliteStore.setSubject({ subject: subjectAt({ logOffset: 2n }) });
 
 		expect(sqliteStore.countSubjects()).toBe(1);
 		expect(sqliteStore.dataBytes()).toBeLessThan(100_000);

@@ -54,6 +54,8 @@ export const createSubjectPulls = ({
 	const now = ctx.now ?? (() => performance.now());
 	let stopped = false;
 	let inFlight = 0;
+	/** Settles waiting for a slot, woken one per pull that ends. */
+	const waiting: (() => void)[] = [];
 	let failureLoggedAt = Number.NEGATIVE_INFINITY;
 
 	/** At most one warning per hold per thread, so an Autumn that is down cannot flood the logs. */
@@ -108,6 +110,7 @@ export const createSubjectPulls = ({
 				else logFailure({ error });
 			} finally {
 				inFlight -= 1;
+				waiting.shift()?.();
 			}
 		}
 
@@ -129,13 +132,23 @@ export const createSubjectPulls = ({
 			void pull({ customerId, entityId });
 		}
 
-		return { request };
+		async function settle({ customerId }: { customerId: string }) {
+			while (!stopped && inFlight >= MAX_PULLS_IN_FLIGHT)
+				await new Promise<void>((wake) => waiting.push(wake));
+			if (stopped) return;
+			inFlight += 1;
+			ctx.counters.add("subjectPulls");
+			await pull({ customerId, entityId: null });
+		}
+
+		return { request, settle };
 	}
 
 	return {
 		forFolder,
 		stop: () => {
 			stopped = true;
+			for (const wake of waiting.splice(0)) wake();
 		},
 	};
 };

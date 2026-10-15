@@ -37,8 +37,6 @@ const getDiscountsApplied = ({
 	for (const dAmount of invoiceItem?.discount_amounts || []) {
 		const discount = subDiscounts?.find((d) => d.id === dAmount.discount);
 		if (discount && dAmount.amount > 0) {
-			// console.log("Discount applied: ", discount.id);
-			// console.log("Amount off: ", dAmount.amount);
 			discountsApplied.push(discount);
 		}
 	}

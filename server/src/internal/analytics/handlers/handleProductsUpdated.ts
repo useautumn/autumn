@@ -96,8 +96,6 @@ export const handleProductsUpdated = async ({
 		reqCtx?: Partial<AutumnContext>;
 		actionDetails: ActionDetails;
 		internalCustomerId: string;
-		// org: Organization;
-		// env: AppEnv;
 		customerId: string;
 		product: FullProduct;
 		scenario: string;

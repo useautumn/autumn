@@ -26,6 +26,7 @@ import {
 } from "@autumn/shared";
 import {
 	and,
+	arrayContains,
 	count,
 	countDistinct,
 	eq,
@@ -77,8 +78,6 @@ import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
-
-// const tracer = trace.getTracer("express");
 
 export class CusService {
 	static async getFull({
@@ -196,10 +195,6 @@ export class CusService {
 					useReplica: ctx.testOptions?.useReplica,
 				});
 				const sqlMs = performance.now() - tSqlStart;
-
-				// ctx.logger.info(
-				// 	`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
-				// );
 
 				let fullCus: FullCustomer;
 				if (useFlatModel) {
@@ -536,6 +531,42 @@ export class CusService {
 		});
 
 		return results as Customer[];
+	}
+
+	/**
+	 * Customers with a live product on a Stripe subscription, oldest product first. Usually one, but an org
+	 * can bill another org's plan through its own subscription, so several customers can share it.
+	 */
+	static async listByStripeSubscriptionId({
+		ctx,
+		stripeSubscriptionId,
+	}: {
+		ctx: AutumnContext;
+		stripeSubscriptionId: string;
+	}): Promise<Customer[]> {
+		const { db, org, env } = ctx;
+		const oldestProductCreatedAt = sql`min(${customerProducts.created_at})`;
+		const results = await db
+			.select({ customer: customers })
+			.from(customerProducts)
+			.innerJoin(
+				customers,
+				eq(customers.internal_id, customerProducts.internal_customer_id),
+			)
+			.where(
+				and(
+					arrayContains(customerProducts.subscription_ids, [
+						stripeSubscriptionId,
+					]),
+					inArray(customerProducts.status, RELEVANT_STATUSES),
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+				),
+			)
+			.groupBy(customers.internal_id)
+			.orderBy(oldestProductCreatedAt, customers.internal_id);
+
+		return results.map(({ customer }) => customer as Customer);
 	}
 
 	static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {

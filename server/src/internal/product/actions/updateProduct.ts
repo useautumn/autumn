@@ -494,14 +494,6 @@ export const updateProduct = async ({
 		candidateProducts: [fullProduct],
 	});
 
-	// logger.info("Adding task to queue to detect base variant");
-	// await addTaskToQueue({
-	// 	jobName: JobName.DetectBaseVariant,
-	// 	payload: {
-	// 		curProduct: newFullProduct,
-	// 	},
-	// });
-
 	await addTaskToQueue({
 		jobName: JobName.RewardMigration,
 		payload: {

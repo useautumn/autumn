@@ -11,6 +11,7 @@ import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/up
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -113,7 +114,13 @@ export async function updateSubscription({
 		return autumnCheckoutResult;
 	}
 
-	// 5. Execute billing plan
+	// 5. Execute billing plan, replacing the pending change it supersedes
+	if (contextOverride?.supersededPendingCustomerProduct) {
+		await discardPendingCustomerProduct({
+			ctx,
+			customerProduct: contextOverride.supersededPendingCustomerProduct,
+		});
+	}
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,

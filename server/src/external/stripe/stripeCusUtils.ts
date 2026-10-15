@@ -196,7 +196,6 @@ export const attachPmToCus = async ({
 				default_payment_method: pm.id,
 			},
 		});
-		// console.log("   - Payment method attached");
 	} catch (error) {
 		console.log("   - Error attaching payment method", error);
 	}

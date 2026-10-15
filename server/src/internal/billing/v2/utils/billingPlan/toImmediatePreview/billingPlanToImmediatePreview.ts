@@ -4,29 +4,10 @@ import type {
 	LineItem,
 	PreviewLineItem,
 } from "@autumn/shared";
-import {
-	atmnToStripeAmount,
-	stripeToAtmnAmount,
-	sumValues,
-} from "@autumn/shared";
 import { customLineItemsToLineItems } from "../../lineItems/customLineItemsToLineItems";
 import { customLineItemToPreviewLineItem } from "../../lineItems/customLineItemToPreviewLineItem";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
-
-// Stripe charges each line in whole minor units, so round per line before summing.
-const sumLineAmounts = ({
-	amounts,
-	currency,
-}: {
-	amounts: number[];
-	currency: string;
-}) =>
-	stripeToAtmnAmount({
-		amount: sumValues(
-			amounts.map((amount) => atmnToStripeAmount({ amount, currency })),
-		),
-		currency,
-	});
+import { sumLineAmounts } from "../../lineItems/sumLineAmounts";
 
 export const billingPlanToImmediatePreview = ({
 	billingContext,

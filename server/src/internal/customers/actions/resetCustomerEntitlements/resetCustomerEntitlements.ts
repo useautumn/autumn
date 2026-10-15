@@ -28,8 +28,6 @@ export const resetCustomerEntitlements = async ({
 
 	const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
 
-	// cusEntsNeedingReset = [];
-
 	if (cusEntsNeedingReset.length === 0) return false;
 
 	try {

@@ -15,6 +15,8 @@ const toDeletableContribution = (
 	current_contribution: contribution.current_contribution ?? 0,
 	next_cycle_contribution: contribution.next_cycle_contribution ?? 0,
 	effective_at: contribution.effective_at ?? null,
+	competes: contribution.competes ?? false,
+	unlimited: contribution.unlimited ?? false,
 	created_at: contribution.created_at ?? 0,
 	updated_at: contribution.updated_at ?? 0,
 });
@@ -51,6 +53,8 @@ export const invertPooledBalancePlan = ({
 				...update,
 				balanceDelta: -update.balanceDelta,
 				grantedDelta: -update.grantedDelta,
+				unlimited:
+					update.unlimited === undefined ? undefined : !update.unlimited,
 			})),
 		deletePoolContributions: pooledBalancePlan.insertPoolContributions
 			.slice()

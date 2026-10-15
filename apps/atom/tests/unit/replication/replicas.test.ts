@@ -20,6 +20,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noPeer,
@@ -355,7 +356,7 @@ describe("a replica not ready yet", () => {
 		expect((await b.app.request("/health")).status).toBe(200);
 	});
 
-	test("answers itself when no peer can be reached: none known, the peer unreachable, or the check already proxied once", async () => {
+	test("answers itself when no peer can be reached: none known or the peer unreachable; a check already proxied once is refused, never answered stale", async () => {
 		const alone = createReplica({
 			address: "10.0.0.1",
 			peers: [],
@@ -381,15 +382,25 @@ describe("a replica not ready yet", () => {
 			"/v1/balances.check",
 			checkMessages(),
 		);
-		const proxiedTwice = await b.app.request("/v1/balances.check", {
-			...checkMessages(),
-			headers: { ...checkMessages().headers, "x-atom-proxied": "1" },
+		const check = checkMessages();
+		const proxiedTwice = await b.peerApp.request("/v1/balances.check", {
+			...check,
+			headers: peerRequestHeaders({
+				secret: PEER_SECRET,
+				method: "POST",
+				path: "/v1/balances.check",
+				body: check.body,
+				headers: check.headers,
+			}),
 		});
 
-		for (const reply of [noPeer, unreachable, proxiedTwice]) {
+		for (const reply of [noPeer, unreachable]) {
 			expect(reply.headers.get("x-atom-proxied")).toBeNull();
 			expect((await reply.json()).balance.remaining).toBe(4);
 		}
+		// Its files may be behind the sender's: the 503 sends the check on to the API instead (owner-hop.test).
+		expect(proxiedTwice.status).toBe(503);
+		expect((await proxiedTwice.json()).code).toBe("atom_not_ready");
 	});
 });
 
@@ -398,6 +409,7 @@ describe("the public app", () => {
 		const dataDir = mkdtempSync(join(tmpdir(), "atom-replica-"));
 		const threadStats = createThreadStatsBuffer({ threads: 1 });
 		const auth = createDeployedAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir,
 			tokenHash: TOKEN_HASH,
 			slotCount: 2,

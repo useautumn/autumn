@@ -69,6 +69,7 @@ describe("pushes to an org's own Atom", () => {
 		});
 		expect(target).toEqual({
 			target: "org",
+			id: "atom_0123456789abcdef01234567",
 			endpointUrl: "https://atom.example.com",
 			encryptedToken: "enc_token",
 			queue: {

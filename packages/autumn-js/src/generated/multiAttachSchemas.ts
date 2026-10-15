@@ -36,6 +36,11 @@ export const multiAttachPriceTierSchema = z.object({
 		.optional(),
 });
 
+export const multiAttachCreditSchema3Schema = z.object({
+	meteredFeatureId: z.string(),
+	excluded: z.literal(true),
+});
+
 export const multiAttachDimensionsMatch4Schema = z.union([
 	z.string(),
 	z.number(),
@@ -261,6 +266,11 @@ export const multiAttachExpiryOutboundSchema = z.object({
 	length: z.number(),
 });
 
+export const multiAttachCreditSchema3OutboundSchema = z.object({
+	metered_feature_id: z.string(),
+	excluded: z.literal(true),
+});
+
 export const multiAttachDimensionsMatch4OutboundSchema = z.union([
 	z.string(),
 	z.number(),
@@ -427,6 +437,7 @@ export const multiAttachCreditSchema1OutboundSchema = z.object({
 export const multiAttachCreditSchemaUnionOutboundSchema = z.union([
 	multiAttachCreditSchema1OutboundSchema,
 	multiAttachCreditSchema2OutboundSchema,
+	multiAttachCreditSchema3OutboundSchema,
 ]);
 
 export const multiAttachProviderMarkupsOutboundSchema = z.object({
@@ -464,6 +475,7 @@ export const multiAttachFeatureOverrideOutboundSchema = z.object({
 				z.union([
 					multiAttachCreditSchema1OutboundSchema,
 					multiAttachCreditSchema2OutboundSchema,
+					multiAttachCreditSchema3OutboundSchema,
 				]),
 			),
 			z.undefined(),
@@ -536,7 +548,8 @@ export const multiAttachFreeTrialParamsOutboundSchema = z.object({
 export const multiAttachInvoiceModeOutboundSchema = z.object({
 	enabled: z.boolean(),
 	enable_plan_immediately: z.boolean(),
-	finalize: z.boolean(),
+	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issue_method: z.union([z.string(), z.undefined()]).optional(),
 	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
 	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
 	payment_method_types: z
@@ -809,6 +822,7 @@ export const multiAttachCreditSchema1Schema = z.object({
 export const multiAttachCreditSchemaUnionSchema = z.union([
 	multiAttachCreditSchema1Schema,
 	multiAttachCreditSchema2Schema,
+	multiAttachCreditSchema3Schema,
 ]);
 
 export const multiAttachFeatureOverrideSchema = z.object({
@@ -818,6 +832,7 @@ export const multiAttachFeatureOverrideSchema = z.object({
 				z.union([
 					multiAttachCreditSchema1Schema,
 					multiAttachCreditSchema2Schema,
+					multiAttachCreditSchema3Schema,
 				]),
 			),
 			z.undefined(),
@@ -879,12 +894,17 @@ export const multiAttachFreeTrialParamsSchema = z.object({
 	onEnd: z.union([multiAttachOnEndSchema, z.undefined()]).optional(),
 });
 
+export const multiAttachIssueMethodSchema = closedEnumSchema;
+
 export const multiAttachPaymentMethodTypeSchema = closedEnumSchema;
 
 export const multiAttachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	issueMethod: z
+		.union([multiAttachIssueMethodSchema, z.undefined()])
+		.optional(),
 	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
 	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
 	paymentMethodTypes: z

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { atomSourceSchema } from "../../../models/command/atomSource.js";
 import { mutatingCommandSchema } from "../../../models/command/baseCommand.js";
 import { commandOrgSchema } from "../../../models/command/commandOrg.js";
 import { propertiesSchema } from "../../../models/common/json.js";
@@ -76,6 +77,7 @@ export const trackCommandSchema = mutatingCommandSchema
 		idempotency: trackIdempotencySchema.optional(),
 		/** Null when this command records none: the caller skipped it, or a fan-out already records it on its first feature. */
 		usageEvent: trackUsageEventSchema.nullable(),
+		source: atomSourceSchema.optional(),
 		/** Loose for a newer server's fields, but the writer's receipt never rides in a command. */
 		receipt: z.never().optional(),
 	})

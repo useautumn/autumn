@@ -20,7 +20,6 @@ export function buildJoinGroupByQuery({
 		fieldName: string;
 	}) => SQL | undefined;
 }): SQL {
-	// Build relation graph
 	const graph = buildRelationGraph({
 		config,
 		relations,
@@ -73,7 +72,6 @@ function buildMainQuery({
 	// Build the base query
 	let query = sql`SELECT ${sql.join(selectFields, sql`, `)} FROM ${sql.identifier(graph.tableName)}`;
 
-	// Add JOINs
 	if (joins.length > 0) {
 		query = sql`${query} ${sql.join(joins, sql` `)}`;
 	}
@@ -93,12 +91,10 @@ function buildMainQuery({
 		query = sql`${query} ORDER BY ${sql.join(config.orderBy, sql`, `)}`;
 	}
 
-	// Add LIMIT
 	if (config.limit !== undefined) {
 		query = sql`${query} LIMIT ${sql.raw(String(config.limit))}`;
 	}
 
-	// Add OFFSET
 	if (config.offset !== undefined) {
 		query = sql`${query} OFFSET ${sql.raw(String(config.offset))}`;
 	}
@@ -134,7 +130,6 @@ function addNestedJoins({
 				ON ${sql.identifier(childAlias)}.${sql.identifier(childNode.childKey || "id")} = ${sql.identifier(parentTableName)}.${sql.identifier(childNode.parentKey || "id")}
 			`);
 
-			// Add to GROUP BY
 			groupByFields.push(
 				sql`${sql.identifier(childAlias)}.${sql.identifier(childNode.childKey || "id")}`,
 			);
@@ -236,7 +231,6 @@ function buildAggregationCTEs({
 					FROM ${sql.identifier(childNode.tableName)}
 				`;
 
-				// Add nested JOINs
 				if (nestedJoins.length > 0) {
 					innerQuery = sql`${innerQuery} ${sql.join(nestedJoins, sql` `)}`;
 				}

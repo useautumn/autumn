@@ -259,6 +259,18 @@ Carry the whole ladder over; don't replace it with just the custom tier or a fla
 - This grants access now while creating a draft Stripe invoice that the operator can review, edit, and send.
 - Use explicit net terms from the user or contract in `invoice_mode.net_terms_days`; otherwise do not ask just to set net terms.
 - If the customer has no email, ask for it and update the customer before previewing invoice or checkout flows.
+- To limit how the customer can pay, set `invoice_mode.payment_method_types` (e.g. `["card", "us_bank_account"]`). It overrides the org's default payment methods for that invoice and its renewals; omit it to keep the defaults. `createInvoice` takes the same field top-level.
+
+### Switching collection method
+
+- To move an existing subscription between invoicing and charging automatically, call `updateSubscription` with `invoice_mode` as the only change: `{ enabled: true, net_terms_days?, payment_method_types? }` for invoicing, `{ enabled: false }` for charging automatically.
+- The switch applies from the next renewal: nothing is charged or invoiced now, and open invoices keep their method. Preview it like any update; the total is $0.
+- Switching to charging automatically needs a card on file; without one it is rejected, so collect a card first.
+- Adding any other change (plan, quantities, items) makes `invoice_mode` describe how that change is billed instead of switching the subscription.
+
+### Invoice payment methods
+
+- To change how a customer can pay an existing draft or open invoice, use `updateInvoice` with `invoice_id` (Autumn `inv_...`) and `payment_method_types`. Paid and void invoices cannot be changed.
 
 ### Enable plan immediately
 

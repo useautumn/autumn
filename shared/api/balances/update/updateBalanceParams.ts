@@ -51,8 +51,6 @@ export const UpdateBalanceParamsV0Schema =
 			internal: true,
 		}),
 
-		// granted_balance: z.number().optional().meta({ internal: true }),
-
 		customer_entitlement_id: z.string().optional().meta({ internal: true }),
 	})
 		.refine(

@@ -78,7 +78,6 @@ export async function writeConfig({
 		formattedCode = code;
 	}
 
-	// Write file
 	writeFileSync(configPath, formattedCode, "utf-8");
 
 	return {

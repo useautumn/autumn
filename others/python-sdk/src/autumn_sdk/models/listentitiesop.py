@@ -375,6 +375,17 @@ ListEntitiesType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+ListEntitiesCombine = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class ListEntitiesDimensions6TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -482,54 +493,6 @@ class ListEntitiesDimensions5(BaseModel):
         return m
 
 
-ListEntitiesDimensionsUnion3TypedDict = TypeAliasType(
-    "ListEntitiesDimensionsUnion3TypedDict",
-    Union[ListEntitiesDimensions6TypedDict, ListEntitiesDimensions5TypedDict],
-)
-
-
-ListEntitiesDimensionsUnion3 = TypeAliasType(
-    "ListEntitiesDimensionsUnion3",
-    Union[ListEntitiesDimensions6, ListEntitiesDimensions5],
-)
-
-
-class ListEntitiesMultipliers3TypedDict(TypedDict):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class ListEntitiesMultipliers3(BaseModel):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class ListEntitiesCreditSchema3TypedDict(TypedDict):
     credit_cost: float
     r"""Credits consumed per billing-unit group."""
@@ -599,6 +562,54 @@ class ListEntitiesDimensions4(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ListEntitiesDimensionsUnion3TypedDict = TypeAliasType(
+    "ListEntitiesDimensionsUnion3TypedDict",
+    Union[ListEntitiesDimensions6TypedDict, ListEntitiesDimensions5TypedDict],
+)
+
+
+ListEntitiesDimensionsUnion3 = TypeAliasType(
+    "ListEntitiesDimensionsUnion3",
+    Union[ListEntitiesDimensions6, ListEntitiesDimensions5],
+)
+
+
+class ListEntitiesMultipliers3TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class ListEntitiesMultipliers3(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 
@@ -1185,6 +1196,8 @@ class ListEntitiesFeatureTypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[ListEntitiesCombine]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[ListEntitiesCreditSchemaUnionTypedDict]]
@@ -1221,6 +1234,9 @@ class ListEntitiesFeature(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[ListEntitiesCombine] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -1246,6 +1262,7 @@ class ListEntitiesFeature(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",

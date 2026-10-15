@@ -19,7 +19,6 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { uniqueTestId } from "../../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
@@ -27,6 +26,7 @@ import {
 	withCatalogPlans,
 	wordsItem,
 } from "../../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	childItemOp,
 	dashboardAddCustomize,
@@ -80,7 +80,10 @@ test.concurrent(
 					plan_id: planId,
 					items: [messagesItem(10), dashboardItem()],
 					propagate: {
-						license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+						license_parents: [
+							{ plan_id: teamId, version: 1 },
+							{ plan_id: scaleId, version: 1 },
+						],
 					},
 					migration: { draft: true },
 				}));
@@ -89,7 +92,9 @@ test.concurrent(
 					ctx,
 					plans,
 					preview: true,
-					responsePlans: [planIds.map((plan_id) => ({ plan_id, versions: [1] }))],
+					responsePlans: [
+						planIds.map((plan_id) => ({ plan_id, versions: [1] })),
+					],
 					expected: [
 						{
 							planIds,
@@ -156,11 +161,16 @@ test.concurrent(
 						plan_id: planId,
 						items: [wordsItem(100)],
 						propagate: {
-							license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+							license_parents: [
+								{ plan_id: teamId, version: 1 },
+								{ plan_id: scaleId, version: 1 },
+							],
 						},
 						migration: { draft: true },
 					})),
-					responsePlans: [planIds.map((plan_id) => ({ plan_id, versions: [1] }))],
+					responsePlans: [
+						planIds.map((plan_id) => ({ plan_id, versions: [1] })),
+					],
 					expected: [
 						{
 							planIds,
@@ -248,11 +258,15 @@ test.concurrent(
 						{
 							plan_id: packId,
 							items: [messagesItem(10), dashboardItem()],
-							propagate: { license_parents: [{ plan_id: scaleId, version: 1 }] },
+							propagate: {
+								license_parents: [{ plan_id: scaleId, version: 1 }],
+							},
 							migration: { draft: true },
 						},
 					],
-					responsePlans: [planIds.map((plan_id) => ({ plan_id, versions: [1] }))],
+					responsePlans: [
+						planIds.map((plan_id) => ({ plan_id, versions: [1] })),
+					],
 					expected: [
 						{
 							planIds,

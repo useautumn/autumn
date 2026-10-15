@@ -39,8 +39,12 @@ export const detectFeatureUpdateBlockers = ({
 	projectedCreditSystemFeatureIds: string[];
 }): FeatureUpdateBlocker[] => {
 	const { current, next } = updateFeaturePlan;
-	const { isChangingId, isChangingType, isChangingUsageType } =
-		featureChangeFlags({ current, next });
+	const {
+		isChangingId,
+		isChangingType,
+		isChangingUsageType,
+		isLeavingCompetingCombine,
+	} = featureChangeFlags({ current, next });
 	const blockers: FeatureUpdateBlocker[] = [];
 	const hasCreditSystems = projectedCreditSystemFeatureIds.length > 0;
 
@@ -133,6 +137,14 @@ export const detectFeatureUpdateBlockers = ({
 				message: `Cannot set to ${usageTypeTitle} because it is / was used by customers`,
 			});
 		}
+	}
+
+	if (isLeavingCompetingCombine && featureState?.has_customers) {
+		blockers.push({
+			field: "combine",
+			code: "attached_to_customer",
+			message: `Cannot change combine of feature ${current.id} away from ${current.config?.combine} because customers hold it`,
+		});
 	}
 
 	return blockers;

@@ -246,26 +246,10 @@ const handleCreatePlanSuccess = async (
 // Product creation helper
 const createProduct = async (product: any, axiosInstance: AxiosInstance) => {
 	try {
-		// const result = CreateProductSchema.safeParse({
-		// 	name: product?.name,
-		// 	id: product?.id,
-		// 	items: product?.items || [],
-		// });
-
-		// if (result.error) {
-		// 	console.error("Product validation error:", result.error);
-		// 	toast.error("Invalid product data");
-		// 	return null;
-		// }
-
 		const createdProduct: Awaited<
 			ReturnType<typeof ProductService.createProduct>
 		> = await ProductService.createProduct(axiosInstance, product);
 
-		// productCreatedRef.current = {
-		// 	created: true,
-		// 	latestId: createdProduct.id,
-		// };
 		toast.success(`Plan "${product?.name}" created successfully!`);
 
 		// if (!productCreatedRef.current.created) {

@@ -14,6 +14,8 @@ import { COMPLEX_UPDATE_ERROR } from "./handleOneOffErrors";
 const FORBIDDEN_FIELDS: readonly (keyof UpdateSubscriptionV1Params)[] = [
 	"customize",
 	"custom_line_items",
+	"add_lines",
+	"remove_lines",
 	"version",
 	"cancel_action",
 	"billing_cycle_anchor",

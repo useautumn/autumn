@@ -21,6 +21,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
 </DynamicParamField>
 
+<DynamicParamField body="combine" type="'sum' | 'max' | 'min'">
+  How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
+</DynamicParamField>
+
 <DynamicParamField body="display" type="object">
   Singular and plural display names for the feature in your user interface.
   <Expandable title="properties">
@@ -166,6 +170,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 <DynamicResponseField name="consumable" type="boolean">
   For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+</DynamicResponseField>
+
+<DynamicResponseField name="combine" type="'sum' | 'max' | 'min'">
+  How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
 </DynamicResponseField>
 
 <DynamicResponseField name="event_names" type="string[]">

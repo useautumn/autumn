@@ -27,51 +27,6 @@ export const handleRenewProduct = async ({
 		message: `Successfully renewed product`,
 	});
 
-	// const { logger, db } = ctx;
-	// const { stripeCli } = attachParams;
-	// let { curScheduledProduct } = attachParamToCusProducts({ attachParams });
-	// const curCusProduct = attachParamsToCurCusProduct({ attachParams });
-
-	// const product = attachParams.products[0];
-	// const cusProducts = attachParams.customer.customer_products;
-	// const curSubId = curCusProduct?.subscription_ids?.[0];
-
-	// if (!curCusProduct) {
-	// 	throw new RecaseError({
-	// 		message: `RENEW FLOW, curCusProduct is undefined`,
-	// 		code: ErrCode.InvalidRequest,
-	// 		statusCode: StatusCodes.BAD_REQUEST,
-	// 	});
-	// }
-
-	// if (curCusProduct.product.is_add_on) {
-	// 	curScheduledProduct = undefined;
-	// }
-
-	// const schedule = await cusProductToSchedule({
-	// 	cusProduct: curCusProduct,
-	// 	stripeCli,
-	// });
-
-	// const otherCanceled = cusProducts.some(
-	// 	(cp) =>
-	// 		cp.subscription_ids?.includes(curSubId || "") &&
-	// 		cp.canceled &&
-	// 		cp.id !== curCusProduct?.id,
-	// );
-
-	// let expectedEnd: number | undefined;
-	// if (curSubId) {
-	// 	const curSub = await getSubForAttach({
-	// 		stripeCli,
-	// 		subId: curSubId,
-	// 	});
-	// 	const subItems = curSub?.items.data.filter((item) =>
-	// 		subItemInCusProduct({ cusProduct: curCusProduct, subItem: item }),
-	// 	);
-	// 	expectedEnd = getLatestPeriodEnd({ subItems });
-	// }
-
 	// if (!otherCanceled) {
 	// 	if (schedule) {
 	// 		logger.info(`RENEW FLOW: releasing schedule ${schedule.id}`);
@@ -131,38 +86,6 @@ export const handleRenewProduct = async ({
 	// 				attachParams,
 	// 			})) as Stripe.Subscription;
 
-	// 			await updateCurSchedule({
-	// 				ctx,
-	// 				attachParams,
-	// 				schedule,
-	// 				newPhases: newItems.phases,
-	// 				sub: curSub,
-	// 			});
-
-	// 			await CusProductService.update({
-	// 				db,
-	// 				cusProductId: curCusProduct.id,
-	// 				updates: {
-	// 					scheduled_ids: [schedule.id],
-	// 					canceled: false,
-	// 					canceled_at: null,
-	// 					ended_at: null,
-	// 				},
-	// 			});
-	// 		} else {
-	// 			logger.info(
-	// 				`RENEW FLOW: no new schedule items, releasing schedule ${schedule.id}`,
-	// 			);
-	// 			await stripeCli.subscriptionSchedules.release(schedule.id);
-
-	// 			await CusProductService.updateByStripeScheduledId({
-	// 				db,
-	// 				stripeScheduledId: schedule.id,
-	// 				updates: {
-	// 					scheduled_ids: [],
-	// 				},
-	// 			});
-
 	// 			await CusProductService.update({
 	// 				db,
 	// 				cusProductId: curCusProduct.id,
@@ -183,15 +106,6 @@ export const handleRenewProduct = async ({
 	// 			stripeCli,
 	// 		})) as Stripe.Subscription;
 
-	// 		const periodEnd = getLatestPeriodEnd({ sub: curSub });
-	// 		await subToNewSchedule({
-	// 			ctx,
-	// 			sub: curSub,
-	// 			attachParams,
-	// 			config,
-	// 			endOfBillingPeriod: periodEnd,
-	// 		});
-
 	// 		await CusProductService.update({
 	// 			db,
 	// 			cusProductId: curCusProduct.id,
@@ -202,45 +116,5 @@ export const handleRenewProduct = async ({
 	// 			},
 	// 		});
 	// 	}
-	// }
-
-	// if (curCusProduct) {
-	// 	try {
-	// 		await addProductsUpdatedWebhookTask({
-	// 			ctx,
-	// 			internalCustomerId: curCusProduct.internal_customer_id,
-	// 			org: attachParams.org,
-	// 			env: attachParams.customer.env,
-	// 			customerId:
-	// 				attachParams.customer.id || attachParams.customer.internal_id,
-	// 			scenario: AttachScenario.Renew,
-	// 			cusProduct: curCusProduct,
-	// 		});
-	// 	} catch (error) {
-	// 		logger.error(`RENEW FLOW: failed to add to webhook queue: ${error}`);
-	// 	}
-	// }
-
-	// if (curScheduledProduct) {
-	// 	await CusProductService.delete({
-	// 		db,
-	// 		cusProductId: curScheduledProduct.id,
-	// 	});
-	// }
-
-	// return AttachFunctionResponseSchema.parse({
-	// 	code: SuccessCode.RenewedProduct,
-	// 	message: `Successfully renewed product ${product.name}`,
-	// });
-	// if (res) {
-	// 	res.status(200).json(
-	// 		AttachResultSchema.parse({
-	// 			code: SuccessCode.RenewedProduct,
-	// 			message: `Successfully renewed product ${product.name}`,
-	// 			product_ids: [product.id],
-	// 			customer_id:
-	// 				attachParams.customer.id || attachParams.customer.internal_id,
-	// 		}),
-	// 	);
 	// }
 };

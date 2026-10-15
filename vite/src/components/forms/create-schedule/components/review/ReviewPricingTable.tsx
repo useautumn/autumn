@@ -1,16 +1,16 @@
+import type { SetPlansReviewPhase, SetPlansReviewRow } from "@autumn/shared";
 import type { ReactNode } from "react";
 import {
 	TABLE_TRAY_SURFACE_CLASS,
 	TABLE_TRAY_SURFACE_DIVIDER_CLASS,
 } from "@/components/general/table";
 import { cn } from "@/lib/utils";
-import type {
-	ReviewChangePhase,
-	ReviewChangeRow,
-	ReviewPhaseBadge,
-} from "../../utils/review/types/reviewChange";
+import { formatReviewText } from "../../utils/review/formatReviewText";
+import { ReviewValue } from "./ReviewValue";
 
-const NO_TOTAL = "—";
+type ReviewPhaseBadge = NonNullable<SetPlansReviewPhase["badge"]>;
+
+const NO_VALUE = "—";
 
 const BADGE_COPY: Record<
 	ReviewPhaseBadge,
@@ -31,7 +31,7 @@ export const PRICING_TABLE_ROW_CLASS = cn(
 export const PRICING_TABLE_QTY_CLASS = "w-[60px] shrink-0 text-right";
 export const PRICING_TABLE_TOTAL_CLASS = "w-[140px] shrink-0 text-right";
 
-export function PricingTablePhaseBadge({ badge }: { badge: ReviewPhaseBadge }) {
+function PricingTablePhaseBadge({ badge }: { badge: ReviewPhaseBadge }) {
 	const { label, className } = BADGE_COPY[badge];
 	return (
 		<span
@@ -68,7 +68,7 @@ export function PricingTablePhase({
 	);
 }
 
-function PricingTableRow({ row }: { row: ReviewChangeRow }) {
+function PricingTableRow({ row }: { row: SetPlansReviewRow }) {
 	return (
 		<div className={PRICING_TABLE_ROW_CLASS}>
 			<div className="flex min-w-0 flex-1 flex-col">
@@ -77,7 +77,7 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 				</span>
 				{row.description && (
 					<span className="truncate text-xs text-tertiary-foreground">
-						{row.description}
+						{formatReviewText(row.description)}
 					</span>
 				)}
 			</div>
@@ -85,21 +85,19 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 				className={cn(
 					PRICING_TABLE_QTY_CLASS,
 					"text-sm tabular-nums",
-					row.quantity === "—" ? "text-tertiary-foreground" : "text-foreground",
+					row.quantity ? "text-foreground" : "text-tertiary-foreground",
 				)}
 			>
-				{row.quantity}
+				{row.quantity ?? NO_VALUE}
 			</span>
 			<span
-				className={cn(
-					PRICING_TABLE_TOTAL_CLASS,
-					"text-sm tabular-nums",
-					row.value && !row.value.isBasis
-						? "text-foreground"
-						: "text-tertiary-foreground",
-				)}
+				className={cn(PRICING_TABLE_TOTAL_CLASS, "flex justify-end gap-[3px]")}
 			>
-				{row.value?.amount ?? NO_TOTAL}
+				{row.value ? (
+					<ReviewValue value={row.value} />
+				) : (
+					<span className="text-sm text-tertiary-foreground">{NO_VALUE}</span>
+				)}
 			</span>
 		</div>
 	);
@@ -109,7 +107,7 @@ function PricingTableRow({ row }: { row: ReviewChangeRow }) {
 export function ReviewPricingTable({
 	phases,
 }: {
-	phases: ReviewChangePhase[];
+	phases: SetPlansReviewPhase[];
 }) {
 	return (
 		<div className="flex flex-col gap-5">
@@ -119,7 +117,7 @@ export function ReviewPricingTable({
 					title={
 						<>
 							<span className="text-[13px] font-semibold text-foreground">
-								{phase.range ?? phase.label}
+								{formatReviewText(phase.range ?? phase.label)}
 							</span>
 							{phase.badge && <PricingTablePhaseBadge badge={phase.badge} />}
 						</>

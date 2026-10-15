@@ -25,10 +25,6 @@ export const PlanResponseSchema = z.object({
 
 	// features:
 
-	// items: z.array(ProductItemResponseSchema),
-	// free_trial: FreeTrialResponseSchema.nullable(),
-	// base_variant_id: z.string().nullable(),
-
 	scenario: z.nativeEnum(AttachScenario).optional(),
 	properties: ApiProductPropertiesSchema.optional(),
 });

@@ -201,15 +201,6 @@ export const saveCusSubsAndProducts = async ({
 		);
 	}
 
-	// console.log("Fetching customers...");
-	// const { customers } = await getAllStripeCustomers({
-	// 	stripeCli,
-	// });
-	// fs.writeFileSync(
-	// 	`${path}/customers.json`,
-	// 	JSON.stringify(customers, null, 2),
-	// );
-
 	console.log("Fetching subscriptions...");
 	if (!skipSubs) {
 		const { subscriptions } = await getAllStripeSubscriptions({

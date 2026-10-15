@@ -13,14 +13,16 @@ import { smartUnion } from "../types/smart-union.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
+  UpdatePlanPriceResponse,
+  UpdatePlanPriceResponse$inboundSchema,
+} from "./update-plan-item-tier-behavior-response.js";
+import {
   UpdatePlanBillingControlsResponse,
   UpdatePlanBillingControlsResponse$inboundSchema,
   UpdatePlanConfigResponse,
   UpdatePlanConfigResponse$inboundSchema,
   UpdatePlanCustomerEligibility,
   UpdatePlanCustomerEligibility$inboundSchema,
-  UpdatePlanDimensionsVariantDetailsUpsertLicense4,
-  UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema,
   UpdatePlanEnv,
   UpdatePlanEnv$inboundSchema,
   UpdatePlanFreeTrial,
@@ -33,8 +35,10 @@ import {
   UpdatePlanProcessors$inboundSchema,
   UpdatePlanUpsertLicenseBasePriceResponse,
   UpdatePlanUpsertLicenseBasePriceResponse$inboundSchema,
-  UpdatePlanUpsertLicenseProrationResponse,
-  UpdatePlanUpsertLicenseProrationResponse$inboundSchema,
+  UpdatePlanUpsertLicenseOnDecreaseResponse,
+  UpdatePlanUpsertLicenseOnDecreaseResponse$inboundSchema,
+  UpdatePlanUpsertLicenseOnIncreaseResponse,
+  UpdatePlanUpsertLicenseOnIncreaseResponse$inboundSchema,
   UpdatePlanVariantDetailsBasePrice,
   UpdatePlanVariantDetailsBasePrice$inboundSchema,
   UpdatePlanVariantDetailsBillingControls,
@@ -43,21 +47,107 @@ import {
   UpdatePlanVariantDetailsPlanItem$inboundSchema,
   UpdatePlanVariantDetailsPlanItemFilter,
   UpdatePlanVariantDetailsPlanItemFilter$inboundSchema,
-  UpdatePlanVariantDetailsUpsertLicenseExpiry,
-  UpdatePlanVariantDetailsUpsertLicenseExpiry$inboundSchema,
   UpdatePlanVariantDetailsUpsertLicensePrice,
   UpdatePlanVariantDetailsUpsertLicensePrice$inboundSchema,
   UpdatePlanVariantDetailsUpsertLicenseReset,
   UpdatePlanVariantDetailsUpsertLicenseReset$inboundSchema,
-  UpdatePlanVariantDetailsUpsertLicenseRollover,
-  UpdatePlanVariantDetailsUpsertLicenseRollover$inboundSchema,
   UpdatePlanVariantDetailsUpsertLicenseThresholdBilling,
   UpdatePlanVariantDetailsUpsertLicenseThresholdBilling$inboundSchema,
-} from "./update-plan-dimensions-variant-details-upsert-license-4.js";
-import {
-  UpdatePlanPriceResponse,
-  UpdatePlanPriceResponse$inboundSchema,
-} from "./update-plan-item-processors.js";
+} from "./update-plan-upsert-license-on-decrease-response.js";
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type UpdatePlanUpsertLicenseProrationResponse = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: UpdatePlanUpsertLicenseOnIncreaseResponse;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: UpdatePlanUpsertLicenseOnDecreaseResponse;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType = OpenEnum<
+  typeof UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type UpdatePlanVariantDetailsUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+export const UpdatePlanVariantDetailsUpsertLicenseDuration = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+export type UpdatePlanVariantDetailsUpsertLicenseDuration = OpenEnum<
+  typeof UpdatePlanVariantDetailsUpsertLicenseDuration
+>;
+
+/**
+ * Purchased units expire this long after each purchase. One-off prepaid consumable items only.
+ */
+export type UpdatePlanVariantDetailsUpsertLicenseExpiry = {
+  duration: UpdatePlanVariantDetailsUpsertLicenseDuration;
+  length: number;
+};
+
+export type UpdatePlanCreditSchemaVariantDetailsUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
+};
+
+export type UpdatePlanDimensionsVariantDetailsUpsertLicense4 = {
+  /**
+   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
+   */
+  match: { [k: string]: string };
+  /**
+   * Breaks ties between dimensions that match the same number of keys. Higher wins.
+   */
+  priority?: number | undefined;
+  /**
+   * Credits consumed per billing-unit group when this dimension matches.
+   */
+  creditCost: number;
+};
 
 export const UpdatePlanDimensionsToVariantDetailsUpsertLicenseEnum2 = {
   Inf: "inf",
@@ -271,7 +361,8 @@ export type UpdatePlanCreditSchemaVariantDetailsUpsertLicense1 = {
 
 export type UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnion =
   | UpdatePlanCreditSchemaVariantDetailsUpsertLicense1
-  | UpdatePlanCreditSchemaVariantDetailsUpsertLicense2;
+  | UpdatePlanCreditSchemaVariantDetailsUpsertLicense2
+  | UpdatePlanCreditSchemaVariantDetailsUpsertLicense3;
 
 export type UpdatePlanVariantDetailsUpsertLicenseProviderMarkups = {
   markup: number;
@@ -312,12 +403,13 @@ export type UpdatePlanVariantDetailsUpsertLicenseMarkups = {
  */
 export type UpdatePlanVariantDetailsUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | UpdatePlanCreditSchemaVariantDetailsUpsertLicense1
       | UpdatePlanCreditSchemaVariantDetailsUpsertLicense2
+      | UpdatePlanCreditSchemaVariantDetailsUpsertLicense3
     >
     | undefined;
   /**
@@ -655,10 +747,16 @@ export type UpdatePlanLicensePriceTierResponse = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const UpdatePlanLicenseTierBehaviorResponse = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type UpdatePlanLicenseTierBehaviorResponse = OpenEnum<
   typeof UpdatePlanLicenseTierBehaviorResponse
 >;
@@ -713,6 +811,9 @@ export type UpdatePlanLicensePriceResponse = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<UpdatePlanLicensePriceTierResponse> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: UpdatePlanLicenseTierBehaviorResponse | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -835,6 +936,17 @@ export type UpdatePlanLicenseDurationResponse = OpenEnum<
 export type UpdatePlanLicenseExpiryResponse = {
   duration: UpdatePlanLicenseDurationResponse;
   length: number;
+};
+
+export type UpdatePlanCreditSchemaLicenseResponse3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type UpdatePlanDimensionsLicenseResponse4 = {
@@ -1064,7 +1176,8 @@ export type UpdatePlanCreditSchemaLicenseResponse1 = {
 
 export type UpdatePlanLicenseCreditSchemaResponseUnion =
   | UpdatePlanCreditSchemaLicenseResponse1
-  | UpdatePlanCreditSchemaLicenseResponse2;
+  | UpdatePlanCreditSchemaLicenseResponse2
+  | UpdatePlanCreditSchemaLicenseResponse3;
 
 export type UpdatePlanLicenseProviderMarkupsResponse = {
   markup: number;
@@ -1105,12 +1218,13 @@ export type UpdatePlanLicenseMarkupsResponse = {
  */
 export type UpdatePlanLicenseFeatureOverrideResponse = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | UpdatePlanCreditSchemaLicenseResponse1
       | UpdatePlanCreditSchemaLicenseResponse2
+      | UpdatePlanCreditSchemaLicenseResponse3
     >
     | undefined;
   /**
@@ -1386,6 +1500,174 @@ export type UpdatePlanResponse = {
 };
 
 /** @internal */
+export const UpdatePlanUpsertLicenseProrationResponse$inboundSchema:
+  z.ZodMiniType<UpdatePlanUpsertLicenseProrationResponse, unknown> = z.pipe(
+    z.object({
+      on_increase: UpdatePlanUpsertLicenseOnIncreaseResponse$inboundSchema,
+      on_decrease: UpdatePlanUpsertLicenseOnDecreaseResponse$inboundSchema,
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "on_increase": "onIncrease",
+        "on_decrease": "onDecrease",
+      });
+    }),
+  );
+
+export function updatePlanUpsertLicenseProrationResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdatePlanUpsertLicenseProrationResponse,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanUpsertLicenseProrationResponse$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdatePlanUpsertLicenseProrationResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType$inboundSchema:
+  z.ZodMiniType<
+    UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType,
+    unknown
+  > = openEnums.inboundSchema(
+    UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export const UpdatePlanVariantDetailsUpsertLicenseRollover$inboundSchema:
+  z.ZodMiniType<UpdatePlanVariantDetailsUpsertLicenseRollover, unknown> = z
+    .pipe(
+      z.object({
+        max: types.optional(types.number()),
+        max_percentage: types.optional(types.number()),
+        expiry_duration_type:
+          UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType$inboundSchema,
+        expiry_duration_length: types.optional(types.number()),
+      }),
+      z.transform((v) => {
+        return remap$(v, {
+          "max_percentage": "maxPercentage",
+          "expiry_duration_type": "expiryDurationType",
+          "expiry_duration_length": "expiryDurationLength",
+        });
+      }),
+    );
+
+export function updatePlanVariantDetailsUpsertLicenseRolloverFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdatePlanVariantDetailsUpsertLicenseRollover,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanVariantDetailsUpsertLicenseRollover$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdatePlanVariantDetailsUpsertLicenseRollover' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdatePlanVariantDetailsUpsertLicenseDuration$inboundSchema:
+  z.ZodMiniType<UpdatePlanVariantDetailsUpsertLicenseDuration, unknown> =
+    openEnums.inboundSchema(UpdatePlanVariantDetailsUpsertLicenseDuration);
+
+/** @internal */
+export const UpdatePlanVariantDetailsUpsertLicenseExpiry$inboundSchema:
+  z.ZodMiniType<UpdatePlanVariantDetailsUpsertLicenseExpiry, unknown> = z
+    .object({
+      duration: UpdatePlanVariantDetailsUpsertLicenseDuration$inboundSchema,
+      length: types.number(),
+    });
+
+export function updatePlanVariantDetailsUpsertLicenseExpiryFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdatePlanVariantDetailsUpsertLicenseExpiry,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanVariantDetailsUpsertLicenseExpiry$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdatePlanVariantDetailsUpsertLicenseExpiry' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdatePlanCreditSchemaVariantDetailsUpsertLicense3$inboundSchema:
+  z.ZodMiniType<UpdatePlanCreditSchemaVariantDetailsUpsertLicense3, unknown> = z
+    .pipe(
+      z.object({
+        metered_feature_id: types.string(),
+        excluded: types.literal(true),
+      }),
+      z.transform((v) => {
+        return remap$(v, {
+          "metered_feature_id": "meteredFeatureId",
+        });
+      }),
+    );
+
+export function updatePlanCreditSchemaVariantDetailsUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdatePlanCreditSchemaVariantDetailsUpsertLicense3,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanCreditSchemaVariantDetailsUpsertLicense3$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdatePlanCreditSchemaVariantDetailsUpsertLicense3' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema:
+  z.ZodMiniType<UpdatePlanDimensionsVariantDetailsUpsertLicense4, unknown> = z
+    .pipe(
+      z.object({
+        match: z.record(z.string(), types.string()),
+        priority: types.optional(types.number()),
+        credit_cost: types.number(),
+      }),
+      z.transform((v) => {
+        return remap$(v, {
+          "credit_cost": "creditCost",
+        });
+      }),
+    );
+
+export function updatePlanDimensionsVariantDetailsUpsertLicense4FromJSON(
+  jsonString: string,
+): SafeParseResult<
+  UpdatePlanDimensionsVariantDetailsUpsertLicense4,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'UpdatePlanDimensionsVariantDetailsUpsertLicense4' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanDimensionsToVariantDetailsUpsertLicenseEnum2$inboundSchema:
   z.ZodMiniEnum<typeof UpdatePlanDimensionsToVariantDetailsUpsertLicenseEnum2> =
     z.enum(UpdatePlanDimensionsToVariantDetailsUpsertLicenseEnum2);
@@ -1493,7 +1775,9 @@ export const UpdatePlanVariantDetailsUpsertLicenseDimensionsUnion2$inboundSchema
     z.lazy(() =>
       UpdatePlanDimensionsVariantDetailsUpsertLicense3$inboundSchema
     ),
-    UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema,
+    z.lazy(() =>
+      UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema
+    ),
   ]);
 
 export function updatePlanVariantDetailsUpsertLicenseDimensionsUnion2FromJSON(
@@ -1550,7 +1834,9 @@ export const UpdatePlanCreditSchemaVariantDetailsUpsertLicense2$inboundSchema:
             z.lazy(() =>
               UpdatePlanDimensionsVariantDetailsUpsertLicense3$inboundSchema
             ),
-            UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema,
+            z.lazy(() =>
+              UpdatePlanDimensionsVariantDetailsUpsertLicense4$inboundSchema
+            ),
           ]),
         )),
         multipliers: types.optional(z.record(
@@ -1904,6 +2190,9 @@ export const UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnion$inboundSchem
     z.lazy(() =>
       UpdatePlanCreditSchemaVariantDetailsUpsertLicense2$inboundSchema
     ),
+    z.lazy(() =>
+      UpdatePlanCreditSchemaVariantDetailsUpsertLicense3$inboundSchema
+    ),
   ]);
 
 export function updatePlanVariantDetailsUpsertLicenseCreditSchemaUnionFromJSON(
@@ -2032,6 +2321,9 @@ export const UpdatePlanVariantDetailsUpsertLicenseFeatureOverride$inboundSchema:
           z.lazy(() =>
             UpdatePlanCreditSchemaVariantDetailsUpsertLicense2$inboundSchema
           ),
+          z.lazy(() =>
+            UpdatePlanCreditSchemaVariantDetailsUpsertLicense3$inboundSchema
+          ),
         ]))),
         markups: types.optional(z.lazy(() =>
           UpdatePlanVariantDetailsUpsertLicenseMarkups$inboundSchema
@@ -2079,15 +2371,15 @@ export const UpdatePlanUpsertLicensePlanItemResponse$inboundSchema:
       price: types.optional(
         UpdatePlanVariantDetailsUpsertLicensePrice$inboundSchema,
       ),
-      proration: types.optional(
-        UpdatePlanUpsertLicenseProrationResponse$inboundSchema,
-      ),
-      rollover: types.optional(
-        UpdatePlanVariantDetailsUpsertLicenseRollover$inboundSchema,
-      ),
-      expiry: types.optional(
-        UpdatePlanVariantDetailsUpsertLicenseExpiry$inboundSchema,
-      ),
+      proration: types.optional(z.lazy(() =>
+        UpdatePlanUpsertLicenseProrationResponse$inboundSchema
+      )),
+      rollover: types.optional(z.lazy(() =>
+        UpdatePlanVariantDetailsUpsertLicenseRollover$inboundSchema
+      )),
+      expiry: types.optional(z.lazy(() =>
+        UpdatePlanVariantDetailsUpsertLicenseExpiry$inboundSchema
+      )),
       feature_override: types.optional(z.lazy(() =>
         UpdatePlanVariantDetailsUpsertLicenseFeatureOverride$inboundSchema
       )),
@@ -2766,6 +3058,31 @@ export function updatePlanLicenseExpiryResponseFromJSON(
 }
 
 /** @internal */
+export const UpdatePlanCreditSchemaLicenseResponse3$inboundSchema:
+  z.ZodMiniType<UpdatePlanCreditSchemaLicenseResponse3, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      excluded: types.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+      });
+    }),
+  );
+
+export function updatePlanCreditSchemaLicenseResponse3FromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanCreditSchemaLicenseResponse3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdatePlanCreditSchemaLicenseResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanCreditSchemaLicenseResponse3' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanDimensionsLicenseResponse4$inboundSchema: z.ZodMiniType<
   UpdatePlanDimensionsLicenseResponse4,
   unknown
@@ -3245,6 +3562,7 @@ export const UpdatePlanLicenseCreditSchemaResponseUnion$inboundSchema:
     smartUnion([
       z.lazy(() => UpdatePlanCreditSchemaLicenseResponse1$inboundSchema),
       z.lazy(() => UpdatePlanCreditSchemaLicenseResponse2$inboundSchema),
+      z.lazy(() => UpdatePlanCreditSchemaLicenseResponse3$inboundSchema),
     ]);
 
 export function updatePlanLicenseCreditSchemaResponseUnionFromJSON(
@@ -3358,6 +3676,7 @@ export const UpdatePlanLicenseFeatureOverrideResponse$inboundSchema:
         z.lazy(() =>
           UpdatePlanCreditSchemaLicenseResponse2$inboundSchema
         ),
+        z.lazy(() => UpdatePlanCreditSchemaLicenseResponse3$inboundSchema),
       ]))),
       markups: types.optional(z.lazy(() =>
         UpdatePlanLicenseMarkupsResponse$inboundSchema

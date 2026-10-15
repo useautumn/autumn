@@ -127,8 +127,6 @@ const getAlignedIntervalUnix = ({
 	now?: number;
 	alwaysReturn?: boolean;
 }) => {
-	// alignWithUnix = addSeconds(alignWithUnix, 20).getTime();
-
 	let nextCycleAnchorUnix = alignWithUnix;
 
 	now = now || Date.now();

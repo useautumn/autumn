@@ -48,7 +48,6 @@ export const ExtAttachBodyV0Schema = z
 	});
 
 export const AttachBodyV0Schema = ExtAttachBodyV0Schema.extend({
-	// products: z.array(ProductOptions).nullish(),
 	customer_data: CustomerDataSchema.nullish(), // For safety
 
 	// Custom Product

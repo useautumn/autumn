@@ -240,7 +240,6 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).scheduled().valid &&
 			!hasCustomerProductStarted(customerProduct, {
 				nowMs: billingContext.currentEpochMs,
-				// toleranceMs: 0,
 			});
 		return isPaidRecurring || startsInFuture;
 	});

@@ -113,7 +113,6 @@ export async function runRewardMigrationTask({
 		const {
 			oldPrices,
 			productId,
-			// newPrices,
 			orgId,
 			env,
 		}: {

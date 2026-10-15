@@ -24,6 +24,7 @@ import { shutdownSqsSendBatchers } from "../queue/queueUtils.js";
 import { runExpiredGrantCleanup } from "./grantCron/runExpiredGrantCleanup.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runLongLivedCheckoutExpiry } from "./longLivedCheckoutCron/runLongLivedCheckoutExpiry";
+import { runExpiredMetadataCleanup } from "./metadataCron/runExpiredMetadataCleanup.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
@@ -102,6 +103,7 @@ const oneOffCleanupTick = async () => {
 		runOneOffCleanup({ ctx }),
 		runSeatSyncCron({ ctx }),
 		runExpiredGrantCleanup({ ctx }),
+		runExpiredMetadataCleanup({ ctx }),
 	]);
 };
 

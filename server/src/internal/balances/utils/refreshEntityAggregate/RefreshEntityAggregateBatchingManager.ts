@@ -28,6 +28,7 @@ interface RefreshEntry {
 	env: AppEnv;
 	internalFeatureIds: Set<string>;
 	timer: NodeJS.Timeout | null;
+	fireAtMs: number;
 }
 
 /**
@@ -101,6 +102,7 @@ export class RefreshEntityAggregateBatchingManager {
 			env,
 			internalFeatureIds: new Set(internalFeatureIds),
 			timer: null,
+			fireAtMs: 0,
 		};
 		this.entries.set(key, entry);
 		this.scheduleTimer({ key, entry });
@@ -137,6 +139,7 @@ export class RefreshEntityAggregateBatchingManager {
 		const nowMs = this._now();
 		const bucketEndMs = (Math.floor(nowMs / this.bucketMs) + 1) * this.bucketMs;
 		const delayMs = bucketEndMs - nowMs + this.settleBufferMs;
+		entry.fireAtMs = nowMs + delayMs;
 
 		entry.timer = setTimeout(() => {
 			this.fire({ key });
@@ -162,7 +165,7 @@ export class RefreshEntityAggregateBatchingManager {
 			orgId: entry.orgId,
 			env: entry.env,
 			customerId: entry.customerId,
-			nowMs: this._now(),
+			nowMs: entry.fireAtMs,
 			bucketMs: this.bucketMs,
 		});
 

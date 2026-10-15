@@ -1,11 +1,13 @@
 import { StaleMutationError } from "../../../errors.js";
 import type { RowChange } from "../../../models/mutation/rowChange.js";
 import type { BillingPlanUpdateOp } from "../types/billingPlanOp.js";
+import { heldProductIsAsExpected } from "./heldProductIsAsExpected.js";
 import {
 	findPlanRow,
 	type PlanRowChangeContext,
 	wasDeletedByPlan,
 } from "./planRowChangeContext.js";
+import { rowHoldsExpectedColumns } from "./rowHoldsExpectedColumns.js";
 
 /** The columns the update sets, as the row holds them now: what it replaced, for the log's readers. */
 const columnsBefore = ({
@@ -60,7 +62,17 @@ export const updateOpToRowChanges = ({
 
 	if (op.table === "customerProducts") {
 		const row = context.state?.customerProducts.find(({ id }) => id === op.id);
-		if (!row) throw new StaleMutationError({ subject: op.id });
+		const productIsAsExpected = heldProductIsAsExpected({
+			context,
+			customerProductId: op.id,
+			expectProduct: op.expectProduct,
+		});
+		if (
+			!row ||
+			!rowHoldsExpectedColumns({ row, expect: op.expect }) ||
+			!productIsAsExpected
+		)
+			throw new StaleMutationError({ subject: op.id });
 		return [
 			{
 				table: op.table,
@@ -89,7 +101,16 @@ export const updateOpToRowChanges = ({
 		table: "customerEntitlements",
 		id: op.id,
 	});
-	if (!row) throw new StaleMutationError({ subject: op.id });
+	if (
+		!row ||
+		!rowHoldsExpectedColumns({ row, expect: op.expect }) ||
+		!heldProductIsAsExpected({
+			context,
+			customerProductId: row.customer_product_id,
+			expectProduct: op.expectProduct,
+		})
+	)
+		throw new StaleMutationError({ subject: op.id });
 	return [
 		{
 			table: op.table,

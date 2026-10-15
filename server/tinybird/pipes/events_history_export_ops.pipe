@@ -1,0 +1,18 @@
+DESCRIPTION >
+    The sinks_ops_log row of one events_history_export* sink job, so the runner can verify written_rows
+    without a workspace-wide token (service data sources are only readable through endpoints).
+
+TOKEN events_history_export_runner READ
+
+NODE endpoint
+SQL >
+    %
+    SELECT job_id, result, error, written_rows, written_bytes, elapsed_time
+    FROM tinybird.sinks_ops_log
+    WHERE timestamp > now() - INTERVAL 2 DAY
+      AND pipe_name IN ('events_history_export', 'events_history_export_lite', 'events_history_export_props')
+      AND job_id = {{ String(job_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

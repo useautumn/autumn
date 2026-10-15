@@ -16,6 +16,7 @@ import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
 import { fleetIdOf } from "../blueGreen/fleetIdOf.js";
 import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
+import { createCjsChildrenDedupe } from "../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
@@ -37,6 +38,7 @@ import {
 	databaseTimings,
 } from "../logging/databaseTimings.js";
 import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
+import { readMemorySignals } from "../logging/eventLoopStalls/readMemorySignals.js";
 import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
 import {
 	createKafkaRequestReporter,
@@ -329,6 +331,7 @@ export async function createBalanceWorker({
 						limits: WORKER_KAFKA_PRODUCER_LIMITS,
 						sendRingBytes: threads.sendRingBytes,
 						ackRingBytes: PRODUCER_ACK_RING_BYTES,
+						dedupeCjsChildren: env.BALANCE_WORKER_DEDUPE_CJS_CHILDREN,
 					},
 				},
 			});
@@ -417,9 +420,19 @@ export async function createBalanceWorker({
 			});
 			return {
 				inline: inlineCounters.drain(),
+				memory: readMemorySignals({
+					ctx: {
+						catalogCache: resources.catalogCache,
+						subjectMapBudget,
+						cjsChildren,
+					},
+				}),
 				...drainThreadSignals?.(),
 			};
 		}
+		const cjsChildren = createCjsChildrenDedupe({
+			config: { enabled: env.BALANCE_WORKER_DEDUPE_CJS_CHILDREN },
+		});
 		const stallMonitor = createEventLoopStallMonitor({
 			ctx: {
 				logger: dependencies.logger,
@@ -457,6 +470,7 @@ export async function createBalanceWorker({
 			},
 		});
 		function startTelemetry(): void {
+			cjsChildren.start();
 			healthReporter.start();
 			void slotHeartbeat?.start();
 			if (!reportsHealth) return;
@@ -470,6 +484,7 @@ export async function createBalanceWorker({
 			stallMonitor.stop();
 			slotHeartbeat?.stop();
 			healthReporter.stop();
+			cjsChildren.stop();
 		}
 		const ctx: WorkerLifecycleContext = {
 			partitions,

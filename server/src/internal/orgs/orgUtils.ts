@@ -220,16 +220,6 @@ export const createOrgResponse = ({
 					slug: org.master.slug,
 				}
 			: null,
-		// sandbox_config: {
-		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Sandbox }),
-		//   default_currency: org.default_currency || "USD",
-		//   return_url: org.sandbox_config?.return_url || "",
-		// },
-		// production_config: {
-		//   stripe_connected: isStripeConnected({ org, env: AppEnv.Live }),
-		//   default_currency: org.default_currency || "USD",
-		//   return_url: org.production_config?.return_url || "",
-		// },
 
 		success_url: toSuccessUrl({ org, env }) || "",
 		default_currency: org.default_currency || "usd",

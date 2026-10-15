@@ -1,4 +1,9 @@
-import type { ModelMarkups } from "../../../../models/featureModels/featureConfig/creditConfig.js";
+import {
+	type CreditSchemaItem,
+	type CreditSchemaOverrideItem,
+	isExcludedCreditSchemaItem,
+	type ModelMarkups,
+} from "../../../../models/featureModels/featureConfig/creditConfig.js";
 import type { Feature } from "../../../../models/featureModels/featureModels.js";
 import type { EntitlementWithFeature } from "../../../../models/productModels/entModels/entModels.js";
 import { isAnyCreditSystem } from "../../../featureUtils/classifyFeature/isAnyCreditSystem.js";
@@ -22,19 +27,47 @@ const mergeModelMarkups = ({
 	return merged;
 };
 
+/** Override rows patch the catalog schema by feature: a rate row replaces or
+ * adds that feature, an excluded row removes it, unlisted features inherit. */
+const mergeCreditSchema = ({
+	catalog,
+	override,
+}: {
+	catalog: CreditSchemaItem[];
+	override: CreditSchemaOverrideItem[];
+}): CreditSchemaItem[] => {
+	const merged = new Map(catalog.map((row) => [row.metered_feature_id, row]));
+	for (const row of override) {
+		if (isExcludedCreditSchemaItem(row)) merged.delete(row.metered_feature_id);
+		else merged.set(row.metered_feature_id, row);
+	}
+	return [...merged.values()];
+};
+
 /** The one place a plan item's feature_override is applied. */
 export const entitlementToCreditSystem = ({
 	entitlement,
 }: {
-	entitlement: EntitlementWithFeature;
+	entitlement: Pick<EntitlementWithFeature, "feature" | "feature_override">;
 }): Feature => {
 	const creditSystem = entitlement.feature;
 	const override = entitlement.feature_override;
 
 	if (!(override && isAnyCreditSystem(creditSystem.type))) return creditSystem;
 
-	const { markups, ...configKeys } = override;
-	const config = { ...creditSystem.config, ...configKeys };
+	const { markups, schema, ...configKeys } = override;
+	const config = {
+		...creditSystem.config,
+		...configKeys,
+		...(schema
+			? {
+					schema: mergeCreditSchema({
+						catalog: creditSystem.config?.schema ?? [],
+						override: schema,
+					}),
+				}
+			: {}),
+	};
 
 	if (!markups) return { ...creditSystem, config };
 

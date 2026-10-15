@@ -72,7 +72,6 @@ export function useEventsFilter(featuresCount: number) {
 		setIsEditingGroupBy(false);
 	}, []);
 
-	// Apply filters
 	const applyFilters = useCallback(() => {
 		setAppliedFilters(draftFilters);
 		setIsFilterOpen(false);
@@ -80,7 +79,6 @@ export function useEventsFilter(featuresCount: number) {
 		setIsEditingGroupBy(false);
 	}, [draftFilters]);
 
-	// Clear all filters
 	const clearFilters = useCallback(() => {
 		setDraftFilters(INITIAL_FILTER_STATE);
 		setAppliedFilters(INITIAL_FILTER_STATE);

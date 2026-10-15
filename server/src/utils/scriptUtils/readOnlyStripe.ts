@@ -50,7 +50,6 @@ function createResourceProxy(resource: any, resourceName: string): any {
 				return value;
 			}
 
-			// Check if method is allowed
 			if (!ALLOWED_READ_METHODS.has(prop)) {
 				// Return a function that throws an error
 				return () => {

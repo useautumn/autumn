@@ -65,4 +65,6 @@ export interface StripeSubscriptionUpdatedContext {
 	 * "phase_changed") when their condition is detected.
 	 */
 	billingChangeTags: Set<string>;
+	/** Products whose pools a default insert already moved; the caller-level pool transition skips them. */
+	pooledTransitionedCustomerProductIds: Set<string>;
 }

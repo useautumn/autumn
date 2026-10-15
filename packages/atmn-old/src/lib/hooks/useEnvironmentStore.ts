@@ -36,7 +36,6 @@ export async function storeEnvKeys(
 		AUTUMN_SECRET_KEY: keys.sandboxKey,
 	};
 
-	// Check if .env exists
 	if (fs.existsSync(envPath)) {
 		// Read and update existing file
 		const content = fs.readFileSync(envPath, "utf-8");

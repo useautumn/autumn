@@ -24,15 +24,12 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../preview/utils/expectPlanPreview.js";
-import {
-	deleteAliases,
-	listAliases,
-} from "../utils/planAliasTestUtils.js";
+import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
+import { deleteAliases, listAliases } from "../utils/planAliasTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 plan aliases: rename writes alias; re-rename replaces; old alias dies")}`,

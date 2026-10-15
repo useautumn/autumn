@@ -148,8 +148,6 @@ export * from "./models/featureModels/featureModels";
 export * from "./models/meteringLogModels/partitionProgressTable";
 export * from "./models/meteringLogModels/subjectSnapshotTable";
 
-// export * from "./models/featureModels/featureResModels";
-
 export * from "./api/features/previewUpdateFeature/previewUpdateFeatureResponse";
 export * from "./api/products/components/billingMethod";
 export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";

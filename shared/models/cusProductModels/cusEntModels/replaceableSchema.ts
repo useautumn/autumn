@@ -17,5 +17,4 @@ export const AttachReplaceableSchema = z.object({
 	delete_next_cycle: z.boolean(),
 });
 
-// export type Replaceable = z.infer<typeof ReplaceableSchema>;
 export type AttachReplaceable = z.infer<typeof AttachReplaceableSchema>;

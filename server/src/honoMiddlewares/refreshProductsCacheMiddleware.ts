@@ -56,8 +56,6 @@ export const refreshProductsCacheMiddleware = async (
 ) => {
 	await next();
 
-	// if (c.res.status < 200 || c.res.status >= 300) return;
-
 	const ctx = c.get("ctx");
 
 	if (ctx.testOptions?.skipCacheDeletion) return;

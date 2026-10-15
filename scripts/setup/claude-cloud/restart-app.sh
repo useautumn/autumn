@@ -28,6 +28,21 @@ cd "$ROOT"
 nohup bash scripts/setup/claude-cloud/with-env.sh server -- bun src/workers.ts >>"$LOG_DIR/workers.log" 2>&1 &
 nohup bash scripts/setup/claude-cloud/with-env.sh server -- bun src/index.ts >>"$LOG_DIR/server.log" 2>&1 &
 
+# Without forwarded webhooks, test-clock advances never reach Autumn. Sandbox
+# key only, passed via env so it never shows in `ps`.
+stripe_key_file="${HOME}/.cache/autumn-stripe-sandbox-secret-key"
+if command -v stripe >/dev/null 2>&1 && [ -s "$stripe_key_file" ]; then
+	for pid in $(ps -eo pid=,args= | awk '$2 ~ /(^|\/)stripe$/ && $3 == "listen" { print $1 }'); do
+		kill "$pid" 2>/dev/null || true
+	done
+	: >"$LOG_DIR/stripe-listen.log"
+	STRIPE_API_KEY="$(cat "$stripe_key_file")" nohup stripe listen --all-snapshot \
+		--forward-connect-to http://localhost:8080/webhooks/connect/sandbox \
+		--skip-verify >>"$LOG_DIR/stripe-listen.log" 2>&1 &
+else
+	echo "stripe CLI or sandbox key missing — Stripe webhooks will not reach the server" >&2
+fi
+
 for _ in $(seq 1 90); do
 	if curl -sf -o /dev/null http://localhost:8080/; then
 		echo "server up on :8080 (logs in $LOG_DIR)"

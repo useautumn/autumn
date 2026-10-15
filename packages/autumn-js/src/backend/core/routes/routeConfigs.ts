@@ -1,4 +1,3 @@
-// import { CustomerExpand } from "@useautumn/sdk";
 import { z } from "zod/v4";
 import {
 	attachParamsSchema,
@@ -35,7 +34,6 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 		requireCustomer: false, // customHandler handles auth logic for errorOnNotFound
 		bodySchema: z.object({
 			errorOnNotFound: z.boolean().optional().default(true),
-			// expand: z.array(z.enum(CustomerExpand)).optional(),
 			expand: z.array(z.string()).optional(),
 		}),
 		protectedBodyFields: CUSTOMER_PROTECTED_BODY_FIELDS,

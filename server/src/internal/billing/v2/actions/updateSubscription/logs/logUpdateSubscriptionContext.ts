@@ -1,6 +1,7 @@
 import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import { formatMs } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { invoiceModeToIssueMethod } from "@/internal/billing/v2/utils/invoiceMode/invoiceModeIssueMethod";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 
 export const logUpdateSubscriptionContext = ({
@@ -38,7 +39,7 @@ export const logUpdateSubscriptionContext = ({
 				timestamps: `Reset: ${formatMs(resetCycleAnchorMs)} | Billing Anchor: ${billingCycleAnchorMs === "now" ? "now" : formatMs(billingCycleAnchorMs)} | Current: ${formatMs(currentEpochMs)}`,
 
 				invoiceMode: invoiceMode
-					? `enable immediately: ${invoiceMode.enableProductImmediately} | finalize invoice: ${invoiceMode.finalizeInvoice}`
+					? `enable immediately: ${invoiceMode.enableProductImmediately} | issue method: ${invoiceModeToIssueMethod({ invoiceMode })}`
 					: "undefined",
 
 				stripe: `${stripeSubscription?.id ?? "no sub"} | ${stripeSubscriptionSchedule?.id ?? "no schedule"}`,

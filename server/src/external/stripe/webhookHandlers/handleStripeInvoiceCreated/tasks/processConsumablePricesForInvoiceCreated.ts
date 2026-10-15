@@ -9,7 +9,6 @@ import {
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems.js";
-import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
 import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToInvoiceAddLinesParams";
@@ -27,21 +26,25 @@ import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 const STRIPE_ADD_LINES_MAX_PER_REQUEST = 100;
 
 /**
- * Checks if the subscription's trial just ended.
- * When a trial ends, Stripe creates the first real billing period where
- * `current_period_start` equals `trial_end`. In this case, we should skip
- * billing for consumable usage since trial usage is free.
+ * Checks if this invoice closes the subscription's trial, in which case
+ * consumable usage is skipped since trial usage is free.
+ *
+ * Keyed off the invoice's own period, not the subscription's: when a
+ * subscription cancelled at period end issues its final invoice, Stripe does
+ * not advance `current_period_start`, so a subscription whose first paid
+ * period began at `trial_end` would still look like it just left its trial.
  */
 const hasTrialJustEnded = ({
+	stripeInvoice,
 	stripeSubscription,
 }: {
+	stripeInvoice: InvoiceCreatedContext["stripeInvoice"];
 	stripeSubscription: InvoiceCreatedContext["stripeSubscription"];
 }): boolean => {
 	const trialEnd = stripeSubscription.trial_end;
 	if (!trialEnd) return false;
 
-	const periodStart = getLatestPeriodStart({ sub: stripeSubscription });
-	return trialEnd === periodStart;
+	return stripeInvoice.period_end === trialEnd;
 };
 
 /**
@@ -430,7 +433,10 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	const isPeriodicInvoice =
 		stripeInvoice.billing_reason === "subscription_cycle";
 
-	const trialJustEnded = hasTrialJustEnded({ stripeSubscription });
+	const trialJustEnded = hasTrialJustEnded({
+		stripeInvoice,
+		stripeSubscription,
+	});
 
 	if (!isPeriodicInvoice) return [];
 

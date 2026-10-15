@@ -29,8 +29,6 @@ export const getNewProductRollovers = async ({
 			cusEnt: FullCusEntWithProduct;
 		}[] = [];
 
-		// let newRollovers: Rollover[] = [];
-
 		const oldCusEnts = curCusProduct.customer_entitlements;
 
 		for (const newCusEnt of newCusEnts) {

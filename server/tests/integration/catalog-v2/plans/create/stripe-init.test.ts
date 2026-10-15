@@ -14,9 +14,9 @@ import {
 } from "@autumn/shared";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct.js";
 import {
-	expectPriceStripeReuseCorrect,
 	expectPriceStripeResourcesAbsent,
 	expectPriceStripeResourcesPresent,
+	expectPriceStripeReuseCorrect,
 	expectProductProcessorCorrect,
 	findBasePrice,
 	findFeaturePrice,

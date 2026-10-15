@@ -102,7 +102,6 @@ const checkCurStripePrice = async ({
 		}
 	}
 
-	// Get stripe product
 	let stripeProd: Stripe.Product | null = null;
 	if (!config.stripe_product_id) {
 		stripeProd = null;

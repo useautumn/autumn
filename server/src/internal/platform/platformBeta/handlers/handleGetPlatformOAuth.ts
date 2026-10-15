@@ -56,7 +56,6 @@ export const handleGetPlatformOAuth = createRoute({
 			});
 		}
 
-		// Build OAuth URL
 		const oauthUrl = new URL("https://connect.stripe.com/oauth/v2/authorize");
 		oauthUrl.searchParams.set("response_type", "code");
 		oauthUrl.searchParams.set("client_id", clientId);

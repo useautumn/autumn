@@ -28,12 +28,10 @@ export const resolveClaimIdentity = async ({
 	db,
 	claimToken,
 	setupKey,
-	now,
 }: {
 	db: DrizzleCli;
 	claimToken?: string;
 	setupKey?: string;
-	now: Date;
 }): Promise<ResolvedAgentAuthIdentity> => {
 	const hasClaimToken = Boolean(claimToken);
 	const hasSetupKey = Boolean(setupKey);
@@ -44,7 +42,6 @@ export const resolveClaimIdentity = async ({
 		const organization = await findPendingAgentOrg({
 			db,
 			claimTokenHash,
-			now,
 		});
 		return organization
 			? {
@@ -60,7 +57,6 @@ export const resolveClaimIdentity = async ({
 	const organization = await findPendingAgentOrgBySetupKeyHash({
 		db,
 		hashedKey: hashApiKey(setupKey),
-		now,
 	});
 	return organization?.claim_token_hash
 		? {

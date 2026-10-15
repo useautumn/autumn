@@ -59,7 +59,6 @@ export const ListCustomersResponseSchema = z.object({
 	}),
 });
 
-// Get Billing Portal Query
 export const GetBillingPortalQuerySchema = z.object({
 	return_url: z.string().optional().meta({
 		description:
@@ -67,7 +66,6 @@ export const GetBillingPortalQuerySchema = z.object({
 	}),
 });
 
-// Get Billing Portal Body
 export const GetBillingPortalBodySchema = z
 	.object({
 		configuration_id: z.string().optional().meta({
@@ -81,7 +79,6 @@ export const GetBillingPortalBodySchema = z
 	})
 	.optional();
 
-// Get Billing Portal Response
 export const GetBillingPortalResponseSchema = z.object({
 	customer_id: z.string().nullable().meta({
 		description: "The ID of the customer",

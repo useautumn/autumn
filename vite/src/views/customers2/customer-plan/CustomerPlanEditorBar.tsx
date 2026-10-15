@@ -82,10 +82,6 @@ export const CustomerPlanEditorBar = () => {
 		returnToCustomer();
 	};
 
-	// if (!hasChanges && activeVersion === product.version) {
-	// 	return null;
-	// }
-
 	const handleDiscardClicked = () => {
 		setQueryStates({ version: null });
 		// Reset product to baseProduct

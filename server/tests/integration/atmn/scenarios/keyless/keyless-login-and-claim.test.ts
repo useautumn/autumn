@@ -7,8 +7,9 @@
  *   K1  init with no key prints the two ways in (--login / --keyless), writes
  *       nothing, and exits 0
  *   K2  login --keyless creates a sandbox org named after the package and
- *       writes AUTUMN_SECRET_KEY
- *   K3  env reports the org as unclaimed, in the table and in --json
+ *       writes AUTUMN_SECRET_KEY; there is no deadline for linking it
+ *   K3  env reports the org as unclaimed with no claim deadline, in the table
+ *       and in --json
  *   K4  login --claim <email> returns a short-lived browser link and emails
  *       the same link; the org remains unclaimed until browser confirmation
  *   K5  init --keyless does K2 and then carries on: config, pull, skills
@@ -118,7 +119,9 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		const keyless = runCliHeadless({ cwd: root, args: ["login", "--keyless"] });
 		expect(keyless.exitCode).toBe(0);
 		expect(keyless.output).toContain("✓ Created sandbox org keyless-app");
-		expect(keyless.output).toContain("atmn login --claim");
+		expect(keyless.output).toContain(
+			"Link it to an account any time: atmn login --claim",
+		);
 		expect(keyless.output).not.toContain("/claim?");
 		const key = envValue({ cwd: root, key: "AUTUMN_SECRET_KEY" });
 		expect(key).toMatch(/^am_sk_test_/);
@@ -129,7 +132,7 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 		);
 		createdOrgIds.push(env.organization.id);
 		expect(env.claimed).toBe(false);
-		expect(typeof env.claimExpiresAt).toBe("string");
+		expect(env.claimExpiresAt).toBeNull();
 		expect(env.notes.join("\n")).toContain("atmn login --claim <email>");
 		expect(runCliHeadless({ cwd: root, args: ["env"] }).output).toContain(
 			"Owner         unclaimed",
@@ -150,7 +153,7 @@ test(`${chalk.yellowBright("atmn keyless: init hints, login --keyless provisions
 			runCliHeadless({ cwd: root, args: ["env", "--json"] }).output,
 		);
 		expect(after.claimed).toBe(false);
-		expect(typeof after.claimExpiresAt).toBe("string");
+		expect(after.claimExpiresAt).toBeNull();
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}

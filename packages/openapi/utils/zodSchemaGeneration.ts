@@ -1,16 +1,22 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-interface SchemaSource {
-	/** Source file in SDK (relative to sdk/src/models/) */
-	sdkFile: string;
-	/** Output filename */
-	outputFile: string;
-}
+/**
+ * An operation's `-op`/`-response` file, or a type found by name. Speakeasy names other files
+ * after hoisted inline schemas, so they're renamed whenever the spec changes.
+ */
+type SchemaSource =
+	| { sdkFile: string; outputFile: string }
+	| { exportedType: string; outputFile: string };
 
-const SCHEMA_SOURCES: SchemaSource[] = [
+type ResolvedSchemaSource = { sdkFile: string; outputFile: string };
+
+export const isStableSdkFile = (file: string) =>
+	/-(op|response)\.ts$/.test(file);
+
+export const SCHEMA_SOURCES: SchemaSource[] = [
 	{
 		sdkFile: "get-or-create-customer-op.ts",
 		outputFile: "getOrCreateCustomerSchemas.ts",
@@ -42,10 +48,7 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "previewMultiAttachSchemas.ts",
 	},
 	{ sdkFile: "list-plans-response.ts", outputFile: "listPlansSchemas.ts" },
-	{
-		sdkFile: "list-plans-variant-details-usage-alert.ts",
-		outputFile: "listPlansParamsSchemas.ts",
-	},
+	{ exportedType: "ListPlansParams", outputFile: "listPlansParamsSchemas.ts" },
 	{ sdkFile: "list-events-op.ts", outputFile: "listEventsSchemas.ts" },
 	{
 		sdkFile: "aggregate-events-op.ts",
@@ -68,6 +71,56 @@ const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "redeemReferralCodeSchemas.ts",
 	},
 ];
+
+const describeSource = (source: SchemaSource) =>
+	`${"sdkFile" in source ? source.sdkFile : source.exportedType} -> ${source.outputFile}`;
+
+/** Finds each source's file in the SDK models; every missing or ambiguous one is reported together. */
+export const resolveSchemaSources = ({
+	sdkModelsDir,
+	sources,
+}: {
+	sdkModelsDir: string;
+	sources: SchemaSource[];
+}): ResolvedSchemaSource[] => {
+	const modelFiles = readdirSync(sdkModelsDir).filter((file) =>
+		file.endsWith(".ts"),
+	);
+	const exportersOf = (typeName: string) => {
+		const declaration = new RegExp(
+			`^export type ${typeName}\\b(?! *[A-Za-z0-9_$])`,
+			"m",
+		);
+		return modelFiles.filter((file) =>
+			declaration.test(readFileSync(path.join(sdkModelsDir, file), "utf-8")),
+		);
+	};
+
+	const problems: string[] = [];
+	const resolved = sources.flatMap((source): ResolvedSchemaSource[] => {
+		if ("sdkFile" in source) {
+			if (existsSync(path.join(sdkModelsDir, source.sdkFile))) return [source];
+			problems.push(`  ${describeSource(source)}: file missing`);
+			return [];
+		}
+		const files = exportersOf(source.exportedType);
+		if (files.length === 1) {
+			return [{ sdkFile: files[0] as string, outputFile: source.outputFile }];
+		}
+		problems.push(
+			files.length === 0
+				? `  ${describeSource(source)}: no model exports it`
+				: `  ${describeSource(source)}: exported by ${files.join(", ")}`,
+		);
+		return [];
+	});
+	if (problems.length > 0) {
+		throw new Error(
+			`SDK models missing or ambiguous for Zod generation:\n${problems.join("\n")}`,
+		);
+	}
+	return resolved;
+};
 
 /**
  * Post-process generated schema file to use zod/v4 instead of zod
@@ -99,18 +152,12 @@ export async function generateZodSchemas({
 	const currentFile = fileURLToPath(import.meta.url);
 	const workspaceRoot = path.resolve(path.dirname(currentFile), "../../..");
 
-	const missing = SCHEMA_SOURCES.filter(
-		(source) => !existsSync(path.join(sdkModelsDir, source.sdkFile)),
-	);
-	if (missing.length > 0) {
-		throw new Error(
-			`SDK model files missing for Zod generation:\n${missing
-				.map((source) => `  ${source.sdkFile} -> ${source.outputFile}`)
-				.join("\n")}`,
-		);
-	}
+	const sources = resolveSchemaSources({
+		sdkModelsDir,
+		sources: SCHEMA_SOURCES,
+	});
 
-	for (const source of SCHEMA_SOURCES) {
+	for (const source of sources) {
 		const inputPath = path.join(sdkModelsDir, source.sdkFile);
 		const outputPath = path.join(outputDir, source.outputFile);
 

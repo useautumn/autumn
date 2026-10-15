@@ -52,6 +52,7 @@ export {
 	_orgWithFeaturesL1SizeForTesting,
 	_resetOrgWithFeaturesL1ForTesting,
 	buildOrgWithFeaturesCacheKey,
+	buildOrgWithFeaturesClearTokenKey,
 	clearOrgWithFeaturesCache,
 	getCachedOrgWithFeatures,
 	ORG_WITH_FEATURES_CACHE_TTL_SECONDS,

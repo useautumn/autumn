@@ -15,12 +15,10 @@ import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams
 
 export const legacyAttach = async ({
 	ctx,
-	// body,
 	attachParams,
 	planTiming,
 }: {
 	ctx: AutumnContext;
-	// body: AttachBodyV0;
 	attachParams: AttachParams;
 	planTiming: PlanTiming;
 }) => {

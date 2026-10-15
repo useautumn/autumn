@@ -272,6 +272,7 @@ MultiAttachTierBehavior = Literal[
     "graduated",
     "volume",
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 MultiAttachItemPriceInterval = Literal[
@@ -306,6 +307,7 @@ class MultiAttachPriceTypedDict(TypedDict):
     tiers: NotRequired[List[MultiAttachPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[MultiAttachTierBehavior]
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -333,6 +335,7 @@ class MultiAttachPrice(BaseModel):
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[MultiAttachTierBehavior] = None
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -490,6 +493,24 @@ class MultiAttachExpiry(BaseModel):
     duration: MultiAttachDuration
 
     length: float
+
+
+class MultiAttachCreditSchema3TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+    excluded: Literal[True]
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class MultiAttachCreditSchema3(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+
+    excluded: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="excluded"),
+    ] = True
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
 
 
 MultiAttachDimensionsMatch4TypedDict = TypeAliasType(
@@ -986,13 +1007,17 @@ class MultiAttachCreditSchema1(BaseModel):
 
 MultiAttachCreditSchemaUnionTypedDict = TypeAliasType(
     "MultiAttachCreditSchemaUnionTypedDict",
-    Union[MultiAttachCreditSchema2TypedDict, MultiAttachCreditSchema1TypedDict],
+    Union[
+        MultiAttachCreditSchema3TypedDict,
+        MultiAttachCreditSchema2TypedDict,
+        MultiAttachCreditSchema1TypedDict,
+    ],
 )
 
 
 MultiAttachCreditSchemaUnion = TypeAliasType(
     "MultiAttachCreditSchemaUnion",
-    Union[MultiAttachCreditSchema2, MultiAttachCreditSchema1],
+    Union[MultiAttachCreditSchema3, MultiAttachCreditSchema2, MultiAttachCreditSchema1],
 )
 
 
@@ -1089,7 +1114,7 @@ class MultiAttachFeatureOverrideTypedDict(TypedDict):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: NotRequired[List[MultiAttachCreditSchemaUnionTypedDict]]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
     markups: NotRequired[MultiAttachMarkupsTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
@@ -1098,7 +1123,7 @@ class MultiAttachFeatureOverride(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: Optional[List[MultiAttachCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
 
     markups: Optional[MultiAttachMarkups] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
@@ -1434,6 +1459,14 @@ class MultiAttachFreeTrialParams(BaseModel):
         return m
 
 
+MultiAttachIssueMethod = Literal[
+    "draft",
+    "finalize",
+    "send",
+]
+r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
+
+
 MultiAttachPaymentMethodType = Literal[
     "card",
     "customer_balance",
@@ -1453,7 +1486,9 @@ class MultiAttachInvoiceModeTypedDict(TypedDict):
     enable_plan_immediately: NotRequired[bool]
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+    issue_method: NotRequired[MultiAttachIssueMethod]
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
     invoice_template_id: NotRequired[str]
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
     net_terms_days: NotRequired[int]
@@ -1471,8 +1506,11 @@ class MultiAttachInvoiceMode(BaseModel):
     enable_plan_immediately: Optional[bool] = False
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
 
-    finalize: Optional[bool] = True
-    r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    finalize: Optional[bool] = None
+    r"""Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set."""
+
+    issue_method: Optional[MultiAttachIssueMethod] = None
+    r"""How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription."""
 
     invoice_template_id: Optional[str] = None
     r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
@@ -1489,6 +1527,7 @@ class MultiAttachInvoiceMode(BaseModel):
             [
                 "enable_plan_immediately",
                 "finalize",
+                "issue_method",
                 "invoice_template_id",
                 "net_terms_days",
                 "payment_method_types",
@@ -1548,7 +1587,7 @@ MultiAttachBillingBehavior = Literal[
     "none",
     "bill_difference",
 ]
-r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
 
 MultiAttachRedirectMode = Literal[
@@ -1941,7 +1980,7 @@ class MultiAttachParamsTypedDict(TypedDict):
     discounts: NotRequired[List[MultiAttachAttachDiscountTypedDict]]
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     billing_behavior: NotRequired[MultiAttachBillingBehavior]
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle of every plan on the subscription to the time of this request."""
     success_url: NotRequired[str]
@@ -1985,7 +2024,7 @@ class MultiAttachParams(BaseModel):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
     billing_behavior: Optional[MultiAttachBillingBehavior] = None
-    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
     billing_cycle_anchor: Annotated[
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
@@ -2195,6 +2234,10 @@ class MultiAttachResponse(BaseModel):
         return m
 
 
+try:
+    MultiAttachCreditSchema3.model_rebuild()
+except NameError:
+    pass
 try:
     MultiAttachDimensions3.model_rebuild()
 except NameError:

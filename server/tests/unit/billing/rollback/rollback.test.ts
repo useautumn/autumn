@@ -338,6 +338,7 @@ const makePooledCustomerEntitlement = ({
 		stripe_subscription_id: stripeSubscriptionId,
 		customer_license_link_id: null,
 		rollover_signature: "none",
+		feature_override_signature: "none",
 		customer_entitlement_id: pooledCustomerEntitlement.id,
 		last_applied_reset_at: null,
 		created_at: 1_700_000_000_000,
@@ -354,6 +355,8 @@ const makePoolContribution = ({ poolId }: { poolId: string }) => ({
 	current_contribution: 10_000,
 	next_cycle_contribution: 10_000,
 	effective_at: null,
+	competes: false,
+	unlimited: false,
 	created_at: 1_700_000_000_000,
 	updated_at: 1_700_000_000_000,
 });

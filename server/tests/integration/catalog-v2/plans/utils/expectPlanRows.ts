@@ -233,7 +233,10 @@ export const expectPlanRowsCorrect = async ({
 
 	for (const entId of expected.retiredEnts ?? []) {
 		const row = await fetchEntRow({ ctx, entId });
-		expect(row, `${label}: ent ${entId} must be retired, not deleted`).toBeTruthy();
+		expect(
+			row,
+			`${label}: ent ${entId} must be retired, not deleted`,
+		).toBeTruthy();
 		expect(
 			row?.is_custom,
 			`${label}: retired ent ${entId} must be stamped is_custom`,
@@ -322,9 +325,10 @@ export const expectPlanRowIdsReminted = ({
 	).not.toBe(from.internalProductId);
 
 	for (const entId of to.entIds) {
-		expect(from.entIds, `${label}: ent ${entId} must be a new row`).not.toContain(
-			entId,
-		);
+		expect(
+			from.entIds,
+			`${label}: ent ${entId} must be a new row`,
+		).not.toContain(entId);
 	}
 	for (const priceId of to.featurePriceIds) {
 		expect(
@@ -333,9 +337,8 @@ export const expectPlanRowIdsReminted = ({
 		).not.toContain(priceId);
 	}
 	if (to.basePriceId && from.basePriceId) {
-		expect(
-			to.basePriceId,
-			`${label}: base price row must be new`,
-		).not.toBe(from.basePriceId);
+		expect(to.basePriceId, `${label}: base price row must be new`).not.toBe(
+			from.basePriceId,
+		);
 	}
 };

@@ -15,6 +15,7 @@ const identity = {
 	stripeSubscriptionId: null,
 	customerLicenseLinkId: null,
 	rolloverSignature: "none",
+	featureOverrideSignature: "none",
 } satisfies Omit<PooledBalanceIdentity, "unlimited">;
 
 test.concurrent(

@@ -20,7 +20,6 @@
 	// Store original keys for each span
 	const originalKeysMap = new WeakMap();
 
-	// Check if TypeScript is selected
 	const isTypeScriptSelected = () => {
 		try {
 			const lang = localStorage.getItem("code");
@@ -52,7 +51,6 @@
 		return results;
 	};
 
-	// Update response examples
 	const updateResponseExamples = () => {
 		const useCamelCase = isTypeScriptSelected();
 		const codeGroups = findResponseCodeGroups();

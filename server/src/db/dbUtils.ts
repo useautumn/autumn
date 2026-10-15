@@ -57,6 +57,16 @@ const TRANSIENT_DB_ERROR_MESSAGES = new Set([
 	"Client has encountered a connection error and is not queryable",
 ]);
 
+export const isTransactionRollbackError = ({
+	error,
+}: {
+	error: unknown;
+}): boolean =>
+	walkErrorChain({ error }).some((candidate) => {
+		const code = getErrorCode({ error: candidate });
+		return code === "40P01" || code === "40001";
+	});
+
 /**
  * PostgreSQL SQLSTATE code prefixes that indicate infrastructure issues.
  * - Class 08: Connection Exception (connection lost, refused, broken pipe)

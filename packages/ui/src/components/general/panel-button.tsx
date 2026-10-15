@@ -73,7 +73,6 @@ export function PanelButton({
 			<div
 				className={cn(
 					"size-9 rounded-xl flex items-center justify-center relative bg-interactive-secondary-hover border",
-					// isSelected ? "bg-interactive-secondary-hover" : " border-input",
 				)}
 			>
 				<div className={isSelected ? "text-primary" : "text-muted-foreground"}>

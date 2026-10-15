@@ -40,12 +40,6 @@ export function compareBillingIntervals({
 	configA: IntervalConfig;
 	configB: IntervalConfig;
 }): number {
-	// if (nullish(a)) {
-	//   return 1;
-	// } else if (nullish(b)) {
-	//   return -1;
-	// }
-
 	// how to compare these... convert to months?
 
 	const a = intervalToValue(configA.interval, configA.intervalCount);
@@ -89,8 +83,6 @@ export const getSmallestInterval = ({
 	ents?: Entitlement[];
 	excludeOneOff?: boolean;
 }) => {
-	// let sortedPrices = structuredClone(prices);
-	// sortPricesByInterval(sortedPrices);
 	let allPriceIntervals = prices.map((p) => {
 		return {
 			interval: p.config.interval,
@@ -142,7 +134,6 @@ export const intervalsDifferent = ({
 	intervalA: IntervalConfig | null;
 	intervalB: IntervalConfig | null;
 }) => {
-	// return compareBillingIntervals({ configA: intervalA, configB: intervalB }) !== 0;
 	if (nullish(intervalA) && nullish(intervalB)) {
 		return false;
 	}

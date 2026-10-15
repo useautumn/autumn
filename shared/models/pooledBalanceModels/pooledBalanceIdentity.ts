@@ -11,4 +11,5 @@ export type PooledBalanceIdentity = {
 	stripeSubscriptionId: string | null;
 	customerLicenseLinkId: string | null;
 	rolloverSignature: string;
+	featureOverrideSignature: string;
 };

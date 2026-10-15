@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type AttachParamsV1Input,
+	CusProductStatus,
+	customers,
+	ErrCode,
+	type UpdateSubscriptionV1ParamsInput,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -7,6 +14,8 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FEATURE QUANTITY ERRORS
@@ -194,6 +203,7 @@ test.concurrent(`${chalk.yellowBright("error: update quantity for non-existent f
 
 	// Try to update a feature that doesn't exist in the subscription
 	await expectAutumnError({
+		errCode: ErrCode.InvalidOptions,
 		func: async () => {
 			await autumnV1.subscriptions.update({
 				customer_id: customerId,
@@ -202,4 +212,62 @@ test.concurrent(`${chalk.yellowBright("error: update quantity for non-existent f
 			});
 		},
 	});
+});
+
+// 5. Pending (unpaid) plan → a rebilling quantity edit can't sneak in a quantity for a non-prepaid feature
+test.concurrent(`${chalk.yellowBright("error: pending plan rejects quantity for non-existent feature before discarding its payment")}`, async () => {
+	const customerId = `err-pending-nonexistent-feature-${Date.now()}`;
+	const product = products.base({
+		id: "pending_prepaid",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Messages,
+				billingUnits: 10,
+				price: 5,
+			}),
+		],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false }), s.products({ list: [product] })],
+		actions: [],
+	});
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: product.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+	});
+
+	const listPendingRows = async () => {
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		return CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: dbCustomer!.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+	};
+	const [originalRow] = await listPendingRows();
+	expect(originalRow).toBeDefined();
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidOptions,
+		func: () =>
+			autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: product.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 200 },
+					{ feature_id: TestFeature.Users, quantity: 100 },
+				],
+			}),
+	});
+
+	const pendingRows = await listPendingRows();
+	expect(pendingRows.map((row) => row.metadata_id)).toEqual([
+		originalRow.metadata_id,
+	]);
 });

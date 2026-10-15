@@ -1,10 +1,12 @@
 import {
 	apiFeatureOverrideToDb,
 	type CreditSchemaItem,
+	entitlementToCreditSystem,
 	type Feature,
 	type FeatureConfigOverride,
 	findFeatureById,
 	hasCreditDimensionRules,
+	isExcludedCreditSchemaItem,
 	numberWithCommas,
 	type UpdatePlanOp,
 } from "@autumn/shared";
@@ -27,10 +29,15 @@ export type ItemRateRow = ReturnType<
 	typeof migrationOpRateRows
 >["rows"][number];
 
-/** Flat per-feature costs, plus everything else on the card as one comparable string. */
-const rateCard = (override: FeatureConfigOverride, inherited?: Feature) => {
-	const schema: CreditSchemaItem[] =
-		override.schema ?? inherited?.config?.schema ?? [];
+/** Flat per-feature costs of the card customers get, plus everything else as one comparable string. */
+const rateCard = (override: FeatureConfigOverride, creditSystem?: Feature) => {
+	const schema: CreditSchemaItem[] = creditSystem
+		? entitlementToCreditSystem({
+				entitlement: { feature: creditSystem, feature_override: override },
+			}).config.schema
+		: (override.schema ?? []).filter(
+				(row): row is CreditSchemaItem => !isExcludedCreditSchemaItem(row),
+			);
 	// A per-units rate (feature_amount) isn't flat, so a change to it shows as "Rate card changed".
 	const isFlat = (item: CreditSchemaItem) =>
 		!item.tiers &&

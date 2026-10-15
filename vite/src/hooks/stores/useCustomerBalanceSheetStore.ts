@@ -58,7 +58,6 @@ export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
 			}));
 		},
 
-		// Close the sheet
 		closeSheet: () => {
 			set((state) => ({
 				previousType: state.type,
@@ -69,7 +68,6 @@ export const useCustomerBalanceSheetStore = create<CustomerBalanceSheetState>(
 			}));
 		},
 
-		// Reset to initial state
 		reset: () => set(initialState),
 	}),
 );

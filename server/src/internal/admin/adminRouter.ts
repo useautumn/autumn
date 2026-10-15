@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { shadowAtomRpcRouter } from "../misc/shadowAtom/shadowAtomRouter.js";
+import { handleEnterOrgAsAdmin } from "./enterOrg/handleEnterOrgAsAdmin";
 import {
 	handleDeleteAdminCacheV2Ramp,
 	handleGetAdminCacheV2Ramp,
@@ -48,7 +49,6 @@ import { handleGetAdminShadowAtomConfig } from "./handleGetAdminShadowAtomConfig
 import { handleGetAdminShadowAtomNames } from "./handleGetAdminShadowAtomNames.js";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 import { handleGetAdminSubjectSnapshotsConfig } from "./handleGetAdminSubjectSnapshotsConfig.js";
-
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
 import { handleGetMasterStripeAccount } from "./handleGetMasterStripeAccount";
@@ -111,6 +111,7 @@ honoAdminRouter.put(
 	"/orgs/:org_id/request-block",
 	...handleUpsertAdminOrgRequestBlock,
 );
+honoAdminRouter.post("/orgs/:org_id/enter", ...handleEnterOrgAsAdmin);
 honoAdminRouter.get("/orgs/:org_id/redis", ...handleGetAdminOrgRedisConfig);
 honoAdminRouter.get(
 	"/orgs/:org_id/customers",

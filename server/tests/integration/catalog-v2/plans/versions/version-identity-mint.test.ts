@@ -15,12 +15,12 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
-import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
-import { expectVersionIdentityCorrect } from "../utils/expectVersionIdentity.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../preview/utils/expectPlanPreview.js";
+import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
+import { expectVersionIdentityCorrect } from "../utils/expectVersionIdentity.js";
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,

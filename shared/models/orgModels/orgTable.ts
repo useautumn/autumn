@@ -35,8 +35,6 @@ export type StripeConfig = {
 export interface VersionConfig {
 	sandbox?: string;
 	live?: string;
-	// sandbox_webhooks: string;
-	// live_webhooks: string;
 }
 
 export type StripeConnectConfig = {
@@ -105,11 +103,6 @@ export const organizations = pgTable(
 		live_stripe_connect: jsonb("live_stripe_connect")
 			.$type<StripeConnectConfig>()
 			.default({} as StripeConnectConfig),
-
-		// stripe_connect: jsonb("stripe_connect")
-		// 	.$type<StripeConnectConfig>()
-		// 	.default({} as StripeConnectConfig)
-		// 	.notNull(),
 
 		processor_configs: jsonb("processor_configs").$type<ProcessorConfigs>(),
 

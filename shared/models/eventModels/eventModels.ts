@@ -29,5 +29,4 @@ export const CreateEventSchema = z.object({
 	entity_id: z.string().nullish(),
 });
 
-// export type Event = z.infer<typeof EventSchema>;
 export type CreateEvent = z.infer<typeof CreateEventSchema>;

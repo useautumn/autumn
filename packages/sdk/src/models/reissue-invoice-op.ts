@@ -210,10 +210,16 @@ export type ReissueInvoicePriceTier = {
   additionalCurrencies?: Array<ReissueInvoiceAdditionalCurrency> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const ReissueInvoiceTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type ReissueInvoiceTierBehavior = ClosedEnum<
   typeof ReissueInvoiceTierBehavior
 >;
@@ -276,6 +282,9 @@ export type ReissueInvoiceItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<ReissueInvoicePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: ReissueInvoiceTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -535,7 +544,7 @@ export type ReissueInvoiceCreditSchemaUnion =
  */
 export type ReissueInvoiceFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<ReissueInvoiceCreditSchema1 | ReissueInvoiceCreditSchema2>
@@ -711,10 +720,16 @@ export type ReissueInvoiceLicenseQuantityPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const ReissueInvoiceLicenseQuantityTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type ReissueInvoiceLicenseQuantityTierBehavior = ClosedEnum<
   typeof ReissueInvoiceLicenseQuantityTierBehavior
 >;
@@ -777,6 +792,9 @@ export type ReissueInvoiceLicenseQuantityItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<ReissueInvoiceLicenseQuantityPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: ReissueInvoiceLicenseQuantityTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -1064,7 +1082,7 @@ export type ReissueInvoiceLicenseQuantityCreditSchemaUnion =
  */
 export type ReissueInvoiceLicenseQuantityFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<

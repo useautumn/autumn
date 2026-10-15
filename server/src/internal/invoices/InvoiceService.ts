@@ -196,7 +196,10 @@ export class InvoiceService {
 	}> {
 		const cursor = StandardCursor.decode(query.start_cursor);
 
+		// invoices.org_id/env drive idx_invoices_org_env_created; the customers predicates stay as the tenancy guard.
 		const conditions = [
+			eq(invoices.org_id, ctx.org.id),
+			eq(invoices.env, ctx.env),
 			eq(customers.org_id, ctx.org.id),
 			eq(customers.env, ctx.env),
 		];

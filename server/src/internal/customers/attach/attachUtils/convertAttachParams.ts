@@ -169,7 +169,6 @@ export const getCustomerSub = async ({
 		return 0;
 	});
 
-	// const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
 	const cusProduct = filteredCusProducts.find(
 		(cp) => cp.subscription_ids && cp.subscription_ids.length > 0,
 	);
@@ -186,7 +185,6 @@ export const getCustomerSub = async ({
 			"items.data.price.tiers",
 			"discounts.source.coupon",
 			"discounts.source.coupon.applies_to",
-			// "discounts.coupon.applies_to",
 			"latest_invoice",
 		],
 	});
@@ -243,7 +241,6 @@ export const getCustomerSchedule = async ({
 		return 0;
 	});
 
-	// const subId = cusProducts.flatMap((cp) => cp.subscription_ids || [])?.[0];
 	const scheduleIds = cusProducts.flatMap((cp) => cp.scheduled_ids || []);
 	if (scheduleIds.length === 0) return { schedule: undefined };
 
@@ -286,7 +283,6 @@ export const paramsToCurSub = async ({
 		expand: [
 			"items.data.price.tiers",
 			"latest_invoice",
-			// "discounts.coupon.applies_to",
 			"discounts.source.coupon",
 			"discounts.source.coupon.applies_to",
 		],

@@ -421,17 +421,23 @@ export const planItemParamsIssues = (
 	return issues;
 };
 
+const planItemMeta = {
+	title: "PlanItem",
+	description:
+		"Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.",
+};
+
 export const CreatePlanItemParamsV1Schema = PlanItemParamsObjectSchema.check(
 	(ctx) => {
 		for (const { message, input } of planItemParamsIssues(ctx.value)) {
 			ctx.issues.push({ code: "custom", message, input });
 		}
 	},
-).meta({
-	title: "PlanItem",
-	description:
-		"Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.",
-});
+).meta(planItemMeta);
+
+export const PlanItemParamsV1ResponseSchema =
+	PlanItemParamsObjectSchema.meta(planItemMeta);
+
 export type CreatePlanItemParamsV1 = z.infer<
 	typeof CreatePlanItemParamsV1Schema
 >;

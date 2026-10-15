@@ -62,10 +62,16 @@ export const expireEndedCustomerProducts = async ({
 			});
 		}
 
-		await expireAndActivateWithTracking({
+		const { insertedCustomerProduct } = await expireAndActivateWithTracking({
 			ctx,
 			eventContext,
 			customerProduct,
 		});
+		if (insertedCustomerProduct) {
+			eventContext.pooledTransitionedCustomerProductIds.add(customerProduct.id);
+			eventContext.pooledTransitionedCustomerProductIds.add(
+				insertedCustomerProduct.id,
+			);
+		}
 	}
 };

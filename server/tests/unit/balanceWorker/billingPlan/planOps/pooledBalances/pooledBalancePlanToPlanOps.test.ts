@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { BillingPlanOp } from "@autumn/balance-engine";
 import {
+	type DbPooledBalance,
 	EntInterval,
 	type FullCustomerEntitlement,
-	type PooledBalance,
 	type PooledBalancePlan,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
@@ -21,7 +21,7 @@ const poolRow = ({
 	id?: string;
 	granted?: number;
 	customerLicenseLinkId?: string | null;
-} = {}): PooledBalance => ({
+} = {}): DbPooledBalance => ({
 	id,
 	org_id: "org_test",
 	env: "sandbox",
@@ -36,6 +36,7 @@ const poolRow = ({
 	stripe_subscription_id: "sub_placeholder",
 	customer_license_link_id: customerLicenseLinkId,
 	rollover_signature: "",
+	feature_override_signature: "none",
 	customer_entitlement_id: "pool_ce",
 	last_applied_reset_at: null,
 	expires_at: null,
@@ -49,7 +50,7 @@ const pooledCustomerEntitlement = ({
 	pooledBalance = poolRow(),
 }: {
 	balance?: number;
-	pooledBalance?: PooledBalance;
+	pooledBalance?: DbPooledBalance;
 } = {}): FullCustomerEntitlement => ({
 	...customerEntitlements.create({
 		id: "pool_ce",
@@ -73,6 +74,8 @@ const contribution = ({ id = "pbc_1", sourceId = "source_1" } = {}) => ({
 	current_contribution: 100,
 	next_cycle_contribution: 100,
 	effective_at: null,
+	competes: false,
+	unlimited: false,
 	created_at: 1,
 	updated_at: 1,
 });

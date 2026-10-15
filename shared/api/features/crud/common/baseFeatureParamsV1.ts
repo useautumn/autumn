@@ -3,7 +3,10 @@ import {
 	ModelMarkupsSchema,
 	ProviderMarkupsSchema,
 } from "../../../../models/featureModels/featureConfig/creditConfig";
-import { FeatureType } from "../../../../models/featureModels/featureEnums";
+import {
+	FeatureCombine,
+	FeatureType,
+} from "../../../../models/featureModels/featureEnums";
 import { idRegex } from "../../../../utils/utils";
 import { ApiCreditSchemaItemSchema } from "../../creditRateCard.js";
 
@@ -25,6 +28,11 @@ export const BaseFeatureV1ParamsSchema = z.object({
 	consumable: z.boolean().optional().meta({
 		description:
 			"Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.",
+	}),
+
+	combine: z.enum(FeatureCombine).optional().meta({
+		description:
+			"How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.",
 	}),
 
 	display: z

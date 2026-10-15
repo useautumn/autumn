@@ -13,20 +13,10 @@ export type SharedContext = {
 	// Objects
 	logger: AutumnLogger;
 	expand: string[];
-	// db: DrizzleCli;
-
-	// // Info
-	// id: string;
-	// isPublic: boolean;
-	// authType: AuthType;
-	// apiVersion: ApiVersionClass;
-	// timestamp: number;
 
 	// // Query params
 	// expand: string[];
 	// skipCache: boolean;
-
-	// extraLogs: Record<string, unknown>;
 
 	// testOptions?: {
 	// 	skipCacheDeletion?: boolean;

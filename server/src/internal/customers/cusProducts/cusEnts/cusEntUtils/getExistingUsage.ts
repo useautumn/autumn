@@ -135,7 +135,6 @@ const getExistingUsages = ({
 			entitlement: ent,
 			options: options || undefined,
 			relatedPrice: relatedCusPrice?.price,
-			// productQuantity: curCusProduct.quantity,
 		});
 
 		usages[key].usage += resetBalance! - cusEnt.balance!;
@@ -193,7 +192,6 @@ export const addExistingUsagesToCusEnts = ({
 		return { ...ce, entitlement, customer_product: curCusProduct };
 	}) as FullCusEntWithFullCusProduct[];
 
-	// Sort cusEnts
 	sortCusEntsForDeduction({ cusEnts: fullCusEnts });
 
 	printLogs = false;

@@ -29,11 +29,10 @@ export * from "./openBillingPortal/openBillingPortalResponse";
 export * from "./restore/restoreParamsV1";
 export * from "./setPlans/setPlansErrorCopy";
 export * from "./setPlans/setPlansErrorDetails";
-// Set Plans
 export * from "./setPlans/setPlansParamsV0";
 export * from "./setPlans/setPlansPreviewResponse";
+export * from "./setPlans/setPlansPreviewReview";
 export * from "./setPlans/setPlansTextParts";
-// Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
 export * from "./sync/previewSyncV2";
@@ -43,7 +42,6 @@ export * from "./sync/syncParamsV1";
 export * from "./sync/syncProposalsParamsV0";
 export * from "./sync/syncProposalsV2";
 
-// Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./updateSubscription/removeDiscount";
 export * from "./updateSubscription/updateSubscriptionV0Params";

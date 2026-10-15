@@ -219,7 +219,6 @@ async function pullDatabase({
 }): Promise<void> {
 	console.log("\n📥 Pulling Remote Database to Local\n");
 
-	// Validate remote URL
 	if (!validatePostgresUrl(remoteUrl)) {
 		console.error("❌ Invalid remote database URL");
 		console.error(

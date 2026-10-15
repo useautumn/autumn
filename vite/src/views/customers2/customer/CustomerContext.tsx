@@ -1,8 +1,8 @@
-import type { CustomerWithProducts } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import { createContext, useContext } from "react";
 
 type CustomerContextType = {
-	customer: CustomerWithProducts;
+	customer: FullCustomer;
 	entityId: string | null;
 	setEntityId: (entityId: string | null) => void;
 	isInlineEditorOpen: boolean;

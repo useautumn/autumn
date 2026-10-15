@@ -5,6 +5,7 @@
  */
 import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
 import { Kafka } from "kafkajs";
+import { createCjsChildrenDedupe } from "../../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { type ProducerLoop, startProducerLoop } from "./startProducerLoop.js";
 import type {
 	DecideToProducerMessage,
@@ -35,6 +36,9 @@ function reportToken(info: unknown): void {
 /** Null when the client could not be built; the decide thread has been told why. */
 function startThread(init: ProducerThreadInit): ProducerLoop | null {
 	let started: ProducerLoop;
+	createCjsChildrenDedupe({
+		config: { enabled: init.dedupeCjsChildren ?? false },
+	}).start();
 	try {
 		const kafka = new Kafka(
 			createKafkaClient({

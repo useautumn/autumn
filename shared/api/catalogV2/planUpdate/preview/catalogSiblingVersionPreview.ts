@@ -9,11 +9,6 @@ export const CatalogSiblingVersionPreviewSchema = CatalogCorePreviewSchema.exten
 			description:
 				"Slots where this version had diverged from the edited version; the edit overwrites them.",
 		}),
-
-		// selected: z.boolean().meta({
-		// 	description:
-		// 		"True when versioning is `all_versions` and this version receives the change.",
-		// }),
 	},
 );
 

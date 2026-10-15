@@ -11,15 +11,18 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import {
-  PhaseAddItemCreditSchemaUnion2,
-  PhaseAddItemCreditSchemaUnion2$Outbound,
-  PhaseAddItemCreditSchemaUnion2$outboundSchema,
+  PhaseAddItemDimensionsUnion3,
+  PhaseAddItemDimensionsUnion3$Outbound,
+  PhaseAddItemDimensionsUnion3$outboundSchema,
   PhaseAddItemExpiry2,
   PhaseAddItemExpiry2$Outbound,
   PhaseAddItemExpiry2$outboundSchema,
-  PhaseAddItemMarkups2,
-  PhaseAddItemMarkups2$Outbound,
-  PhaseAddItemMarkups2$outboundSchema,
+  PhaseAddItemFeatureOverrideToUnion2,
+  PhaseAddItemFeatureOverrideToUnion2$Outbound,
+  PhaseAddItemFeatureOverrideToUnion2$outboundSchema,
+  PhaseAddItemMultipliers3,
+  PhaseAddItemMultipliers3$Outbound,
+  PhaseAddItemMultipliers3$outboundSchema,
   PhaseAddItemPrice2,
   PhaseAddItemPrice2$Outbound,
   PhaseAddItemPrice2$outboundSchema,
@@ -38,6 +41,12 @@ import {
   PhaseBasePrice2,
   PhaseBasePrice2$Outbound,
   PhaseBasePrice2$outboundSchema,
+  PhaseCreditSchemaAddItem2,
+  PhaseCreditSchemaAddItem2$Outbound,
+  PhaseCreditSchemaAddItem2$outboundSchema,
+  PhaseCreditSchemaAddItem3,
+  PhaseCreditSchemaAddItem3$Outbound,
+  PhaseCreditSchemaAddItem3$outboundSchema,
   PhaseFeatureQuantity2,
   PhaseFeatureQuantity2$Outbound,
   PhaseFeatureQuantity2$outboundSchema,
@@ -56,7 +65,7 @@ import {
   UnscheduledPlan,
   UnscheduledPlan$Outbound,
   UnscheduledPlan$outboundSchema,
-} from "./phase-add-item-markups-2.js";
+} from "./phase-add-item-feature-override-to-union-2.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   CreateScheduleAttachDiscount,
@@ -72,16 +81,90 @@ import {
   CreateScheduleInvoiceMode$outboundSchema,
   CreateScheduleRedirectMode,
   CreateScheduleRedirectMode$outboundSchema,
-} from "./unscheduled-plan-upsert-license-on-decrease.js";
+} from "./unscheduled-plan-upsert-license-add-item-billing-method.js";
+
+export type PhaseAddItemFeatureOverrideTier2 = {
+  /**
+   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
+   */
+  to: PhaseAddItemFeatureOverrideToUnion2;
+  /**
+   * Credits consumed per billing-unit group within this tier.
+   */
+  creditCost: number;
+};
+
+export type PhaseCreditSchemaAddItem1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Number of metered-feature units priced together. Defaults to one when omitted.
+   */
+  billingUnits?: number | undefined;
+  /**
+   * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
+   */
+  dimensions?: { [k: string]: PhaseAddItemDimensionsUnion3 } | undefined;
+  /**
+   * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
+   */
+  multipliers?: { [k: string]: PhaseAddItemMultipliers3 } | undefined;
+  tierBehavior: "graduated";
+  tiers: Array<PhaseAddItemFeatureOverrideTier2>;
+};
+
+export type PhaseAddItemCreditSchemaUnion2 =
+  | PhaseCreditSchemaAddItem1
+  | PhaseCreditSchemaAddItem2
+  | PhaseCreditSchemaAddItem3;
+
+export type PhaseAddItemProviderMarkups2 = {
+  markup: number;
+};
+
+export type PhaseAddItemModelMarkups2 = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+/**
+ * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
+ */
+export type PhaseAddItemMarkups2 = {
+  /**
+   * Default percentage markup for customers on this plan. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider markup percentages for customers on this plan.
+   */
+  providerMarkups?:
+    | { [k: string]: PhaseAddItemProviderMarkups2 }
+    | null
+    | undefined;
+  /**
+   * Per-model markup overrides for customers on this plan.
+   */
+  modelMarkups?: { [k: string]: PhaseAddItemModelMarkups2 } | null | undefined;
+};
 
 /**
  * Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
  */
 export type PhaseAddItemFeatureOverride2 = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
-  creditSchema?: Array<PhaseAddItemCreditSchemaUnion2> | undefined;
+  creditSchema?:
+    | Array<
+      | PhaseCreditSchemaAddItem1
+      | PhaseCreditSchemaAddItem2
+      | PhaseCreditSchemaAddItem3
+    >
+    | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
    */
@@ -616,10 +699,16 @@ export type PhaseUpsertLicensePriceTier2 = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PhaseUpsertLicenseTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PhaseUpsertLicenseTierBehavior2 = ClosedEnum<
   typeof PhaseUpsertLicenseTierBehavior2
 >;
@@ -674,6 +763,9 @@ export type PhaseUpsertLicensePrice2 = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PhaseUpsertLicensePriceTier2> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PhaseUpsertLicenseTierBehavior2 | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -796,6 +888,17 @@ export type PhaseUpsertLicenseDuration2 = ClosedEnum<
 export type PhaseUpsertLicenseExpiry2 = {
   duration: PhaseUpsertLicenseDuration2;
   length: number;
+};
+
+export type PhaseCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type PhaseDimensionsUpsertLicenseMatch4 = string | number | boolean;
@@ -1001,7 +1104,8 @@ export type PhaseCreditSchemaUpsertLicense1 = {
 
 export type PhaseUpsertLicenseCreditSchemaUnion2 =
   | PhaseCreditSchemaUpsertLicense1
-  | PhaseCreditSchemaUpsertLicense2;
+  | PhaseCreditSchemaUpsertLicense2
+  | PhaseCreditSchemaUpsertLicense3;
 
 export type PhaseUpsertLicenseProviderMarkups2 = {
   markup: number;
@@ -1042,10 +1146,14 @@ export type PhaseUpsertLicenseMarkups2 = {
  */
 export type PhaseUpsertLicenseFeatureOverride2 = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<PhaseCreditSchemaUpsertLicense1 | PhaseCreditSchemaUpsertLicense2>
+    | Array<
+      | PhaseCreditSchemaUpsertLicense1
+      | PhaseCreditSchemaUpsertLicense2
+      | PhaseCreditSchemaUpsertLicense3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -1347,7 +1455,7 @@ export type CreateScheduleParams = {
    */
   redirectMode?: CreateScheduleRedirectMode | undefined;
   /**
-   * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' charges/credits the full-period price difference.
+   * Whether to prorate the immediate phase. 'none' skips proration charges and credits, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades).
    */
   billingBehavior?: CreateScheduleBillingBehavior | undefined;
   /**
@@ -1490,8 +1598,222 @@ export type CreateScheduleResponse = {
 };
 
 /** @internal */
+export type PhaseAddItemFeatureOverrideTier2$Outbound = {
+  to: PhaseAddItemFeatureOverrideToUnion2$Outbound;
+  credit_cost: number;
+};
+
+/** @internal */
+export const PhaseAddItemFeatureOverrideTier2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemFeatureOverrideTier2$Outbound,
+  PhaseAddItemFeatureOverrideTier2
+> = z.pipe(
+  z.object({
+    to: PhaseAddItemFeatureOverrideToUnion2$outboundSchema,
+    creditCost: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      creditCost: "credit_cost",
+    });
+  }),
+);
+
+export function phaseAddItemFeatureOverrideTier2ToJSON(
+  phaseAddItemFeatureOverrideTier2: PhaseAddItemFeatureOverrideTier2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemFeatureOverrideTier2$outboundSchema.parse(
+      phaseAddItemFeatureOverrideTier2,
+    ),
+  );
+}
+
+/** @internal */
+export type PhaseCreditSchemaAddItem1$Outbound = {
+  metered_feature_id: string;
+  billing_units?: number | undefined;
+  dimensions?:
+    | { [k: string]: PhaseAddItemDimensionsUnion3$Outbound }
+    | undefined;
+  multipliers?: { [k: string]: PhaseAddItemMultipliers3$Outbound } | undefined;
+  tier_behavior: "graduated";
+  tiers: Array<PhaseAddItemFeatureOverrideTier2$Outbound>;
+};
+
+/** @internal */
+export const PhaseCreditSchemaAddItem1$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaAddItem1$Outbound,
+  PhaseCreditSchemaAddItem1
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    billingUnits: z.optional(z.number()),
+    dimensions: z.optional(
+      z.record(z.string(), PhaseAddItemDimensionsUnion3$outboundSchema),
+    ),
+    multipliers: z.optional(
+      z.record(z.string(), PhaseAddItemMultipliers3$outboundSchema),
+    ),
+    tierBehavior: z.literal("graduated"),
+    tiers: z.array(
+      z.lazy(() => PhaseAddItemFeatureOverrideTier2$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+      billingUnits: "billing_units",
+      tierBehavior: "tier_behavior",
+    });
+  }),
+);
+
+export function phaseCreditSchemaAddItem1ToJSON(
+  phaseCreditSchemaAddItem1: PhaseCreditSchemaAddItem1,
+): string {
+  return JSON.stringify(
+    PhaseCreditSchemaAddItem1$outboundSchema.parse(phaseCreditSchemaAddItem1),
+  );
+}
+
+/** @internal */
+export type PhaseAddItemCreditSchemaUnion2$Outbound =
+  | PhaseCreditSchemaAddItem1$Outbound
+  | PhaseCreditSchemaAddItem2$Outbound
+  | PhaseCreditSchemaAddItem3$Outbound;
+
+/** @internal */
+export const PhaseAddItemCreditSchemaUnion2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemCreditSchemaUnion2$Outbound,
+  PhaseAddItemCreditSchemaUnion2
+> = smartUnion([
+  z.lazy(() => PhaseCreditSchemaAddItem1$outboundSchema),
+  PhaseCreditSchemaAddItem2$outboundSchema,
+  PhaseCreditSchemaAddItem3$outboundSchema,
+]);
+
+export function phaseAddItemCreditSchemaUnion2ToJSON(
+  phaseAddItemCreditSchemaUnion2: PhaseAddItemCreditSchemaUnion2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemCreditSchemaUnion2$outboundSchema.parse(
+      phaseAddItemCreditSchemaUnion2,
+    ),
+  );
+}
+
+/** @internal */
+export type PhaseAddItemProviderMarkups2$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const PhaseAddItemProviderMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemProviderMarkups2$Outbound,
+  PhaseAddItemProviderMarkups2
+> = z.object({
+  markup: z.number(),
+});
+
+export function phaseAddItemProviderMarkups2ToJSON(
+  phaseAddItemProviderMarkups2: PhaseAddItemProviderMarkups2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemProviderMarkups2$outboundSchema.parse(
+      phaseAddItemProviderMarkups2,
+    ),
+  );
+}
+
+/** @internal */
+export type PhaseAddItemModelMarkups2$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const PhaseAddItemModelMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemModelMarkups2$Outbound,
+  PhaseAddItemModelMarkups2
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
+
+export function phaseAddItemModelMarkups2ToJSON(
+  phaseAddItemModelMarkups2: PhaseAddItemModelMarkups2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemModelMarkups2$outboundSchema.parse(phaseAddItemModelMarkups2),
+  );
+}
+
+/** @internal */
+export type PhaseAddItemMarkups2$Outbound = {
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: PhaseAddItemProviderMarkups2$Outbound }
+    | null
+    | undefined;
+  model_markups?:
+    | { [k: string]: PhaseAddItemModelMarkups2$Outbound }
+    | null
+    | undefined;
+};
+
+/** @internal */
+export const PhaseAddItemMarkups2$outboundSchema: z.ZodMiniType<
+  PhaseAddItemMarkups2$Outbound,
+  PhaseAddItemMarkups2
+> = z.pipe(
+  z.object({
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PhaseAddItemProviderMarkups2$outboundSchema),
+    ))),
+    modelMarkups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => PhaseAddItemModelMarkups2$outboundSchema),
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
+      modelMarkups: "model_markups",
+    });
+  }),
+);
+
+export function phaseAddItemMarkups2ToJSON(
+  phaseAddItemMarkups2: PhaseAddItemMarkups2,
+): string {
+  return JSON.stringify(
+    PhaseAddItemMarkups2$outboundSchema.parse(phaseAddItemMarkups2),
+  );
+}
+
+/** @internal */
 export type PhaseAddItemFeatureOverride2$Outbound = {
-  credit_schema?: Array<PhaseAddItemCreditSchemaUnion2$Outbound> | undefined;
+  credit_schema?:
+    | Array<
+      | PhaseCreditSchemaAddItem1$Outbound
+      | PhaseCreditSchemaAddItem2$Outbound
+      | PhaseCreditSchemaAddItem3$Outbound
+    >
+    | undefined;
   markups?: PhaseAddItemMarkups2$Outbound | undefined;
 };
 
@@ -1501,10 +1823,14 @@ export const PhaseAddItemFeatureOverride2$outboundSchema: z.ZodMiniType<
   PhaseAddItemFeatureOverride2
 > = z.pipe(
   z.object({
-    creditSchema: z.optional(
-      z.array(PhaseAddItemCreditSchemaUnion2$outboundSchema),
-    ),
-    markups: z.optional(PhaseAddItemMarkups2$outboundSchema),
+    creditSchema: z.optional(z.array(smartUnion([
+      z.lazy(() => PhaseCreditSchemaAddItem1$outboundSchema),
+      PhaseCreditSchemaAddItem2$outboundSchema,
+      PhaseCreditSchemaAddItem3$outboundSchema,
+    ]))),
+    markups: z.optional(z.lazy(() =>
+      PhaseAddItemMarkups2$outboundSchema
+    )),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2476,6 +2802,38 @@ export function phaseUpsertLicenseExpiry2ToJSON(
 }
 
 /** @internal */
+export type PhaseCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const PhaseCreditSchemaUpsertLicense3$outboundSchema: z.ZodMiniType<
+  PhaseCreditSchemaUpsertLicense3$Outbound,
+  PhaseCreditSchemaUpsertLicense3
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    excluded: z.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+    });
+  }),
+);
+
+export function phaseCreditSchemaUpsertLicense3ToJSON(
+  phaseCreditSchemaUpsertLicense3: PhaseCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    PhaseCreditSchemaUpsertLicense3$outboundSchema.parse(
+      phaseCreditSchemaUpsertLicense3,
+    ),
+  );
+}
+
+/** @internal */
 export type PhaseDimensionsUpsertLicenseMatch4$Outbound =
   | string
   | number
@@ -3114,7 +3472,8 @@ export function phaseCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type PhaseUpsertLicenseCreditSchemaUnion2$Outbound =
   | PhaseCreditSchemaUpsertLicense1$Outbound
-  | PhaseCreditSchemaUpsertLicense2$Outbound;
+  | PhaseCreditSchemaUpsertLicense2$Outbound
+  | PhaseCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const PhaseUpsertLicenseCreditSchemaUnion2$outboundSchema: z.ZodMiniType<
@@ -3123,6 +3482,7 @@ export const PhaseUpsertLicenseCreditSchemaUnion2$outboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => PhaseCreditSchemaUpsertLicense1$outboundSchema),
   z.lazy(() => PhaseCreditSchemaUpsertLicense2$outboundSchema),
+  z.lazy(() => PhaseCreditSchemaUpsertLicense3$outboundSchema),
 ]);
 
 export function phaseUpsertLicenseCreditSchemaUnion2ToJSON(
@@ -3245,6 +3605,7 @@ export type PhaseUpsertLicenseFeatureOverride2$Outbound = {
     | Array<
       | PhaseCreditSchemaUpsertLicense1$Outbound
       | PhaseCreditSchemaUpsertLicense2$Outbound
+      | PhaseCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: PhaseUpsertLicenseMarkups2$Outbound | undefined;
@@ -3261,6 +3622,7 @@ export const PhaseUpsertLicenseFeatureOverride2$outboundSchema: z.ZodMiniType<
       z.lazy(() =>
         PhaseCreditSchemaUpsertLicense2$outboundSchema
       ),
+      z.lazy(() => PhaseCreditSchemaUpsertLicense3$outboundSchema),
     ]))),
     markups: z.optional(z.lazy(() =>
       PhaseUpsertLicenseMarkups2$outboundSchema

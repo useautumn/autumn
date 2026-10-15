@@ -24,12 +24,6 @@ export const EntitySchema = z.object({
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 });
 
-// export const CreateEntitySchema = z.object({
-// 	id: z.string(),
-// 	name: z.string().nullish(),
-// 	feature_id: z.string(),
-// });
-
 // export const EntityDataSchema = z.object({
 // 	name: z.string().nullish(), // Name of entity
 // 	feature_id: z.string(), // Feature ID of entity
@@ -39,5 +33,3 @@ export type Entity = z.infer<typeof EntitySchema>;
 export type EntityWithFeature = Entity & {
 	feature: Feature;
 };
-// export type CreateEntity = z.infer<typeof CreateEntitySchema>;
-// export type EntityData = z.infer<typeof EntityDataSchema>;

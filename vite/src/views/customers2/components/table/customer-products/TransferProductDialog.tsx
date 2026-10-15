@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { invalidateCustomerBillingQueries } from "@/components/forms/shared/utils/invalidateCustomerBillingQueries";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 const CUSTOMER_LEVEL_VALUE = "__customer__";
 
@@ -31,7 +31,7 @@ export const TransferProductDialog = ({
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) => {
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const queryClient = useQueryClient();
 	const axiosInstance = useAxiosInstance();
 	const [loading, setLoading] = useState(false);

@@ -1,6 +1,11 @@
 import type { Context } from "hono";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
+/** Tells a caller, and a test, that the API answered and why. */
+export const FORWARDED_HEADER = "x-atom-forwarded";
+/** What a reply keeps through a relay: the SDK reads whether the API answered to decide whether to ask it itself. */
+const RELAYED_REPLY_HEADERS = ["content-type", FORWARDED_HEADER];
+
 /** Headers that belong to this hop and never travel on. */
 const HOP_HEADERS = ["host", "connection", "content-length"];
 
@@ -40,7 +45,9 @@ export const forwardRequest = async ({
 		]),
 	});
 	const replied = new Headers(replyHeaders);
-	const contentType = reply.headers.get("content-type");
-	if (contentType) replied.set("content-type", contentType);
+	for (const name of RELAYED_REPLY_HEADERS) {
+		const value = reply.headers.get(name);
+		if (value) replied.set(name, value);
+	}
 	return new Response(reply.body, { status: reply.status, headers: replied });
 };

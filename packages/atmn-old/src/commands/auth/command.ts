@@ -42,7 +42,6 @@ export default async function AuthCommand() {
 
 		spinner.stop();
 
-		// Store keys to .env
 		await storeToEnv(prodKey, sandboxKey);
 
 		console.log(

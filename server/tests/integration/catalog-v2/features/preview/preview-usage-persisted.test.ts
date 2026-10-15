@@ -47,9 +47,7 @@ test.concurrent(
 						feature_id: creditSystemId,
 						name: "CatalogV2 Preview Usage Credits",
 						type: FeatureType.CreditSystem,
-						credit_schema: [
-							{ metered_feature_id: meteredId, credit_cost: 1 },
-						],
+						credit_schema: [{ metered_feature_id: meteredId, credit_cost: 1 }],
 					},
 				],
 			});
@@ -370,6 +368,75 @@ test.concurrent(
 			});
 		} finally {
 			await autumnV2_3.products.delete(plan.id).catch(() => {});
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 remove preview: an override that excludes a feature is not plan usage; one that adds it is")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const excludedId = uniqueTestId("cv2_ovr_usage_excluded");
+		const addedId = uniqueTestId("cv2_ovr_usage_added");
+		const creditSystemId = uniqueTestId("cv2_ovr_usage_cs");
+		const planId = uniqueTestId("cv2_ovr_usage_plan");
+		const featureIds = [creditSystemId, excludedId, addedId];
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					meteredFeature(excludedId),
+					meteredFeature(addedId),
+					{
+						feature_id: creditSystemId,
+						name: "CatalogV2 Preview Override Credits",
+						type: FeatureType.CreditSystem,
+						credit_schema: [{ metered_feature_id: excludedId, credit_cost: 1 }],
+					},
+				],
+				plans: [
+					{
+						plan_id: planId,
+						name: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								included: 100,
+								feature_override: {
+									credit_schema: [
+										{ metered_feature_id: excludedId, excluded: true },
+										{ metered_feature_id: addedId, credit_cost: 2 },
+									],
+								},
+							},
+						],
+					},
+				],
+			});
+
+			const preview = await autumnV2_3.catalogV2.previewUpdate({
+				remove_features: [{ feature_id: excludedId }, { feature_id: addedId }],
+			});
+
+			expectCatalogPreviewCorrect({
+				preview,
+				features: [
+					{
+						featureId: excludedId,
+						action: "delete",
+						usage: { plans: { count: 0 } },
+					},
+					{
+						featureId: addedId,
+						action: "delete",
+						usage: { plans: { count: 1, sampleIds: [planId] } },
+					},
+				],
+			});
+		} finally {
+			await autumnV2_3.products.delete(planId).catch(() => {});
 			await deleteDbFeatures({ ctx, featureIds });
 		}
 	},

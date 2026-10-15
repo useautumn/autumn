@@ -12,7 +12,6 @@ import { handleNewProductItems } from "@/internal/products/product-items/product
 
 export const setupCustomFullProduct = async ({
 	ctx,
-	// customItems,
 	currentFullProduct,
 	customizePlan,
 	patchContext,

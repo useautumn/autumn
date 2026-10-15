@@ -21,7 +21,6 @@ export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 	const backupPath = path.join(cwd, "autumn.config.ts.backup");
 
 	try {
-		// Check if config exists
 		if (!fs.existsSync(configPath)) {
 			return {
 				created: false,
@@ -49,7 +48,6 @@ export function createConfigBackup(cwd: string = process.cwd()): BackupResult {
 			};
 		}
 
-		// Create backup
 		fs.copyFileSync(configPath, backupPath);
 
 		return {

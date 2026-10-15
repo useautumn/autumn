@@ -70,6 +70,8 @@ curl -X POST 'https://api.useautumn.com/v1/check' \
 
 You can also use `check` to [gate boolean features](/documentation/customers/check#checking-boolean-features) (non-metered features), such as access to "premium AI models".
 
+Each `check` and `track` is a network call to Autumn. If they sit on a latency-sensitive path, you can deploy the [edge cache](/documentation/edge-cache) to handle both from inside your own cloud.
+
 ### Tracking usage
 
 After the user has successfully used a chatbot message, you can record the usage in Autumn. This will decrement the user's message balance.

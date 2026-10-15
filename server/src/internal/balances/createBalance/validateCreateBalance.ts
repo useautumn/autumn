@@ -1,3 +1,4 @@
+import { formatZodError } from "@autumn/errors";
 import {
 	type CreateBalanceParamsV0,
 	type EntInterval,
@@ -26,10 +27,17 @@ export const validateCreateBalanceParams = async ({
 	feature: Feature;
 	fullCustomer: FullCustomer;
 }) => {
-	ValidateCreateBalanceParamsSchema.parse({
+	const validation = ValidateCreateBalanceParamsSchema.safeParse({
 		...params,
 		feature,
 	});
+	if (!validation.success) {
+		throw new RecaseError({
+			message: formatZodError(validation.error),
+			code: ErrCode.InvalidInputs,
+			statusCode: 400,
+		});
+	}
 
 	await validateBooleanEntitlementConflict({
 		ctx,

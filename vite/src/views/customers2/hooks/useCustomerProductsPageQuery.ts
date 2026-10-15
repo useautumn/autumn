@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { customerProductsPageUrl } from "@/boot/bootRequests";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -21,14 +22,20 @@ export function useCustomerProductsPageQuery({
 	statuses,
 	kind,
 	initialPage,
+	enabled = true,
+	customerId,
 }: {
 	cursor: string;
 	pageSize: CustomerProductsPageSize;
 	statuses: CustomerProductsStatusOption[];
 	kind: CustomerProductsKindFilter;
 	initialPage?: CustomerProductsPage;
+	enabled?: boolean;
+	/** Defaults to the route's customer; the layout passes it before the route mounts. */
+	customerId?: string;
 }) {
-	const { customer_id } = useParams();
+	const { customer_id: routeCustomerId } = useParams();
+	const customer_id = customerId ?? routeCustomerId;
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const { entityId } = useEntity();
@@ -46,16 +53,14 @@ export function useCustomerProductsPageQuery({
 	const fetcher = async (): Promise<CustomerProductsPage> => {
 		try {
 			const { data } = await axiosInstance.get(
-				`/customers/${customer_id}/products`,
-				{
-					params: {
-						start_cursor: cursor,
-						limit: pageSize,
-						status,
-						...(kind !== "all" ? { kind } : {}),
-						...(entityId ? { entity_id: entityId } : {}),
-					},
-				},
+				customerProductsPageUrl({
+					customerId: customer_id as string,
+					cursor,
+					pageSize,
+					status,
+					kind,
+					entityId,
+				}),
 			);
 			return data as CustomerProductsPage;
 		} catch (error) {
@@ -77,7 +82,7 @@ export function useCustomerProductsPageQuery({
 				entityId,
 			]),
 			queryFn: fetcher,
-			enabled: !!customer_id,
+			enabled: enabled && !!customer_id,
 			initialData: seedPage,
 			initialDataUpdatedAt: 0,
 			placeholderData: keepPreviousData,

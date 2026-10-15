@@ -81,6 +81,7 @@ test.concurrent(
 				requestId: `${customerId}-release`,
 				params: {
 					lock_id: customerId,
+					customer_id: "",
 					action: "release",
 					override_value: 0,
 				},

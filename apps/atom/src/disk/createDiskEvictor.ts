@@ -94,7 +94,7 @@ export const createDiskEvictor = ({
 			const store = stores[index] as SqliteStore;
 			nextStore = (index + 1) % stores.length;
 			const sizeBefore = store.dataBytes();
-			const { customers } = store.dropCustomersWrittenBefore({
+			const { customers } = await store.dropCustomersWrittenBefore({
 				before,
 				limit: DISK_EVICT_BATCH,
 			});

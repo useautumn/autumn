@@ -118,8 +118,6 @@ export function CustomerInvoicesTable() {
 		},
 	});
 
-	// const hasInvoices = invoices.length > 0;
-
 	return (
 		<Table.Provider
 			config={{

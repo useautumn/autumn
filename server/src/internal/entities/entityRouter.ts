@@ -25,8 +25,6 @@ entityRouter.delete(
 );
 
 entityRouter.get("/customers/:customer_id/entities", ...handleListEntities);
-// entityRouter.post("", ...handlePostEntityRequest);
-// entityRouter.delete("/:entity_id", ...handleDeleteEntity);
 
 export const entityRpcRouter = new Hono<HonoEnv>();
 entityRpcRouter.post("/entities.create", ...handleCreateEntityV2);

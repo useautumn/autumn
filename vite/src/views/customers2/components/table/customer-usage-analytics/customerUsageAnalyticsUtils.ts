@@ -1,5 +1,5 @@
 import type { Event } from "@autumn/shared";
-import type { ChartConfig } from "@autumn/ui";
+import type { ChartConfig } from "@autumn/ui/components/ui/chart";
 
 type TimeseriesMeta = {
 	name: string;
@@ -30,7 +30,6 @@ export function prepareTimeseriesChartData({
 		.filter((m) => m.name !== "period")
 		.map((m) => m.name.replace("_count", ""));
 
-	// Build chart config
 	const config: ChartConfig = {};
 	eventNames.forEach((name: string, index: number) => {
 		config[name] = {
@@ -170,11 +169,6 @@ export function prepareChartData({
 	// 				? new Date(event.timestamp * 1000)
 	// 				: // type is Date but actually comes as a string
 	// 					new Date(event.timestamp as unknown as string);
-
-	// 		const dayKey = date.toLocaleDateString("en-US", {
-	// 			month: "short",
-	// 			day: "numeric",
-	// 		});
 
 	// 		if (allDates[dayKey] !== undefined) {
 	// 			const eventName = event.event_name;

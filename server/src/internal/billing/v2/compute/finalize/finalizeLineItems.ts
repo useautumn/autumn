@@ -9,9 +9,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isSetPlansBillingContext } from "@/internal/billing/v2/actions/setPlans/utils/persistDeferredSetPlansSchedule";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
 import { filterLineItemsForTrialTransition } from "@/internal/billing/v2/compute/computeAutumnUtils/filterLineItemsForTrialTransition";
+import { billDifferenceOrProration } from "@/internal/billing/v2/compute/finalize/billDifferenceOrProration";
 import { dropUnchangedSubscriptionItemCharges } from "@/internal/billing/v2/compute/finalize/dropUnchangedSubscriptionItemCharges";
+import { applyInvoiceLineEdits } from "@/internal/billing/v2/compute/finalize/invoiceLineEdits/applyInvoiceLineEdits";
 import { isUsageNoSubscriptionBilled } from "@/internal/billing/v2/compute/finalize/isUsageNoSubscriptionBilled";
-import { prorateBillDifferenceCredits } from "@/internal/billing/v2/compute/finalize/prorateBillDifferenceCredits";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { isNewSubscriptionBackdate } from "@/internal/billing/v2/utils/backdate/isNewSubscriptionBackdate";
 import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/utils/billingContext/billingContextToNewSubscriptionAnchorMs";
@@ -22,7 +23,8 @@ import { billingContextToNewSubscriptionAnchorMs } from "@/internal/billing/v2/u
  * 2. Filtering line items based on trial state transitions
  * 3. Filtering out unchanged prices (refund + charge pairs that cancel out)
  * 4. Adding line items for sibling products affected by trial state changes
- * 5. Applying Stripe discounts to line items
+ * 5. Applying remove_lines / add_lines
+ * 6. Applying Stripe discounts to line items
  */
 export const finalizeLineItems = ({
 	ctx,
@@ -69,18 +71,25 @@ export const finalizeLineItems = ({
 		lineItems = unbilledUsage;
 	}
 
+	// set_plans only: bill_difference on a reset now bills the full new cycle with no unused-time credit.
+	const billsFullCycleOnReset =
+		resetsLikeStripeUnderNone &&
+		resetsCycleNow &&
+		billingContext.requestedProrationBehavior === "bill_difference";
+	const resetCharges = lineItems.filter(
+		({ context }) =>
+			context.direction === "charge" || context.billingTiming === "in_arrear",
+	);
 	const billedLineItems =
 		skipsProration && resetsLikeStripeUnderNone
 			? dropUnchangedSubscriptionItemCharges({
 					ctx,
 					billingContext,
-					lineItems: lineItems.filter(
-						({ context }) =>
-							context.direction === "charge" ||
-							context.billingTiming === "in_arrear",
-					),
+					lineItems: resetCharges,
 				})
-			: lineItems;
+			: billsFullCycleOnReset
+				? resetCharges
+				: lineItems;
 
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
@@ -100,7 +109,7 @@ export const finalizeLineItems = ({
 		lineItems: finalizedLineItems,
 	});
 
-	finalizedLineItems = prorateBillDifferenceCredits({
+	finalizedLineItems = billDifferenceOrProration({
 		lineItems: finalizedLineItems,
 		billingContext,
 	});
@@ -113,7 +122,14 @@ export const finalizeLineItems = ({
 	});
 	finalizedLineItems = [...finalizedLineItems, ...sharedTrialLineItems];
 
-	// 4. Apply Stripe discounts if present
+	// 4. remove_lines / add_lines patch the generated lines
+	finalizedLineItems = applyInvoiceLineEdits({
+		ctx,
+		lineItems: finalizedLineItems,
+		billingContext,
+	});
+
+	// 5. Apply Stripe discounts if present
 	if (billingContext.stripeDiscounts?.length) {
 		finalizedLineItems = applyStripeDiscountsToLineItems({
 			lineItems: finalizedLineItems,

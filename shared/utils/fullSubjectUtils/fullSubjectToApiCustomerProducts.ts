@@ -9,7 +9,6 @@ export const fullSubjectToApiCustomerProducts = ({
 	fullSubject.subjectType === "entity"
 		? [
 				...fullSubject.customer_products,
-				// ...(fullSubject.aggregated_customer_products ?? []),
 			]
 		: [
 				...fullSubject.customer_products,

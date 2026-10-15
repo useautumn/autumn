@@ -23,7 +23,6 @@ internalTrmnlRouter.get("/device_id", ...handleGetTrmnlDeviceId);
 // POST /device_id - Save TRMNL device config (requires session auth)
 internalTrmnlRouter.post("/device_id", ...handlePostTrmnlDeviceId);
 
-// Call this publicTrmnlRouter
 export const publicTrmnlRouter = new Hono<HonoEnv>();
 publicTrmnlRouter.post(
 	"/screen",

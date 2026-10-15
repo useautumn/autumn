@@ -69,7 +69,6 @@ const initCusEntBalance = ({
 
 	options,
 	relatedPrice,
-	// existingCusEnt,
 	entities,
 	carryExistingUsages = false,
 }: {
@@ -111,8 +110,6 @@ export const initCusEntitlement = ({
 	options,
 	nextResetAt,
 	relatedPrice,
-	// existingCusEnt,
-	// keepResetIntervals = false,
 	trialEndsAt,
 	anchorToUnix,
 	entities,

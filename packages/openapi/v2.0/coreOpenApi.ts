@@ -103,7 +103,6 @@ export const coreOps: ZodOpenApiPathsObject = {
 	"/track": {
 		post: {
 			summary: "Track Event",
-			// description: trackJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {
@@ -182,7 +181,6 @@ export const coreOps: ZodOpenApiPathsObject = {
 				path: z.object({
 					customer_id: z.string(),
 				}),
-				// query: GetBillingPortalQuerySchema,
 			},
 			requestBody: {
 				content: {

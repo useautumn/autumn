@@ -173,9 +173,6 @@ export const UpdateProductV2ParamsSchema = z.object({
 	description: z.string().nullish().optional().meta({
 		description: descriptions.description,
 	}),
-	// version: z.number().optional().meta({
-	// 	internal: true,
-	// }),
 	group: z.string().nonempty().nullable().optional().meta({
 		description: descriptions.group,
 	}),
@@ -217,7 +214,6 @@ export type CreateProductV2ParamsInput = z.input<
 >;
 export type UpdateProductV2Params = z.infer<typeof UpdateProductV2ParamsSchema>;
 
-// Copy Product Schema
 export const CopyProductParamsSchema = z.object({
 	id: z.string().nonempty().regex(idRegex).meta({
 		description: "New product ID in the target environment",

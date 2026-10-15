@@ -93,11 +93,6 @@ export const updateOneTimeCusProduct = async ({
 	);
 
 	if (!existingCusProduct) {
-		// logger.warn("No existing cus product found", {
-		// 	data: {
-		// 		attachParams,
-		// 	},
-		// });
 		return;
 	}
 
@@ -147,7 +142,6 @@ export const updateOneTimeCusProduct = async ({
 	const newOptionsList = [...attachParams.optionsList];
 
 	for (const curOptions of existingCusProduct.options) {
-		// Find the option in the new options list
 		const newOptionIndex = newOptionsList.findIndex(
 			(o) => o.internal_feature_id === curOptions.internal_feature_id,
 		);

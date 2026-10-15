@@ -111,7 +111,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicParamField>
 
-                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                </DynamicParamField>
 
                 <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                   Billing interval. For consumable features, should match reset.interval.
@@ -151,7 +153,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               For credit-system features: a credit rate card to use when converting `usage` on this invoice.
               <Expandable title="properties">
                 <DynamicParamField body="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                  Replaces the feature's credit_schema entirely for this invoice.
                   <Expandable title="properties">
                     <DynamicParamField body="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -376,7 +378,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicParamField>
 
-                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                      How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                    </DynamicParamField>
 
                     <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                       Billing interval. For consumable features, should match reset.interval.
@@ -416,7 +420,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   For credit-system features: a credit rate card to use when converting `usage` on this invoice.
                   <Expandable title="properties">
                     <DynamicParamField body="credit_schema" type="object | object[]">
-                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                      Replaces the feature's credit_schema entirely for this invoice.
                       <Expandable title="properties">
                         <DynamicParamField body="metered_feature_id" type="string">
                           ID of the metered feature that draws from this credit system.

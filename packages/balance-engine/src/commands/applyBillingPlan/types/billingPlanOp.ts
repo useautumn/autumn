@@ -31,12 +31,23 @@ const insertOf = <Table extends string, RowSchema extends z.ZodObject>({
 		})
 		.loose();
 
+const expectedColumnsSchema = z.record(
+	nonEmptyStringSchema,
+	z.union([z.string(), z.number(), z.boolean(), z.null()]),
+);
+
+const expectedProductSchema = z.object({
+	columns: expectedColumnsSchema.optional(),
+	customerPriceIds: z.array(nonEmptyStringSchema),
+});
+
 const deleteOf = <Table extends string>({ table }: { table: Table }) =>
 	z
 		.object({
 			op: z.literal("delete"),
 			table: z.literal(table),
 			id: nonEmptyStringSchema,
+			expect: expectedColumnsSchema.optional(),
 		})
 		.loose();
 
@@ -107,6 +118,11 @@ const insertOpSchema = z.discriminatedUnion("table", [
 	insertOf({
 		table: "customerEntitlements",
 		rowSchema: workerCustomerEntitlementSchema,
+	}).extend({
+		expectFeatureGrants: z
+			.record(nonEmptyStringSchema, nonEmptyStringSchema)
+			.optional(),
+		expectProduct: expectedProductSchema.optional(),
 	}),
 	insertOf({ table: "rollovers", rowSchema: workerRolloverSchema }),
 	insertOf({ table: "pooledBalances", rowSchema: workerPooledBalanceSchema }),
@@ -135,6 +151,8 @@ const updateOpSchema = z.discriminatedUnion("table", [
 			table: z.literal("customerProducts"),
 			id: nonEmptyStringSchema,
 			set: customerProductUpdateSetSchema,
+			expect: expectedColumnsSchema.optional(),
+			expectProduct: expectedProductSchema.optional(),
 		})
 		.loose(),
 	z
@@ -143,6 +161,8 @@ const updateOpSchema = z.discriminatedUnion("table", [
 			table: z.literal("customerEntitlements"),
 			id: nonEmptyStringSchema,
 			set: customerEntitlementUpdateSetSchema,
+			expect: expectedColumnsSchema.optional(),
+			expectProduct: expectedProductSchema.optional(),
 		})
 		.loose(),
 	z
@@ -167,7 +187,10 @@ const updateOpSchema = z.discriminatedUnion("table", [
 const deleteOpSchema = z.discriminatedUnion("table", [
 	deleteOf({ table: "customerProducts" }),
 	deleteOf({ table: "customerPrices" }),
-	deleteOf({ table: "customerEntitlements" }),
+	deleteOf({ table: "customerEntitlements" }).extend({
+		withoutRollovers: z.literal(true).optional(),
+		expectProduct: expectedProductSchema.optional(),
+	}),
 	deleteOf({ table: "rollovers" }),
 	deleteOf({ table: "pooledBalances" }),
 	/** Names its pool and source: the plan releases the source, the worker asks whether the pool keeps any share. The row itself is not state. */
@@ -250,6 +273,8 @@ export const billingPlanOpSchema = z.discriminatedUnion("op", [
 ]);
 
 export type BillingPlanOp = z.infer<typeof billingPlanOpSchema>;
+export type ExpectedColumns = z.infer<typeof expectedColumnsSchema>;
+export type ExpectedProduct = z.infer<typeof expectedProductSchema>;
 export type BillingPlanInsertOp = z.infer<typeof insertOpSchema>;
 export type BillingPlanUpdateOp = z.infer<typeof updateOpSchema>;
 export type BillingPlanDeleteOp = z.infer<typeof deleteOpSchema>;

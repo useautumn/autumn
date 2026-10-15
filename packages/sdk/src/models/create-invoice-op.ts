@@ -92,10 +92,16 @@ export type CreateInvoicePriceTier = {
   additionalCurrencies?: Array<CreateInvoiceAdditionalCurrency> | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const CreateInvoiceTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type CreateInvoiceTierBehavior = ClosedEnum<
   typeof CreateInvoiceTierBehavior
 >;
@@ -158,6 +164,9 @@ export type CreateInvoiceItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<CreateInvoicePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: CreateInvoiceTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -415,7 +424,7 @@ export type CreateInvoiceCreditSchemaUnion =
  */
 export type CreateInvoiceFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<CreateInvoiceCreditSchema1 | CreateInvoiceCreditSchema2>
@@ -591,10 +600,16 @@ export type CreateInvoiceLicenseQuantityPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const CreateInvoiceLicenseQuantityTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type CreateInvoiceLicenseQuantityTierBehavior = ClosedEnum<
   typeof CreateInvoiceLicenseQuantityTierBehavior
 >;
@@ -657,6 +672,9 @@ export type CreateInvoiceLicenseQuantityItemPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<CreateInvoiceLicenseQuantityPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: CreateInvoiceLicenseQuantityTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -944,7 +962,7 @@ export type CreateInvoiceLicenseQuantityCreditSchemaUnion =
  */
 export type CreateInvoiceLicenseQuantityFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * Replaces the feature's credit_schema entirely for this invoice.
    */
   creditSchema?:
     | Array<

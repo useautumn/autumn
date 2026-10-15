@@ -35,6 +35,8 @@ export type ProducerThreadInit = {
 	sendSignal: SharedArrayBuffer;
 	/** Woken by the producer thread when it publishes acks; the decide thread sleeps on it. */
 	ackSignal: SharedArrayBuffer;
+	/** The thread has its own module cache, so it runs its own oven-sh/bun#43279 workaround. */
+	dedupeCjsChildren?: boolean;
 };
 
 export type KafkaRequestEvent = {

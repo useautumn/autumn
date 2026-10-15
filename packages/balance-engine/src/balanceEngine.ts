@@ -27,12 +27,21 @@ export type { ApplyBillingPlanResult } from "./commands/applyBillingPlan/types/a
 export type {
 	BillingPlanOp,
 	BillingPlanUpdateOp,
+	ExpectedProduct,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export { atomFinalizeToFinalize } from "./commands/atomFinalize/atomFinalizeToFinalize.js";
+export { atomFinalizeToTrackOfNothing } from "./commands/atomFinalize/atomFinalizeToTrackOfNothing.js";
+export {
+	computeAtomFinalize,
+	computeAtomFinalizeDecision,
+} from "./commands/atomFinalize/computeAtomFinalize.js";
+export type { AtomFinalizeCommand } from "./commands/atomFinalize/types/atomFinalizeCommand.js";
 export {
 	type CheckAfterDeduction,
 	checkAfterDeduction,
 } from "./commands/check/checkAfterDeduction.js";
 export { computeCheck } from "./commands/check/computeCheck.js";
+export { trackResultToCheckResult } from "./commands/check/trackResultToCheckResult.js";
 export type { CheckCommand } from "./commands/check/types/checkCommand.js";
 export type { CheckResult } from "./commands/check/types/checkResult.js";
 export { computeConfirmExpiredLock } from "./commands/confirmExpiredLock/computeConfirmExpiredLock.js";
@@ -71,10 +80,16 @@ export type {
 	ResetResult,
 	ResetRow,
 } from "./commands/reset/types/resetResult.js";
+export { callerKeyOf } from "./commands/track/callerKeyOf.js";
 export {
 	computeTrack,
 	computeTrackDecision,
 } from "./commands/track/computeTrack.js";
+export { lockParamsToTrackLock } from "./commands/track/lockParamsToTrackLock.js";
+export {
+	isLandedSeq,
+	trackOfNothing,
+} from "./commands/track/trackSourceToRowChange.js";
 export type {
 	OverageBehavior,
 	TrackCommand,
@@ -120,6 +135,8 @@ export type {
 } from "./models/catalog/catalogKey.js";
 export type { CatalogPlanLicense } from "./models/catalog/catalogPlanLicense.js";
 export type { CatalogRow } from "./models/catalog/catalogRow.js";
+
+export type { AtomSource } from "./models/command/atomSource.js";
 export type { BaseCommand } from "./models/command/baseCommand.js";
 export type { CommandDurability } from "./models/command/commandDurability.js";
 export type { CommandOrg } from "./models/command/commandOrg.js";
@@ -190,6 +207,7 @@ export { applyMutation } from "./mutation/applyMutation.js";
 export { incrementRow } from "./mutation/incrementRow.js";
 export {
 	parseApplyBillingPlanRequest,
+	parseAtomFinalizeCommand,
 	parseCatalog,
 	parseCatalogRow,
 	parseCheckCommand,
@@ -228,6 +246,10 @@ export {
 	filterCatalogForState,
 	filterCatalogKeysMissingFrom,
 } from "./utils/catalogUtils/filterCatalogUtils.js";
+export {
+	findStructuralDifference,
+	type StructuralDifference,
+} from "./utils/findStructuralDifference.js";
 export { isSameCustomerIdentity } from "./utils/identityUtils/classifyIdentityUtils.js";
 export {
 	meteringIdentityToPartitionKey,
@@ -235,6 +257,7 @@ export {
 	partitionKeyToMeteringIdentity,
 	planCommandToEntityIdentities,
 } from "./utils/identityUtils/convertIdentityUtils.js";
+export { findLockInsertInMutation } from "./utils/mutationUtils/findMutationUtils.js";
 // utils
 export {
 	customerRowsToSubjectState,
@@ -244,6 +267,10 @@ export {
 	splitSubjectState,
 } from "./utils/subjectStateUtils/convertSubjectStateUtils.js";
 export { createSubjectState } from "./utils/subjectStateUtils/createSubjectState.js";
+export {
+	findSubjectStateDifference,
+	subjectStateRowsOf,
+} from "./utils/subjectStateUtils/findSubjectStateUtils.js";
 export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,

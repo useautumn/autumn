@@ -12,8 +12,8 @@ export type ProvisionedOrg = {
 	organizationSlug: string;
 	apiKey: string;
 	claimToken: string;
-	/** ISO 8601: after this the org can no longer be linked to anyone. */
-	claimExpiresAt: string;
+	/** ISO 8601 deadline for linking, or null when the org can be linked at any time. */
+	claimExpiresAt: string | null;
 };
 
 export type ClaimStarted = {
@@ -76,7 +76,9 @@ export const provisionKeylessOrg = async ({
 		organizationSlug: String(body.organization_slug),
 		apiKey: String(body.api_key),
 		claimToken: String(body.claim_token),
-		claimExpiresAt: String(body.claim_expires_at),
+		claimExpiresAt: body.claim_expires_at
+			? String(body.claim_expires_at)
+			: null,
 	};
 };
 

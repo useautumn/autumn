@@ -37,7 +37,6 @@ export function CustomerFeatureUsageBar({
 		<div
 			className={cn(
 				"w-0.5 h-full rounded-full bg-gray-200 dark:bg-zinc-800 flex items-end overflow-hidden",
-				// "w-0.5 h-full rounded-full flex items-end overflow-hidden",
 				horizontal ? "w-full h-1 justify-start" : "",
 			)}
 		>

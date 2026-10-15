@@ -50,7 +50,6 @@ export const getItemsForCurProduct = async ({
 	let items: LegacyPreviewLineItem[] = [];
 	const subItems = sub?.items.data || [];
 	const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
-	// const anchor = sub?.billing_cycle_anchor ? sub.billing_cycle_anchor * 1000 : undefined;
 
 	for (const price of curPrices) {
 		if (isArrearPrice({ price }) || isContUsePrice({ price })) {
@@ -74,8 +73,6 @@ export const getItemsForCurProduct = async ({
 
 		items.push(previewLineItem);
 	}
-
-	// console.log("items: ", items);
 
 	const { oldItems } = await getContUseInvoiceItems({
 		sub,

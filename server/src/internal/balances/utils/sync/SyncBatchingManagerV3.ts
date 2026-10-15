@@ -457,7 +457,6 @@ export class SyncBatchingManagerV3 {
 					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
 					usageWindowUpdates,
 				},
-				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
 

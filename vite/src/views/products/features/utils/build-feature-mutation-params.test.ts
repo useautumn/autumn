@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { FeatureType, FeatureUsageType, Infinite } from "@autumn/shared";
+import {
+	FeatureCombine,
+	FeatureType,
+	FeatureUsageType,
+	Infinite,
+} from "@autumn/shared";
 import {
 	buildFeatureMarkupParams,
 	featureToCatalogFeatureParams,
@@ -104,4 +109,22 @@ test("never sends processors: feature Stripe products are managed outside the sh
 	});
 
 	expect(result.processors).toBeUndefined();
+});
+
+test("carries combine so saving or archiving a max/min feature never resets it to sum", () => {
+	const result = featureToCatalogFeatureParams({
+		feature: {
+			id: "refresh_hours",
+			name: "Refresh hours",
+			type: FeatureType.Metered,
+			config: {
+				usage_type: FeatureUsageType.Continuous,
+				combine: FeatureCombine.Min,
+			},
+			event_names: [],
+		},
+		archived: true,
+	});
+
+	expect(result.combine).toBe(FeatureCombine.Min);
 });

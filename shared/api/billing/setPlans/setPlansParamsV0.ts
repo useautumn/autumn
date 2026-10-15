@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { ms } from "../../../utils/common/unixUtils";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
+import { InvoiceLineEditsParamsShape } from "../common/invoiceLineEdits";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import {
 	CreateScheduleParamsV0BaseSchema,
@@ -43,6 +44,7 @@ export const SetPlansParamsV0Schema = CreateScheduleParamsV0BaseSchema.omit({
 			description:
 				"Discounts to remove from the subscription, by reward ID. Discounts not listed are left unchanged; when the subscription is recreated, the rest carry over.",
 		}),
+		...InvoiceLineEditsParamsShape,
 		carry_over_usages: CarryOverUsagesSchema.meta({
 			description:
 				"Carry the consumable usage of a plan the first phase replaces onto the plan replacing it, instead of billing it now. Only valid when a plan is replaced immediately; usage of features left out of feature_ids is billed now.",

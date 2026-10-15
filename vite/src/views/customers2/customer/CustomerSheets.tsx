@@ -76,8 +76,6 @@ export function CustomerSheets() {
 			case "attach-checkout-session":
 			case "attach-schedule-plan":
 				return <AttachProductSheet />;
-			// case "attach-product-v2":
-			// 	return <AttachProductSheetV3 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "license-detail":

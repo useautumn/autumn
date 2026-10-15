@@ -13,15 +13,13 @@ const CreditSchemaListContext = createContext<CreditSchemaListValue | null>(
 export function CreditSchemaListProvider({
 	schema,
 	onChange,
-	onRemoveLast,
 	children,
 }: {
 	schema: CreditSchemaItem[];
 	onChange: (schema: CreditSchemaItem[]) => void;
-	onRemoveLast?: () => void;
 	children: ReactNode;
 }) {
-	const list = useCreditSchemaList({ schema, onChange, onRemoveLast });
+	const list = useCreditSchemaList({ schema, onChange });
 
 	return (
 		<CreditSchemaListContext.Provider value={{ ...list, schema }}>

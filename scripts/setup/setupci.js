@@ -29,7 +29,6 @@ async function main() {
 
 	const databaseUrl = process.env.DATABASE_URL;
 	const stripeWebhookVars = [];
-	// stripeWebhookVars = await handleLocalRunSetup();
 
 	// Step 11: Write to server/.env
 	console.log(

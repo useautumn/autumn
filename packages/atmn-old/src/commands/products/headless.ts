@@ -41,7 +41,6 @@ export async function headlessProductsCommand(
 	try {
 		const secretKey = getKey(environment);
 
-		// Fetch all products
 		const allProducts = await fetchPlans({
 			secretKey,
 			includeArchived,
@@ -75,7 +74,6 @@ export async function headlessProductsCommand(
 		const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 		const hasMore = endIndex < filteredProducts.length;
 
-		// Output the list
 		outputProductList(
 			paginatedProducts,
 			{

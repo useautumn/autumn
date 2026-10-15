@@ -84,6 +84,7 @@ const mergePooledBalanceUpdates = ({
 							left: existing.grantedDelta,
 							right: update.grantedDelta,
 						}),
+						unlimited: update.unlimited ?? existing.unlimited,
 					}
 				: update,
 		);

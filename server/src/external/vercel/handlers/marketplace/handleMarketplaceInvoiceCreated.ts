@@ -75,7 +75,6 @@ export const handleMarketplaceInvoiceCreated = async ({
 
 	const vercelResourceId = subscription.metadata?.vercel_resource_id;
 
-	// Fetch customer
 	const partialCustomer = await CusService.getByStripeId({
 		ctx,
 		stripeId: invoice.customer as string,

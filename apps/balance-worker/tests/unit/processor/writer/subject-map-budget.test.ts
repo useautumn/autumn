@@ -75,6 +75,18 @@ describe("subject map budget", () => {
 		expect(first.maxBytes()).toBe(1_000);
 	});
 
+	test("used bytes sum what every member holds now, and stop counting a member that left", () => {
+		const budget = createSubjectMapBudget({ totalBytes: 1_000 });
+		let heldBySecond = 100;
+		budget.join({ sizeBytes: () => 250 });
+		const second = budget.join({ sizeBytes: () => heldBySecond });
+		expect(budget.usedBytes()).toBe(350);
+		heldBySecond = 300;
+		expect(budget.usedBytes()).toBe(550);
+		second.leave();
+		expect(budget.usedBytes()).toBe(250);
+	});
+
 	test("a map bound by the budget re-reads it: another partition filling up shrinks what this one may hold and the next write evicts", () => {
 		const state = createState();
 		const bytes = JSON.stringify(state).length;

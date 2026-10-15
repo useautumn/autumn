@@ -28,8 +28,6 @@ export const runStripeWebhookHandlers = async ({
 	const { db, org, env, stripeEvent } = ctx;
 	const event = stripeEvent;
 
-	// await throwOnSimulatedWebhookFailure({ ctx });
-
 	switch (event.type) {
 		case "account.application.deauthorized":
 			await handleStripeApplicationDeauthorized({ ctx });

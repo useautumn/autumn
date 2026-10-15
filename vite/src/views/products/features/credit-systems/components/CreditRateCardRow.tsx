@@ -1,9 +1,7 @@
 import {
 	type CreditSchemaItem,
 	type Feature,
-	getFeatureName,
 	hasCreditDimensionRules,
-	isAiCreditSystem,
 } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
@@ -11,7 +9,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { withoutDimensions } from "../utils/creditDimensionUtils";
-import { creditRateSummary } from "../utils/creditRateSummary";
+import { creditRateSummary, rateUnit } from "../utils/creditRateSummary";
 import {
 	addTier,
 	isGraduated,
@@ -49,14 +47,10 @@ export function CreditRateCardRow({
 		(f: Feature) => f.id === item.metered_feature_id,
 	);
 	const billingUnits = item.feature_amount ?? 1;
-	const isAiChild = isAiCreditSystem(selectedFeature?.type);
-	const unitName = isAiChild
-		? "of AI usage"
-		: getFeatureName({
-				feature: selectedFeature,
-				plural: billingUnits !== 1,
-				capitalize: false,
-			}) || "units";
+	const { unitName, isAiChild } = rateUnit({
+		feature: selectedFeature,
+		billingUnits,
+	});
 
 	const isMultiTier = isGraduated(item) && item.tiers.length > 1;
 	const singleTierCost = isGraduated(item)

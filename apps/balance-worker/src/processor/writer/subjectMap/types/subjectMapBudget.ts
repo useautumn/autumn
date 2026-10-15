@@ -12,6 +12,8 @@ export type SubjectMapBudgetMember = {
 export type SubjectMapBudget = {
 	totalBytes: number;
 	members(): number;
+	/** What every partition holds now, summed. */
+	usedBytes(): number;
 	/** `sizeBytes` reports what this partition holds now, so the others know what it leaves them. */
 	join(params: { sizeBytes: () => number }): SubjectMapBudgetMember;
 };

@@ -74,7 +74,6 @@ export function AdvancedSettings() {
 			<SheetAccordionItem
 				value="advanced"
 				title="Advanced"
-				// description="Additional configuration options for this feature"
 			>
 				<div className="flex flex-col gap-6 pt-2 pb-10 [>&_.advanced-input-width]:w-xs">
 					<PooledBalanceConfig />

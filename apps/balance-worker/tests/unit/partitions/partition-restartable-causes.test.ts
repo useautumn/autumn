@@ -164,6 +164,20 @@ test("a producer the coordinator could not yet initialise restarts the partition
 	}
 });
 
+test("a producer the broker's policy refused to initialise restarts the partition alone: it wrote nothing", () => {
+	const cause = new OwnedPartitionRecoveryRequiredError({
+		topic,
+		partition,
+		cause: new KafkaJSProtocolError(
+			Object.assign(
+				new Error("Request parameters do not satisfy the configured policy"),
+				{ type: "POLICY_VIOLATION", code: 44, retriable: false },
+			),
+		),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(true);
+});
+
 test("any other refusal the broker gave up retrying still stops the service", () => {
 	const cause = new OwnedPartitionRecoveryRequiredError({
 		topic,

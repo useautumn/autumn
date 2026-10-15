@@ -1,4 +1,5 @@
 import {
+	type FullCusProduct,
 	type FullCustomerEntitlement,
 	InternalError,
 	pooledBalanceIdentityToKey,
@@ -9,6 +10,10 @@ import type {
 	MutablePooledCustomerEntitlement,
 	PooledBalanceComputeContext,
 } from "../types/pooledBalanceComputeTypes";
+import {
+	addPaidCustomerProductToPool,
+	isPaidSubscriptionPoolHost,
+} from "../utils/subscriptionPoolHost";
 
 const clonePooledCustomerEntitlements = ({
 	customerEntitlements,
@@ -26,10 +31,59 @@ const clonePooledCustomerEntitlements = ({
 		return clonedCustomerEntitlement as MutablePooledCustomerEntitlement;
 	});
 
+const competingContributionsOf = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}) =>
+	new Map(
+		customerProducts.flatMap((customerProduct) =>
+			(customerProduct.customer_entitlements ?? []).flatMap(
+				(customerEntitlement) => {
+					const contribution = customerEntitlement.pooled_balance_contribution;
+					return contribution?.competes
+						? [[customerEntitlement.id, contribution] as const]
+						: [];
+				},
+			),
+		),
+	);
+
+const paidCustomerProductIdsByPoolIdOf = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}) => {
+	const paidCustomerProductIdsByPoolId = new Map<string, Set<string>>();
+	for (const customerProduct of customerProducts) {
+		if (
+			!isPaidSubscriptionPoolHost({
+				customerProduct,
+			})
+		) {
+			continue;
+		}
+		for (const customerEntitlement of customerProduct.customer_entitlements ??
+			[]) {
+			const poolId =
+				customerEntitlement.pooled_balance_contribution?.pooled_balance_id;
+			if (!poolId) continue;
+			addPaidCustomerProductToPool({
+				paidCustomerProductIdsByPoolId,
+				poolId,
+				customerProductId: customerProduct.id,
+			});
+		}
+	}
+	return paidCustomerProductIdsByPoolId;
+};
+
 export const setupPooledBalanceComputeContext = ({
 	pooledCustomerEntitlements: inputPooledCustomerEntitlements,
+	customerProducts = [],
 }: {
 	pooledCustomerEntitlements: FullCustomerEntitlement[];
+	customerProducts?: FullCusProduct[];
 }): PooledBalanceComputeContext => {
 	const pooledCustomerEntitlements = clonePooledCustomerEntitlements({
 		customerEntitlements: inputPooledCustomerEntitlements,
@@ -55,5 +109,12 @@ export const setupPooledBalanceComputeContext = ({
 			]),
 		),
 		pooledBalanceIdsWithRemovedContributions: new Set(),
+		pooledBalanceIdsWithReplacedContributions: new Set(),
+		competingContributionsBySourceId: competingContributionsOf({
+			customerProducts,
+		}),
+		paidCustomerProductIdsByPoolId: paidCustomerProductIdsByPoolIdOf({
+			customerProducts,
+		}),
 	};
 };

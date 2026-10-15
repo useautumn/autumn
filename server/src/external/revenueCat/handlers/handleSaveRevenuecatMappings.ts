@@ -52,7 +52,6 @@ export const handleSaveRCMappings = createRoute({
 			}
 		}
 
-		// Return updated mappings
 		const updatedMappings = await RCMappingService.getAll({
 			db,
 			orgId: org.id,

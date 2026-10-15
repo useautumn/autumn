@@ -562,7 +562,6 @@ class TestRunner {
 
 		await Promise.all(promises);
 
-		// Remove SIGINT handler
 		process.off("SIGINT", sigintHandler);
 
 		// Final render

@@ -183,6 +183,17 @@ FlagType2 = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+CheckCombine2 = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class CheckDimensions12TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -489,6 +500,53 @@ class CheckDimensions9(BaseModel):
         return m
 
 
+CheckDimensionsUnion5TypedDict = TypeAliasType(
+    "CheckDimensionsUnion5TypedDict",
+    Union[CheckDimensions10TypedDict, CheckDimensions9TypedDict],
+)
+
+
+CheckDimensionsUnion5 = TypeAliasType(
+    "CheckDimensionsUnion5", Union[CheckDimensions10, CheckDimensions9]
+)
+
+
+class CheckMultipliers5TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    factor: NotRequired[float]
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+    add: NotRequired[float]
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+
+class CheckMultipliers5(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    factor: Optional[float] = None
+    r"""Multiplies the matched rate. All matching multipliers stack."""
+
+    add: Optional[float] = None
+    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["factor", "add"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CheckCreditSchema5TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
@@ -557,53 +615,6 @@ class CheckDimensions8(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckDimensionsUnion5TypedDict = TypeAliasType(
-    "CheckDimensionsUnion5TypedDict",
-    Union[CheckDimensions10TypedDict, CheckDimensions9TypedDict],
-)
-
-
-CheckDimensionsUnion5 = TypeAliasType(
-    "CheckDimensionsUnion5", Union[CheckDimensions10, CheckDimensions9]
-)
-
-
-class CheckMultipliers5TypedDict(TypedDict):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    factor: NotRequired[float]
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-    add: NotRequired[float]
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-
-class CheckMultipliers5(BaseModel):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    factor: Optional[float] = None
-    r"""Multiplies the matched rate. All matching multipliers stack."""
-
-    add: Optional[float] = None
-    r"""Added to the rate after every factor is applied, in credits per billing-unit group."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["factor", "add"])
         serialized = handler(self)
         m = {}
 
@@ -983,6 +994,8 @@ class CheckFeature2TypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[CheckCombine2]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CheckCreditSchemaUnion2TypedDict]]
@@ -1017,6 +1030,9 @@ class CheckFeature2(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[CheckCombine2] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -1042,6 +1058,7 @@ class CheckFeature2(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",
@@ -2335,6 +2352,17 @@ FlagType1 = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+CheckCombine1 = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class CheckDimensions6TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -3135,6 +3163,8 @@ class CheckFeature1TypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[CheckCombine1]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CheckCreditSchemaUnion1TypedDict]]
@@ -3169,6 +3199,9 @@ class CheckFeature1(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[CheckCombine1] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -3194,6 +3227,7 @@ class CheckFeature1(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",

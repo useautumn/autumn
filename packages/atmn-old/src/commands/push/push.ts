@@ -257,16 +257,6 @@ async function checkPlanForVersioning(
 	);
 
 	if (missingLocalFeatureIds.length > 0) {
-		// if (missingUnknownFeatureIds.length > 0) {
-		// 	console.log(
-		// 		`[checkPlanForVersioning] plan=${plan.id} has mixed missing features. Local-first features: ${missingLocalFeatureIds.join(", ")}; missing unknown: ${missingUnknownFeatureIds.join(", ")}.`,
-		// 	);
-		// } else {
-		// 	console.log(
-		// 		`[checkPlanForVersioning] plan=${plan.id} has local-only feature refs (${missingLocalFeatureIds.join(", ")}). Deferring versioning check until after feature upsert.`,
-		// 	);
-		// }
-
 		return {
 			plan,
 			willVersion: false,
@@ -312,20 +302,6 @@ async function checkPlanForVersioning(
 				responseMessage,
 			)
 		) {
-			// if (missingUnknownFeatureIds.length > 0) {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} failed versioning check: feature "${missingFeature || "unknown"}" not found and not in local config`,
-			// 	);
-			// } else if (missingFeature) {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found for feature "${missingFeature}", will recheck after feature upsert`,
-			// 	);
-			// } else {
-			// 	console.log(
-			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found`,
-			// 	);
-			// }
-
 			return {
 				plan,
 				willVersion: false,

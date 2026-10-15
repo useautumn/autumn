@@ -13,7 +13,6 @@ export const coreOpenApi: ZodOpenApiPathsObject = {
 	"/track": {
 		post: {
 			summary: "Track Event",
-			// description: trackJsDoc,
 			tags: ["core"],
 			requestBody: {
 				content: {

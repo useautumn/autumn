@@ -34,10 +34,6 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 	if (!currentCustomerProduct) return;
 
-	// const featuresToCarryUsagesFor = customerProductToFeaturesToCarryUsagesFor({
-	// 	cusProduct: customerProduct,
-	// });
-
 	const currentUsages = cusProductToExistingUsages({
 		cusProduct: currentCustomerProduct,
 		entityId: customerProduct.entity_id ?? undefined,

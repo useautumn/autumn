@@ -15,12 +15,12 @@ import { BillingInterval } from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	messagesItem,
 	seedTwoParents,
 	withCatalogPlans,
 } from "../../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	expectLicenseDraftCase,
 	messagesItemDelta,
@@ -58,16 +58,16 @@ test.concurrent(
 						plan_id: childId,
 						items: [messagesItem(200)],
 						propagate: {
-							license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+							license_parents: [
+								{ plan_id: teamId, version: 1 },
+								{ plan_id: scaleId, version: 1 },
+							],
 						},
 						migration: { draft: true },
 					},
 				];
 				const planFilter = orVersionPinnedFilter({
-					branches: [
-						{ planId: teamId },
-						{ planId: scaleId },
-					],
+					branches: [{ planId: teamId }, { planId: scaleId }],
 				});
 				await expectLicenseDraftCase({
 					autumn: autumnV2_3,
@@ -128,7 +128,10 @@ test.concurrent(
 							plan_id: childId,
 							items: [messagesItem(200)],
 							propagate: {
-								license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+								license_parents: [
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: scaleId, version: 1 },
+								],
 							},
 							migration: { draft: true },
 						},
@@ -205,7 +208,10 @@ test.concurrent(
 							items: [messagesItem(10)],
 							price: monthPrice({ amount: 20 }),
 							propagate: {
-								license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: entId, version: 1 }],
+								license_parents: [
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: entId, version: 1 },
+								],
 							},
 							migration: { draft: true },
 						},

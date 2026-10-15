@@ -45,7 +45,6 @@ export const V2_1_PlanChanges = defineVersionChange({
 		return {
 			...input,
 			customer_eligibility: {
-				// object: "customer_eligibility" as const,
 				trial_available: input.customer_eligibility.trial_available,
 				scenario: input.customer_eligibility.scenario,
 				attach_action: input.customer_eligibility.attach_action,

@@ -69,7 +69,6 @@ const getNextCycleItems = async ({
 		attachParams,
 		logger,
 		withPrepaid,
-		// anchor,
 	});
 
 	return {

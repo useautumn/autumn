@@ -58,7 +58,7 @@ PreviewMultiUpdateProrationBehavior = Literal[
     "none",
     "bill_difference",
 ]
-r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
 
 class PreviewMultiUpdateUpdateTypedDict(TypedDict):
@@ -71,7 +71,7 @@ class PreviewMultiUpdateUpdateTypedDict(TypedDict):
     entity_id: NotRequired[str]
     r"""The ID of the entity this update targets. Overrides the top-level entity_id for this update."""
     proration_behavior: NotRequired[PreviewMultiUpdateProrationBehavior]
-    r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
 
 class PreviewMultiUpdateUpdate(BaseModel):
@@ -88,7 +88,7 @@ class PreviewMultiUpdateUpdate(BaseModel):
     r"""The ID of the entity this update targets. Overrides the top-level entity_id for this update."""
 
     proration_behavior: Optional[PreviewMultiUpdateProrationBehavior] = None
-    r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle."""
+    r"""How to handle proration for this update. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

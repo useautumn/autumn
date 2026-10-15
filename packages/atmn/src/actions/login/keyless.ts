@@ -63,11 +63,16 @@ const daysUntil = (iso: string): string => {
 	return `${days} day${days === 1 ? "" : "s"}`;
 };
 
+const linkWindow = (claimExpiresAt: string | null) =>
+	claimExpiresAt
+		? `Link it within ${daysUntil(claimExpiresAt)}`
+		: "Link it to an account any time";
+
 export type KeylessLoginResult = {
 	envPath: string;
 	orgId: string;
 	orgSlug: string;
-	claimExpiresAt: string;
+	claimExpiresAt: string | null;
 };
 
 /** A sandbox org with no owner, its key in .env; the account comes later. */
@@ -95,7 +100,7 @@ export const runKeylessLogin = async ({
 		`${done(`Created sandbox org ${provisioned.organizationSlug} (keyless). Wrote AUTUMN_SECRET_KEY to ${envPath}`)}\n`,
 	);
 	prompter.write(
-		`  This org has no owner yet. Link it within ${daysUntil(provisioned.claimExpiresAt)}: atmn login --claim you@example.com\n`,
+		`  This org has no owner yet. ${linkWindow(provisioned.claimExpiresAt)}: atmn login --claim you@example.com\n`,
 	);
 	return {
 		envPath,

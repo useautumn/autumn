@@ -49,7 +49,12 @@ const advanceClock = (byMs: number) => {
 	setSystemTime(new Date(nowMs));
 };
 
-type StreamPass = { events: EveEvent[]; thenThrow?: "idle" | "disconnect" };
+type StreamPass = {
+	events: EveEvent[];
+	eventGapMs?: number;
+	quietMs?: number;
+	thenThrow?: "idle" | "disconnect";
+};
 
 let streamPasses: StreamPass[] = [];
 let childEvents: EveEvent[] = [];
@@ -78,9 +83,12 @@ await mockLeafModule({
 				Math.min(parentStreamCalls, streamPasses.length - 1)
 			] ?? { events: [] };
 			parentStreamCalls += 1;
-			for (const event of pass.events) yield event;
+			for (const event of pass.events) {
+				advanceClock(pass.eventGapMs ?? 0);
+				yield event;
+			}
 			// A real idle window burns wall-clock before it throws.
-			advanceClock(PASS_ADVANCE_MS);
+			advanceClock(pass.quietMs ?? PASS_ADVANCE_MS);
 			if (pass.thenThrow === "idle") {
 				throw new MockEveStreamIdleTimeoutError("Eve stream idle timeout");
 			}
@@ -99,6 +107,9 @@ await mockLeafModule({
 	}),
 });
 
+const { MAX_TURN_DURATION_MS } = await import(
+	"../../../src/internal/agentRuntime/turnBudget.js"
+);
 const { consumeAgentTurn } = await import(
 	"../../../src/internal/agentRuntime/actions/runAgentTurn/execute/consumeAgentTurn.js"
 );
@@ -119,7 +130,11 @@ const session = (): EveSessionRef => ({
 
 type AbandonedLog = { quiet_ms: number; turn_ms: number };
 
-const consumeAndCaptureAbandon = async () => {
+const consumeAndCaptureAbandon = async ({
+	deadlineAt,
+}: {
+	deadlineAt?: number;
+} = {}) => {
 	const abandoned: AbandonedLog[] = [];
 	const logger = {
 		error: (
@@ -135,6 +150,7 @@ const consumeAndCaptureAbandon = async () => {
 	};
 	const outcome = await consumeAgentTurn({
 		auth: {} as never,
+		deadlineAt,
 		env: AppEnv.Sandbox,
 		logger: logger as never,
 		onAction: async () => undefined,
@@ -144,6 +160,17 @@ const consumeAndCaptureAbandon = async () => {
 	} as never);
 	return { abandoned, outcome };
 };
+
+const toolEvents = (count: number) =>
+	Array.from({ length: count }, () =>
+		event({
+			actions: [{ toolName: "stripe_execute" }],
+			type: "actions.requested",
+		}),
+	);
+
+const reply = (message: string) =>
+	event({ finishReason: "stop", message, type: "message.completed" });
 
 // Nine idle passes: far more than either exit path needs, so the pass count at
 // settle time is decided purely by which condition fired.
@@ -307,5 +334,56 @@ describe("a parent quiet past the cap settles on the clock", () => {
 		// Six quiet passes at 80s each is well past the 150s cap, proving the
 		// live child — not a short clock — is what kept the turn alive.
 		expect(parentStreamCalls).toBeGreaterThan(5);
+	});
+
+	test("a parent still streaming at the deadline is not cut off", async () => {
+		// Prod 2026-10-14: 88 events in 149.8s, the last 3.1s before the
+		// deadline, no text yet; eve replied ~70s later to nobody.
+		streamPasses = [
+			{
+				events: [event({ type: "turn.started" }), ...toolEvents(49)],
+				eventGapMs: 3_000,
+				quietMs: 3_100,
+				thenThrow: "idle",
+			},
+			{
+				events: [
+					...toolEvents(20),
+					reply("Open invoices."),
+					event({ type: "session.waiting" }),
+				],
+				eventGapMs: 3_500,
+			},
+		];
+
+		const { abandoned, outcome } = await consumeAndCaptureAbandon({
+			deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
+		});
+
+		expect(abandoned).toHaveLength(0);
+		expect(outcome).toMatchObject({ kind: "answered", text: "Open invoices." });
+	});
+
+	test("a parent streaming past the turn ceiling settles at it", async () => {
+		streamPasses = [
+			{
+				events: [
+					event({ type: "turn.started" }),
+					...toolEvents(2_000),
+					reply("Too late."),
+				],
+				eventGapMs: 500,
+			},
+		];
+
+		await expect(
+			consumeAndCaptureAbandon({
+				deadlineAt: TURN_START.getTime() + QUIET_CAP_MS,
+			}),
+		).rejects.toThrow("Eve stopped responding");
+
+		expect(nowMs - TURN_START.getTime()).toBeLessThan(
+			MAX_TURN_DURATION_MS + 1_000,
+		);
 	});
 });

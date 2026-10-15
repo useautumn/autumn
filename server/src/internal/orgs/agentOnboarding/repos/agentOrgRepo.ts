@@ -8,7 +8,7 @@ import {
 	session,
 	user,
 } from "@autumn/shared";
-import { and, eq, gt, notExists, sql } from "drizzle-orm";
+import { and, eq, notExists, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { AGENT_PROVISIONING_KEY_SOURCE } from "../agentAuthScopeKeys.js";
@@ -23,7 +23,6 @@ export const createPendingAgentOrg = async ({
 		name: string;
 		slug: string;
 		claimTokenHash: string;
-		claimExpiresAt: Date;
 	};
 }): Promise<Organization> => {
 	const [organization] = await db
@@ -39,7 +38,6 @@ export const createPendingAgentOrg = async ({
 			provisioning_source: OrgProvisioningSource.Agent,
 			claim_state: OrgClaimState.Pending,
 			claim_token_hash: org.claimTokenHash,
-			claim_expires_at: org.claimExpiresAt,
 		})
 		.returning();
 
@@ -53,18 +51,15 @@ export const createPendingAgentOrg = async ({
 export const findPendingAgentOrg = async ({
 	db,
 	claimTokenHash,
-	now,
 }: {
 	db: DrizzleCli;
 	claimTokenHash: string;
-	now: Date;
 }) =>
 	db.query.organizations.findFirst({
 		where: and(
 			eq(organizations.claim_token_hash, claimTokenHash),
 			eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 			eq(organizations.claim_state, OrgClaimState.Pending),
-			gt(organizations.claim_expires_at, now),
 			notExists(
 				db
 					.select({ id: member.id })
@@ -82,11 +77,9 @@ export const findPendingAgentOrg = async ({
 export const findPendingAgentOrgBySetupKeyHash = async ({
 	db,
 	hashedKey,
-	now,
 }: {
 	db: Pick<DrizzleCli, "select">;
 	hashedKey: string;
-	now: Date;
 }) => {
 	const [row] = await db
 		.select({ organization: organizations })
@@ -98,7 +91,6 @@ export const findPendingAgentOrgBySetupKeyHash = async ({
 				sql`${apiKeys.meta}->>'source' = ${AGENT_PROVISIONING_KEY_SOURCE}`,
 				eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 				eq(organizations.claim_state, OrgClaimState.Pending),
-				gt(organizations.claim_expires_at, now),
 				notExists(
 					db
 						.select({ id: member.id })
@@ -145,7 +137,6 @@ export const claimPendingAgentOrg = async ({
 				eq(organizations.claim_token_hash, claimTokenHash),
 				eq(organizations.provisioning_source, OrgProvisioningSource.Agent),
 				eq(organizations.claim_state, OrgClaimState.Pending),
-				gt(organizations.claim_expires_at, now),
 				notExists(
 					db
 						.select({ id: member.id })

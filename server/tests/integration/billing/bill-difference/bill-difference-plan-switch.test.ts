@@ -1,10 +1,10 @@
 /**
  * proration_behavior: "bill_difference" on a mid-cycle plan switch.
  *
- * Contract:
- *   Pro ($20) -> Premium ($50) on day 14 charges Premium's full price and credits only
- *   Pro's unused time, grants Premium's full balance, and keeps the renewal date.
- *   When Pro was paid for only part of the cycle, the credit is the unused part of what was paid.
+ * Contract: each change bills the larger of the full difference and normal proration.
+ *   Pro ($20) -> Premium ($50) on day 14 bills the full $30 difference, grants Premium's
+ *   full balance, and keeps the renewal date. Premium -> Pro bills normal proration.
+ *   When Pro was paid for only part of the cycle, the difference is against what was paid.
  */
 
 import { expect, test } from "bun:test";
@@ -24,7 +24,7 @@ import { expectProductActive } from "@tests/integration/billing/utils/expectCust
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import {
-	calculateResetBillingCycleNowTotal,
+	calculateProration,
 	getBillingPeriod,
 } from "@tests/integration/billing/utils/proration";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -33,10 +33,11 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { expectPreviewTotalCorrect } from "./utils/expectPreviewTotalCorrect";
 
 test.concurrent(
-	`${chalk.yellowBright("bill_difference: pro -> premium charges full premium, credits unused pro")}`,
+	`${chalk.yellowBright("bill_difference: pro -> premium bills the full price difference")}`,
 	async () => {
 		const customerId = "bill-diff-plan-switch";
 
@@ -47,7 +48,7 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 500 })],
 		});
 
-		const { autumnV2_4, ctx, advancedTo } = await initScenario({
+		const { autumnV2_4, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -60,12 +61,7 @@ test.concurrent(
 		});
 
 		const { billingPeriod } = await getBillingPeriod({ customerId });
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
-			customerId,
-			advancedTo,
-			oldAmount: 20,
-			newAmount: 50,
-		});
+		const expectedTotal = 30;
 
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
@@ -108,7 +104,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("bill_difference: credits only the unused part of a partly paid plan")}`,
+	`${chalk.yellowBright("bill_difference: an upgrade from a partly paid plan credits only what was paid")}`,
 	async () => {
 		const customerId = "bill-diff-partial-paid";
 
@@ -135,12 +131,10 @@ test.concurrent(
 
 		const [stubInvoice] =
 			(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices ?? [];
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
-			customerId,
-			advancedTo,
-			oldAmount: stubInvoice.total,
-			newAmount: 50,
-		});
+		const expectedTotal = new Decimal(50)
+			.minus(stubInvoice.total)
+			.toDecimalPlaces(2)
+			.toNumber();
 
 		const params: AttachParamsV1Input = {
 			customer_id: customerId,
@@ -164,5 +158,60 @@ test.concurrent(
 			customerId,
 			anchorMs: nextMonthStartMs({ fromMs: advancedTo }),
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("bill_difference: premium -> pro refunds normal proration")}`,
+	async () => {
+		const customerId = "bill-diff-downgrade";
+
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { autumnV2_4, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id }),
+				s.advanceTestClock({ days: 14 }),
+			],
+		});
+
+		const expectedTotal = await calculateProration({
+			customerId,
+			advancedTo,
+			amount: 20 - 50,
+		});
+
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: pro.id,
+			redirect_mode: "if_required",
+			proration_behavior: "bill_difference",
+			plan_schedule: "immediate",
+		};
+
+		const preview: BillingPreviewResponse =
+			await autumnV2_4.billing.previewAttach<AttachParamsV1Input>(params);
+		expectPreviewTotalCorrect({ preview, total: expectedTotal });
+
+		await autumnV2_4.billing.attach<AttachParamsV1Input>(params);
+
+		const customer = await autumnV2_4.customers.get<ApiCustomerV5>(customerId);
+		await expectProductActive({ customer, productId: pro.id });
+		await expectCustomerInvoiceCorrect({
+			customerId,
+			count: 2,
+			latestTotal: expectedTotal,
+		});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

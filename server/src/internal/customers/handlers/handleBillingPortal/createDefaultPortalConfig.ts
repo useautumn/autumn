@@ -20,10 +20,6 @@ export const createDefaultPortalConfig = async (stripeCli: Stripe) => {
 					enabled: true,
 				},
 			},
-			// business_profile: {
-			//   privacy_policy_url: "https://example.com/privacy",
-			//   terms_of_service_url: "https://example.com/terms",
-			// },
 		});
 		return configuration;
 	} catch (error: any) {

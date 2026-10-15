@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import { LATEST_VERSION } from "@autumn/shared";
+import { type CheckLockParams, LATEST_VERSION } from "@autumn/shared";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { TestAtom } from "./ensureAtomDeployment.js";
@@ -19,6 +19,8 @@ export const checkOnAtom = async ({
 	featureId,
 	requiredBalance = 1,
 	sendEvent,
+	lock,
+	idempotencyKey,
 }: {
 	atom: TestAtom;
 	token?: string | null;
@@ -28,6 +30,8 @@ export const checkOnAtom = async ({
 	featureId: string;
 	requiredBalance?: number;
 	sendEvent?: boolean;
+	lock?: CheckLockParams;
+	idempotencyKey?: string;
 }): Promise<{
 	status: number;
 	forwarded: string | null;
@@ -41,6 +45,7 @@ export const checkOnAtom = async ({
 			Authorization: `Bearer ${secretKey}`,
 			"x-api-version": LATEST_VERSION,
 			...(token && { "x-atom-token": token }),
+			...(idempotencyKey && { "Idempotency-Key": idempotencyKey }),
 		},
 		body: JSON.stringify({
 			customer_id: customerId,
@@ -48,6 +53,7 @@ export const checkOnAtom = async ({
 			feature_id: featureId,
 			required_balance: requiredBalance,
 			send_event: sendEvent,
+			lock,
 		}),
 	});
 	return {

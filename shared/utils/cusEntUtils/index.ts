@@ -39,7 +39,6 @@ export * from "./classifyCusEnt/isUnlimitedCustomerEntitlement";
 export * from "./classifyCusEntUtils";
 // Convert utils barrel
 export * from "./convertCusEntUtils";
-// Convert utils
 export * from "./convertCusEntUtils/cusEntsToMainPlanAllowance";
 export * from "./convertCusEntUtils/cusEntsToMaxPurchase";
 export * from "./convertCusEntUtils/cusEntsToStartingBalance";
@@ -69,7 +68,6 @@ export * from "./overageUtils/cusEntToInvoiceOverage";
 export * from "./overageUtils/cusEntToInvoiceUsage";
 export * from "./overageUtils/cusEntToOptions";
 export * from "./overageUtils/cusEntToVolumeInvoiceQuantity";
-// Reset utils
 export * from "./resetUtils/clampNextResetAtToPendingBillingCycleAnchor";
 export * from "./resetUtils/customerEntitlementToNextResetAt";
 export * from "./resetUtils/getNextResetAt";

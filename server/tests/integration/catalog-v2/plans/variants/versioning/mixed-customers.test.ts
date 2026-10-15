@@ -9,12 +9,12 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
@@ -44,7 +44,8 @@ test.concurrent(
 						{
 							plan_id: baseId,
 							items: [messagesItem(100), dashboardItem()],
-							versioning: "new_version", active: true,
+							versioning: "new_version",
+							active: true,
 							propagate: {
 								variants: [{ plan_id: euId }, { plan_id: ukId }],
 							},
@@ -100,7 +101,8 @@ test.concurrent(
 							{
 								plan_id: baseId,
 								items: [messagesItem(100), dashboardItem()],
-								versioning: "new_version", active: true,
+								versioning: "new_version",
+								active: true,
 								propagate: {
 									variants: [{ plan_id: euId }, { plan_id: ukId }],
 								},

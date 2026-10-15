@@ -117,7 +117,6 @@ export const useSheetStore = create<SheetState>((set) => ({
 	// Update just the itemId without clearing other state
 	updateItemId: (itemId) => set({ itemId }),
 
-	// Close the sheet
 	closeSheet: () =>
 		set((state) => ({
 			previousType: state.type,
@@ -128,7 +127,6 @@ export const useSheetStore = create<SheetState>((set) => ({
 			initialProduct: null,
 		})),
 
-	// Reset to initial state
 	reset: () => set(initialState),
 }));
 

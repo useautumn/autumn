@@ -37,6 +37,7 @@ export const billingParamsV1ToV0 = ({
 	const unrepresentable = [
 		customize?.update_items !== undefined && "customize.update_items",
 		customize?.remove_licenses !== undefined && "customize.remove_licenses",
+		invoice_mode?.issue_method === "finalize" && "invoice_mode.issue_method",
 	].filter((key): key is string => typeof key === "string");
 
 	const items =
@@ -68,7 +69,9 @@ export const billingParamsV1ToV0 = ({
 			...(invoice_mode?.enabled
 				? {
 						invoice: true,
-						finalize_invoice: invoice_mode.finalize ?? true,
+						finalize_invoice: invoice_mode.issue_method
+							? invoice_mode.issue_method !== "draft"
+							: (invoice_mode.finalize ?? true),
 						...(invoice_mode.invoice_template_id !== undefined
 							? { invoice_template_id: invoice_mode.invoice_template_id }
 							: {}),

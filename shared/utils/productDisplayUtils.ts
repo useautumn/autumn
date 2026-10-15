@@ -418,3 +418,6 @@ export const getProductItemDisplay = ({
 		secondary_text: undefined,
 	};
 };
+
+/** Label for a paid plan with no base price. */
+export const PRICE_VARIES_LABEL = "Price varies";

@@ -35,10 +35,6 @@ const filterContUsageProrations = async ({
 	});
 	const allPrices = [...curPrices, ...newProduct.prices];
 
-	// const upcomingLines = await stripeCli.invoices.listUpcomingLines({
-	//   subscription: sub.id,
-	// });
-
 	const pendingItems = await stripeCli.invoiceItems.list({
 		pending: true,
 		customer: sub.customer as string,
@@ -47,7 +43,6 @@ const filterContUsageProrations = async ({
 	const intervalSet = subToAutumnInterval(sub);
 
 	for (const item of pendingItems.data) {
-		// console.log("LINE ITEM:", item);
 		if (!item.proration) continue;
 
 		const price = findPriceInStripeItems({

@@ -114,7 +114,6 @@ async function replicateDatabase({
 }) {
 	console.log("\n🔄 PostgreSQL Database Replication\n");
 
-	// Validate URLs
 	if (!validatePostgresUrl(fromUrl)) {
 		console.error("❌ Invalid source database URL");
 		console.error(

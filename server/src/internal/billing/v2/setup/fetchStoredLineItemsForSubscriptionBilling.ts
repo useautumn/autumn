@@ -9,19 +9,31 @@ export const fetchStoredLineItemsForSubscriptionBilling = async ({
 	fullCustomer,
 	stripeSubscription,
 	outgoingCusProductIds,
+	excludeStripeInvoiceId,
 }: {
 	db: DrizzleCli;
 	fullCustomer: FullCustomer;
 	stripeSubscription?: Stripe.Subscription;
 	outgoingCusProductIds: string[];
+	excludeStripeInvoiceId?: string | null;
 }) => {
 	const siblingIds = getSiblingCusProductIds({
 		fullCustomer,
 		stripeSubscription,
 		excludeIds: outgoingCusProductIds,
 	});
-	return fetchStoredLineItemsForBilling({
-		db,
-		customerProductIds: [...outgoingCusProductIds, ...siblingIds],
-	});
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForBilling({
+			db,
+			customerProductIds: [...outgoingCusProductIds, ...siblingIds],
+		});
+	const notExcluded = ({
+		stripe_invoice_id,
+	}: {
+		stripe_invoice_id: string | null;
+	}) => !excludeStripeInvoiceId || stripe_invoice_id !== excludeStripeInvoiceId;
+	return {
+		storedChargeLineItems: storedChargeLineItems.filter(notExcluded),
+		storedRefundLineItems: storedRefundLineItems.filter(notExcluded),
+	};
 };

@@ -52,17 +52,18 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 const HOUR = 3_600_000;
 const quiet = { warn() {} };
 
-const drainMicrotasks = () =>
-	new Promise<void>((resolve) => setImmediate(resolve));
+const drainMicrotasks = settleSqliteWrites;
 
 const folders: string[] = [];
 const closers: (() => void)[] = [];
@@ -170,6 +171,7 @@ const openFolder = ({ heldBudgetBytes = 64 * 1024 * 1024 } = {}) => {
 		now: () => at,
 	});
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
@@ -413,6 +415,7 @@ describe("a multi-tenant Atom", () => {
 		folders.push(dataDir);
 		const { counters, stats } = threadCounters();
 		const auth = createMultiTenantAuth({
+			journalForwarder: forwardingNowhere,
 			dataDir,
 			slotCount: 2,
 			owners: allSlotsOwnedHere,

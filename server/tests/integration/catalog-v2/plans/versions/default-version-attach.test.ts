@@ -13,8 +13,8 @@
 
 import { expect, test } from "bun:test";
 import { customerProducts, products, ResetInterval } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { forceActiveVersion } from "@tests/integration/utils/forceActiveVersion.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
@@ -82,7 +82,8 @@ const mintV2 = async ({
 		plans: [
 			{
 				plan_id: planId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				items: [
 					{
 						feature_id: TestFeature.Messages,
@@ -280,65 +281,62 @@ test.concurrent(
 	},
 );
 
-test(
-	`${chalk.yellowBright("catalogV2 defaults: both is_default → entity create attaches active")}`,
-	async () => {
-		const { autumnV1, autumnV2_3, ctx } = await initScenario({
-			setup: [],
-			actions: [],
+test(`${chalk.yellowBright("catalogV2 defaults: both is_default → entity create attaches active")}`, async () => {
+	const { autumnV1, autumnV2_3, ctx } = await initScenario({
+		setup: [],
+		actions: [],
+	});
+	const planId = uniqueTestId("cv2_def_ent");
+	await deleteDbPlans({ ctx, planIds: [planId] });
+
+	const orgBefore = await OrgService.get({ db: ctx.db, orgId: ctx.org.id });
+	const previousAppliesToEntities =
+		orgBefore.config.default_applies_to_entities ?? false;
+
+	try {
+		await seedDefaultFreeV1({ autumn: autumnV2_3, planId });
+		await mintV2({ autumn: autumnV2_3, planId });
+
+		const v1 = await getFull({ ctx, planId, version: 1 });
+		await ctx.db
+			.update(products)
+			.set({ is_default: true })
+			.where(eq(products.internal_id, v1.internal_id));
+
+		const customerId = uniqueTestId("cv2_defcus_ent");
+		const customer = await autumnV1.customers.create({
+			id: customerId,
+			email: `${planId}-ent@test.com`,
+			withAutumnId: true,
 		});
-		const planId = uniqueTestId("cv2_def_ent");
-		await deleteDbPlans({ ctx, planIds: [planId] });
 
-		const orgBefore = await OrgService.get({ db: ctx.db, orgId: ctx.org.id });
-		const previousAppliesToEntities =
-			orgBefore.config.default_applies_to_entities ?? false;
+		await setDefaultAppliesToEntities({ ctx, enabled: true });
+		const entityId = uniqueTestId("cv2_defent");
+		await autumnV1.entities.create(customerId, {
+			id: entityId,
+			name: "Default entity",
+			feature_id: TestFeature.Users,
+			customer_data: {
+				internal_options: { default_group: `g_${planId}` },
+			},
+		});
 
+		await expectAttachedPlanVersionCorrect({
+			ctx,
+			internalCustomerId: customer.autumn_id as string,
+			planId,
+			version: 2,
+			entityId,
+		});
+	} finally {
 		try {
-			await seedDefaultFreeV1({ autumn: autumnV2_3, planId });
-			await mintV2({ autumn: autumnV2_3, planId });
-
-			const v1 = await getFull({ ctx, planId, version: 1 });
-			await ctx.db
-				.update(products)
-				.set({ is_default: true })
-				.where(eq(products.internal_id, v1.internal_id));
-
-			const customerId = uniqueTestId("cv2_defcus_ent");
-			const customer = await autumnV1.customers.create({
-				id: customerId,
-				email: `${planId}-ent@test.com`,
-				withAutumnId: true,
-			});
-
-			await setDefaultAppliesToEntities({ ctx, enabled: true });
-			const entityId = uniqueTestId("cv2_defent");
-			await autumnV1.entities.create(customerId, {
-				id: entityId,
-				name: "Default entity",
-				feature_id: TestFeature.Users,
-				customer_data: {
-					internal_options: { default_group: `g_${planId}` },
-				},
-			});
-
-			await expectAttachedPlanVersionCorrect({
+			await setDefaultAppliesToEntities({
 				ctx,
-				internalCustomerId: customer.autumn_id as string,
-				planId,
-				version: 2,
-				entityId,
+				enabled: previousAppliesToEntities,
 			});
 		} finally {
-			try {
-				await setDefaultAppliesToEntities({
-					ctx,
-					enabled: previousAppliesToEntities,
-				});
-			} finally {
-				await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
-				await deleteDbPlans({ ctx, planIds: [planId] });
-			}
+			await cleanupPlanCustomerRefs({ ctx, planIds: [planId] });
+			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
-	},
-);
+	}
+});

@@ -202,7 +202,6 @@ export const submitInvoiceToVercel = async ({
 						test: {
 							validate: true,
 							result: "paid",
-							// result: "notpaid",
 						},
 					}
 				: {}),

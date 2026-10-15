@@ -59,7 +59,10 @@ export function useMigratableVersions({
 	pastVersions: number[];
 	currency: string;
 }) {
-	const { products } = useProductsQuery({ allVersions: true });
+	const { products } = useProductsQuery({
+		allVersions: true,
+		enabled: pastVersions.length > 0,
+	});
 
 	return useMemo(() => {
 		const latest = products.find(

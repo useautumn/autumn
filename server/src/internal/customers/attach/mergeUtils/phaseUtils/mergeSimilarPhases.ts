@@ -30,7 +30,6 @@ const haveSameItems = (
 	return true;
 };
 
-// Check if a phase has no items
 const hasNoItems = (phase: Stripe.SubscriptionScheduleUpdateParams.Phase) => {
 	const items =
 		(phase.items as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[]) || [];

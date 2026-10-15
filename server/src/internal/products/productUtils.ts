@@ -137,28 +137,6 @@ export const isProductUpgrade = ({
 		prices2,
 		usageAlwaysUpgrade,
 	});
-	// if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
-	// 	return true;
-	// }
-
-	// if (!isFreeProduct(prices1) && isFreeProduct(prices2)) {
-	// 	return false;
-	// }
-
-	// if (
-	// 	prices1.every(
-	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-	// 	) &&
-	// 	prices2.every(
-	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-	// 	) &&
-	// 	usageAlwaysUpgrade
-	// ) {
-	// 	return true;
-	// }
-
-	// const billingInterval1 = getBillingInterval(prices1); // pro quarter
-	// const billingInterval2 = getBillingInterval(prices2); // premium
 
 	// // 2. Get total price for each product
 	// const getTotalPrice = (prices: Price[]) => {
@@ -176,22 +154,6 @@ export const isProductUpgrade = ({
 	// };
 
 	// // 3. Compare prices
-
-	// if (
-	// 	intervalsSame({
-	// 		intervalA: billingInterval1,
-	// 		intervalB: billingInterval2,
-	// 	})
-	// ) {
-	// 	return getTotalPrice(prices1) < getTotalPrice(prices2);
-	// } else {
-	// 	return (
-	// 		compareBillingIntervals({
-	// 			configA: billingInterval1,
-	// 			configB: billingInterval2,
-	// 		}) > 0
-	// 	);
-	// }
 };
 
 export const isFreeProduct = (prices: Price[]) => {
@@ -328,7 +290,6 @@ export const attachToInsertParams = (
 	product: FullProduct,
 	entityId?: string,
 ) => {
-	// Get entity
 	let { internalEntityId, entityId: attachEntityId } = attachParams;
 	if (notNullish(entityId)) {
 		const entity = attachParams.customer.entities.find(
@@ -466,7 +427,6 @@ export const copyProduct = async ({
 			config.internal_feature_id = toFeature.internal_id!;
 			config.feature_id = toFeature.id;
 
-			// Update entitlement id
 			const entitlementId = newEntIds[price.entitlement_id!];
 			if (!entitlementId) {
 				throw new RecaseError({

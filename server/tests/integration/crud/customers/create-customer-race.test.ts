@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
+import { type ApiCustomerV3, CusProductStatus, ErrCode } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect.js";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing.js";
@@ -11,6 +11,7 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
+import { timeout } from "@/utils/genUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RACE CONDITION TESTS
@@ -326,4 +327,61 @@ test.concurrent(`${chalk.yellowBright("race: concurrent create with name vs with
 
 	// Name should be preserved - not overwritten with empty string
 	expect(finalCustomer.name).toBe(customerName);
+});
+
+test.concurrent(`${chalk.yellowBright("race: concurrent create_in_stripe with vs without email shares one Stripe customer")}`, async () => {
+	const customerId = "race-stripe-email-mismatch-test";
+	const email = `${customerId}@example.com`;
+
+	const { autumnV1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	const create = (requestEmail?: string) =>
+		autumnV1.customers.create({
+			id: customerId,
+			email: requestEmail,
+			withAutumnId: true,
+			create_in_stripe: true,
+		});
+	const createAfter = async ({
+		delayMs,
+		requestEmail,
+	}: {
+		delayMs: number;
+		requestEmail?: string;
+	}) => {
+		await timeout(delayMs);
+		try {
+			return await create(requestEmail);
+		} catch (error) {
+			if (
+				(error as { code?: string }).code !==
+				ErrCode.StripeCreateCustomerFailed
+			) {
+				throw error;
+			}
+			await timeout(1000);
+			return create(requestEmail);
+		}
+	};
+
+	// Stripe customer idempotency keys roll every 5s; start just after a boundary.
+	await timeout(5000 - (Date.now() % 5000) + 100);
+	const results = await Promise.all([
+		createAfter({ delayMs: 0 }),
+		...[50, 100, 150, 200, 250, 300].map((delayMs) =>
+			createAfter({ delayMs, requestEmail: email }),
+		),
+	]);
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const stripeCustomerId = fullCustomer.processor?.id;
+	expect(new Set(results.map((r) => r.stripe_id))).toEqual(
+		new Set([stripeCustomerId]),
+	);
 });

@@ -281,7 +281,6 @@ export const buildStripePhasesUpdate = ({
 		nowMs,
 	});
 
-	// Find all transition points
 	const transitionPoints = buildTransitionPoints({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,

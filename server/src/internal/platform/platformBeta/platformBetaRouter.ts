@@ -23,12 +23,6 @@ platformBetaRouter.use("*", async (c, next) => {
 	}
 
 	try {
-		// const autumn = new Autumn();
-		// const { allowed } = await autumn.check({
-		// 	customerId: org.id,
-		// 	featureId: "platform",
-		// });
-
 		const allowed = true;
 		if (!allowed) {
 			return c.json(

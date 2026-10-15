@@ -164,7 +164,6 @@ export function PromptCard({
 			}
 		}
 
-		// Add overhead for border and padding
 		return maxLineWidth + BORDER_PADDING_OVERHEAD;
 	}, [title, icon, children, options]);
 

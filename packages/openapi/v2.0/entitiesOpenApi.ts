@@ -8,7 +8,6 @@ import { z } from "zod/v4";
 // This schema is exported through the main index and should not have an id here
 export const ApiEntityWithMeta = ApiEntitySchema.meta({
 	id: "Entity",
-	// examples: [ENTITY_EXAMPLE],
 });
 
 export const entitiesOpenApi = {

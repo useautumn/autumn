@@ -1,7 +1,7 @@
 /**
  * catalogV2.update — plan-item feature_override: round-trips through
  * create/update/clear, persists on the entitlement row, and rejects invalid
- * shapes. Each present key fully replaces the feature's config value at
+ * shapes. credit_schema rows merge into the credit system's schema at
  * runtime (runtime behavior covered by track tests).
  */
 
@@ -137,6 +137,7 @@ test.concurrent(
 					(row.feature_override?.schema ?? []).some(
 						(item) =>
 							item.metered_feature_id === meteredFeatureId &&
+							"credit_amount" in item &&
 							item.credit_amount === 5,
 					),
 				),
@@ -320,6 +321,158 @@ test.concurrent(
 							},
 						],
 					}),
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 item feature_override: excluded rows round-trip, stale exclusions are allowed, invalid rows are rejected")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const keptFeatureId = uniqueTestId("ifo_ex_kept");
+		const excludedFeatureId = uniqueTestId("ifo_ex_excluded");
+		const outsideFeatureId = uniqueTestId("ifo_ex_outside");
+		const creditSystemId = uniqueTestId("ifo_ex_credits");
+		const planId = uniqueTestId("ifo_ex_plan");
+		const featureIds = [
+			keptFeatureId,
+			excludedFeatureId,
+			outsideFeatureId,
+			creditSystemId,
+		];
+
+		const meteredFeature = (featureId: string) => ({
+			feature_id: featureId,
+			name: featureId,
+			type: FeatureType.Metered,
+			consumable: true,
+		});
+
+		const creditItem = (credit_schema: object[]) => ({
+			feature_id: creditSystemId,
+			included: 100,
+			reset: { interval: ResetInterval.Month },
+			feature_override: { credit_schema },
+		});
+
+		const updatePlan = (credit_schema: object[]) =>
+			autumnV2_3.catalogV2.update({
+				plans: [
+					{ plan_id: planId, name: planId, items: [creditItem(credit_schema)] },
+				],
+			});
+
+		const excludedOverride = {
+			credit_schema: [
+				{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+				{ metered_feature_id: excludedFeatureId, excluded: true as const },
+			],
+		};
+
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [
+					meteredFeature(keptFeatureId),
+					meteredFeature(excludedFeatureId),
+					meteredFeature(outsideFeatureId),
+					{
+						feature_id: creditSystemId,
+						name: creditSystemId,
+						type: FeatureType.CreditSystem,
+						credit_schema: [
+							{ metered_feature_id: keptFeatureId, credit_cost: 1 },
+							{ metered_feature_id: excludedFeatureId, credit_cost: 2 },
+						],
+					},
+				],
+			});
+
+			// 1. Round-trips through the API and persists as an excluded row.
+			await updatePlan(excludedOverride.credit_schema);
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [
+					{
+						id: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								feature_override: excludedOverride,
+							},
+						],
+					},
+				],
+			});
+			const rows = await getDbEntFeatureOverride({ ctx, creditSystemId });
+			expect(
+				rows.some((row) =>
+					(row.feature_override?.schema ?? []).some(
+						(item) =>
+							item.metered_feature_id === excludedFeatureId &&
+							"excluded" in item &&
+							item.excluded === true,
+					),
+				),
+			).toBe(true);
+
+			// 2. A rate on an excluded row is rejected.
+			await expectAutumnError({
+				errMessage: "An excluded credit_schema row only takes",
+				func: () =>
+					updatePlan([
+						{
+							metered_feature_id: excludedFeatureId,
+							excluded: true,
+							credit_cost: 1,
+						},
+					]),
+			});
+
+			// 3. Excluding a real feature the credit system doesn't have is a no-op, not an error.
+			const outsideOverride = {
+				credit_schema: [
+					{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+					{ metered_feature_id: outsideFeatureId, excluded: true as const },
+				],
+			};
+			await updatePlan(outsideOverride.credit_schema);
+			await expectCatalogPlansCorrect({
+				autumn: autumnV2_3,
+				expected: [
+					{
+						id: planId,
+						items: [
+							{
+								feature_id: creditSystemId,
+								feature_override: outsideOverride,
+							},
+						],
+					},
+				],
+			});
+
+			// 4. Excluding a feature that doesn't exist (e.g. since deleted) is a no-op.
+			await updatePlan([
+				{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+				{ metered_feature_id: "does_not_exist_xyz", excluded: true },
+			]);
+
+			// 5. Listing a feature twice (rate + excluded) is rejected.
+			await expectAutumnError({
+				errCode: ErrCode.InvalidProductItem,
+				errMessage: `lists ${keptFeatureId} more than once`,
+				func: () =>
+					updatePlan([
+						{ metered_feature_id: keptFeatureId, credit_cost: 5 },
+						{ metered_feature_id: keptFeatureId, excluded: true },
+					]),
 			});
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

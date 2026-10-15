@@ -403,3 +403,72 @@ test.concurrent(
 		expect(after?.processor?.id ?? null).toBeNull();
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("rc processor-id: stores purchase id found on a second RC list page")}`,
+	async () => {
+		const customerId = "rc-procid-paged-cus";
+		const RC_STORE_ID = "com.app.rc_procid_paged_pack";
+		const RC_INTERNAL_ID = "prod_rc_internal_paged_1";
+		const PURCHASE_ID = "purchase_rc_procid_paged_002";
+		const oneOff = rcOneOff({ id: "rc-procid-paged-pack" });
+
+		await setupRevenueCatOrg();
+
+		await initScenario({
+			customerId,
+			setup: [
+				s.deleteCustomer({ customerId }),
+				s.customer({ testClock: false, skipWebhooks: true }),
+				s.products({ list: [oneOff] }),
+			],
+			actions: [],
+		});
+
+		await mapProduct({
+			autumnProductId: oneOff.id,
+			revenuecatProductId: RC_STORE_ID,
+		});
+
+		const mock: RevenueCatMockFixtures = {
+			products: [
+				mockProduct({
+					internalId: RC_INTERNAL_ID,
+					storeId: RC_STORE_ID,
+					type: "one_time",
+				}),
+			],
+			subscriptions: [],
+			purchases: [
+				mockPurchase({
+					id: "purchase_rc_procid_paged_001",
+					internalProductId: "prod_rc_internal_unrelated",
+				}),
+				mockPurchase({ id: PURCHASE_ID, internalProductId: RC_INTERNAL_ID }),
+			],
+		};
+
+		expectWebhookSuccess(
+			await newRcClient().nonRenewingPurchase({
+				productId: RC_STORE_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc_procid_paged_tx_001",
+				mock,
+			}),
+		);
+
+		const dbCustomer = await getCustomerByCustomerId(customerId);
+		expect(dbCustomer).toBeTruthy();
+
+		const cusProduct = await pollUntil(
+			() =>
+				rcCusProduct({
+					internalCustomerId: dbCustomer!.internal_id,
+					autumnProductId: oneOff.id,
+				}),
+			(cp) => Boolean(cp?.processor?.id),
+		);
+
+		expect(cusProduct?.processor?.id).toBe(PURCHASE_ID);
+	},
+);

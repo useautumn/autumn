@@ -1,4 +1,6 @@
 import type { BillingDetailsBillingParams } from "@api/billing/common/billingDetailsBillingParams";
+import type { InvoiceLineEdits } from "@api/billing/common/invoiceLineEdits";
+import { InvoiceIssueMethodSchema } from "@api/others/apiInvoice/invoiceIssueMethod";
 import type {
 	BillingBehavior,
 	CancelAction,
@@ -27,6 +29,8 @@ import type { CustomerLicenseBillingContext } from "./customerLicenseBillingCont
 
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
+	/** Absent on contexts stored before issue_method existed; finalizeInvoice then decides draft or send. */
+	issueMethod: InvoiceIssueMethodSchema.optional(),
 	enableProductImmediately: z.boolean().default(true),
 	footer: z.string().optional(),
 	memo: z.string().optional(),
@@ -35,6 +39,12 @@ const InvoiceModeSchema = z.object({
 });
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
+
+/** A send_invoice subscription's own terms, which invoice a change when the request leaves invoice_mode out. */
+export type SubscriptionInvoiceTerms = Pick<
+	InvoiceMode,
+	"daysUntilDue" | "paymentMethodTypes"
+>;
 
 export enum BillingVersion {
 	V1 = "v1",
@@ -70,6 +80,7 @@ export interface BillingContext {
 	customerLicenseQuantities?: CustomerLicenseQuantity[];
 	transitionConfig?: TransitionConfig;
 	invoiceMode?: InvoiceMode;
+	subscriptionInvoiceTerms?: SubscriptionInvoiceTerms;
 
 	// Timestamps...
 	currentEpochMs: number;
@@ -81,6 +92,8 @@ export interface BillingContext {
 	requestedProrationBehavior?: BillingBehavior;
 	/** Where proration can't change what's billed, set by set_plans' setup. */
 	prorationOverride?: ProrationBehaviorOverride;
+	/** remove_lines / add_lines: patch the invoice this request creates. */
+	invoiceLineEdits?: InvoiceLineEdits;
 
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;

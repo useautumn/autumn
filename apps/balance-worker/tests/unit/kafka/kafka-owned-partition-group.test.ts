@@ -1042,6 +1042,94 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
+	test("parks and retries a producer the broker refused to initialise, keeping the task and the other partitions up", async () => {
+		const policyRefusal = new KafkaJSProtocolError(
+			Object.assign(
+				new Error("Request parameters do not satisfy the configured policy"),
+				{ type: "POLICY_VIOLATION", code: 44, retriable: false },
+			),
+		);
+		const coordinatorLoading = new KafkaJSNumberOfRetriesExceeded(
+			new KafkaJSProtocolError(
+				Object.assign(
+					new Error(
+						"The coordinator is loading and hence can't process requests for this group",
+					),
+					{ type: "COORDINATOR_LOAD_IN_PROGRESS", code: 14, retriable: true },
+				),
+			),
+			{ retryCount: 5, retryTime: 1_000 },
+		);
+		for (const refusal of [policyRefusal, coordinatorLoading]) {
+			const fixture = createStoreFixture();
+			try {
+				const consumer = createFakeGroupConsumer();
+				const startupFailure = new OwnedPartitionRecoveryRequiredError({
+					topic,
+					partition: 1,
+					cause: refusal,
+				});
+				const startAttempts = new Map<number, number>();
+				const events: string[] = [];
+				const group = createKafkaOwnedPartitionGroup({
+					consumer,
+					partitionOffsets: createPartitionOffsets(),
+					topic,
+					stateStore: fixture.store,
+					idempotencyKeys: createFakeIdempotencyKeys().keys,
+					partitionsConsumedConcurrently: 2,
+					healthRefreshIntervalMs: 5,
+					partitionBootstrapRetryIntervalMs: 5,
+					createRuntime: ({ partition }) => ({
+						start: async () => {
+							const attempt = (startAttempts.get(partition) ?? 0) + 1;
+							startAttempts.set(partition, attempt);
+							if (partition === 1 && attempt <= 2) throw startupFailure;
+						},
+						stop: async () => {},
+						getHealth: () =>
+							partition === 1 && (startAttempts.get(partition) ?? 0) <= 2
+								? terminalHealth({ partition, reason: "commit_unknown" })
+								: ownedPartitionHealthOf({
+										topic,
+										partition,
+										status: "ready",
+										localNextOffset: 0n,
+										consumedNextOffset: 0n,
+										highWatermark: 0n,
+										failureReason: null,
+									}),
+					}),
+					onError: () => undefined,
+					onUnhealthyPartition: () => undefined,
+					onServiceStopped: () => {
+						events.push("service-stopped");
+					},
+				});
+
+				await group.start();
+				consumer.emitGroupJoin([0, 1]);
+				await waitFor(() => startAttempts.get(1) === 3);
+				await waitFor(
+					() =>
+						group.partitions().find(({ partition }) => partition === 1)
+							?.status === "ready",
+				);
+
+				expect(events).toEqual([]);
+				expect(consumer.lifecycle).not.toContain("consumer-stop");
+				expect(startAttempts.get(0)).toBe(1);
+				expect(group.partitions()).toEqual([
+					expect.objectContaining({ partition: 0, status: "ready" }),
+					expect.objectContaining({ partition: 1, status: "ready" }),
+				]);
+				await group.stop();
+			} finally {
+				closeStoreFixture(fixture);
+			}
+		}
+	});
+
 	test("parks a partition whose log cannot be read and keeps the others serving", async () => {
 		const fixture = createStoreFixture();
 		try {

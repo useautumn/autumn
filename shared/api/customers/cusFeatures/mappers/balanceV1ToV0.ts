@@ -58,7 +58,6 @@ export function balanceV1ToV0({ input }: { input: ApiBalanceV1 }): ApiBalance {
 		.sub(prepaidQuantity)
 		.toNumber();
 
-	// Get plan_id from breakdown
 	const breakdownPlanIds = deduplicateArray(
 		input.breakdown?.map((b) => b.plan_id) ?? [],
 	);

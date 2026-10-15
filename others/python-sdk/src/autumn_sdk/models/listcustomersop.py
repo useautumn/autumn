@@ -1106,6 +1106,17 @@ ListCustomersType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+ListCustomersCombine = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class ListCustomersDimensions6TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -1918,6 +1929,8 @@ class ListCustomersFeatureTypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[ListCustomersCombine]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[ListCustomersCreditSchemaUnionTypedDict]]
@@ -1954,6 +1967,9 @@ class ListCustomersFeature(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[ListCustomersCombine] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -1979,6 +1995,7 @@ class ListCustomersFeature(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",

@@ -1,6 +1,4 @@
 export enum ProductItemInterval {
-	// None = "none",
-
 	// Reset interval
 	Minute = "minute",
 	Hour = "hour",

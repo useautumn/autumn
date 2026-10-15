@@ -127,7 +127,7 @@ const seedRun = async ({
  *   plan qa-status, customers qa-st-a..f on it
  *
  *   qa-dry      draft   — dry run only, so dry-run rows show without a Run All
- *   qa-skips    run     — a: guard skip (ineligible)   b: connection dropped (ineligible)
+ *   qa-skips    run     — a: guard skip (ineligible)   b: connection dropped (failed)
  *                         c: no_updates_needed         d: failed (error shown in sheet)
  *                         e: succeeded                 f: never claimed
  *   qa-running  running — a, b claimed and running, c succeeded; the run row is

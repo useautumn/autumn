@@ -14,9 +14,6 @@ export const useFeatureNavigation = () => {
 
 	// Get filtered items (non-price items)
 	const filteredItems = productV2ToFeatureItems({ items: product.items });
-	// const filteredItems = useMemo(() => {
-	// 	return productV2ToFeatureItems({ items: product?.items });
-	// }, [product?.items]);
 
 	// Update selected index when editing state changes or items change
 	useEffect(() => {

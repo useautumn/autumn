@@ -40,17 +40,11 @@ export const getCusProductsToRemove = ({
 			? products
 			: [cusProductToProduct({ cusProduct: attachParams.cusProduct! })];
 
-	// console.log(
-	// 	"Getting customer products to remove, internal entity ID:",
-	// 	attachParams.internalEntityId,
-	// );
-
 	const isUpdate =
 		attachParams.branch === AttachBranch.NewVersion ||
 		attachParams.branch === AttachBranch.SameCustomEnts;
 
 	for (const product of prods) {
-		// Get cur main and cur same
 		const { curMainProduct, curSameProduct, curScheduledProduct } =
 			getExistingCusProducts({
 				product,

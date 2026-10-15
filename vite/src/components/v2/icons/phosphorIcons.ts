@@ -2,12 +2,15 @@ import type { Icon } from "@phosphor-icons/react";
 
 type IconModule = Record<string, Icon>;
 
+// The query gives these their own module ids, so icons pages import statically stay in
+// those pages' chunks instead of each becoming a chunk this glob shares.
 const iconModules = import.meta.glob<IconModule>(
 	"/node_modules/@phosphor-icons/react/dist/csr/*.es.js",
+	{ query: "?picker" },
 );
 
 const pathToName = (path: string) =>
-	path.split("/").pop()?.replace(".es.js", "") ?? "";
+	path.split("/").pop()?.replace(/\.es\.js(\?.*)?$/, "") ?? "";
 
 const loaderByName = new Map<string, () => Promise<IconModule>>();
 for (const [path, loader] of Object.entries(iconModules)) {

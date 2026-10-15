@@ -9,8 +9,8 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedDivergedChildAnchors } from "../utils/atmnPutDirectVersions.js";
 import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
+import { seedDivergedChildAnchors } from "../utils/atmnPutDirectVersions.js";
 import {
 	bumpChild,
 	messagesItem,

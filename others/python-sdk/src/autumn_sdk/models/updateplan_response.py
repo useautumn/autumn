@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 from .plan import Plan, PlanTypedDict
-from .updateplan_dimensions_variant_details_upsert_license_4 import (
+from .updateplan_item_tier_behavior_response import (
+    UpdatePlanPriceResponse,
+    UpdatePlanPriceResponseTypedDict,
+)
+from .updateplan_upsert_license_on_decrease_response import (
     UpdatePlanBillingControlsResponse,
     UpdatePlanBillingControlsResponseTypedDict,
     UpdatePlanConfigResponse,
     UpdatePlanConfigResponseTypedDict,
     UpdatePlanCustomerEligibility,
     UpdatePlanCustomerEligibilityTypedDict,
-    UpdatePlanDimensionsVariantDetailsUpsertLicense4,
-    UpdatePlanDimensionsVariantDetailsUpsertLicense4TypedDict,
     UpdatePlanEnv,
     UpdatePlanFreeTrial,
     UpdatePlanFreeTrialParamsResponse,
@@ -22,8 +24,8 @@ from .updateplan_dimensions_variant_details_upsert_license_4 import (
     UpdatePlanProcessorsTypedDict,
     UpdatePlanUpsertLicenseBasePriceResponse,
     UpdatePlanUpsertLicenseBasePriceResponseTypedDict,
-    UpdatePlanUpsertLicenseProrationResponse,
-    UpdatePlanUpsertLicenseProrationResponseTypedDict,
+    UpdatePlanUpsertLicenseOnDecreaseResponse,
+    UpdatePlanUpsertLicenseOnIncreaseResponse,
     UpdatePlanVariantDetailsBasePrice,
     UpdatePlanVariantDetailsBasePriceTypedDict,
     UpdatePlanVariantDetailsBillingControls,
@@ -32,20 +34,12 @@ from .updateplan_dimensions_variant_details_upsert_license_4 import (
     UpdatePlanVariantDetailsPlanItemFilter,
     UpdatePlanVariantDetailsPlanItemFilterTypedDict,
     UpdatePlanVariantDetailsPlanItemTypedDict,
-    UpdatePlanVariantDetailsUpsertLicenseExpiry,
-    UpdatePlanVariantDetailsUpsertLicenseExpiryTypedDict,
     UpdatePlanVariantDetailsUpsertLicensePrice,
     UpdatePlanVariantDetailsUpsertLicensePriceTypedDict,
     UpdatePlanVariantDetailsUpsertLicenseReset,
     UpdatePlanVariantDetailsUpsertLicenseResetTypedDict,
-    UpdatePlanVariantDetailsUpsertLicenseRollover,
-    UpdatePlanVariantDetailsUpsertLicenseRolloverTypedDict,
     UpdatePlanVariantDetailsUpsertLicenseThresholdBilling,
     UpdatePlanVariantDetailsUpsertLicenseThresholdBillingTypedDict,
-)
-from .updateplan_item_processors import (
-    UpdatePlanPriceResponse,
-    UpdatePlanPriceResponseTypedDict,
 )
 from autumn_sdk.types import (
     BaseModel,
@@ -61,6 +55,160 @@ from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
+
+
+class UpdatePlanUpsertLicenseProrationResponseTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanUpsertLicenseOnIncreaseResponse
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: UpdatePlanUpsertLicenseOnDecreaseResponse
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UpdatePlanUpsertLicenseProrationResponse(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanUpsertLicenseOnIncreaseResponse
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: UpdatePlanUpsertLicenseOnDecreaseResponse
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType = Union[
+    Literal[
+        "month",
+        "forever",
+    ],
+    UnrecognizedStr,
+]
+r"""When rolled over units expire."""
+
+
+class UpdatePlanVariantDetailsUpsertLicenseRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class UpdatePlanVariantDetailsUpsertLicenseRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanVariantDetailsUpsertLicenseExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsUpsertLicenseDuration = Union[
+    Literal[
+        "day",
+        "week",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+class UpdatePlanVariantDetailsUpsertLicenseExpiryTypedDict(TypedDict):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: UpdatePlanVariantDetailsUpsertLicenseDuration
+    length: float
+
+
+class UpdatePlanVariantDetailsUpsertLicenseExpiry(BaseModel):
+    r"""Purchased units expire this long after each purchase. One-off prepaid consumable items only."""
+
+    duration: UpdatePlanVariantDetailsUpsertLicenseDuration
+
+    length: float
+
+
+class UpdatePlanCreditSchemaVariantDetailsUpsertLicense3TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+    excluded: Literal[True]
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class UpdatePlanCreditSchemaVariantDetailsUpsertLicense3(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+
+    excluded: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="excluded"),
+    ] = True
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class UpdatePlanDimensionsVariantDetailsUpsertLicense4TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+
+class UpdatePlanDimensionsVariantDetailsUpsertLicense4(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group when this dimension matches."""
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 UpdatePlanDimensionsToVariantDetailsUpsertLicenseEnum2 = Literal["inf",]
@@ -498,6 +646,7 @@ class UpdatePlanCreditSchemaVariantDetailsUpsertLicense1(BaseModel):
 UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
     "UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnionTypedDict",
     Union[
+        UpdatePlanCreditSchemaVariantDetailsUpsertLicense3TypedDict,
         UpdatePlanCreditSchemaVariantDetailsUpsertLicense2TypedDict,
         UpdatePlanCreditSchemaVariantDetailsUpsertLicense1TypedDict,
     ],
@@ -507,6 +656,7 @@ UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnionTypedDict = TypeAliasType(
 UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnion = TypeAliasType(
     "UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnion",
     Union[
+        UpdatePlanCreditSchemaVariantDetailsUpsertLicense3,
         UpdatePlanCreditSchemaVariantDetailsUpsertLicense2,
         UpdatePlanCreditSchemaVariantDetailsUpsertLicense1,
     ],
@@ -616,7 +766,7 @@ class UpdatePlanVariantDetailsUpsertLicenseFeatureOverrideTypedDict(TypedDict):
     credit_schema: NotRequired[
         List[UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnionTypedDict]
     ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
     markups: NotRequired[UpdatePlanVariantDetailsUpsertLicenseMarkupsTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
@@ -627,7 +777,7 @@ class UpdatePlanVariantDetailsUpsertLicenseFeatureOverride(BaseModel):
     credit_schema: Optional[
         List[UpdatePlanVariantDetailsUpsertLicenseCreditSchemaUnion]
     ] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
 
     markups: Optional[UpdatePlanVariantDetailsUpsertLicenseMarkups] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
@@ -1330,6 +1480,7 @@ UpdatePlanLicenseTierBehaviorResponse = Union[
     ],
     UnrecognizedStr,
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 UpdatePlanLicenseAddItemPriceIntervalResponse = Union[
@@ -1372,6 +1523,7 @@ class UpdatePlanLicensePriceResponseTypedDict(TypedDict):
     tiers: NotRequired[List[UpdatePlanLicensePriceTierResponseTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[UpdatePlanLicenseTierBehaviorResponse]
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1401,6 +1553,7 @@ class UpdatePlanLicensePriceResponse(BaseModel):
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[UpdatePlanLicenseTierBehaviorResponse] = None
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1570,6 +1723,24 @@ class UpdatePlanLicenseExpiryResponse(BaseModel):
     duration: UpdatePlanLicenseDurationResponse
 
     length: float
+
+
+class UpdatePlanCreditSchemaLicenseResponse3TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+    excluded: Literal[True]
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
+
+
+class UpdatePlanCreditSchemaLicenseResponse3(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature to remove from the credit system."""
+
+    excluded: Annotated[
+        Annotated[Literal[True], AfterValidator(validate_const(True))],
+        pydantic.Field(alias="excluded"),
+    ] = True
+    r"""Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate."""
 
 
 class UpdatePlanDimensionsLicenseResponse4TypedDict(TypedDict):
@@ -2025,6 +2196,7 @@ class UpdatePlanCreditSchemaLicenseResponse1(BaseModel):
 UpdatePlanLicenseCreditSchemaResponseUnionTypedDict = TypeAliasType(
     "UpdatePlanLicenseCreditSchemaResponseUnionTypedDict",
     Union[
+        UpdatePlanCreditSchemaLicenseResponse3TypedDict,
         UpdatePlanCreditSchemaLicenseResponse2TypedDict,
         UpdatePlanCreditSchemaLicenseResponse1TypedDict,
     ],
@@ -2034,7 +2206,9 @@ UpdatePlanLicenseCreditSchemaResponseUnionTypedDict = TypeAliasType(
 UpdatePlanLicenseCreditSchemaResponseUnion = TypeAliasType(
     "UpdatePlanLicenseCreditSchemaResponseUnion",
     Union[
-        UpdatePlanCreditSchemaLicenseResponse2, UpdatePlanCreditSchemaLicenseResponse1
+        UpdatePlanCreditSchemaLicenseResponse3,
+        UpdatePlanCreditSchemaLicenseResponse2,
+        UpdatePlanCreditSchemaLicenseResponse1,
     ],
 )
 
@@ -2140,7 +2314,7 @@ class UpdatePlanLicenseFeatureOverrideResponseTypedDict(TypedDict):
     credit_schema: NotRequired[
         List[UpdatePlanLicenseCreditSchemaResponseUnionTypedDict]
     ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
     markups: NotRequired[UpdatePlanLicenseMarkupsResponseTypedDict]
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
 
@@ -2149,7 +2323,7 @@ class UpdatePlanLicenseFeatureOverrideResponse(BaseModel):
     r"""Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema)."""
 
     credit_schema: Optional[List[UpdatePlanLicenseCreditSchemaResponseUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate."""
 
     markups: Optional[UpdatePlanLicenseMarkupsResponse] = None
     r"""For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's."""
@@ -2651,6 +2825,10 @@ class UpdatePlanResponse(BaseModel):
 
 
 try:
+    UpdatePlanCreditSchemaVariantDetailsUpsertLicense3.model_rebuild()
+except NameError:
+    pass
+try:
     UpdatePlanDimensionsVariantDetailsUpsertLicense3.model_rebuild()
 except NameError:
     pass
@@ -2660,6 +2838,10 @@ except NameError:
     pass
 try:
     UpdatePlanCreditSchemaVariantDetailsUpsertLicense1.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdatePlanCreditSchemaLicenseResponse3.model_rebuild()
 except NameError:
     pass
 try:

@@ -68,7 +68,7 @@ const findExistingLicensePool = ({
 	resetMode: PooledBalanceResetMode;
 }) => {
 	const entIdentity = entToPooledBalanceIdentity({ entitlement });
-	return computeContext.pooledCustomerEntitlements.find(
+	const candidates = computeContext.pooledCustomerEntitlements.filter(
 		({ pooled_balance }) =>
 			pooled_balance.internal_feature_id === entIdentity.internalFeatureId &&
 			(pooled_balance.unlimited ?? false) === entIdentity.unlimited &&
@@ -78,6 +78,18 @@ const findExistingLicensePool = ({
 			pooled_balance.stripe_subscription_id === null &&
 			pooled_balance.customer_license_link_id === customerLicense.link_id &&
 			pooled_balance.rollover_signature === entIdentity.rolloverSignature,
+	);
+	// Pools written before credit-rate signatures carry "none"; a link holds one pool per feature, so it is still this one.
+	return (
+		candidates.find(
+			({ pooled_balance }) =>
+				pooled_balance.feature_override_signature ===
+				entIdentity.featureOverrideSignature,
+		) ??
+		candidates.find(
+			({ pooled_balance }) =>
+				(pooled_balance.feature_override_signature ?? "none") === "none",
+		)
 	);
 };
 

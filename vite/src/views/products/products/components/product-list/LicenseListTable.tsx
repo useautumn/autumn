@@ -7,6 +7,7 @@ import type { ProductListItem } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
+import { usePrefetchPlanPage } from "@/views/products/plan/hooks/usePrefetchPlanPage";
 import { createProductListColumns } from "./ProductListColumns";
 
 type LicenseWithCount = ProductV2 & { active_count?: number };
@@ -23,6 +24,7 @@ export function LicenseListTable({
 	showArchivedProducts?: boolean;
 }) {
 	const [sorting, setSorting] = useState<SortingState>([]);
+	const prefetchPlanPage = usePrefetchPlanPage();
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
 		product: ProductV2 | null;
@@ -75,6 +77,7 @@ export function LicenseListTable({
 					isLoading: isCountsLoading,
 					getRowHref: (product: LicenseWithCount) =>
 						pushPage({ path: `/products/${product.id}` }),
+					onRowIntent: prefetchPlanPage,
 					rowClassName: "h-10",
 				}}
 			>

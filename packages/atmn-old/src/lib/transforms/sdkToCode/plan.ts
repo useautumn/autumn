@@ -27,7 +27,6 @@ export function buildPlanCode(
 	}
 	lines.push(`\tname: '${plan.name}',`);
 
-	// Add description
 	if (plan.description !== undefined && plan.description !== null) {
 		lines.push(`\tdescription: '${plan.description}',`);
 	}
@@ -53,7 +52,6 @@ export function buildPlanCode(
 		lines.push(`\tarchived: true,`);
 	}
 
-	// Add price
 	if (plan.price) {
 		lines.push(`\tprice: {`);
 		lines.push(`\t\tamount: ${plan.price.amount},`);
@@ -83,7 +81,6 @@ export function buildPlanCode(
 		lines.push(`\tlicenses: ${formatValue(plan.licenses)},`);
 	}
 
-	// Add freeTrial
 	if (plan.freeTrial) {
 		lines.push(`\tfreeTrial: ${formatValue(plan.freeTrial)},`);
 	}

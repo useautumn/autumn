@@ -41,6 +41,7 @@ export type PooledAddIdentity = {
 	stripeSubscriptionId: null;
 	customerLicenseLinkId: string;
 	rolloverSignature: string;
+	featureOverrideSignature: string;
 };
 
 export type PooledAddSpec = {

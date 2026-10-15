@@ -14,7 +14,29 @@ export const THREAD_STAT_FIELDS = [
 	"relayed",
 	"relayFailed",
 	"relayDropped",
+	/** Checks another replica answered (the customer's owner, or a ready peer while this one starts); and those the owner could not take, left to the API. */
+	"checksProxied",
+	"ownerUnavailable",
+	"handoffLate",
 	/** Checks the stored rows could not answer: no customer, no entity, or an entity read before its customer's evict. */
+	/** What this thread's journals hold that Autumn does not, and how long the oldest of it has waited. */
+	"journalUnsent",
+	"journalOldestUnsentMs",
+	/** Deductions journaled; commits that failed, left to the API; batches Autumn did not take, sent again. */
+	"tracksAppended",
+	"appendFailed",
+	/** Writes this thread's SQLite writer thread committed and answered since boot, and the p99 of their wait (post to reply) over the last tick. */
+	"sqliteWriterRoundTrips",
+	"sqliteWriterWaitP99Us",
+	"journalForwardFailed",
+	/** Pushes that replaced the copy of a customer still owing deductions: its view's fold continued, or replayed from the push. */
+	"viewFoldKept",
+	"viewFoldRebuilt",
+	/** Of those replays, why: no fold was held, the push trimmed more than a prefix, or its catalog or rows differed. */
+	"viewFoldRebuiltNoFold",
+	"viewFoldRebuiltTrim",
+	"viewFoldRebuiltCatalog",
+	"viewFoldRebuiltState",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",

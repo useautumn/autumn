@@ -11,7 +11,6 @@ export const apiPurchasesV0ToSubscriptionsV0 = ({
 	ctx: SharedContext;
 	purchases: ApiPurchaseV0[];
 }): ApiSubscription[] => {
-	// Merge purchases as subscriptions
 	const mergedPurchases = mergeSubscriptionResponses({
 		subscriptions: purchases.map((purchase) => ({
 			...purchase,
@@ -31,19 +30,3 @@ export const apiPurchasesV0ToSubscriptionsV0 = ({
 		apiSubscriptionV1ToV0({ ctx, input: subscription }),
 	);
 };
-
-// return {
-// plan: input.plan ? planV1ToV0({ ctx, plan: input.plan }) : undefined,
-// plan_id: input.plan_id,
-// default: false,
-// add_on: true,
-// status: "active",
-// past_due: false,
-// canceled_at: null,
-// expires_at: input.expires_at,
-// trial_ends_at: null,
-// started_at: input.started_at,
-// current_period_start: null,
-// current_period_end: null,
-// quantity: input.quantity,
-// };

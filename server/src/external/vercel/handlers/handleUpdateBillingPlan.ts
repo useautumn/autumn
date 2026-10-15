@@ -13,7 +13,6 @@ export const handleUpdateVercelBillingPlan = createRoute({
 	body: z.object({
 		billingPlanId: z.string().min(1),
 	}),
-	// assertIdempotence: "Idempotency-Key",
 	handler: async (c) => {
 		const { integrationConfigurationId } = c.req.param();
 		const ctx = c.get("ctx");

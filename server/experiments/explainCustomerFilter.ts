@@ -37,8 +37,6 @@ const EXPLAIN_MAX_LINES = 20;
 
 
 const FILTER: CustomerFilter = {
-	// plan: { plan_id: "free" },
-	// plan: { item: { feature_id: "CREDITS", price: { $ne: null } } }
 	plan: { plan_id: "free", recurring: true }
 };
 

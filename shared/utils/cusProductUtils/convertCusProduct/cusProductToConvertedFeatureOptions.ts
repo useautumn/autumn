@@ -71,14 +71,10 @@ export const cusProductToConvertedFeatureOptions = ({
 	const feature = entitlement.feature;
 	const currentOption = cusProductToFeatureOptions({ cusProduct, feature });
 
-	// if (nullish(currentOption?.quantity)) return undefined;
-
 	const oldCusPrice = findPrepaidCusPriceByFeature({
 		customerPrices: cusProduct.customer_prices,
 		feature,
 	});
-
-	// if (!oldCusPrice) return undefined;
 
 	if (nullish(currentOption?.quantity) || !oldCusPrice) {
 		return usageToConvertedFeatureOptions({

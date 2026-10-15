@@ -49,7 +49,6 @@ export const handleCancelOnPastDue = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	// Get latest invoice
 	const latestInvoice = await stripeSubscriptionToLatestInvoice({
 		stripeSubscription,
 		stripeCli,

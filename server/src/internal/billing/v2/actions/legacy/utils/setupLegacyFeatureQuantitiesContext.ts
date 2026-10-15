@@ -6,8 +6,6 @@ export const setupLegacyTransitionContext = ({
 }: {
 	attachParams: AttachParams;
 }) => {
-	// const { optionsList } = attachParams;
-
 	const consumableFeatures = attachParams.products
 		.flatMap((product) => product.entitlements)
 		.filter((ent) => isConsumableFeature(ent.feature))

@@ -33,6 +33,21 @@ export type CreateFeatureTypeRequestBody = ClosedEnum<
 >;
 
 /**
+ * How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
+ */
+export const CreateFeatureCombineRequest = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
+ */
+export type CreateFeatureCombineRequest = ClosedEnum<
+  typeof CreateFeatureCombineRequest
+>;
+
+/**
  * Singular and plural display names for the feature in your user interface.
  */
 export type CreateFeatureDisplayRequestBody = {
@@ -305,6 +320,10 @@ export type CreateFeatureParams = {
    */
   consumable?: boolean | undefined;
   /**
+   * How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only.
+   */
+  combine?: CreateFeatureCombineRequest | undefined;
+  /**
    * Singular and plural display names for the feature in your user interface.
    */
   display?: CreateFeatureDisplayRequestBody | undefined;
@@ -356,6 +375,21 @@ export const CreateFeatureTypeResponse = {
  */
 export type CreateFeatureTypeResponse = OpenEnum<
   typeof CreateFeatureTypeResponse
+>;
+
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const CreateFeatureCombineResponse = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type CreateFeatureCombineResponse = OpenEnum<
+  typeof CreateFeatureCombineResponse
 >;
 
 export type CreateFeatureDimensionsResponse6 = {
@@ -741,6 +775,10 @@ export type CreateFeatureResponse = {
    */
   consumable: boolean;
   /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: CreateFeatureCombineResponse | undefined;
+  /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
   eventNames?: Array<string> | undefined;
@@ -790,6 +828,11 @@ export type CreateFeatureResponse = {
 export const CreateFeatureTypeRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof CreateFeatureTypeRequestBody
 > = z.enum(CreateFeatureTypeRequestBody);
+
+/** @internal */
+export const CreateFeatureCombineRequest$outboundSchema: z.ZodMiniEnum<
+  typeof CreateFeatureCombineRequest
+> = z.enum(CreateFeatureCombineRequest);
 
 /** @internal */
 export type CreateFeatureDisplayRequestBody$Outbound = {
@@ -1599,6 +1642,7 @@ export type CreateFeatureParams$Outbound = {
   name: string;
   type: string;
   consumable?: boolean | undefined;
+  combine?: string | undefined;
   display?: CreateFeatureDisplayRequestBody$Outbound | undefined;
   credit_schema?:
     | Array<
@@ -1628,6 +1672,7 @@ export const CreateFeatureParams$outboundSchema: z.ZodMiniType<
     name: z.string(),
     type: CreateFeatureTypeRequestBody$outboundSchema,
     consumable: z.optional(z.boolean()),
+    combine: z.optional(CreateFeatureCombineRequest$outboundSchema),
     display: z.optional(
       z.lazy(() => CreateFeatureDisplayRequestBody$outboundSchema),
     ),
@@ -1674,6 +1719,12 @@ export const CreateFeatureTypeResponse$inboundSchema: z.ZodMiniType<
   CreateFeatureTypeResponse,
   unknown
 > = openEnums.inboundSchema(CreateFeatureTypeResponse);
+
+/** @internal */
+export const CreateFeatureCombineResponse$inboundSchema: z.ZodMiniType<
+  CreateFeatureCombineResponse,
+  unknown
+> = openEnums.inboundSchema(CreateFeatureCombineResponse);
 
 /** @internal */
 export const CreateFeatureDimensionsResponse6$inboundSchema: z.ZodMiniType<
@@ -2456,6 +2507,7 @@ export const CreateFeatureResponse$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: CreateFeatureTypeResponse$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(CreateFeatureCombineResponse$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => CreateFeatureCreditSchemaResponse1$inboundSchema),

@@ -13,6 +13,8 @@ import {
 	type BillingPlanOp,
 	type BillingPlanUpdateOp,
 	billingPlanOpSchema,
+	type ExpectedColumns,
+	type ExpectedProduct,
 } from "./types/billingPlanOp.js";
 
 const insertRowSchemas = {
@@ -34,14 +36,20 @@ export type BillingPlanDeleteTable = BillingPlanDeleteOp["table"];
 export const toBillingPlanInsertOp = ({
 	table,
 	row,
+	expectFeatureGrants,
+	expectProduct,
 }: {
 	table: BillingPlanInsertTable;
 	row: object;
+	expectFeatureGrants?: Record<string, string>;
+	expectProduct?: ExpectedProduct;
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({
 		op: "insert",
 		table,
 		row: pickColumns({ schema: insertRowSchemas[table], row }),
+		...(expectFeatureGrants ? { expectFeatureGrants } : {}),
+		...(expectProduct ? { expectProduct } : {}),
 	});
 
 const definedColumns = (record: object): Record<string, unknown> =>
@@ -55,12 +63,16 @@ export const toBillingPlanUpdateOp = ({
 	id,
 	set,
 	whereUnset,
+	expect,
+	expectProduct,
 }: {
 	table: BillingPlanUpdateTable;
 	id: string;
 	set: object;
 	/** Customer only: set the columns only where the row still holds null. */
 	whereUnset?: true;
+	expect?: ExpectedColumns;
+	expectProduct?: ExpectedProduct;
 }): BillingPlanOp =>
 	billingPlanOpSchema.parse({
 		op: "update",
@@ -68,19 +80,35 @@ export const toBillingPlanUpdateOp = ({
 		id,
 		set: definedColumns(set),
 		...(whereUnset ? { whereUnset } : {}),
+		...(expect ? { expect } : {}),
+		...(expectProduct ? { expectProduct } : {}),
 	});
 
 export const toBillingPlanDeleteOp = ({
 	table,
 	id,
 	share,
+	expect,
+	withoutRollovers,
+	expectProduct,
 }: {
 	table: BillingPlanDeleteTable;
 	id: string;
 	/** A share's pool and source: the source is released when the share goes. */
 	share?: { pooledBalanceId: string; sourceCustomerEntitlementId: string };
+	expect?: ExpectedColumns;
+	withoutRollovers?: true;
+	expectProduct?: ExpectedProduct;
 }): BillingPlanOp =>
-	billingPlanOpSchema.parse({ op: "delete", table, id, ...share });
+	billingPlanOpSchema.parse({
+		op: "delete",
+		table,
+		id,
+		...share,
+		...(expect ? { expect } : {}),
+		...(withoutRollovers ? { withoutRollovers } : {}),
+		...(expectProduct ? { expectProduct } : {}),
+	});
 
 /** New rollovers for a held grant, cut to the columns the worker stores; none names nothing. */
 export const toBillingPlanAddRolloversOp = ({

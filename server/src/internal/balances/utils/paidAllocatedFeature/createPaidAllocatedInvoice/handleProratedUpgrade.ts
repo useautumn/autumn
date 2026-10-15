@@ -26,14 +26,12 @@ interface UsageValues {
 
 export const getPrevAndNewPriceForUpgrade = ({
 	ent,
-	// numReplaceables,
 	price,
 	newBalance,
 	prevBalance,
 	logger,
 }: {
 	ent: Entitlement;
-	// numReplaceables: number;
 	price: Price;
 	newBalance: number;
 	prevBalance: number;
@@ -54,7 +52,6 @@ export const getPrevAndNewPriceForUpgrade = ({
 	const prevPrice = priceToInvoiceAmount({
 		price,
 		overage: roundUsage({
-			// usage: prevUsage,
 			usage: prevOverage,
 			price,
 		}),
@@ -63,17 +60,13 @@ export const getPrevAndNewPriceForUpgrade = ({
 	const newPrice = priceToInvoiceAmount({
 		price,
 		overage: roundUsage({
-			// usage: newUsage,
 			usage: newOverage,
 			price,
 		}),
 	});
 
 	return {
-		// prevOverage,
-		// newOverage,
 		newUsage,
-		// prevUsage,
 		prevPrice,
 		newPrice,
 	};

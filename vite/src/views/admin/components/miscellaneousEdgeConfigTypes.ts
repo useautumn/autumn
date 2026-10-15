@@ -5,6 +5,7 @@ export type MiscellaneousEdgeConfig = {
 	idempotencyDynamoRead: boolean;
 	redisFallbackToDb: boolean;
 	axiomResponseBodyReduction: boolean;
+	expiredMetadataCleanup: boolean;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -18,6 +19,7 @@ export const MISCELLANEOUS_DEFAULT_CONFIG: MiscellaneousEdgeConfig = {
 	idempotencyDynamoRead: false,
 	redisFallbackToDb: false,
 	axiomResponseBodyReduction: true,
+	expiredMetadataCleanup: false,
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,

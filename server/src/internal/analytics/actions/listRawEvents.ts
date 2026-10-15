@@ -139,20 +139,7 @@ export const listRawEvents = async ({
 		offset: 0,
 	};
 
-	// ctx.logger.debug("Listing raw events via Tinybird pipe", {
-	// 	customerId: params.customer_id,
-	// 	aggregateAll: params.aggregateAll,
-	// 	startDate: finalStartDate,
-	// 	endDate: finalEndDate,
-	// 	limit: pipeParams.limit,
-	// });
-
 	const result = await pipes.listEventsPaginated(pipeParams);
-
-	// ctx.logger.debug("Raw events result", {
-	// 	queryMs: Math.round(performance.now() - startTime),
-	// 	rowCount: result.data.length,
-	// });
 
 	// Convert to ClickHouseResult format for backwards compatibility
 	const data = result.data.map(convertPipeRowToClickHouseFormat);

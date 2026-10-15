@@ -17,11 +17,6 @@ import type {
 	ApiCusFeatureV3Schema,
 } from "../previousVersions/apiCusFeatureV3";
 
-// overage_allowed: z.boolean().nullish().meta({
-// 	description: "Whether overage usage beyond the limit is allowed",
-// 	example: true,
-// }),
-
 /**
  * Transform feature from V2.0 format to V1.2 format
  * Exported so it can be reused in other transformations (e.g., V1_2_CustomerChange)
@@ -195,9 +190,6 @@ export function transformBalanceToCusFeatureV3({
 	let newBreakdown: ApiCusFeatureV3Breakdown[] | undefined;
 	if (input.breakdown && input.breakdown.length > 0) {
 		newBreakdown = input.breakdown.map((breakdown) => {
-			// const interval = resetIntvToEntIntv({
-			// 	resetIntv: breakdown.reset_interval,
-			// });
 			const { interval, interval_count, next_reset_at } =
 				resetToV3IntervalParams({
 					input: breakdown,

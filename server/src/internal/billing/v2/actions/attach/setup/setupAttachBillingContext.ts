@@ -29,8 +29,10 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupRequestedBillingCycleAnchor } from "@/internal/billing/v2/setup/setupRequestedBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { setupSubscriptionInvoiceTerms } from "@/internal/billing/v2/setup/setupSubscriptionInvoiceTerms";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { markAutumnManagedTrialContext } from "@/internal/billing/v2/setup/trialContext/markAutumnManagedTrialContext";
+import { paramsToInvoiceLineEdits } from "@/internal/billing/v2/utils/invoiceLineEdits/paramsToInvoiceLineEdits";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -371,8 +373,13 @@ export const setupAttachBillingContext = async ({
 		})
 			? undefined
 			: params.proration_behavior,
+		invoiceLineEdits: paramsToInvoiceLineEdits({ params }),
 
 		invoiceMode,
+		subscriptionInvoiceTerms: setupSubscriptionInvoiceTerms({
+			params,
+			stripeSubscription,
+		}),
 		paymentBehaviorIntent,
 		shouldFinalizeFirstInvoice,
 		skipCustomPaymentMethodGuard: contextOverride.skipCustomPaymentMethodGuard,

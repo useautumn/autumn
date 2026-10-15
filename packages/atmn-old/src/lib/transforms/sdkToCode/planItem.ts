@@ -74,7 +74,6 @@ export function buildPlanItemCode({
 	lines.push(`${itemIndent}item({`);
 	lines.push(`${fieldIndent}featureId: ${featureIdCode},`);
 
-	// Add entityFeatureId
 	if (planItem.entityFeatureId != null) {
 		lines.push(
 			`${fieldIndent}entityFeatureId: '${escapeString(planItem.entityFeatureId)}',`,
@@ -86,12 +85,10 @@ export function buildPlanItemCode({
 		lines.push(`${fieldIndent}included: ${planItem.included},`);
 	}
 
-	// Add unlimited
 	if (planItem.unlimited === true) {
 		lines.push(`${fieldIndent}unlimited: true,`);
 	}
 
-	// Add pooled
 	if (planItem.pooled === true) {
 		lines.push(`${fieldIndent}pooled: true,`);
 	}
@@ -110,7 +107,6 @@ export function buildPlanItemCode({
 		lines.push(`${fieldIndent}},`);
 	}
 
-	// Add price
 	if (planItem.price) {
 		lines.push(`${fieldIndent}price: {`);
 
@@ -179,12 +175,10 @@ export function buildPlanItemCode({
 		lines.push(`${fieldIndent}},`);
 	}
 
-	// Add proration
 	if (planItem.proration) {
 		lines.push(`${fieldIndent}proration: ${formatValue(planItem.proration)},`);
 	}
 
-	// Add rollover
 	if (planItem.rollover) {
 		lines.push(`${fieldIndent}rollover: ${formatValue(planItem.rollover)},`);
 	}

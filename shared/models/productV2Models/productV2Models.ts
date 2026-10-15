@@ -20,7 +20,6 @@ export const ProductV2Schema = z.object({
 	group: z.string().nullable(),
 	env: z.nativeEnum(AppEnv),
 
-	// free_trial: FreeTrialSchema.nullish(),
 	free_trial: ApiFreeTrialSchema.nullish(),
 	items: z.array(ProductItemSchema),
 	created_at: z.number(),

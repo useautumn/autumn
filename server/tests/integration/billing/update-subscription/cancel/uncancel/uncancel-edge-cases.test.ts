@@ -328,10 +328,13 @@ test.concurrent(`${chalk.yellowBright("remove trial while canceling: cancel pres
 		productId: free.id,
 	});
 
-	// Verify invoices (don't assert latestTotal - proration varies based on timing)
+	// Flexible-mode Stripe invoices nothing when the trial ends into cancel_at, so Autumn bills the full cycle itself.
+	expect(preview.total).toBe(20);
 	expectCustomerInvoiceCorrect({
 		customer: customerAfterUpdate,
 		count: 2,
+		latestTotal: preview.total,
+		latestStatus: "paid",
 	});
 
 	// Verify Stripe subscription (should still be set to cancel)

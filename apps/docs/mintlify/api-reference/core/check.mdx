@@ -136,6 +136,10 @@ const { allowed } = await autumn.check({
           For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
         </DynamicResponseField>
 
+        <DynamicResponseField name="combine" type="'sum' | 'max' | 'min'">
+          How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+        </DynamicResponseField>
+
         <DynamicResponseField name="event_names" type="string[]">
           Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
         </DynamicResponseField>
@@ -473,6 +477,10 @@ const { allowed } = await autumn.check({
 
         <DynamicResponseField name="consumable" type="boolean">
           For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="combine" type="'sum' | 'max' | 'min'">
+          How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
         </DynamicResponseField>
 
         <DynamicResponseField name="event_names" type="string[]">
@@ -824,6 +832,10 @@ const { allowed } = await autumn.check({
 
         <DynamicResponseField name="consumable" type="boolean">
           For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="combine" type="'sum' | 'max' | 'min'">
+          How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
         </DynamicResponseField>
 
         <DynamicResponseField name="event_names" type="string[]">

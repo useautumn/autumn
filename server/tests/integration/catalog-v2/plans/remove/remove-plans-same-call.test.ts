@@ -8,14 +8,14 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import {
-	expectDbPlansAbsent,
-	expectDbPlansCorrect,
-} from "../utils/expectCatalogPlans.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
-import {
 	messagesItem,
 	withCatalogPlans,
 } from "../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
+import {
+	expectDbPlansAbsent,
+	expectDbPlansCorrect,
+} from "../utils/expectCatalogPlans.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 remove plans: parent + child with no customers both hard delete")}`,

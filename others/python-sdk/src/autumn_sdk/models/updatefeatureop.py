@@ -54,6 +54,14 @@ UpdateFeatureTypeRequestBody = Literal[
 r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
 
 
+UpdateFeatureCombineRequest = Literal[
+    "sum",
+    "max",
+    "min",
+]
+r"""How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only."""
+
+
 class UpdateFeatureDisplayRequestBodyTypedDict(TypedDict):
     r"""Singular and plural display names for the feature in your user interface."""
 
@@ -640,6 +648,8 @@ class UpdateFeatureParamsTypedDict(TypedDict):
     r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
     consumable: NotRequired[bool]
     r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
+    combine: NotRequired[UpdateFeatureCombineRequest]
+    r"""How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only."""
     display: NotRequired[UpdateFeatureDisplayRequestBodyTypedDict]
     r"""Singular and plural display names for the feature in your user interface."""
     credit_schema: NotRequired[List[UpdateFeatureCreditSchemaRequestBodyUnionTypedDict]]
@@ -673,6 +683,9 @@ class UpdateFeatureParams(BaseModel):
 
     consumable: Optional[bool] = None
     r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
+
+    combine: Optional[UpdateFeatureCombineRequest] = None
+    r"""How grants of this feature from several plans combine. 'sum' (default) adds them up. 'max' or 'min' keeps only the highest or lowest grant among plan items with no price; priced items always add on top. Metered and credit system features only."""
 
     display: Optional[UpdateFeatureDisplayRequestBody] = None
     r"""Singular and plural display names for the feature in your user interface."""
@@ -708,6 +721,7 @@ class UpdateFeatureParams(BaseModel):
                 "name",
                 "type",
                 "consumable",
+                "combine",
                 "display",
                 "credit_schema",
                 "model_markups",
@@ -753,6 +767,17 @@ UpdateFeatureTypeResponse = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
+UpdateFeatureCombineResponse = Union[
+    Literal[
+        "sum",
+        "max",
+        "min",
+    ],
+    UnrecognizedStr,
+]
+r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
+
 class UpdateFeatureDimensionsResponse6TypedDict(TypedDict):
     match: Dict[str, str]
     r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
@@ -790,75 +815,6 @@ class UpdateFeatureDimensionsResponse6(BaseModel):
 
 
 UpdateFeatureDimensionsToResponseEnum3 = Literal["inf",]
-
-
-UpdateFeatureDimensionsToResponseUnion3TypedDict = TypeAliasType(
-    "UpdateFeatureDimensionsToResponseUnion3TypedDict",
-    Union[float, UpdateFeatureDimensionsToResponseEnum3],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-UpdateFeatureDimensionsToResponseUnion3 = TypeAliasType(
-    "UpdateFeatureDimensionsToResponseUnion3",
-    Union[float, UpdateFeatureDimensionsToResponseEnum3],
-)
-r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-
-class UpdateFeatureDimensionsTierResponse3TypedDict(TypedDict):
-    to: UpdateFeatureDimensionsToResponseUnion3TypedDict
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class UpdateFeatureDimensionsTierResponse3(BaseModel):
-    to: UpdateFeatureDimensionsToResponseUnion3
-    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
-
-    credit_cost: float
-    r"""Credits consumed per billing-unit group within this tier."""
-
-
-class UpdateFeatureDimensionsResponse5TypedDict(TypedDict):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-    tiers: List[UpdateFeatureDimensionsTierResponse3TypedDict]
-    priority: NotRequired[int]
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-    tier_behavior: Literal["graduated"]
-
-
-class UpdateFeatureDimensionsResponse5(BaseModel):
-    match: Dict[str, str]
-    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
-
-    tiers: List[UpdateFeatureDimensionsTierResponse3]
-
-    priority: Optional[int] = None
-    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
-
-    tier_behavior: Annotated[
-        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
-        pydantic.Field(alias="tier_behavior"),
-    ] = "graduated"
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["priority"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
 
 
 UpdateFeatureDimensionsResponseUnion3TypedDict = TypeAliasType(
@@ -996,6 +952,75 @@ class UpdateFeatureDimensionsResponse4(BaseModel):
 
 
 UpdateFeatureDimensionsToResponseEnum2 = Literal["inf",]
+
+
+UpdateFeatureDimensionsToResponseUnion3TypedDict = TypeAliasType(
+    "UpdateFeatureDimensionsToResponseUnion3TypedDict",
+    Union[float, UpdateFeatureDimensionsToResponseEnum3],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+UpdateFeatureDimensionsToResponseUnion3 = TypeAliasType(
+    "UpdateFeatureDimensionsToResponseUnion3",
+    Union[float, UpdateFeatureDimensionsToResponseEnum3],
+)
+r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+
+class UpdateFeatureDimensionsTierResponse3TypedDict(TypedDict):
+    to: UpdateFeatureDimensionsToResponseUnion3TypedDict
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdateFeatureDimensionsTierResponse3(BaseModel):
+    to: UpdateFeatureDimensionsToResponseUnion3
+    r"""Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'."""
+
+    credit_cost: float
+    r"""Credits consumed per billing-unit group within this tier."""
+
+
+class UpdateFeatureDimensionsResponse5TypedDict(TypedDict):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+    tiers: List[UpdateFeatureDimensionsTierResponse3TypedDict]
+    priority: NotRequired[int]
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+    tier_behavior: Literal["graduated"]
+
+
+class UpdateFeatureDimensionsResponse5(BaseModel):
+    match: Dict[str, str]
+    r"""Event properties this entry applies to. Every key must equal the tracked property, compared as strings."""
+
+    tiers: List[UpdateFeatureDimensionsTierResponse3]
+
+    priority: Optional[int] = None
+    r"""Breaks ties between dimensions that match the same number of keys. Higher wins."""
+
+    tier_behavior: Annotated[
+        Annotated[Literal["graduated"], AfterValidator(validate_const("graduated"))],
+        pydantic.Field(alias="tier_behavior"),
+    ] = "graduated"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["priority"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 UpdateFeatureDimensionsToResponseUnion2TypedDict = TypeAliasType(
@@ -1577,6 +1602,8 @@ class UpdateFeatureResponseTypedDict(TypedDict):
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
+    combine: NotRequired[UpdateFeatureCombineResponse]
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[UpdateFeatureCreditSchemaResponseUnionTypedDict]]
@@ -1615,6 +1642,9 @@ class UpdateFeatureResponse(BaseModel):
     archived: bool
     r"""Whether the feature is archived and hidden from the dashboard."""
 
+    combine: Optional[UpdateFeatureCombineResponse] = None
+    r"""How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'."""
+
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
@@ -1644,6 +1674,7 @@ class UpdateFeatureResponse(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
+                "combine",
                 "event_names",
                 "credit_schema",
                 "model_markups",
@@ -1689,11 +1720,11 @@ try:
 except NameError:
     pass
 try:
-    UpdateFeatureDimensionsResponse5.model_rebuild()
+    UpdateFeatureCreditSchemaResponse3.model_rebuild()
 except NameError:
     pass
 try:
-    UpdateFeatureCreditSchemaResponse3.model_rebuild()
+    UpdateFeatureDimensionsResponse5.model_rebuild()
 except NameError:
     pass
 try:

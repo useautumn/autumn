@@ -1,4 +1,7 @@
-import type { BillingInterval, CreatePlanItemParamsV1Input } from "@autumn/shared";
+import type {
+	BillingInterval,
+	CreatePlanItemParamsV1Input,
+} from "@autumn/shared";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import {
 	expectCatalogPreviewCorrect,
