@@ -42,7 +42,8 @@ type Field =
 			kind: "match";
 			label: (ctx: Ctx) => string;
 			format: Format;
-			path?: string;
+			/** Keys the field reads from a nested object; the first holds the matcher. */
+			nested?: string[];
 	  }
 	| { kind: "each"; scope: (ctx: Ctx) => string }
 	| { kind: "phrase"; phrase: (value: unknown) => string };
@@ -91,8 +92,8 @@ const money: Format = ({ value, ctx }) => ctx.labels.money(Number(value));
 const match = (
 	label: (ctx: Ctx) => string,
 	format: Format,
-	path?: string,
-): Field => ({ kind: "match", label, format, path });
+	nested?: string[],
+): Field => ({ kind: "match", label, format, nested });
 
 const FIELDS: Record<string, Field> = {
 	paid: match(fixed("Charges customer"), yesNo),
@@ -117,12 +118,12 @@ const FIELDS: Record<string, Field> = {
 		fixed("Free trial"),
 		({ value, ctx }) =>
 			`${value} ${ctx.parent.duration_type}${Number(value) === 1 ? "" : "s"}`,
-		"duration_length",
+		["duration_length", "duration_type"],
 	),
 	cancel_action: match(fixed("Timing"), ({ value }) =>
 		String(TIMINGS[String(value)] ?? value),
 	),
-	refund: match(fixed("Refund"), money, "amount"),
+	refund: match(fixed("Refund"), money, ["amount"]),
 	feature_id: match(
 		fixed("Feature"),
 		({ value, ctx }) => ctx.labels.feature(String(value)).name,
@@ -176,20 +177,31 @@ const fieldConditions = ({
 		return [{ field: "", operator: "", value: field.phrase(value) }];
 	}
 	if (field.kind === "each") {
+		const quantifiers = isFilter(value) ? Object.keys(value) : [];
 		const element = isFilter(value) ? (value.$every ?? value.$some) : null;
-		if (!isFilter(element)) return [CUSTOM];
+		if (quantifiers.length !== 1 || !isFilter(element)) return [CUSTOM];
 		return filterConditions({
 			filter: element,
 			ctx: { ...ctx, scope: field.scope(ctx) },
 		});
 	}
-	if (field.path && !isFilter(value)) return [CUSTOM];
-	const nested = isFilter(value) && field.path;
+	if (!field.nested) {
+		return matcherConditions({
+			label: field.label(ctx),
+			matcher: value,
+			format: field.format,
+			ctx,
+		});
+	}
+	const readsWholeObject =
+		isFilter(value) &&
+		Object.keys(value).every((key) => field.nested?.includes(key));
+	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
 		label: field.label(ctx),
-		matcher: nested ? value[field.path ?? ""] : value,
+		matcher: value[field.nested[0]],
 		format: field.format,
-		ctx: nested ? { ...ctx, parent: value } : ctx,
+		ctx: { ...ctx, parent: value },
 	});
 };
 
@@ -207,7 +219,7 @@ const filterConditions = ({
 		return fieldConditions({ key, value, ctx: inFilter });
 	});
 
-/** `$or: [{ x: null }, { x: … }]` is a cap that lets "no x" through; the editor shows its widest branch, stored last. */
+/** `$or: [{ x: null }, { x: … }, …]` on one field is a cap that lets "no x" through; the editor shows its widest branch, stored last. */
 const cappedConditions = ({
 	branches,
 	ctx,
@@ -215,12 +227,15 @@ const cappedConditions = ({
 	branches: unknown;
 	ctx: Ctx;
 }): RuleCondition[] => {
-	if (!Array.isArray(branches)) return [CUSTOM];
-	const caps = branches.filter(
-		(branch) => isFilter(branch) && !hasNullField(branch),
-	);
+	if (!Array.isArray(branches) || !branches.every(isFilter)) return [CUSTOM];
+	const keys = new Set(branches.flatMap((branch) => Object.keys(branch)));
+	const caps = branches.filter((branch) => !hasNullField(branch));
+	const isCap =
+		keys.size === 1 &&
+		branches.every((branch) => Object.keys(branch).length === 1) &&
+		caps.length === branches.length - 1;
 	const widest = caps.at(-1);
-	if (!widest || caps.length === branches.length) return [CUSTOM];
+	if (!isCap || !widest) return [CUSTOM];
 	return filterConditions({ filter: widest, ctx });
 };
 

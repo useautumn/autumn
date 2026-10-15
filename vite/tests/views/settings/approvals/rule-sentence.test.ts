@@ -266,6 +266,44 @@ describe("rule sentence: when clauses from the boards", () => {
 			"Sales can Attach when Doesn't send a checkout link and Charges customer is No",
 		],
 		[
+			"an $or that isn't a cap stays custom",
+			{
+				subjects: [support],
+				actions: ["billing.cancel"],
+				when: {
+					$or: [{ refund: null }, { cancel_action: "cancel_end_of_cycle" }],
+					outgoing: { $every: { plan_id: "starter" } },
+				},
+			},
+			"Support can Cancel when Custom condition and Plan is Starter",
+		],
+		[
+			"trial checks the list can't word stay custom",
+			{
+				when: {
+					incoming: {
+						$every: {
+							free_trial: {
+								duration_type: "month",
+								duration_length: { $lte: 2 },
+								card_required: true,
+							},
+						},
+					},
+				},
+			},
+			"Sales can Attach when Custom condition",
+		],
+		[
+			"an array with more than one quantifier stays custom",
+			{
+				when: {
+					incoming: { $every: { recurring: true }, $some: { plan_id: "pro" } },
+				},
+			},
+			"Sales can Attach when Custom condition",
+		],
+		[
 			"a shape the list can't word yet",
 			{ when: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",
