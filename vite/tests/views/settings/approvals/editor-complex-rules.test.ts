@@ -163,6 +163,22 @@ const CASES: {
 			],
 		],
 	},
+	{
+		name: "Customer has any of two plans",
+		params: {
+			name: "Existing customers",
+			subjects: [sales],
+			actions: ["billing.attach"],
+			when: {
+				customer: { plan: { $some: { plan_id: { $in: ["pro", "team"] } } } },
+			},
+			note: null,
+			enabled: true,
+		},
+		rows: [
+			[{ field: "customer_plan", operator: "has", values: ["pro", "team"] }],
+		],
+	},
 ];
 
 const storedRule = (params: CreateApprovalRuleParams): ApprovalRule => ({

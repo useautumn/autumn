@@ -88,6 +88,10 @@ export const fitOperatorToValues = ({
 	row: RuleRow;
 	operators: readonly EditorOperator[];
 }): RuleRow => {
+	// S5 reads "doesn't have" back for one plan only, so the picker keeps the latest.
+	if (row.operator === "doesnt_have" && row.values.length > 1) {
+		return { ...row, values: row.values.slice(-1) };
+	}
 	const swap = row.values.length > 1 ? MANY[row.operator] : ONE[row.operator];
 	return swap && operators.includes(swap) ? { ...row, operator: swap } : row;
 };
@@ -100,7 +104,8 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 			if (isMany(operator)) return values.length > 0 ? values : null;
 			return first ?? null;
 		case "plan":
-			if (isMany(operator))
+			// "has" takes several plans too ("has any of"); S5 stores them as one `$in`.
+			if (isMany(operator) || values.length > 1)
 				return values.length > 0 ? values.map(toPlan) : null;
 			return first ? toPlan(first) : null;
 		case "number":
