@@ -242,12 +242,13 @@ test.concurrent(
 			redirect_mode: "if_required",
 		});
 
+		// A quantity increase adds the new packs and keeps this cycle's usage, as for any prepaid item.
 		customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			remaining: 1500,
-			usage: 0,
+			remaining: 1200,
+			usage: 300,
 			planId,
 		});
 
@@ -261,8 +262,8 @@ test.concurrent(
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			remaining: 1200,
-			usage: 300,
+			remaining: 900,
+			usage: 600,
 			planId,
 		});
 
@@ -421,24 +422,32 @@ test.concurrent(
 			customerBeforeQuarterly.balances[TestFeature.Messages].next_reset_at;
 		expect(firstNextResetAt).toBeDefined();
 
+		const frozenTimeMs = addHours(addMonths(advancedTo, 3), 2).getTime();
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId,
-			advanceTo: addHours(addMonths(advancedTo, 3), 2).getTime(),
+			advanceTo: frozenTimeMs,
 			waitForSeconds: 30,
 		});
 
-		const rawStateAfterQuarterlyInvoice = await getSplitCustomerProductState({
-			ctx,
-			customerId,
-			planId,
-			skipReset: true,
+		// Three monthly resets came due, so test_clock.ready refills the grant on the monthly cadence.
+		// An invoice.created reset would instead push next_reset_at to the quarter end.
+		const rawStateAfterQuarterlyInvoice = await pollUntilAsserted({
+			fetch: () =>
+				getSplitCustomerProductState({
+					ctx,
+					customerId,
+					planId,
+					skipReset: true,
+				}),
+			assert: (state) => expect(state.customerEntitlement.balance).toBe(1000),
+			timeoutMs: 30_000,
 		});
 
-		expect(rawStateAfterQuarterlyInvoice.customerEntitlement.balance).toBe(700);
-		expect(
-			rawStateAfterQuarterlyInvoice.customerEntitlement.next_reset_at,
-		).toBe(firstNextResetAt);
+		const nextResetAt =
+			rawStateAfterQuarterlyInvoice.customerEntitlement.next_reset_at ?? 0;
+		expect(nextResetAt).toBeGreaterThan(frozenTimeMs);
+		expect(nextResetAt).toBeLessThan(addMonths(advancedTo, 5).getTime());
 		expect(rawStateAfterQuarterlyInvoice.priceConfig.interval).toBe(
 			BillingInterval.Quarter,
 		);
