@@ -164,9 +164,6 @@ const freeTrial: FieldCodec = {
 		const duration = row.value as TrialDuration | null;
 		if (!isPlainObject(duration)) return null;
 		const branches = toTrialBranches({ operator: row.operator, duration });
-		// "< 1 day" leaves only the no-trial branch, which is "has none".
-		if (branches.length === 1)
-			return at([...INCOMING_PLAN, "free_trial"], null);
 		return at([...INCOMING_PLAN, "$or"], branches);
 	},
 	fromFilter: (group) => {

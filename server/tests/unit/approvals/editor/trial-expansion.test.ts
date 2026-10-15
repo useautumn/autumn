@@ -19,14 +19,23 @@ type Unit = "day" | "month" | "year";
 const trial = (operator: string, length: number, unit: Unit) =>
 	({ field: "free_trial", operator, value: { length, unit } }) as EditorRow;
 
-const unit = (type: Unit, length?: Record<string, number>) => ({
-	free_trial: length
-		? { duration_type: type, duration_length: length }
-		: { duration_type: type },
-});
-
 const noTrial = { free_trial: null };
 const inIncoming = (plan: unknown) => ({ incoming: { $every: plan } });
+
+/** The stored branches for a threshold in days: 30-day months, 365-day years. */
+const units = (operator: string, days: number) =>
+	(
+		[
+			["day", days],
+			["month", days / 30],
+			["year", days / 365],
+		] as const
+	).map(([type, length]) => ({
+		free_trial: {
+			duration_type: type,
+			duration_length: { [operator]: length },
+		},
+	}));
 
 const CASES: {
 	name: string;
@@ -45,44 +54,37 @@ const CASES: {
 			},
 			trial("lt", 2, "month"),
 		],
-		when: rules.enterpriseTrials().when,
+		when: {
+			paid: false,
+			incoming: {
+				$every: { plan_id: "enterprise", $or: [noTrial, ...units("$lt", 60)] },
+			},
+		},
 	},
 	{
 		name: "< 45 days keeps days (1.5 months isn't whole)",
 		rows: [trial("lt", 45, "day")],
-		when: inIncoming({
-			$or: [noTrial, unit("day", { $lt: 45 }), unit("month", { $lt: 1.5 })],
-		}),
+		when: inIncoming({ $or: [noTrial, ...units("$lt", 45)] }),
 	},
 	{
-		name: "≤ 1 year includes every unit",
+		name: "≤ 1 year",
 		rows: [trial("lte", 1, "year")],
-		when: inIncoming({
-			$or: [
-				noTrial,
-				unit("day", { $lte: 365 }),
-				unit("month", { $lte: 365 / 30 }),
-				unit("year", { $lte: 1 }),
-			],
-		}),
+		when: inIncoming({ $or: [noTrial, ...units("$lte", 365)] }),
 	},
 	{
-		name: "> 2 months has no 'no trial' branch; any year is longer",
+		name: "> 2 months keeps a year threshold, since lengths can be fractional",
 		rows: [trial("gt", 2, "month")],
-		when: inIncoming({
-			$or: [unit("day", { $gt: 60 }), unit("month", { $gt: 2 }), unit("year")],
-		}),
+		when: inIncoming({ $or: units("$gt", 60) }),
 	},
 	{
-		name: "≥ 1 month",
+		name: "≥ 1 month has no 'no trial' branch",
 		rows: [trial("gte", 1, "month")],
-		when: inIncoming({
-			$or: [
-				unit("day", { $gte: 30 }),
-				unit("month", { $gte: 1 }),
-				unit("year"),
-			],
-		}),
+		when: inIncoming({ $or: units("$gte", 30) }),
+	},
+	{
+		name: "< 1 day stays a length",
+		rows: [trial("lt", 1, "day")],
+		when: inIncoming({ $or: [noTrial, ...units("$lt", 1)] }),
 	},
 	{
 		name: "has none stores a null trial",
@@ -92,16 +94,8 @@ const CASES: {
 	{
 		name: "< 60 days is the same filter as < 2 months, so it reads back in months",
 		rows: [trial("lt", 60, "day")],
-		when: inIncoming({
-			$or: [noTrial, unit("day", { $lt: 60 }), unit("month", { $lt: 2 })],
-		}),
+		when: inIncoming({ $or: [noTrial, ...units("$lt", 60)] }),
 		readsBack: [trial("lt", 2, "month")],
-	},
-	{
-		name: "< 1 day only lets 'no trial' through, so it's stored and read as has none",
-		rows: [trial("lt", 1, "day")],
-		when: inIncoming(noTrial),
-		readsBack: [{ field: "free_trial", operator: "has_none", value: null }],
 	},
 	{
 		name: "card required and trial end sit beside the duration",
@@ -111,7 +105,7 @@ const CASES: {
 			{ field: "trial_on_end", operator: "is", value: "bill" },
 		],
 		when: inIncoming({
-			$or: [noTrial, unit("day", { $lte: 14 })],
+			$or: [noTrial, ...units("$lte", 14)],
 			free_trial: { card_required: true, on_end: "bill" },
 		}),
 	},
@@ -130,8 +124,17 @@ test.each(CASES)("$name", ({ rows, when, readsBack = rows }) => {
 	});
 });
 
-test("a hand-edited $or that isn't an expansion isn't editable", () => {
-	const when = inIncoming({ $or: [noTrial, unit("month", { $lt: 2 })] });
+test.each([
+	[
+		"a hand-edited $or that isn't an expansion",
+		inIncoming({ $or: [noTrial, units("$lt", 60)[1]] }),
+	],
+	// S3's design-case fixture has no year branch, so it'd miss a 0.1-year trial.
+	[
+		"the design-case fixture without a year branch",
+		rules.enterpriseTrials().when,
+	],
+])("%s isn't editable", (_name, when) => {
 	expect(whenToRows({ area: "billing_change", when })).toEqual({
 		editable: false,
 	});

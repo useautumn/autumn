@@ -215,7 +215,6 @@ describe("groups", () => {
 
 describe("stored design cases open in the editor", () => {
 	test.each([
-		["enterprise trials", "billing_change", rules.enterpriseTrials()],
 		["recurring discounts", "billing_change", rules.recurringDiscounts()],
 		["support cancellations", "billing_cancel", rules.supportCancellations()],
 		[
@@ -362,18 +361,12 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 					{
 						$or: [
 							{ free_trial: null },
-							{
+							...(["day", "month", "year"] as const).map((type, index) => ({
 								free_trial: {
-									duration_type: "day",
-									duration_length: { $lt: 60 },
+									duration_type: type,
+									duration_length: { $lt: 60 / [1, 30, 365][index] },
 								},
-							},
-							{
-								free_trial: {
-									duration_type: "month",
-									duration_length: { $lt: 2 },
-								},
-							},
+							})),
 						],
 					},
 				],
@@ -384,6 +377,23 @@ describe("rows that collide in the incoming plan element combine with $and", () 
 			rows: [quantity("seats", 10), quantity("workers", 5)],
 			element: {
 				$and: [quantityLimit("seats", 10), quantityLimit("workers", 5)],
+			},
+		},
+		{
+			name: "a range on one feature keeps both limits",
+			rows: [
+				{ ...quantity("seats", 5), operator: "gte" },
+				quantity("seats", 10),
+			],
+			element: {
+				$and: [
+					{
+						feature_quantities: {
+							$none: { feature_id: "seats", quantity: { $lt: 5 } },
+						},
+					},
+					quantityLimit("seats", 10),
+				],
 			},
 		},
 		{
