@@ -1,9 +1,11 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { Replication } from "../../replication/types/replication.js";
 import {
+	createHandoffSession,
 	type HandOffContext,
+	type HandoffSession,
 	handOffJournals,
-	type LockMarks,
+	releaseHandoffSession,
 } from "../handover/handOffJournals.js";
 import type { ReplicaRing } from "../types/replicaRing.js";
 import type { Membership } from "./types/membership.js";
@@ -109,18 +111,23 @@ export const startReadinessProber = ({
 		ctx,
 		peer,
 		ownerOf,
-		marks,
+		session,
 	}: {
 		ctx: ReadinessProberContext;
 		peer: string;
 		ownerOf: (customerId: string) => Promise<string>;
-		marks: LockMarks;
+		session: HandoffSession;
 	}): Promise<void> {
 		let sweeps = 0;
 		let handed = 0;
 		let locks = 0;
 		const sweep = async () => {
-			const swept = await handOffJournals({ ctx, ownerOf, marks, quiet: true });
+			const swept = await handOffJournals({
+				ctx,
+				ownerOf,
+				session,
+				quiet: true,
+			});
 			sweeps++;
 			handed += swept.handed;
 			locks += swept.locks;
@@ -171,26 +178,31 @@ export const startReadinessProber = ({
 				continue;
 			const ownerOf = (customerId: string) =>
 				ctx.ring.ownerOnceJoined({ customerId, peer });
-			const marks: LockMarks = new Map();
-			await handOffJournals({ ctx, ownerOf, marks });
+			const session = createHandoffSession();
+			await handOffJournals({ ctx, ownerOf, session });
 			ctx.onHandedOff?.(peer);
 			const joined = ctx.membership.handedOff({
 				address: peer,
 				thread: ctx.thread,
 				threads: ctx.threads,
 			});
-			if (joined)
+			if (joined) {
 				ctx.logger.info(
 					{ type: "atom_peer_joined", data: { peer } },
 					`${peer} is ready and holds its customers' entries: it owns them from now on`,
 				);
-			else
-				void sweepUntilJoined({ ctx, peer, ownerOf, marks }).catch((error) =>
-					ctx.logger.warn(
-						{ type: "atom_join_sweep_failed", error },
-						"Could not hand the peer what this thread took while the other threads were still handing off",
-					),
-				);
+				// The last thread: nothing of this thread's can be taken for the moved customers after the flip.
+				await handOffJournals({ ctx, ownerOf, session, quiet: true });
+				releaseHandoffSession({ session });
+			} else
+				void sweepUntilJoined({ ctx, peer, ownerOf, session })
+					.catch((error) =>
+						ctx.logger.warn(
+							{ type: "atom_join_sweep_failed", error },
+							"Could not hand the peer what this thread took while the other threads were still handing off",
+						),
+					)
+					.finally(() => releaseHandoffSession({ session }));
 		}
 	}
 

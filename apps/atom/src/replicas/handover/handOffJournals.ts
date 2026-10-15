@@ -38,6 +38,8 @@ type Pending = {
 	journal: Journal | null;
 	atomId: string | null;
 	customerId: string;
+	/** Who takes the customer, decided before its entries were read. */
+	owner: string;
 	entries: HandedEntry[];
 	locks: OpenLock[];
 };
@@ -101,7 +103,7 @@ const batchesOf = async ({
 	const batches: Batch[] = [];
 	let kept = 0;
 	for (const item of pending) {
-		const owner = await ownerOf(item.customerId);
+		const owner = item.owner;
 		if (owner === ctx.ring.self) {
 			kept += item.entries.length;
 			continue;
@@ -120,39 +122,109 @@ const batchesOf = async ({
 	return { batches, kept };
 };
 
-/** The owed entries of each customer in the folder, one pending handoff per customer and journal. */
+/**
+ * One handoff from this thread to a new owner, across its rounds and sweeps: where each slot's lock reads left off, so a
+ * later pass hands only the locks taken since, and which customers each journal holds back from Autumn meanwhile.
+ */
+export type HandoffSession = {
+	marks: Map<OpenLocks, number>;
+	held: Map<Journal, Set<string>>;
+};
+
+export const createHandoffSession = (): HandoffSession => ({
+	marks: new Map(),
+	held: new Map(),
+});
+
+/** The handoff is over: every journal's held customers drain to Autumn again, whatever they still owe here. */
+export const releaseHandoffSession = ({
+	session,
+}: {
+	session: HandoffSession;
+}): void => {
+	for (const [journal, customerIds] of session.held)
+		journal.releaseHandoffHold({ customerIds: [...customerIds] });
+	session.held.clear();
+};
+
+type OwnerOf = (customerId: string) => Promise<string>;
+
+/** Who takes each of the journal's customers; the moving ones are held back from Autumn before their entries are read. */
+const holdMovingCustomers = async ({
+	ctx,
+	journal,
+	ownerOf,
+	session,
+}: {
+	ctx: HandOffContext;
+	journal: Journal;
+	ownerOf: OwnerOf;
+	session: HandoffSession;
+}): Promise<Map<string, string>> => {
+	const owners = new Map<string, string>();
+	await Promise.all(
+		journal.owingCustomers().map(async (customerId) => {
+			owners.set(customerId, await ownerOf(customerId));
+		}),
+	);
+	const moving = [...owners]
+		.filter(([, owner]) => owner !== ctx.ring.self)
+		.map(([customerId]) => customerId);
+	journal.holdForHandoff({ customerIds: moving });
+	const held = session.held.get(journal) ?? new Set<string>();
+	for (const customerId of moving) held.add(customerId);
+	session.held.set(journal, held);
+	return owners;
+};
+
+/**
+ * The owed entries of each customer in the folder, one pending handoff per customer and journal. A moving customer is
+ * held back from Autumn before its entries are read, so a seq appended here while the handoff is in flight is never sent
+ * from here ahead of the handed ones; the next round or sweep hands it instead.
+ */
 const pendingEntriesOf = async ({
-	atomId,
-	slots,
-}: ReplicaFolder): Promise<Pending[]> =>
+	ctx,
+	folder: { atomId, slots },
+	ownerOf,
+	session,
+}: {
+	ctx: HandOffContext;
+	folder: ReplicaFolder;
+	ownerOf: OwnerOf;
+	session: HandoffSession;
+}): Promise<Pending[]> =>
 	(
 		await Promise.all(
-			slots.ownedJournals().map(async (journal) =>
-				(
-					await journal.handoffs()
-				).map((handoff) => ({
+			slots.ownedJournals().map(async (journal) => {
+				const owners = await holdMovingCustomers({
+					ctx,
+					journal,
+					ownerOf,
+					session,
+				});
+				return (await journal.handoffs()).map((handoff) => ({
 					journal,
 					atomId,
+					owner: owners.get(handoff.customerId) ?? ctx.ring.self,
 					locks: [],
 					...handoff,
-				})),
-			),
+				}));
+			}),
 		)
 	).flat();
 
-/** Where each slot's lock reads left off, so a later round or sweep hands only the locks taken since. */
-export type LockMarks = Map<OpenLocks, number>;
-
 /** The folder's open locks taken since the marks, joined onto their customer's pending handoff or a handoff of their own. */
-const withPendingLocks = ({
+const withPendingLocks = async ({
 	folder: { atomId, slots },
 	pending,
-	marks,
+	ownerOf,
+	session: { marks },
 }: {
 	folder: ReplicaFolder;
 	pending: Pending[];
-	marks: LockMarks;
-}): Pending[] => {
+	ownerOf: OwnerOf;
+	session: HandoffSession;
+}): Promise<Pending[]> => {
 	const byCustomer = new Map(pending.map((item) => [item.customerId, item]));
 	for (const openLocks of slots.ownedOpenLocks()) {
 		const { customers, heldThrough } = openLocks.all({
@@ -167,6 +239,7 @@ const withPendingLocks = ({
 					journal: null,
 					atomId,
 					customerId,
+					owner: await ownerOf(customerId),
 					entries: [],
 					locks,
 				});
@@ -178,18 +251,21 @@ const withPendingLocks = ({
 /** What the slots hold for other owners now: owed entries not yet handed, and locks taken since the last read. */
 const pendingOf = async ({
 	ctx,
-	marks,
+	ownerOf,
+	session,
 }: {
 	ctx: HandOffContext;
-	marks: LockMarks;
+	ownerOf: OwnerOf;
+	session: HandoffSession;
 }): Promise<Pending[]> =>
 	(
 		await Promise.all(
 			ctx.folders.all().map(async (folder) =>
 				withPendingLocks({
 					folder,
-					pending: await pendingEntriesOf(folder),
-					marks,
+					pending: await pendingEntriesOf({ ctx, folder, ownerOf, session }),
+					ownerOf,
+					session,
 				}),
 			),
 		)
@@ -251,27 +327,27 @@ const sendRound = async ({
 export const handOffJournals = async ({
 	ctx,
 	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
-	marks = new Map(),
+	session,
 	quiet = false,
 }: {
 	ctx: HandOffContext;
 	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
-	ownerOf?: (customerId: string) => Promise<string>;
-	/** Carried across calls by a caller that sweeps again later, so each sweep hands only the locks taken since. */
-	marks?: LockMarks;
+	ownerOf?: OwnerOf;
+	/** The caller's, carried across its sweeps and released by it once the new owner counts. */
+	session: HandoffSession;
 	/** A sweep after the first handoff logs nothing of its own; the caller sums it. */
 	quiet?: boolean;
 }): Promise<{ handed: number; kept: number; locks: number }> => {
 	const first = await sendRound({
 		ctx,
-		pending: await pendingOf({ ctx, marks }),
+		pending: await pendingOf({ ctx, ownerOf, session }),
 		ownerOf,
 	});
 	let { customers, batches, handed, kept, locks } = first;
 	let rounds = 1;
 	// Entries this thread keeps stay pending every round; only sent batches mean another round can find something new.
 	while (rounds < MAX_HANDOFF_ROUNDS && batches > 0) {
-		const pending = await pendingOf({ ctx, marks });
+		const pending = await pendingOf({ ctx, ownerOf, session });
 		const {
 			batches: sent,
 			handed: more,

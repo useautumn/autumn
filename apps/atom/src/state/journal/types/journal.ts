@@ -70,6 +70,15 @@ export type Journal = {
 	handoffs(): Promise<{ customerId: string; entries: HandedEntry[] }[]>;
 	/** Entries handed to another journal, which holds them now: gone from this one. */
 	dropHandedOff(params: { entries: JournalEntry[] }): Promise<void>;
+	/**
+	 * These customers' entries were handed to another replica, which sends them under this writer's seqs: nothing of theirs
+	 * is offered as unsent here until released, or a later seq sent from here would make Autumn skip the handed ones.
+	 */
+	holdForHandoff(params: { customerIds: string[] }): void;
+	/** Every customer owing something here, cheap: what a handoff decides ownership of before it reads their entries. */
+	owingCustomers(): string[];
+	/** The handoff is over: whatever the customers still owe here drains to Autumn as before. */
+	releaseHandoffHold(params: { customerIds: string[] }): void;
 	close(): void;
 	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
 	holdsKey(params: { customerId: string; key: string }): boolean;

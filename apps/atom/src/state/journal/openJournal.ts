@@ -73,6 +73,8 @@ export const openJournal = ({
 	unsentByJournal.add(unsent);
 	/** By customer, the entry Autumn refused that its later entries wait behind. */
 	const parkedCustomers = new Map<string, JournalEntry>();
+	/** Customers whose entries were handed to another replica: nothing of theirs leaves here until the hold is released. */
+	const heldForHandoff = new Set<string>();
 	/** Each customer's unsent entries in seq order, from `head`: those sent since leave the front as it is next settled. */
 	const unsentByCustomer = new Map<
 		string,
@@ -282,9 +284,31 @@ export const openJournal = ({
 		const taken: JournalEntry[] = [];
 		for (const entry of unsent) {
 			if (taken.length === limit) break;
-			if (!parkedCustomers.has(entry.customerId)) taken.push(entry);
+			if (
+				!parkedCustomers.has(entry.customerId) &&
+				!heldForHandoff.has(entry.customerId)
+			)
+				taken.push(entry);
 		}
 		return taken;
+	}
+
+	function owingCustomers(): string[] {
+		return [...owedByCustomer.keys()];
+	}
+
+	function holdForHandoff({ customerIds }: { customerIds: string[] }): void {
+		for (const customerId of customerIds) heldForHandoff.add(customerId);
+	}
+
+	function releaseHandoffHold({
+		customerIds,
+	}: {
+		customerIds: string[];
+	}): void {
+		for (const customerId of customerIds) heldForHandoff.delete(customerId);
+		// What stayed (a batch the new owner never took) drains to Autumn as before.
+		notifyCommitted();
 	}
 
 	function park({ entry }: { entry: JournalEntry }): void {
@@ -439,5 +463,8 @@ export const openJournal = ({
 		appendForeign,
 		handoffs,
 		dropHandedOff,
+		owingCustomers,
+		holdForHandoff,
+		releaseHandoffHold,
 	};
 };
