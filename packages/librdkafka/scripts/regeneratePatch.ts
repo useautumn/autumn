@@ -1,6 +1,6 @@
 /**
  * Rebuilds the root bun patch for @confluentinc/kafka-javascript from the provenance patches here:
- * upstream PR #471 (NAN → N-API), then ours: libuv → std/N-API so Bun can load it, librdkafka broker wakeups, and consume errors kept past a batch.
+ * upstream PR #471 (NAN → N-API), then ours: libuv → std/N-API so Bun can load it, librdkafka broker wakeups, consume errors kept past a batch, and a fatal error's cause.
  */
 import { join } from "node:path";
 import { $ } from "bun";
@@ -19,6 +19,7 @@ for (const patch of [
 	"bunUvToNapi.patch",
 	"brokerWakeup.patch",
 	"consumeErrorAfterRecords.patch",
+	"fatalErrorCause.patch",
 ]) {
 	await $`patch -p1 --forward --silent -i ${join(patches, patch)}`.cwd(target);
 }

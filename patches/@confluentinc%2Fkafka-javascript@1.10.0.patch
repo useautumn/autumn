@@ -6384,7 +6384,7 @@ index e73718251173020f5ed859aaa653ede47562a18f..171c016d8769bf0d2d24b1e208661047
  
  }  // namespace NodeKafka
 diff --git a/src/errors.cc b/src/errors.cc
-index 9d1d967515dbd9c81389a8a0644dca360665d3d1..f16d2ab368a167b8d5c6b19d06e3d3cfba16b2a4 100644
+index 9d1d967515dbd9c81389a8a0644dca360665d3d1..38d2fe96d48a2b9cd1972c30e0323205570ee1cc 100644
 --- a/src/errors.cc
 +++ b/src/errors.cc
 @@ -14,40 +14,47 @@
@@ -6451,12 +6451,15 @@ index 9d1d967515dbd9c81389a8a0644dca360665d3d1..f16d2ab368a167b8d5c6b19d06e3d3cf
  Baton::Baton(const RdKafka::ErrorCode &code) {
    m_err = code;
  }
-@@ -92,16 +99,16 @@ Baton Baton::BatonFromErrorAndDestroy(RdKafka::Error *error) {
+@@ -92,16 +99,19 @@ Baton Baton::BatonFromErrorAndDestroy(RdKafka::Error *error) {
    return Baton(err, errstr);
  }
  
 -v8::Local<v8::Object> Baton::ToObject() {
 +Napi::Error Baton::ToError(const Napi::Env& env) {
++  if (m_isFatal) {
++    return ToTxnError(env);
++  }
    if (m_errstr.empty()) {
 -    return RdKafkaError(m_err);
 +    return RdKafkaError(env, m_err);
@@ -6474,7 +6477,7 @@ index 9d1d967515dbd9c81389a8a0644dca360665d3d1..f16d2ab368a167b8d5c6b19d06e3d3cf
  
  RdKafka::ErrorCode Baton::err() {
 diff --git a/src/errors.h b/src/errors.h
-index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..53dff7a8d0f3a8eff7b6de13e88cdf2dd736370e 100644
+index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..015a63403a9a2e837124994f07e82cfd29581f83 100644
 --- a/src/errors.h
 +++ b/src/errors.h
 @@ -11,7 +11,8 @@
@@ -6487,7 +6490,7 @@ index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..53dff7a8d0f3a8eff7b6de13e88cdf2d
  #include <iostream>
  #include <string>
  
-@@ -39,8 +40,8 @@ class Baton {
+@@ -39,21 +40,25 @@ class Baton {
    RdKafka::ErrorCode err();
    std::string errstr();
  
@@ -6498,8 +6501,14 @@ index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..53dff7a8d0f3a8eff7b6de13e88cdf2d
  
   private:
    void* m_data;
-@@ -51,9 +52,13 @@ class Baton {
-   bool m_isTxnRequiresAbort;
+   std::string m_errstr;
+   RdKafka::ErrorCode m_err;
+-  bool m_isFatal;
+-  bool m_isRetriable;
+-  bool m_isTxnRequiresAbort;
++  bool m_isFatal = false;
++  bool m_isRetriable = false;
++  bool m_isTxnRequiresAbort = false;
  };
  
 -v8::Local<v8::Object> RdKafkaError(const RdKafka::ErrorCode &);
@@ -6516,7 +6525,7 @@ index 248d26ad0502e7f5d9bc4891bd6f78d8565661a6..53dff7a8d0f3a8eff7b6de13e88cdf2d
  }  // namespace NodeKafka
  
 diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
-index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa956785e52 100644
+index 4bc778d46a53f271b825e1d2646b76ffafee10f7..08d37d8d70e5567f4e9011f71ea40b166562d8e5 100644
 --- a/src/kafka-consumer.cc
 +++ b/src/kafka-consumer.cc
 @@ -9,14 +9,14 @@
@@ -6565,31 +6574,31 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 +  }
 +
 +  std::string errstr;
- 
--    if (m_tconfig)
--      m_gconfig->set("default_topic_conf", m_tconfig, errstr);
++
 +  Conf* gconfig =
 +    Conf::create(RdKafka::Conf::CONF_GLOBAL, info[0].ToObject(), errstr);
- 
--    m_consume_loop = nullptr;
++
 +  if (!gconfig) {
 +    Napi::Error::New(env, errstr.c_str()).ThrowAsJavaScriptException();
 +    return;
-   }
++  }
  
+-    if (m_tconfig)
+-      m_gconfig->set("default_topic_conf", m_tconfig, errstr);
 +  // If tconfig isn't set, then just let us pick properties from gconf.
 +  Conf* tconfig = nullptr;
 +  if (info[1].IsObject()) {
 +    tconfig = Conf::create(RdKafka::Conf::CONF_TOPIC, info[1].ToObject(),
 +        errstr);
-+
+ 
+-    m_consume_loop = nullptr;
 +    if (!tconfig) {
 +      delete gconfig;
 +      Napi::Error::New(env, errstr.c_str()).ThrowAsJavaScriptException();
 +      return;
 +    }
-+  }
-+
+   }
+ 
 +  this->Config(gconfig, tconfig);
 +
 +  if (m_tconfig)
@@ -6660,7 +6669,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
        }
      }
    }
-@@ -459,6 +501,17 @@ Baton KafkaConsumer::Subscribe(std::vector<std::string> topics) {
+@@ -459,6 +501,34 @@ Baton KafkaConsumer::Subscribe(std::vector<std::string> topics) {
    return Baton(RdKafka::ERR_NO_ERROR);
  }
  
@@ -6675,10 +6684,27 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 +      m_deferred_consume_error.exchange(RdKafka::ERR_NO_ERROR));
 +}
 +
++Baton KafkaConsumer::WithFatalCause(Baton error) {
++  if (error.err() != RdKafka::ERR__FATAL) return error;
++  // librdkafka queues ERR__FATAL alone and keeps the cause (an authorization refusal, a fenced instance)
++  // on the handle; an application deciding whether to come back needs the cause.
++  std::string errstr;
++  RdKafka::ErrorCode fatal = RdKafka::ERR_NO_ERROR;
++  {
++    scoped_shared_read_lock lock(m_connection_lock);
++    if (IsConnected()) fatal = m_client->fatal_error(errstr);
++  }
++  if (fatal == RdKafka::ERR_NO_ERROR)
++    return Baton(RdKafka::ERR__FATAL, RdKafka::err2str(RdKafka::ERR__FATAL),
++                 true, false, false);
++  // The binding's JS error keeps only the text after the first ": ", so the message is the code's own.
++  return Baton(fatal, RdKafka::err2str(fatal), true, false, false);
++}
++
  Baton KafkaConsumer::Consume(int timeout_ms) {
    if (IsConnected()) {
      scoped_shared_read_lock lock(m_connection_lock);
-@@ -469,12 +522,11 @@ Baton KafkaConsumer::Consume(int timeout_ms) {
+@@ -469,12 +539,11 @@ Baton KafkaConsumer::Consume(int timeout_ms) {
        RdKafka::ErrorCode response_code = message->err();
        // we want to handle these errors at the call site
        if (response_code != RdKafka::ERR_NO_ERROR &&
@@ -6696,7 +6722,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
        }
  
        return Baton(message);
-@@ -522,278 +574,235 @@ std::string KafkaConsumer::RebalanceProtocol() {
+@@ -522,278 +591,235 @@ std::string KafkaConsumer::RebalanceProtocol() {
    return m_consumer->rebalance_protocol();
  }
  
@@ -7131,7 +7157,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -803,75 +812,80 @@ NAN_METHOD(KafkaConsumer::NodeAssign) {
+@@ -803,75 +829,80 @@ NAN_METHOD(KafkaConsumer::NodeAssign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7175,13 +7201,13 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
 -NAN_METHOD(KafkaConsumer::NodeUnassign) {
 -  Nan::HandleScope scope;
--
--  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
--
 +Napi::Value KafkaConsumer::NodeUnassign(const Napi::CallbackInfo &info) {
 +    Napi::Env env = info.Env();
 +  Napi::HandleScope scope(env);
  
+-  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
+-
+-
 -  if (!consumer->IsClosing() && !consumer->IsConnected()) {
 -    Nan::ThrowError("KafkaConsumer is disconnected");
 -    return;
@@ -7244,7 +7270,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -881,56 +895,58 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalAssign) {
+@@ -881,56 +912,58 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalAssign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7325,7 +7351,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
      // Got the object
      int64_t partition = GetParameter<int64_t>(partition_obj, "partition", -1);
-@@ -940,321 +956,351 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalUnassign) {
+@@ -940,321 +973,351 @@ NAN_METHOD(KafkaConsumer::NodeIncrementalUnassign) {
        RdKafka::TopicPartition* part;
  
        if (partition < 0) {
@@ -7571,13 +7597,13 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 +  callback = new Napi::FunctionReference();
 +  callback->Reset(info[1].As<Napi::Function>());
 +
- 
--  info.GetReturnValue().Set(Nan::Null());
++
 +  Workers::KafkaConsumerCommitCb *worker =
 +      new Workers::KafkaConsumerCommitCb(callback, this, toppars);
 +
 +  worker->Queue();
-+
+ 
+-  info.GetReturnValue().Set(Nan::Null());
 +  return env.Null();
  }
  
@@ -7691,15 +7717,15 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
 -  Nan::AsyncQueueWorker(
 -    new Workers::KafkaConsumerSeek(callback, consumer, toppar, timeout_ms));
 +  Napi::FunctionReference *callback = new Napi::FunctionReference();
- 
--  info.GetReturnValue().Set(Nan::Null());
++
 +  callback->Reset(info[2].As<Napi::Function>());
 +
 +  Napi::AsyncWorker *worker =
 +      new Workers::KafkaConsumerSeek(callback, this, toppar, timeout_ms);
 +
 +  worker->Queue();
-+
+ 
+-  info.GetReturnValue().Set(Nan::Null());
 +  return env.Null();
  }
  
@@ -7823,7 +7849,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    RdKafka::TopicPartition::destroy(toppars);
  
    #if 0
-@@ -1271,28 +1317,31 @@ NAN_METHOD(KafkaConsumer::NodePause) {
+@@ -1271,28 +1334,31 @@ NAN_METHOD(KafkaConsumer::NodePause) {
    #endif
  
    int error_code = static_cast<int>(b.err());
@@ -7865,7 +7891,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  
    // Now iterate through and delete these toppars
    for (std::vector<RdKafka::TopicPartition *>::const_iterator it = toppars.begin();  // NOLINT
-@@ -1306,233 +1355,246 @@ NAN_METHOD(KafkaConsumer::NodeResume) {
+@@ -1306,233 +1372,246 @@ NAN_METHOD(KafkaConsumer::NodeResume) {
    }
  
    int error_code = static_cast<int>(b.err());
@@ -7927,18 +7953,18 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    int timeout_sleep_delay_ms;
 -  Nan::Maybe<uint32_t> maybeSleep =
 -    Nan::To<uint32_t>(info[1].As<v8::Number>());
-+  uint32_t maybeSleep =
-+    info[1].As<Napi::Number>().Uint32Value();
- 
+-
 -  if (maybeSleep.IsNothing()) {
 -    timeout_sleep_delay_ms = 500;
 -  } else {
 -    timeout_sleep_delay_ms = static_cast<int>(maybeSleep.FromJust());
 -  }
-+  timeout_sleep_delay_ms = static_cast<int>(maybeSleep);
++  uint32_t maybeSleep =
++    info[1].As<Napi::Number>().Uint32Value();
  
 -  KafkaConsumer* consumer = ObjectWrap::Unwrap<KafkaConsumer>(info.This());
--
++  timeout_sleep_delay_ms = static_cast<int>(maybeSleep);
+ 
 -  if (consumer->m_consume_loop != nullptr) {
 -    return Nan::ThrowError("Consume was already called");
 +  if (this->m_consume_loop != nullptr) {
@@ -8107,11 +8133,11 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
    // on the background thread.
    // We will deactivate them if the connection fails.
 -  consumer->ActivateDispatchers();
--
--  Nan::Callback *callback = new Nan::Callback(info[0].As<v8::Function>());
--  Nan::AsyncQueueWorker(new Workers::KafkaConsumerConnect(callback, consumer));
 +  this->ActivateDispatchers();
  
+-  Nan::Callback *callback = new Nan::Callback(info[0].As<v8::Function>());
+-  Nan::AsyncQueueWorker(new Workers::KafkaConsumerConnect(callback, consumer));
+-
 -  info.GetReturnValue().Set(Nan::Null());
 +  Napi::FunctionReference *callback = new Napi::FunctionReference();
 +  callback->Reset(info[0].As<Napi::Function>());
@@ -8240,7 +8266,7 @@ index 4bc778d46a53f271b825e1d2646b76ffafee10f7..7544604c51d61d8974b75cf674f33aa9
  }
  
 diff --git a/src/kafka-consumer.h b/src/kafka-consumer.h
-index e0d9356285edfa737661da0ed4cb14def5dad689..92c31dafae9cc44a257055aba629b6b902b48bfc 100644
+index e0d9356285edfa737661da0ed4cb14def5dad689..313914cfba2188c40eed58ea871557267ba3ef1e 100644
 --- a/src/kafka-consumer.h
 +++ b/src/kafka-consumer.h
 @@ -11,11 +11,12 @@
@@ -8272,7 +8298,7 @@ index e0d9356285edfa737661da0ed4cb14def5dad689..92c31dafae9cc44a257055aba629b6b9
  
    Baton Connect();
    Baton Disconnect();
-@@ -86,25 +87,31 @@ class KafkaConsumer : public Connection {
+@@ -86,25 +87,33 @@ class KafkaConsumer : public Connection {
    Baton Subscribe(std::vector<std::string>);
    Baton Consume(int timeout_ms);
  
@@ -8281,6 +8307,8 @@ index e0d9356285edfa737661da0ed4cb14def5dad689..92c31dafae9cc44a257055aba629b6b9
 +  // An error a batch consume read after it already held records; the next consume returns it.
 +  void DeferConsumeError(RdKafka::ErrorCode code);
 +  RdKafka::ErrorCode TakeDeferredConsumeError();
++  // A consume error as the application should see it: ERR__FATAL becomes the error that made the client fatal.
++  Baton WithFatalCause(Baton error);
  
 -  void ConfigureCallback(const std::string& string_key,
 -                         const v8::Local<v8::Function>& cb, bool add) override;
@@ -8312,7 +8340,7 @@ index e0d9356285edfa737661da0ed4cb14def5dad689..92c31dafae9cc44a257055aba629b6b9
  
    void* m_consume_loop = nullptr;
    Callbacks::QueueNotEmpty m_queue_not_empty_cb;
-@@ -114,32 +121,32 @@ class KafkaConsumer : public Connection {
+@@ -114,32 +123,32 @@ class KafkaConsumer : public Connection {
    RdKafka::KafkaConsumer *m_consumer = nullptr;
  
    // Node methods
@@ -9759,7 +9787,7 @@ index d487d08912ce15ce448ef8919f4e31f841ffcf93..eb7aa0d8a94a0cb1bf7b97fac5c81164
  
  }  // namespace NodeKafka
 diff --git a/src/workers.cc b/src/workers.cc
-index 76fdca6b1ae1a9edb556129703436d50431c48d1..f95fadb8978f820a2e9334d8ccd0454e9d2ee022 100644
+index 76fdca6b1ae1a9edb556129703436d50431c48d1..028d4bf36c8132ebdd2e803076fc1d1443d76ff2 100644
 --- a/src/workers.cc
 +++ b/src/workers.cc
 @@ -12,6 +12,11 @@
@@ -10685,26 +10713,29 @@ index 76fdca6b1ae1a9edb556129703436d50431c48d1..f95fadb8978f820a2e9334d8ccd0454e
 +  // librdkafka hands a consumer error (a fatal one included) out exactly once.
 +  RdKafka::ErrorCode deferred = m_consumer->TakeDeferredConsumeError();
 +  if (deferred != RdKafka::ERR_NO_ERROR) {
-+    SetErrorBaton(Baton(deferred));
++    SetErrorBaton(m_consumer->WithFatalCause(Baton(deferred)));
 +    return;
 +  }
 +
    while (m_messages.size() - eof_event_count < max && looping) {
      // Get a message
      Baton b = m_consumer->Consume(timeout_ms);
-@@ -857,6 +920,8 @@ void KafkaConsumerConsumeNum::Execute() {
+@@ -856,63 +919,67 @@ void KafkaConsumerConsumeNum::Execute() {
+           // Set the error for any other errors and break
            delete message;
            if (m_messages.size() == eof_event_count) {
-             SetErrorBaton(Baton(errorCode));
+-            SetErrorBaton(Baton(errorCode));
++            SetErrorBaton(m_consumer->WithFatalCause(Baton(errorCode)));
 +          } else {
 +            m_consumer->DeferConsumeError(errorCode);
            }
            looping = false;
            break;
-@@ -864,55 +929,57 @@ void KafkaConsumerConsumeNum::Execute() {
+       }
      } else {
        if (m_messages.size() == eof_event_count) {
-         SetErrorBaton(b);
+-        SetErrorBaton(b);
++        SetErrorBaton(m_consumer->WithFatalCause(b));
 +      } else {
 +        m_consumer->DeferConsumeError(b.err());
        }
