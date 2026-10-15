@@ -116,6 +116,10 @@ export type RequestContext = {
 		listScanCap?: number;
 		/** Stands in for Autumn's own billing checks per feature (non-prod only); a missing feature runs the real check. */
 		billingFeatures?: Partial<Record<string, boolean>>;
+		/** Raw `x-include-permission-facts` JSON: billing previews also return `_permission_facts` and `_permission` (non-prod only). */
+		includePermissionFacts?: string;
+		/** The approvals evaluator treats sandbox as live, since sandbox is exempt (non-prod only). */
+		approvalsSandboxAsLive?: boolean;
 		revenueCat?: {
 			subscriptions?: unknown[];
 			purchases?: unknown[];
