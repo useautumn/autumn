@@ -30,10 +30,13 @@ export type Journal = {
 	onCommitted(listener: () => void): void;
 	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */
 	isBackedUp(params: { customerId: string }): boolean;
-	/** After a push is stored: every entry at or below the seq it has seen from this journal's writer leaves the journal. */
+	/**
+	 * After a push is stored: every entry at or below the seq its customer row holds for this journal's writer leaves the
+	 * journal. `atomSeqs` is that row's, by atom id then writer id; a writer id is unique, so any atom id may hold it.
+	 */
 	reconcile(params: {
 		customerId: string;
-		atomSeqs: Record<string, number> | null;
+		atomSeqs: Record<string, Record<string, number>> | null;
 	}): void;
 	/** The customer is gone from Autumn: nothing it owes can ever apply. */
 	forget(params: { customerId: string }): void;

@@ -22,6 +22,7 @@ import {
 	noSubjectPulls,
 	storedSubjectWith,
 	subjectPushOf,
+	withAtomSeqs,
 } from "../utils/atomFixtures.js";
 import { startFakeAutumn, until } from "../utils/fakeAutumnTracks.js";
 import {
@@ -396,7 +397,7 @@ describe("one writer per journal file", () => {
 		for (const journal of journals)
 			journal.reconcile({
 				customerId: "cus_1",
-				atomSeqs: { [w1.writerId]: 1 },
+				atomSeqs: { atom_1: { [w1.writerId]: 1 } },
 			});
 
 		expect(
@@ -422,16 +423,14 @@ describe("a sent deduction no push clears", () => {
 		await until(() => pulled.length > 0);
 		expect(pulled).toEqual(["cus_1"]);
 
-		const read = subjectPushOf({
-			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
-		});
-		await processor.setSubject({
-			customerId: read.customerId,
-			body: JSON.stringify({
-				...JSON.parse(read.body),
-				atom_seqs: { [journal.writerId]: 1 },
+		await processor.setSubject(
+			subjectPushOf({
+				subject: withAtomSeqs({
+					subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+					writerSeqs: { [journal.writerId]: 1 },
+				}),
 			}),
-		});
+		);
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(await remainingOf({ processor })).toBe(990);
 	});
@@ -456,16 +455,14 @@ describe("a sent deduction no push clears", () => {
 		await processor.check({ request: sendEvent() });
 		await until(() => nothingUnsent({ journal }));
 
-		const push = subjectPushOf({
-			subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
-		});
-		await processor.setSubject({
-			customerId: push.customerId,
-			body: JSON.stringify({
-				...JSON.parse(push.body),
-				atom_seqs: { [journal.writerId]: 1 },
+		await processor.setSubject(
+			subjectPushOf({
+				subject: withAtomSeqs({
+					subject: storedSubjectWith({ balance: 990, readAt: 2000 }),
+					writerSeqs: { [journal.writerId]: 1 },
+				}),
 			}),
-		});
+		);
 		(await sleeps.next({ ms: PUSH_GRACE_MS })).wake();
 		await Bun.sleep(10);
 

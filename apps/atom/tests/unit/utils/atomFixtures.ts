@@ -99,6 +99,24 @@ export const deletedPushOf = ({
 	}),
 });
 
+/** The subject as Autumn pushes it once its worker applied this Atom's tracks: its customer row holds each journal's seq. */
+export const withAtomSeqs = ({
+	subject,
+	writerSeqs,
+}: {
+	subject: StoredSubject;
+	writerSeqs: Record<string, number> | null;
+}): StoredSubject => ({
+	...subject,
+	state: {
+		...subject.state,
+		customer: {
+			...subject.state.customer,
+			atom_seqs: writerSeqs && { atom_1: writerSeqs },
+		},
+	},
+});
+
 /** The fixture customer `cus_1` holding `balance` messages, as Atom stores it. */
 export const storedSubjectWith = ({
 	balance,

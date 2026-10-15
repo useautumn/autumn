@@ -189,7 +189,7 @@ describe("journal", () => {
 
 		journal.reconcile({
 			customerId: "cus_1",
-			atomSeqs: { [journal.writerId]: 1 },
+			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
 		});
 		const next = await journal.append({
 			customerId: "cus_1",
@@ -212,10 +212,13 @@ describe("journal", () => {
 		const owed = journal.owed({ customerId: "cus_1" });
 
 		journal.reconcile({ customerId: "cus_1", atomSeqs: null });
-		journal.reconcile({ customerId: "cus_1", atomSeqs: { other_writer: 7 } });
 		journal.reconcile({
 			customerId: "cus_1",
-			atomSeqs: { [journal.writerId]: 0 },
+			atomSeqs: { atom_1: { other_writer: 7 } },
+		});
+		journal.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { atom_1: { [journal.writerId]: 0 } },
 		});
 
 		expect(journal.owed({ customerId: "cus_1" })).toBe(owed);
@@ -282,7 +285,7 @@ describe("journal", () => {
 		expect(journal.isBackedUp({ customerId: "cus_2" })).toBe(false);
 		journal.reconcile({
 			customerId: "cus_1",
-			atomSeqs: { [journal.writerId]: 1 },
+			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
 		});
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
 	}, 30_000);
@@ -315,7 +318,10 @@ describe("journal", () => {
 			command: commandOf({ commandId: "a" }),
 		});
 
-		fresh.reconcile({ customerId: "cus_1", atomSeqs: { [old.writerId]: 7 } });
+		fresh.reconcile({
+			customerId: "cus_1",
+			atomSeqs: { atom_1: { [old.writerId]: 7 } },
+		});
 
 		expect(fresh.writerId).not.toBe(old.writerId);
 		expect(fresh.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual([
