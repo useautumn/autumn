@@ -233,10 +233,31 @@ const pushAfterLag = ({ customerId }: { customerId: string }) =>
 		pushLag(),
 	);
 
+/** Every hand-in as it arrived, copies included: [customer, writer, seq, appendedAt], for the two-owner detector. */
+const handIns: [string, string, number, number][] = [];
+const recordHandIns = (raw: unknown) => {
+	const tracks = (raw as { tracks?: Record<string, unknown>[] })?.tracks ?? [];
+	for (const track of tracks) {
+		const { writerId, seq, appendedAt } = track as {
+			writerId?: string;
+			seq?: number;
+			appendedAt?: number;
+		};
+		const customerId =
+			(track as { command?: { identity?: { customerId?: string } } }).command
+				?.identity?.customerId ??
+			(track as { finalize?: { customer_id?: string } }).finalize?.customer_id;
+		if (customerId && writerId && seq && typeof appendedAt === "number")
+			handIns.push([customerId, writerId, seq, appendedAt]);
+	}
+};
+
 const appendTracks = async (request: Request) => {
-	const parsed = AtomTracksAppendRequestSchema.safeParse(await request.json());
+	const raw = await request.json();
+	const parsed = AtomTracksAppendRequestSchema.safeParse(raw);
 	if (!parsed.success)
 		return Response.json({ code: "unreadable" }, { status: 400 });
+	recordHandIns(raw);
 	const touched = new Set<string>();
 	for (const track of parsed.data.tracks) {
 		if (!("command" in track)) {
@@ -317,6 +338,7 @@ Bun.serve({
 			return Response.json({ seeded: await seed() });
 		if (pathname === "/__rig/stats")
 			return Response.json({ ...counts, queue: queue.stats() });
+		if (pathname === "/__rig/handins") return Response.json({ handIns });
 		if (pathname === "/__rig/applied")
 			return Response.json({ applied: Object.fromEntries(applied) });
 		if (pathname.startsWith("/v1/")) return answerForwarded(request, pathname);
