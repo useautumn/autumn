@@ -2,6 +2,13 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+// Approvals
+import { approvalDecisions } from "../models/approvalModels/approvalDecisionTable.js";
+import {
+	approvalRuleSubjects,
+	approvalRules,
+	approvalRuleVersions,
+} from "../models/approvalModels/approvalRuleTable.js";
 // Balance worker: open locks
 import { balanceLocks } from "../models/balanceLockModels/balanceLockTable.js";
 import {
@@ -147,6 +154,10 @@ import {
 export {
 	account,
 	actions,
+	approvalDecisions,
+	approvalRuleSubjects,
+	approvalRules,
+	approvalRuleVersions,
 	apiKeyRelations,
 	apiKeys,
 	customerJwtFamilies,
