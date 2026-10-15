@@ -4,6 +4,7 @@ import { hashToken } from "../auth/hashToken.js";
 import type { Auth } from "../auth/types/auth.js";
 import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import type { ReplicaRing } from "../replicas/types/replicaRing.js";
 import { CATALOG_FILE, openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -50,6 +51,7 @@ export const createMultiTenantAuth = ({
 	now,
 	clock = () => performance.now(),
 	barrier,
+	ring,
 }: {
 	dataDir: string;
 	slotCount: number;
@@ -64,6 +66,7 @@ export const createMultiTenantAuth = ({
 	clock?: () => number;
 	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
 	barrier?: HandoffBarrier;
+	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
@@ -150,6 +153,7 @@ export const createMultiTenantAuth = ({
 			},
 			journalForwarder,
 			barrier,
+			ring,
 		});
 		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;

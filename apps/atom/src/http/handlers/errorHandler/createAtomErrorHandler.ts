@@ -3,7 +3,9 @@ import {
 	CannotAnswerError,
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
+import { CustomerMovedError } from "../../../processor/ownership/customerMovedError.js";
 import { forwardToAutumn } from "../../forward/forwardToAutumn.js";
+import { hopMovedRequest } from "../../forward/hopMovedRequest.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { atomErrorOf } from "./atomErrorOf.js";
 
@@ -44,9 +46,19 @@ export const createAtomErrorHandler = ({
 		}
 	}
 
-	return function handleError(cause, context) {
+	return async function handleError(cause, context) {
 		if (cause instanceof CannotAnswerError)
 			return forwardWithinCap(context, cause.reason);
+		// The customer moved on while this request waited: its owner decides it, or the API when they disagree.
+		if (cause instanceof CustomerMovedError) {
+			try {
+				return await hopMovedRequest({ ctx, context, owner: cause.owner });
+			} catch (error) {
+				if (error instanceof CannotAnswerError)
+					return forwardWithinCap(context, error.reason);
+				throw error;
+			}
+		}
 
 		const { status, code, message } = atomErrorOf({ cause });
 		context.set("failure", { code, error: cause });

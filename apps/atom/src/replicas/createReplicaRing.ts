@@ -75,7 +75,17 @@ export const createReplicaRing = ({
 		return bestOf({ members: await members(), customerId }) ?? self;
 	}
 
-	/** The leaving peer the customer came from, when this replica owns it only because that peer is leaving. */
+	async function ownerWithout({
+		customerId,
+		member,
+	}: {
+		customerId: string;
+		member: string;
+	}): Promise<string | null> {
+		const others = (await members()).filter((each) => each !== member);
+		return bestOf({ members: others, customerId });
+	}
+
 	async function movedFrom({
 		customerId,
 	}: {
@@ -85,34 +95,17 @@ export const createReplicaRing = ({
 		const leaving = (await peersListed()).filter((peer) =>
 			membership.isLeaving(peer),
 		);
-		if (leaving.length === 0) return null;
-		const before = bestOf({
-			members: [...(await members()), ...leaving].sort(),
-			customerId,
-		});
-		return before !== null && leaving.includes(before) ? before : null;
-	}
-
-	/** Who owns the customer once this replica has left: where what it holds for the customer is sent ahead of the leave. */
-	async function ownerAfterLeaving({
-		customerId,
-	}: {
-		customerId: string;
-	}): Promise<string | null> {
-		const others = (await members()).filter((member) => member !== self);
-		return bestOf({ members: others, customerId });
-	}
-
-	/** Who owns the customer once `peer` counts: where its entries go before the peer is counted. */
-	async function ownerOnceJoined({
-		customerId,
-		peer,
-	}: {
-		customerId: string;
-		peer: string;
-	}): Promise<string> {
-		const joined = [...new Set([...(await members()), peer])].sort();
-		return bestOf({ members: joined, customerId }) ?? self;
+		if (leaving.length > 0) {
+			const before = bestOf({
+				members: [...(await members()), ...leaving].sort(),
+				customerId,
+			});
+			if (before !== null && leaving.includes(before)) return before;
+		}
+		const previous = await ownerWithout({ customerId, member: self });
+		return previous !== null && membership.isHanding(previous)
+			? previous
+			: null;
 	}
 
 	return {
@@ -120,8 +113,7 @@ export const createReplicaRing = ({
 		ownerOf,
 		isOwner: async ({ customerId }) => (await ownerOf({ customerId })) === self,
 		members,
+		ownerWithout,
 		movedFrom,
-		ownerAfterLeaving,
-		ownerOnceJoined,
 	};
 };

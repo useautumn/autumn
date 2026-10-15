@@ -10,6 +10,8 @@ import {
 	checkCallerKeyOf,
 	trackCallerKeyOf,
 } from "./callerKeys/requestCallerKeyOf.js";
+import { CustomerMovedError } from "./ownership/customerMovedError.js";
+import { beginRequest } from "./ownership/inFlightRequests.js";
 import type {
 	SlotProcessor,
 	SlotProcessorContext,
@@ -48,44 +50,87 @@ export const createSlotProcessor = ({
 			await ctx.barrier.wait({ customerId, from: movedFrom });
 	};
 
+	/** A straggler for a customer whose owner changed on its way here is not decided from this copy; one the previous owner hopped here is. */
+	const refuseMoved = async ({
+		customerId,
+		movedFrom,
+	}: {
+		customerId: string;
+		movedFrom: string | null;
+	}) => {
+		if (!ctx.ring) return;
+		const owner = await ctx.ring.ownerOf({ customerId });
+		if (owner !== ctx.ring.self && owner !== movedFrom)
+			throw new CustomerMovedError({ owner });
+	};
+
+	/**
+	 * Every decision runs inside this: parked for its handoff when the customer just moved here, refused when it
+	 * moved away, and counted in flight while decided, so a hand-over that waits for the count reads what it appends.
+	 */
+	const decide = async <T>({
+		customerId,
+		movedFrom,
+		run,
+	}: {
+		customerId: string;
+		movedFrom: string | null;
+		run: () => Promise<T>;
+	}): Promise<T> => {
+		// The handoff first: a moved customer's keys arrive with its entries, so the claim reads them.
+		await awaitHandoff({ customerId, movedFrom });
+		const request = beginRequest();
+		try {
+			await refuseMoved({ customerId, movedFrom });
+			return await run();
+		} finally {
+			request.done();
+		}
+	};
+
 	return {
 		check: async ({ request }) => {
 			refuseUnwritten(request.params);
-			// The handoff first: a moved customer's keys arrive with its entries, so the claim reads them.
-			await awaitHandoff({
+			return decide({
 				customerId: request.params.customer_id,
 				movedFrom: request.movedFrom,
-			});
-			return callerKeys.run({
-				customerId: request.params.customer_id,
-				key: checkCallerKeyOf({ request }),
-				run: async () => {
-					const { response, result } = await check({ ctx, request });
-					return {
-						json: checkResponseToJson({ response }),
-						allowed: response.allowed,
-						denial: response.allowed
-							? null
-							: { reason: result.reason, limitType: result.limitType },
-					};
-				},
+				run: () =>
+					callerKeys.run({
+						customerId: request.params.customer_id,
+						key: checkCallerKeyOf({ request }),
+						run: async () => {
+							const { response, result } = await check({ ctx, request });
+							return {
+								json: checkResponseToJson({ response }),
+								allowed: response.allowed,
+								denial: response.allowed
+									? null
+									: { reason: result.reason, limitType: result.limitType },
+							};
+						},
+					}),
 			});
 		},
 		track: async ({ request }) => {
 			refuseUnwritten(request.params);
-			await awaitHandoff({
+			return decide({
 				customerId: request.params.customer_id,
 				movedFrom: request.movedFrom,
-			});
-			return callerKeys.run({
-				customerId: request.params.customer_id,
-				key: trackCallerKeyOf({ request }),
-				run: () => track({ ctx, request }),
+				run: () =>
+					callerKeys.run({
+						customerId: request.params.customer_id,
+						key: trackCallerKeyOf({ request }),
+						run: () => track({ ctx, request }),
+					}),
 			});
 		},
 		finalize: async ({ request }) => {
 			refuseUnwritten(request.params);
-			return finalize({ ctx, request });
+			return decide({
+				customerId: request.params.customer_id,
+				movedFrom: null,
+				run: () => finalize({ ctx, request }),
+			});
 		},
 		setSubject: async (params) => {
 			const subject = subjectPushToStoredSubject(params);

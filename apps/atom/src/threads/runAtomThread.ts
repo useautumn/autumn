@@ -7,11 +7,16 @@ import { createJournalForwarder } from "../journalForwarder/createJournalForward
 import { getAtomLogger } from "../lib/logging/getAtomLogger.js";
 import { ATOM_DELETE, ATOM_PUT } from "../multiTenant/replicateAtoms.js";
 import { CATALOG_PUSH, SUBJECT_PUSH } from "../pushes/applyPushes.js";
+import { createReplicaRing } from "../replicas/createReplicaRing.js";
 import { createHandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import { createMembership } from "../replicas/membership/createMembership.js";
 import { createReplicaSync } from "../replication/createReplicaSync.js";
 import { createReplication } from "../replication/createReplication.js";
-import { ownAddresses } from "../replication/discovery/createPeerResolver.js";
+import {
+	createPeerResolver,
+	ownAddresses,
+	type PeerResolver,
+} from "../replication/discovery/createPeerResolver.js";
 import {
 	createDeployedFolders,
 	createMultiTenantFolders,
@@ -57,6 +62,12 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		self,
 		table: new Int32Array(init.membership),
 	});
+	const resolver = createPeerResolver({
+		ctx: { peersFile: env.ATOM_PEERS_FILE },
+	});
+	const ring = createReplicaRing({
+		ctx: { resolver, own: () => [self], membership },
+	});
 	// On this thread, where a moved customer's handoff and its requests both land.
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const { auth, multiTenant, held } = openAuth({
@@ -65,6 +76,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 		subjectPulls,
 		journalForwarder,
 		barrier,
+		ring,
 	});
 	const health = {
 		bootedAt: init.bootedAt,
@@ -83,6 +95,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 	// Every Atom keeps its replicas in step: an org's own over its one folder, a multi-tenant one over every tenant's.
 	const replicas = openReplicas({
 		env,
+		resolver,
 		folders,
 		counters,
 		logger,
@@ -100,6 +113,7 @@ const openThread = ({ init }: { init: ThreadInit }) => {
 			replication: replicas.replication,
 			journalForwarder,
 			membership,
+			ring,
 		},
 		config: {
 			env,
@@ -150,12 +164,14 @@ const ownFolder = ({ auth }: { auth: Auth }): Slots => {
 /** The pushes and tenants this thread applies, on their way to every other replica, and what this one copies back from them. */
 const openReplicas = ({
 	env,
+	resolver,
 	folders,
 	counters,
 	logger,
 	isStopping,
 }: {
 	env: ThreadInit["env"];
+	resolver: PeerResolver;
 	folders: ReplicaFolders;
 	counters: ReturnType<typeof openThreadCounters>;
 	logger: ReturnType<typeof getAtomLogger>;
@@ -170,7 +186,7 @@ const openReplicas = ({
 		ctx: {
 			secret: env.ATOM_PEER_SECRET,
 			port: env.ATOM_PEER_PORT,
-			peersFile: env.ATOM_PEERS_FILE,
+			resolver,
 			registry,
 			counters,
 			logger,

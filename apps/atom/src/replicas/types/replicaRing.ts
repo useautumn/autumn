@@ -7,13 +7,17 @@ export type ReplicaRing = {
 	isOwner(params: { customerId: string }): Promise<boolean>;
 	/** This replica's address and its peers', sorted. */
 	members(): Promise<string[]>;
-	/** The leaving peer this customer came from, when it is this replica's only because that peer is leaving; else null. */
-	movedFrom(params: { customerId: string }): Promise<string | null>;
-	/** The member that takes the customer once this replica leaves; null when it is alone. */
-	ownerAfterLeaving(params: { customerId: string }): Promise<string | null>;
-	/** The owner among the members plus `peer`, as the ring will be once the peer is counted. */
-	ownerOnceJoined(params: {
+	/**
+	 * The member that owns the customer once `member` does not count; null when nobody else does. Without this replica:
+	 * where a leaver sends the customer, and where an ungranted replica hops it. Without a joiner: who owned it before.
+	 */
+	ownerWithout(params: {
 		customerId: string;
-		peer: string;
-	}): Promise<string>;
+		member: string;
+	}): Promise<string | null>;
+	/**
+	 * The peer the customer came from, when this replica owns it only because that peer is leaving, or because this
+	 * replica joined and the peer is still handing it over; else null.
+	 */
+	movedFrom(params: { customerId: string }): Promise<string | null>;
 };

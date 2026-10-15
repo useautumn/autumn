@@ -4,6 +4,7 @@ import type { Auth } from "../../auth/types/auth.js";
 import type { JournalForwarder } from "../../journalForwarder/types/journalForwarder.js";
 import type { MultiTenantContext } from "../../multiTenant/multiTenantContext.js";
 import type { Membership } from "../../replicas/membership/types/membership.js";
+import type { ReplicaRing } from "../../replicas/types/replicaRing.js";
 import type { ReplicaFolders } from "../../replication/types/replicaFolders.js";
 import type { Replication } from "../../replication/types/replication.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
@@ -33,6 +34,8 @@ export type AtomServerDependencies = {
 	journalForwarder: Pick<JournalForwarder, "drainAll">;
 	/** Which listed peers count as ring members, over the table the replica's threads share. */
 	membership: Membership;
+	/** Who owns each customer across the replicas, over the membership. */
+	ring: ReplicaRing;
 };
 
 export type AtomServerConfig = { env: AtomEnv; receivesPushes: boolean };

@@ -2,6 +2,7 @@ import type { CheckResult } from "@autumn/balance-engine";
 import type { AutumnLogger } from "@autumn/logging";
 import type { TrackResponseV3 } from "@autumn/shared";
 import type { HandoffBarrier } from "../../replicas/handover/createHandoffBarrier.js";
+import type { ReplicaRing } from "../../replicas/types/replicaRing.js";
 import type {
 	HandedEntry,
 	Journal,
@@ -25,6 +26,8 @@ export type SlotProcessorContext = {
 	openLocks: OpenLocks;
 	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
 	barrier?: HandoffBarrier;
+	/** Who owns each customer now: a request for one that moved away is refused here, so its new owner decides it. */
+	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
 };
 
 /** A check's response as the JSON body it is sent as, and its verdict, read before stringify for the request line. */

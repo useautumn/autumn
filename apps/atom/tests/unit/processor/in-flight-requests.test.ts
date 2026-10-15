@@ -2,7 +2,6 @@
 import { describe, expect, test } from "bun:test";
 import {
 	beginRequest,
-	inFlightRequests,
 	waitForInFlight,
 } from "../../../src/processor/ownership/inFlightRequests.js";
 
@@ -11,17 +10,21 @@ const settled = (promise: Promise<unknown>) =>
 
 describe("waiting for the requests in flight", () => {
 	test("returns at once with none, and only once every begun request is done, whatever it ended in", async () => {
-		expect(inFlightRequests()).toBe(0);
-		expect(await settled(waitForInFlight())).toBe(true);
+		expect(await waitForInFlight({ withinMs: 1_000 })).toBe(true);
 
 		const first = beginRequest();
 		const second = beginRequest();
-		const idle = waitForInFlight();
-		expect(inFlightRequests()).toBe(2);
+		const idle = waitForInFlight({ withinMs: 1_000 });
 		first.done();
 		expect(await settled(idle)).toBe(false);
 		second.done();
 		expect(await settled(idle)).toBe(true);
-		expect(inFlightRequests()).toBe(0);
+		expect(await idle).toBe(true);
+	});
+
+	test("gives up at its deadline while a request is still going: its entries reach Autumn from here", async () => {
+		const stuck = beginRequest();
+		expect(await waitForInFlight({ withinMs: 5 })).toBe(false);
+		stuck.done();
 	});
 });

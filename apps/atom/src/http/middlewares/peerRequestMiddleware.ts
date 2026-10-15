@@ -1,5 +1,6 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { MOVED_FROM_HEADER } from "../../replicas/handover/handoffContract.js";
 import {
 	PEER_FOLDER_HEADER,
 	PEER_SIGNATURE_HEADER,
@@ -33,6 +34,9 @@ export function peerRequestMiddleware({
 				401,
 			);
 		context.set("relayed", true);
+		// Hopped here by the customer's previous owner: its answer waits for that owner's handoff.
+		const movedFrom = context.req.header(MOVED_FROM_HEADER);
+		if (movedFrom) context.set("movedFrom", movedFrom);
 		await next();
 	}
 	return authorizePeer;

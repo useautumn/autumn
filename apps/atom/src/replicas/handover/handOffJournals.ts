@@ -75,17 +75,15 @@ const sendBatch = async ({
 const batchesOf = async ({
 	ctx,
 	pending,
-	ownerOf,
 }: {
 	ctx: HandOffContext;
 	pending: Pending[];
-	ownerOf: (customerId: string) => Promise<string>;
 }): Promise<{ batches: Batch[]; kept: number }> => {
 	const open = new Map<string, Batch>();
 	const batches: Batch[] = [];
 	let kept = 0;
 	for (const item of pending) {
-		const owner = await ownerOf(item.customerId);
+		const owner = await ctx.ring.ownerOf({ customerId: item.customerId });
 		if (owner === ctx.ring.self) {
 			kept += item.entries.length;
 			continue;
@@ -110,11 +108,8 @@ const batchesOf = async ({
  */
 export const handOffJournals = async ({
 	ctx,
-	ownerOf = (customerId) => ctx.ring.ownerOf({ customerId }),
 }: {
 	ctx: HandOffContext;
-	/** Who takes each customer; the ring's owner unless the caller is handing to a peer about to be counted. */
-	ownerOf?: (customerId: string) => Promise<string>;
 }): Promise<{ handed: number; kept: number }> => {
 	const pending: Pending[] = (
 		await Promise.all(
@@ -130,7 +125,7 @@ export const handOffJournals = async ({
 			),
 		)
 	).flat();
-	const { batches, kept: ownKept } = await batchesOf({ ctx, pending, ownerOf });
+	const { batches, kept: ownKept } = await batchesOf({ ctx, pending });
 	let handed = 0;
 	let kept = ownKept;
 	let next = 0;
