@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SettingsTable } from "../../SettingsTable";
 import { ApprovalRuleRow } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
+import type { RuleDialogs } from "./editor/useRuleDialogs";
 import { useApprovalRuleRows } from "./useApprovalRuleRows";
 
 const COLUMNS = [
@@ -12,7 +13,13 @@ const COLUMNS = [
 	{ label: "Enabled", width: "10%" },
 ];
 
-export const ApprovalRulesTable = ({ rules }: { rules: ApprovalRule[] }) => {
+export const ApprovalRulesTable = ({
+	rules,
+	dialogs,
+}: {
+	rules: ApprovalRule[];
+	dialogs: RuleDialogs;
+}) => {
 	const [filter, setFilter] = useState("");
 	const rows = useApprovalRuleRows({ rules, filter });
 	const enabledCount = rules.filter((rule) => rule.enabled).length;
@@ -39,7 +46,13 @@ export const ApprovalRulesTable = ({ rules }: { rules: ApprovalRule[] }) => {
 			{rows.length > 0 ? (
 				<SettingsTable columns={COLUMNS}>
 					{rows.map(({ rule, parts }) => (
-						<ApprovalRuleRow key={rule.id} rule={rule} parts={parts} />
+						<ApprovalRuleRow
+							key={rule.id}
+							rule={rule}
+							parts={parts}
+							onEdit={() => dialogs.openEditor({ rule })}
+							onDelete={() => dialogs.openDelete({ rule })}
+						/>
 					))}
 				</SettingsTable>
 			) : (

@@ -1,5 +1,15 @@
 import type { ApprovalRule } from "@autumn/shared";
-import { Switch, TableCell, TableRow } from "@autumn/ui";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	IconButton,
+	Switch,
+	TableCell,
+	TableRow,
+} from "@autumn/ui";
+import { DotsThreeIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useToggleApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
 import { cn } from "@/lib/utils";
@@ -9,9 +19,13 @@ import { RuleSentencePart } from "./RuleSentencePart";
 export const ApprovalRuleRow = ({
 	rule,
 	parts,
+	onEdit,
+	onDelete,
 }: {
 	rule: ApprovalRule;
 	parts: SentencePart[];
+	onEdit: () => void;
+	onDelete: () => void;
 }) => {
 	const toggle = useToggleApprovalRule();
 	const enabled = toggle.isPending ? toggle.variables.enabled : rule.enabled;
@@ -40,7 +54,27 @@ export const ApprovalRuleRow = ({
 					}
 				/>
 			</TableCell>
-			<TableCell />
+			<TableCell className="pr-2">
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						render={
+							<IconButton
+								variant="skeleton"
+								size="icon"
+								iconOrientation="center"
+								icon={<DotsThreeIcon />}
+								aria-label={`${rule.name} actions`}
+							/>
+						}
+					/>
+					<DropdownMenuContent align="end">
+						<DropdownMenuItem onClick={onEdit}>Edit rule</DropdownMenuItem>
+						<DropdownMenuItem variant="destructive" onClick={onDelete}>
+							Delete rule
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</TableCell>
 		</TableRow>
 	);
 };

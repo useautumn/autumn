@@ -3,13 +3,14 @@ import { InfoIcon } from "@phosphor-icons/react";
 import { useApprovalRulesQuery } from "@/hooks/queries/useApprovalRulesQuery";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
 import { ApprovalRulesTable } from "./ApprovalRulesTable";
+import type { RuleDialogs } from "./editor/useRuleDialogs";
 
 const NOTES = [
 	"Rules are checked most specific first. If no rule covers an action, the role's access applies.",
 	"Owners, Admins and full-access keys are never limited. Sandbox stays unrestricted.",
 ];
 
-export const ApprovalRulesList = () => {
+export const ApprovalRulesList = ({ dialogs }: { dialogs: RuleDialogs }) => {
 	const { rules, isLoading } = useApprovalRulesQuery();
 
 	if (isLoading) return <Skeleton className="h-64 w-full" />;
@@ -17,7 +18,7 @@ export const ApprovalRulesList = () => {
 	return (
 		<div className="flex flex-col gap-6">
 			{rules.length > 0 ? (
-				<ApprovalRulesTable rules={rules} />
+				<ApprovalRulesTable rules={rules} dialogs={dialogs} />
 			) : (
 				<ApprovalRulesEmpty
 					title="No rules yet"

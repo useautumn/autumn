@@ -1,0 +1,184 @@
+import { APPROVAL_AREAS, type ApprovalRule } from "@autumn/shared";
+import {
+	Button,
+	Input,
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+	Switch,
+} from "@autumn/ui";
+import { ChipMultiSelect } from "./ChipMultiSelect";
+import { RuleActionsPicker } from "./RuleActionsPicker";
+import { RuleField } from "./RuleField";
+import { ruleArea, ruleWhenArea } from "./ruleActions";
+import { useApprovalRuleForm } from "./useApprovalRuleForm";
+import {
+	subjectKey,
+	toggleSubject,
+	useRuleSubjectGroups,
+} from "./useRuleSubjectGroups";
+
+const SCOPE_CAPTION =
+	"Once a role has a rule for an action, every request for that action must match one of its rules.";
+
+const required =
+	({ message }: { message: string }) =>
+	({ value }: { value: string | unknown[] }) =>
+		(typeof value === "string" ? value.trim() : value).length > 0
+			? undefined
+			: message;
+
+export const ApprovalRuleSheet = ({
+	rule,
+	open,
+	onOpenChange,
+}: {
+	rule: ApprovalRule | null;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+}) => {
+	const { form, isSaving, serverIssue } = useApprovalRuleForm({
+		rule,
+		onSaved: () => onOpenChange(false),
+	});
+	const subjectGroups = useRuleSubjectGroups();
+
+	return (
+		<Sheet open={open} onOpenChange={onOpenChange}>
+			<SheetContent
+				side="right"
+				className="!w-[30rem] !max-w-[30rem] sm:!w-[30rem] sm:!max-w-[30rem]"
+			>
+				<SheetHeader>
+					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
+					<SheetDescription>Billing → Approvals</SheetDescription>
+				</SheetHeader>
+
+				<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+					<form.Field
+						name="name"
+						validators={{ onSubmit: required({ message: "Name the rule." }) }}
+					>
+						{(field) => (
+							<RuleField
+								label="Name"
+								error={field.state.meta.errors[0] ?? serverIssue("name")}
+							>
+								<Input
+									aria-label="Name"
+									placeholder="Sales trials"
+									value={field.state.value}
+									onChange={(event) => field.handleChange(event.target.value)}
+								/>
+							</RuleField>
+						)}
+					</form.Field>
+
+					<form.Field
+						name="subjects"
+						validators={{
+							onSubmit: required({ message: "Choose who the rule is for." }),
+						}}
+					>
+						{(field) => (
+							<RuleField
+								label="Who"
+								hint="Everyone, roles or members"
+								error={field.state.meta.errors[0] ?? serverIssue("subjects")}
+							>
+								<ChipMultiSelect
+									ariaLabel="Who"
+									placeholder="Choose people or roles"
+									groups={subjectGroups}
+									value={field.state.value.map(subjectKey)}
+									onToggle={(key) =>
+										field.handleChange(
+											toggleSubject({ subjects: field.state.value, key }),
+										)
+									}
+								/>
+							</RuleField>
+						)}
+					</form.Field>
+
+					<form.Field
+						name="actions"
+						validators={{
+							onSubmit: required({ message: "Choose at least one action." }),
+						}}
+					>
+						{(field) => {
+							const area = ruleArea({ actions: field.state.value });
+							return (
+								<RuleField
+									label="Can"
+									hint={area ? APPROVAL_AREAS[area] : undefined}
+									error={field.state.meta.errors[0] ?? serverIssue("actions")}
+								>
+									<RuleActionsPicker
+										actions={field.state.value}
+										onChange={field.handleChange}
+									/>
+									{ruleWhenArea({ actions: field.state.value }) && (
+										<p className="text-subtle text-xs">{SCOPE_CAPTION}</p>
+									)}
+								</RuleField>
+							);
+						}}
+					</form.Field>
+
+					<form.Field name="note">
+						{(field) => (
+							<RuleField
+								label="Note"
+								hint="Optional · shown when blocked"
+								error={serverIssue("note")}
+							>
+								<Input
+									aria-label="Note"
+									placeholder="Trials over 2 months need Finance."
+									value={field.state.value}
+									onChange={(event) => field.handleChange(event.target.value)}
+								/>
+							</RuleField>
+						)}
+					</form.Field>
+
+					<form.Field name="enabled">
+						{(field) => (
+							<div className="flex items-center justify-between text-sm">
+								<span className="font-medium text-foreground">Enabled</span>
+								<Switch
+									aria-label="Enabled"
+									checked={field.state.value}
+									onCheckedChange={field.handleChange}
+								/>
+							</div>
+						)}
+					</form.Field>
+				</div>
+
+				<div className="flex gap-2 border-t px-4 pt-4 pb-4">
+					<Button
+						variant="secondary"
+						className="flex-1"
+						onClick={() => onOpenChange(false)}
+						disabled={isSaving}
+					>
+						Close
+					</Button>
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() => form.handleSubmit()}
+						isLoading={isSaving}
+					>
+						Save
+					</Button>
+				</div>
+			</SheetContent>
+		</Sheet>
+	);
+};

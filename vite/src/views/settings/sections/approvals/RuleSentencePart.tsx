@@ -3,7 +3,7 @@ import { GlobeIcon, UserIcon, UsersIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { SentencePart } from "./buildRuleSentence";
 
-const SUBJECT_ICONS: Record<RuleSubject["type"], typeof UserIcon> = {
+export const SUBJECT_ICONS: Record<RuleSubject["type"], typeof UserIcon> = {
 	everyone: GlobeIcon,
 	role: UsersIcon,
 	user: UserIcon,
