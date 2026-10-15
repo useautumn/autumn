@@ -41,7 +41,7 @@ const save = ({
 const missing = "Choose a value for this condition.";
 
 describe("editor required Feature", () => {
-	test.each<[ApprovalAction, string | null]>([
+	test.each<[ApprovalAction, "feature" | null]>([
 		["balances.create", "feature"],
 		["balances.update", "feature"],
 		["billing.attach", null],

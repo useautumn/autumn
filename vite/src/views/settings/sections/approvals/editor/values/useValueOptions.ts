@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
 
 /** The list's timing labels, else the value in sentence case ("bill_difference" → "Bill difference"). */
 const enumLabel = (value: string) => {
-	const words = value.replaceAll("_", " ");
+	const words = value.split("_").join(" ");
 	return LABELS[value] ?? words.charAt(0).toUpperCase() + words.slice(1);
 };
 
