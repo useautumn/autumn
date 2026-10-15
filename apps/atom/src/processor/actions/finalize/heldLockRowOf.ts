@@ -3,6 +3,7 @@ import {
 	type WorkerLock,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
+import { isDeletedSubject } from "../../../state/types/storedSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "../readCurrentSubject/freshestCatalog.js";
 import { replayOwed } from "../readCurrentSubject/replayOwed.js";
@@ -21,7 +22,7 @@ const replayLockRows = ({
 	owed: readonly JournalEntry[];
 }): void => {
 	const customer = ctx.sqliteStore.readSubject({ customerId, entityId: null });
-	if (!customer) return;
+	if (!customer || isDeletedSubject(customer)) return;
 	replayOwed({
 		owed,
 		state: customer.state,
