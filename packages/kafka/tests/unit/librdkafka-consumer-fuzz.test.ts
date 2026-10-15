@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { appendFileSync } from "node:fs";
 import { LIBRDKAFKA_ERROR_CODES } from "@autumn/librdkafka";
 import { createLibrdkafkaConsumer } from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
 import type {
@@ -89,6 +90,10 @@ function createWorld(options: FuzzOptions) {
 	let leaving = false;
 	let pendingRevokeAll = false;
 	let externalAction: (() => void) | null = null;
+	let commitQueue = Promise.resolve();
+	/** Where the application sought, per partition: a commit below the landed one is expected at or past one. A restart racing
+	 *  another partition's in-flight commit also moves it back (repeats, never a loss), so it is traced, not failed. */
+	const appSeekTargets = new Map<number, number[]>();
 	/** Rebalances librdkafka served in a poll whose callbacks reach JS after the poll's records; in order. */
 	const lateChanges: { code: number; partitions: NativeTopicPartition[] }[] =
 		[];
@@ -433,21 +438,43 @@ function createWorld(options: FuzzOptions) {
 		},
 		commitCb(offsets, done) {
 			stats.commits += 1;
-			for (const { partition, offset } of offsets)
+			for (const { partition, offset } of offsets) {
 				checkCommit(partition, offset);
+				const landed = committed.get(partition);
+				if (
+					landed !== undefined &&
+					offset < landed &&
+					assigned.has(partition) &&
+					!(appSeekTargets.get(partition) ?? []).some(
+						(target) => target <= offset,
+					)
+				)
+					note(
+						`commit p${partition}=${offset} issued below the landed ${landed}`,
+					);
+			}
 			const fail = !calm && random.chance(0.08);
-			later(() => {
-				if (fail) {
-					stats.failedCommits += 1;
-					done(nativeError(LIBRDKAFKA_ERROR_CODES.ERR_REBALANCE_IN_PROGRESS));
-					return;
-				}
-				for (const { partition, offset } of offsets) {
-					committed.set(partition, offset);
-					note(`commit p${partition}=${offset}`);
-				}
-				done(null);
-			});
+			// The coordinator answers one member's commits in the order they were sent.
+			commitQueue = commitQueue.then(
+				() =>
+					new Promise<void>((settled) =>
+						later(() => {
+							settled();
+							if (fail) {
+								stats.failedCommits += 1;
+								done(
+									nativeError(LIBRDKAFKA_ERROR_CODES.ERR_REBALANCE_IN_PROGRESS),
+								);
+								return;
+							}
+							for (const { partition, offset } of offsets) {
+								committed.set(partition, offset);
+								note(`commit p${partition}=${offset}`);
+							}
+							done(null);
+						}),
+					),
+			);
 		},
 		committed(partitions, _timeout, done) {
 			const fail = !calm && random.chance(0.25);
@@ -526,6 +553,11 @@ function createWorld(options: FuzzOptions) {
 		checkReportedProgress,
 		logs,
 		committed,
+		countAppSeek: (partition: number, target: number) =>
+			appSeekTargets.set(partition, [
+				...(appSeekTargets.get(partition) ?? []),
+				target,
+			]),
 		assigned,
 		handled,
 		appSeekFloor,
@@ -589,6 +621,7 @@ function createHandler({
 				const length = (world.logs[partition] as Slot[]).length;
 				const target = random.int(0, length);
 				world.note(`app seek p${partition}@${target}`);
+				world.countAppSeek(partition, target);
 				world.appSeekFloor.set(
 					partition,
 					Math.max(world.appSeekFloor.get(partition) ?? 0, target),
@@ -659,6 +692,7 @@ async function runScenario(options: FuzzOptions): Promise<{
 			if (roll === 0) {
 				const target = random.int(0, (world.logs[partition] as Slot[]).length);
 				world.note(`external seek p${partition}@${target}`);
+				world.countAppSeek(partition, target);
 				world.appSeekFloor.set(
 					partition,
 					Math.max(world.appSeekFloor.get(partition) ?? 0, target),
@@ -777,6 +811,11 @@ describe("librdkafka consumer runner under random interleavings", () => {
 					chaosPolls: random.int(40, 160),
 					...variant,
 				});
+				if (failures.length > 0 && process.env.FUZZ_TRACE_FILE)
+					appendFileSync(
+						process.env.FUZZ_TRACE_FILE,
+						`seed ${seed} ${name}\n${world.trace.join("\n")}\n\n`,
+					);
 				if (failures.length > 0)
 					failed.push(
 						`seed ${seed}: ${failures.slice(0, 3).join(" | ")}\n    trace: ${world.trace.slice(-Number(process.env.FUZZ_TRACE_TAIL ?? 25)).join(" ; ")}`,
