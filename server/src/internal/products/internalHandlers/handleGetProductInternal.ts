@@ -26,25 +26,18 @@ export const handleGetProductInternal = createRoute({
 		const { version } = c.req.valid("query");
 		const { db, org, env, features } = c.get("ctx");
 
-		const getLatestProduct = () =>
+		const getProduct = (atVersion?: number) =>
 			ProductService.getFull({
 				db,
 				idOrInternalId: productId,
 				orgId: org.id,
 				env,
+				version: atVersion,
 			});
-		// Without a version the requested product is the latest one; fetch it once.
 		const [product, latestProduct, versionCounts] = await Promise.all([
-			version === undefined
-				? getLatestProduct()
-				: ProductService.getFull({
-						db,
-						idOrInternalId: productId,
-						orgId: org.id,
-						env,
-						version,
-					}),
-			version === undefined ? undefined : getLatestProduct(),
+			getProduct(version),
+			// Without a version the requested product is the latest one, so it isn't fetched twice.
+			version === undefined ? undefined : getProduct(),
 			CusProdReadService.getCountsPerVersion({
 				db,
 				productId,

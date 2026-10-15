@@ -31,6 +31,7 @@ export const getOrgWithFeaturesCached = async ({
 	env,
 	skipCache = false,
 	skipL1 = false,
+	allowNotFound = false,
 	requestId,
 }: {
 	db: DrizzleCli;
@@ -39,9 +40,12 @@ export const getOrgWithFeaturesCached = async ({
 	skipCache?: boolean;
 	/** Skip this process's L1 so a clear made by another process is seen at once. */
 	skipL1?: boolean;
+	/** Resolve a missing org to null instead of throwing. */
+	allowNotFound?: boolean;
 	requestId?: string;
 }): Promise<OrgWithFeatures | null> => {
-	const load = () => OrgService.getWithFeatures({ db, orgId, env });
+	const load = () =>
+		OrgService.getWithFeatures({ db, orgId, env, allowNotFound });
 	if (!skipCache)
 		return readThroughOrgWithFeatures({
 			ctx: getMiscCacheContext(),
