@@ -286,16 +286,27 @@ export const openJournal = ({
 			if (Number(pruned) < PRUNE_CHUNK) return;
 		}
 	}
-	// A failed prune is retried the next minute; a writer that died ends the thread anyway.
-	const pruneTimer = setInterval(
-		() => void pruneKeys().catch(() => {}),
-		PRUNE_EVERY_MS,
-	);
-	pruneTimer.unref();
+
+	let pruneTimer: ReturnType<typeof setTimeout> | null = null;
+	const untilNextPrune = () =>
+		new Promise<void>((resolve) => {
+			pruneTimer = setTimeout(resolve, PRUNE_EVERY_MS);
+			pruneTimer.unref();
+		});
+
+	/** One loop per journal, so a prune the writer is slow to answer is never joined by another; a failed one waits for the next cycle. */
+	async function runPruneLoop(): Promise<void> {
+		while (!closed) {
+			await untilNextPrune();
+			if (closed) return;
+			await pruneKeys().catch(() => {});
+		}
+	}
+	void runPruneLoop();
 
 	function close(): void {
 		closed = true;
-		clearInterval(pruneTimer);
+		if (pruneTimer) clearTimeout(pruneTimer);
 		for (const entry of [...unsent]) releaseUnsent(entry);
 		unsentByJournal.delete(unsent);
 		file.close();
