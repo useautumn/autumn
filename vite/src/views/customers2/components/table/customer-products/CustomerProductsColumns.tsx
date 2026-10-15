@@ -117,6 +117,10 @@ export const CustomerProductsColumns = [
 			};
 
 			if (!meta?.onCancelClick) return null;
+			// A later phase row runs the same customer product; act on it from its own row.
+			if ("phase_starts_at" in row.original && row.original.phase_starts_at) {
+				return null;
+			}
 
 			const isCanceling = row.original.canceled;
 			const isPending = row.original.status === CusProductStatus.Pending;

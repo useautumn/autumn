@@ -47,6 +47,11 @@ export const handleGetCustomer = createRoute({
 			includeExpiredLooseEntitlements,
 		});
 
+		const testClockFrozenTimeMsPromise = getTestClockFrozenTimeMs({
+			ctx,
+			stripeCustomerId: fullCus.processor?.id,
+		});
+
 		const [
 			testClockFrozenTimeMs,
 			autoTopupsWithLimits,
@@ -54,10 +59,7 @@ export const handleGetCustomer = createRoute({
 			usageLimitsWithUsage,
 			productsPage,
 		] = await Promise.all([
-			getTestClockFrozenTimeMs({
-				ctx,
-				stripeCustomerId: fullCus.processor?.id,
-			}),
+			testClockFrozenTimeMsPromise,
 			getCusAutoTopupPurchaseLimits({
 				ctx,
 				internalCustomerId: fullCus.internal_id,
@@ -74,11 +76,14 @@ export const handleGetCustomer = createRoute({
 				expand,
 			}),
 			getCusUsageLimitsWithUsage({ ctx, fullCus }),
-			CusService.getDefaultProductsPage({
-				ctx,
-				idOrInternalId: customer_id,
-				internalCustomerId: fullCus.internal_id,
-			}),
+			testClockFrozenTimeMsPromise.then((frozenTimeMs) =>
+				CusService.getDefaultProductsPage({
+					ctx,
+					idOrInternalId: customer_id,
+					internalCustomerId: fullCus.internal_id,
+					nowMs: frozenTimeMs ?? Date.now(),
+				}),
+			),
 		]);
 
 		// Overlay usage onto the customer and every entity that has caps, so the

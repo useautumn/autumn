@@ -6,7 +6,12 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { differenceInCalendarDays, format, formatDistance } from "date-fns";
+import {
+	differenceInCalendarDays,
+	format,
+	formatDistance,
+	isSameYear,
+} from "date-fns";
 import { cn } from "@/lib/utils";
 import { PLAN_STATUS_CONFIG } from "./planStatusConfig";
 import { type PlanStatus, resolvePlanStatus } from "./resolvePlanStatus";
@@ -66,7 +71,10 @@ function getStatusDetail({
 	}
 	if (planStatus === "scheduled" && starts_at) {
 		return {
-			shortText: format(starts_at, SHORT_DATE),
+			shortText: format(
+				starts_at,
+				isSameYear(starts_at, nowMs) ? SHORT_DATE : LONG_DATE,
+			),
 			tooltipText: `Starts ${format(starts_at, LONG_DATE)}`,
 		};
 	}

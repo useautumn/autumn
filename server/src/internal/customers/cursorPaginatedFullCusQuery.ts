@@ -137,6 +137,8 @@ export const getCursorPaginatedFullCusQuery = ({
 		? sql`, ${customerProductsSeedCte({
 				inStatuses: RELEVANT_STATUSES,
 				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+				// Live has no test clocks; a sandbox page refetches with its customer's clock.
+				nowMs: Date.now(),
 			})}`
 		: sql``;
 

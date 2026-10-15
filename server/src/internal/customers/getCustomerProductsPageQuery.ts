@@ -4,12 +4,14 @@ import {
 	type CustomerProductsCursorFields,
 	type CustomerProductsStatusFilter,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
+	/** The customer's current time (test clock aware); later phases before it have started. */
+	nowMs: number;
 	status: CustomerProductsStatusFilter;
 	entityId?: string;
 	kind?: CustomerProductKind;
@@ -49,6 +51,7 @@ const typeRankSql = sql`(
 // scheduled, then one-off, then everything else (expired/past_due/paused).
 const statusRankSql = sql`(
 	CASE
+		WHEN cp.phase_starts_at IS NOT NULL THEN 1
 		WHEN cp.status = 'scheduled' THEN 1
 		WHEN ${oneOffPredicate} THEN 2
 		WHEN cp.status = 'active' THEN 0
@@ -60,6 +63,7 @@ const statusRankSql = sql`(
 // without disturbing the rest of the ordering.
 const scheduledStartSql = sql`(
 	CASE
+		WHEN cp.phase_starts_at IS NOT NULL THEN cp.phase_starts_at
 		WHEN cp.status = 'scheduled' THEN COALESCE(cp.starts_at, cp.created_at, 0)
 		ELSE 0
 	END
@@ -142,6 +146,44 @@ export const freeTrialLateral = sql`
 		WHERE ft.id = cp.free_trial_id
 	) ft_data ON true`;
 
+// Identical consecutive phases share one row, so each later future phase it runs is
+// listed as a row of its own, as Set Plans shows it. Phases are looked up per customer.
+const customerProductRows = ({
+	customers,
+	nowMs,
+}: {
+	customers: SQL;
+	nowMs: number;
+}) => sql`(
+	SELECT cp.*, NULL::numeric AS phase_starts_at
+	FROM ${customers} rows_customer
+	JOIN customer_products cp ON cp.internal_customer_id = rows_customer.internal_id
+	UNION ALL
+	SELECT cp.*, later_phase.starts_at AS phase_starts_at
+	FROM ${customers} rows_customer
+	CROSS JOIN LATERAL (
+		SELECT phase_product.id, ph.starts_at
+		FROM schedules sch
+		JOIN phases ph ON ph.schedule_id = sch.id
+		CROSS JOIN LATERAL unnest(ph.customer_product_ids) AS phase_product(id)
+		-- customers.internal_id is COLLATE "C"; match the schedules index's default collation.
+		WHERE sch.internal_customer_id = rows_customer.internal_id COLLATE "default"
+			AND ph.starts_at > ${nowMs}
+			AND EXISTS (
+				SELECT 1 FROM phases earlier
+				WHERE earlier.schedule_id = ph.schedule_id
+					AND earlier.starts_at < ph.starts_at
+					AND phase_product.id = ANY(earlier.customer_product_ids)
+			)
+		OFFSET 0
+	) later_phase
+	JOIN customer_products cp ON cp.id = later_phase.id
+	WHERE cp.status <> 'expired'
+) cp`;
+
+const singleCustomer = (internalCustomerId: string) =>
+	sql`(SELECT ${internalCustomerId}::text AS internal_id)`;
+
 const statusFilterSql = (status: CustomerProductsStatusFilter) => {
 	switch (status) {
 		case "expired":
@@ -177,6 +219,7 @@ const buildFilters = ({
 
 export const getCustomerProductsPageQuery = ({
 	internalCustomerId,
+	nowMs,
 	status,
 	entityId,
 	kind,
@@ -207,7 +250,7 @@ export const getCustomerProductsPageQuery = ({
 			cpr_data.customer_prices,
 			ce_data.customer_entitlements,
 			ft_data.free_trial
-		FROM customer_products cp
+		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId), nowMs })}
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		${customerPricesLateral}
 		${customerEntitlementsLateral}
@@ -223,6 +266,7 @@ export const getCustomerProductsPageQuery = ({
 
 export const getCustomerProductsCountQuery = ({
 	internalCustomerId,
+	nowMs,
 	status,
 	entityId,
 	kind,
@@ -231,7 +275,7 @@ export const getCustomerProductsCountQuery = ({
 
 	return sql`
 		SELECT COUNT(*)::int AS total_count
-		FROM customer_products cp
+		FROM ${customerProductRows({ customers: singleCustomer(internalCustomerId), nowMs })}
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
@@ -248,9 +292,11 @@ export const getCustomerProductsCountQuery = ({
 export const customerProductsSeedCte = ({
 	inStatuses,
 	limit,
+	nowMs,
 }: {
 	inStatuses?: CusProductStatus[];
 	limit: number;
+	nowMs: number;
 }) => {
 	const statusFilter = cpStatusInClause(inStatuses);
 	const fetchLimit = limit + 1;
@@ -260,6 +306,7 @@ export const customerProductsSeedCte = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				cp.phase_starts_at,
 				${statusRankSql} AS status_rank,
 				${scheduledStartSql} AS scheduled_start,
 				${entityRankSql} AS entity_rank,
@@ -269,8 +316,7 @@ export const customerProductsSeedCte = ({
 					ORDER BY ${customerProductsOrderExpr}
 				) AS rn,
 				COUNT(*) OVER (PARTITION BY cp.internal_customer_id)::int AS total_count
-			FROM cr
-			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
+			FROM ${customerProductRows({ customers: sql`cr`, nowMs })}
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			WHERE TRUE ${statusFilter}
 				AND ${sql.raw(notLicenseAssignmentSql("cp"))}
@@ -285,7 +331,8 @@ export const customerProductsSeedCte = ({
 				row_to_json(prod) AS product,
 				cpr_data.customer_prices,
 				ce_data.customer_entitlements,
-				ft_data.free_trial
+				ft_data.free_trial,
+				ranked.phase_starts_at
 			FROM products_seed_ranked ranked
 			JOIN customer_products cp ON cp.id = ranked.id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
