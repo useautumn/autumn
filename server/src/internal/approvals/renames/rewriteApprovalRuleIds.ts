@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { AppEnv } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { clearApprovalRulesCache } from "@/external/redis/actions/approvalRulesCache/approvalRulesCache.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { listRulesMentioningId } from "../repos/listRulesMentioningId.js";
@@ -20,24 +21,28 @@ export const rewriteApprovalRuleIds = async ({
 }) => {
 	if (ctx.env !== AppEnv.Live) return;
 
-	const rules = await listRulesMentioningId({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		id: fromId,
-	});
-	const rewrites = rules
-		.map((rule) => ({
-			ruleId: rule.id,
-			when: rewriteWhenIds({ when: rule.when, key, fromId, toId }),
-			previous: rule.when,
-		}))
-		.filter(({ when, previous }) => !isDeepStrictEqual(when, previous));
-	if (rewrites.length === 0) return;
+	// Locked from read to write: parallel renames in one catalog update can touch the same rule.
+	const rewroteAny = await ctx.db.transaction(async (transaction) => {
+		const tx = transaction as unknown as DrizzleCli;
+		const rules = await listRulesMentioningId({
+			db: tx,
+			orgId: ctx.org.id,
+			id: fromId,
+		});
+		const rewrites = rules
+			.map((rule) => ({
+				ruleId: rule.id,
+				when: rewriteWhenIds({ when: rule.when, key, fromId, toId }),
+				previous: rule.when,
+			}))
+			.filter(({ when, previous }) => !isDeepStrictEqual(when, previous));
 
-	await Promise.all(
-		rewrites.map(({ ruleId, when }) =>
-			updateRuleWhen({ db: ctx.db, orgId: ctx.org.id, ruleId, when }),
-		),
-	);
+		for (const { ruleId, when } of rewrites) {
+			await updateRuleWhen({ db: tx, orgId: ctx.org.id, ruleId, when });
+		}
+		return rewrites.length > 0;
+	});
+	if (!rewroteAny) return;
+
 	await clearApprovalRulesCache({ orgId: ctx.org.id, env: AppEnv.Live });
 };
