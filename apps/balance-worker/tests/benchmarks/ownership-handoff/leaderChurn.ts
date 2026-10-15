@@ -567,6 +567,10 @@ const LEADER_FETCH_ERROR =
 // librdkafka applying a new leader from metadata (`debug: topic`).
 const LEADER_MIGRATION =
 	/[Mm]igrating topic|[Dd]elegat|leader .* -> |[Ll]eader changed/;
+/** Diagnostics: librdkafka log lines matching CHURN_LOG_MATCH are kept verbatim in the raw data. */
+const LOG_MATCH = process.env.CHURN_LOG_MATCH
+	? new RegExp(process.env.CHURN_LOG_MATCH, "i")
+	: null;
 function recordKafkaLog({
 	worker,
 	line,
@@ -581,6 +585,15 @@ function recordKafkaLog({
 			worker,
 			event: "kafka.fetch_leader_error",
 			code: leaderError[1],
+			message: line.message,
+		});
+		return;
+	}
+	if (LOG_MATCH?.test(line.message)) {
+		workerEvents.push({
+			t: Date.now(),
+			worker,
+			event: "kafka.match",
 			message: line.message,
 		});
 		return;
