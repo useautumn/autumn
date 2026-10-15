@@ -11,7 +11,7 @@ import {
 import { sqlNow } from "../../db/utils.js";
 import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
-import type { ApprovalVerdict } from "./approvalModels.js";
+import type { ApprovalDecisionVerdict } from "./approvalModels.js";
 
 /** Audit and shadow log: one row per rules evaluation on a write. */
 export const approvalDecisions = pgTable(
@@ -24,7 +24,7 @@ export const approvalDecisions = pgTable(
 		action: text("action").notNull(),
 		user_id: text("user_id"),
 		role: text("role"),
-		verdict: text("verdict").$type<ApprovalVerdict>().notNull(),
+		verdict: text("verdict").$type<ApprovalDecisionVerdict>().notNull(),
 		// False in shadow mode, where a deny is logged but not blocked.
 		enforced: boolean("enforced").notNull(),
 		decided_by: jsonb("decided_by").$type<unknown>(),

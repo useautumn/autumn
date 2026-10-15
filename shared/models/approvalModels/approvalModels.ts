@@ -6,7 +6,7 @@ import type {
 } from "./approvalRuleTable.js";
 
 export type ApprovalSubjectType = "everyone" | "role" | "user";
-export type ApprovalVerdict = "allow" | "deny";
+export type ApprovalDecisionVerdict = "allow" | "deny";
 
 /** `subject_id` for an "everyone" subject, which names no one; keeps the composite key non-null. */
 export const EVERYONE_SUBJECT_ID = "*";
