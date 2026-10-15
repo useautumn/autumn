@@ -5,8 +5,15 @@ import {
 	organizationRole,
 	type UpdateRoleParams,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+
+const roleSubjectIs = ({ orgId, name }: { orgId: string; name: string }) =>
+	and(
+		eq(approvalRuleSubjects.org_id, orgId),
+		eq(approvalRuleSubjects.subject_type, "role"),
+		eq(approvalRuleSubjects.subject_id, name),
+	);
 
 /** Updates a custom role; a rename also moves its members, pending invites and rule subjects, atomically. */
 export const updateCustomRole = async ({
@@ -57,16 +64,25 @@ export const updateCustomRole = async ({
 					eq(invitation.status, "pending"),
 				),
 			);
+		// A rule naming both roles keeps one subject row, not two identical keys.
+		await tx
+			.delete(approvalRuleSubjects)
+			.where(
+				and(
+					roleSubjectIs({ orgId, name: newName }),
+					inArray(
+						approvalRuleSubjects.rule_id,
+						tx
+							.select({ rule_id: approvalRuleSubjects.rule_id })
+							.from(approvalRuleSubjects)
+							.where(roleSubjectIs({ orgId, name })),
+					),
+				),
+			);
 		await tx
 			.update(approvalRuleSubjects)
 			.set({ subject_id: newName })
-			.where(
-				and(
-					eq(approvalRuleSubjects.org_id, orgId),
-					eq(approvalRuleSubjects.subject_type, "role"),
-					eq(approvalRuleSubjects.subject_id, name),
-				),
-			);
+			.where(roleSubjectIs({ orgId, name }));
 
 		return role;
 	});

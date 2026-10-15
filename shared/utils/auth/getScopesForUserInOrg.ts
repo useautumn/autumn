@@ -11,7 +11,9 @@ type ScopeResolverDb = Pick<
 	"query"
 >;
 
-const isCanonicalRole = (role: string): role is Role => role in ROLE_SCOPES;
+// Own keys only: `in` would also match inherited names like "constructor".
+const isCanonicalRole = (role: string): role is Role =>
+	Object.hasOwn(ROLE_SCOPES, role);
 
 /** Custom roles grant their stored access; unknown roles keep their name but grant no scopes. */
 export async function getScopesForUserInOrg({

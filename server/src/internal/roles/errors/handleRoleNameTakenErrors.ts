@@ -1,6 +1,7 @@
-import { ErrCode, isBuiltInRole, RecaseError } from "@autumn/shared";
+import { isBuiltInRole } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { roleRepo } from "../repos/index.js";
+import { buildRoleExistsError } from "./buildRoleExistsError.js";
 
 export const handleRoleNameTakenErrors = async ({
 	db,
@@ -15,9 +16,5 @@ export const handleRoleNameTakenErrors = async ({
 		isBuiltInRole(name) || (await roleRepo.get({ db, orgId, name }));
 	if (!nameTaken) return;
 
-	throw new RecaseError({
-		message: `A role named ${name} already exists. Pick another name.`,
-		code: ErrCode.RoleExists,
-		statusCode: 409,
-	});
+	throw buildRoleExistsError({ name });
 };
