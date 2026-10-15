@@ -10,7 +10,6 @@ import {
 	orgToInStatuses,
 	type ParsedCheckParams,
 	RecaseError,
-	type TrackParams,
 	UsageLimitExceededError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -19,6 +18,7 @@ import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
 import { buildLockScheduleName } from "@/internal/balances/utils/lock/buildLockScheduleName.js";
 import { getCreditRateRequiredBalance } from "@/internal/features/creditSystemUtils.js";
 import { workflows } from "@/queue/workflows.js";
+import { checkParamsToTrackBody } from "./checkParamsToTrackBody.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { getCheckResponseV2 } from "./getCheckResponseV2.js";
 
@@ -100,15 +100,7 @@ export const runCheckWithTrackV2 = async ({
 		value: requiredBalance,
 	}).map((deduction) => ({ ...deduction, enforceOverdueBlock: true }));
 
-	const trackBody: TrackParams = {
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
-		feature_id: body.feature_id,
-		value: requiredBalance,
-		properties: body.properties,
-		skip_event: body.skip_event,
-		overage_behavior: body.lock?.overage_behavior ?? "reject",
-	};
+	const trackBody = checkParamsToTrackBody({ body, requiredBalance });
 
 	let allowed = true;
 	let trackBalances: Record<string, ApiBalanceV1 | null> | undefined;
