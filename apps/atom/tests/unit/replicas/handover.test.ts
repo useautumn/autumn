@@ -136,6 +136,17 @@ const appliedLockBodyFor = ({
 	return JSON.stringify(body);
 };
 
+const deductOnB = async ({ b, times }: { b: Replica; times: number }) => {
+	for (let i = 0; i < times; i++) {
+		const reply = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER, sendEvent: true }),
+		);
+		expect(reply.status).toBe(200);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+	}
+};
+
 const journalOwing = (replica: Replica) =>
 	replica.slots
 		.ownedJournals()
@@ -198,6 +209,36 @@ const toggledAutumn = () => {
 		up: () => {
 			down = false;
 		},
+	};
+};
+
+/** Autumn as two replicas' forwarders see it: every hand-in, tagged with the sender; a batch waits at the gate until `release()`. */
+const taggedAutumn = () => {
+	const handedIn: { from: string; seq: number }[] = [];
+	let gate: Promise<void> = Promise.resolve();
+	let open = () => {};
+	const forwarderFor = (from: string) =>
+		createJournalForwarder({
+			ctx: {
+				autumnClient: {
+					appendTracks: async ({ tracks }) => {
+						await gate;
+						for (const track of tracks) handedIn.push({ from, seq: track.seq });
+					},
+				},
+				logger: quiet,
+				sleep: async () => {},
+			},
+		});
+	return {
+		handedIn,
+		forwarderFor,
+		close: () => {
+			gate = new Promise<void>((resolve) => {
+				open = resolve;
+			});
+		},
+		release: () => open(),
 	};
 };
 
@@ -777,6 +818,62 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(calls).toEqual([]);
+	});
+
+	test("a seq the stand-in appends for a moving customer after handing its earlier ones reaches Autumn through the joiner, after them, never from the stand-in", async () => {
+		const autumn = taggedAutumn();
+		const a = createReplica({
+			address: A,
+			peers: [B],
+			ringPeers: [B],
+			journalForwarder: autumn.forwarderFor("a"),
+		});
+		const b = createReplica({
+			address: B,
+			peers: [A],
+			ringPeers: [A],
+			joined: [],
+			journalForwarder: autumn.forwarderFor("b"),
+		});
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		let handoffs = 0;
+		connect({
+			replicas: [a, b],
+			beforeDispatch: async (request) => {
+				if (new URL(request.url).pathname !== PEER_HANDOFF_PATH) return;
+				handoffs++;
+				await Bun.sleep(30);
+			},
+		});
+		// B owns everything while A is away; Autumn is slow (the gate), so seq 1 is still unsent when handed.
+		autumn.close();
+		await deductOnB({ b, times: 1 });
+		const probing = b.probeOnce();
+		await until(() => handoffs === 1);
+		// Seq 2, appended while the handoff of seq 1 is on its way to A: B still owns the customer, but must not send it
+		// itself, or Autumn's per-writer watermark would skip seq 1 when A hands it in later.
+		await deductOnB({ b, times: 1 });
+		expect(
+			journalOwing(b)
+				?.unsent({ limit: 100 })
+				.map(({ seq }) => seq),
+		).toEqual([]);
+		await probing;
+		expect(b.membership.isMember(A)).toBe(true);
+		await until(() =>
+			(journalOwing(a)?.owed({ customerId: CUSTOMER }) ?? []).some(
+				({ seq }) => seq === 2,
+			),
+		);
+		autumn.release();
+
+		await until(() => autumn.handedIn.some(({ seq }) => seq === 2));
+		await Bun.sleep(50);
+		expect(autumn.handedIn.find(({ seq }) => seq === 2)?.from).toBe("a");
+		expect(
+			autumn.handedIn.filter(({ from }) => from === "a").map(({ seq }) => seq),
+		).toEqual([1, 2]);
 	});
 
 	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
