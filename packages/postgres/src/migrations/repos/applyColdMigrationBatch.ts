@@ -63,21 +63,8 @@ const opsSql = ({ document }: { document: string }): SQL => sql`ops AS (
 		)
 	)`;
 
-const lockSql = ({
-	batch,
-	document,
-	nonce,
-}: {
-	batch: ColdMigrationBatch;
-	document: string;
-	nonce: string;
-}): SQL => sql`
+const lockSql = ({ document }: { document: string }): SQL => sql`
 	WITH ${opsSql({ document })},
-	own AS (
-		SELECT 1 FROM partition_progress
-		WHERE topic = ${batch.topic} AND partition_id = ${batch.partition} AND claim_token = ${batch.claimToken}
-		FOR SHARE
-	),
 	ce_locked AS (
 		SELECT ce.id, ce.customer_product_id FROM customer_entitlements ce
 		WHERE ce.id IN (SELECT ce_id FROM ops)
@@ -99,9 +86,22 @@ const lockSql = ({
 		ORDER BY r.item_id
 		FOR UPDATE
 	)
-	SELECT CASE WHEN (SELECT count(*) FROM own) = 1
-		THEN (SELECT count(*) FROM ce_locked) + 0 * (SELECT count(*) FROM cp_locked) + 0 * (SELECT count(*) FROM runs_locked)
-		ELSE (${`${COLD_MIGRATION_NOT_OWNER_MARKER}${nonce}:`}::text || (SELECT count(*) FROM own))::integer END AS locked`;
+	SELECT (SELECT count(*) FROM ce_locked) + 0 * (SELECT count(*) FROM cp_locked) + 0 * (SELECT count(*) FROM runs_locked) AS locked`;
+
+const ownerSql = ({
+	batch,
+	nonce,
+}: {
+	batch: ColdMigrationBatch;
+	nonce: string;
+}): SQL => sql`
+	WITH own AS (
+		SELECT 1 FROM partition_progress
+		WHERE topic = ${batch.topic} AND partition_id = ${batch.partition} AND claim_token = ${batch.claimToken}
+		FOR SHARE
+	)
+	SELECT CASE WHEN (SELECT count(*) FROM own) = 1 THEN 1
+		ELSE (${`${COLD_MIGRATION_NOT_OWNER_MARKER}${nonce}:`}::text || (SELECT count(*) FROM own))::integer END AS owned`;
 
 const applySql = ({ document }: { document: string }): SQL => sql`
 	WITH ${opsSql({ document })},
@@ -223,12 +223,15 @@ const applySql = ({ document }: { document: string }): SQL => sql`
 
 type StatementResult = Pick<QueryResult, "rows">;
 
-const lastResultRows = ({
+const APPLY_STATEMENT_INDEX = 2;
+
+const applyResultRows = ({
 	results,
 }: {
 	results: StatementResult | StatementResult[];
 }): unknown[] =>
-	(Array.isArray(results) ? results.at(-1) : results)?.rows ?? [];
+	(Array.isArray(results) ? results[APPLY_STATEMENT_INDEX] : results)?.rows ??
+	[];
 
 export class ColdMigrationBatchRolledBackError extends Error {
 	readonly reason: string;
@@ -278,11 +281,10 @@ export const applyColdMigrationBatch = async ({
 		};
 	const nonce = randomUUID().replaceAll("-", "");
 	const document = opsDocumentOf({ batch });
-	const lock = inlineSqlParams({
-		statement: lockSql({ batch, document, nonce }),
-	});
+	const lock = inlineSqlParams({ statement: lockSql({ document }) });
 	const apply = inlineSqlParams({ statement: applySql({ document }) });
-	if (lock === null || apply === null)
+	const owner = inlineSqlParams({ statement: ownerSql({ batch, nonce }) });
+	if (lock === null || apply === null || owner === null)
 		throw new Error("Cold migration batch has a value with no literal");
 	const forcedRollback = batch.forceRollback
 		? `; SELECT ('${COLD_MIGRATION_FORCED_ROLLBACK_MARKER}${nonce}:' || count(*))::integer FROM customer_entitlements WHERE id = ''`
@@ -291,7 +293,7 @@ export const applyColdMigrationBatch = async ({
 	try {
 		results = await ctx.db.execute(
 			sql.raw(
-				`SET LOCAL statement_timeout = ${COLD_MIGRATION_STATEMENT_TIMEOUT_MS}; ${lock}; ${apply}${forcedRollback}`,
+				`SET LOCAL statement_timeout = ${COLD_MIGRATION_STATEMENT_TIMEOUT_MS}; ${lock}; ${apply}; ${owner}${forcedRollback}`,
 			),
 		);
 	} catch (error) {
@@ -300,7 +302,7 @@ export const applyColdMigrationBatch = async ({
 			throw new ColdMigrationBatchRolledBackError({ reason, cause: error });
 		throw error;
 	}
-	const parsed = resultSchema.parse(lastResultRows({ results })[0]);
+	const parsed = resultSchema.parse(applyResultRows({ results })[0]);
 	return {
 		applied: parsed.applied,
 		stale: parsed.stale,

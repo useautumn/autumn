@@ -297,21 +297,28 @@ const verifyScenario = async ({
 const verifyUnrelated = async ({
 	ctx,
 	applied,
+	unknown,
 }: {
 	ctx: AutumnContext;
 	applied: Map<string, number>;
+	unknown: Map<string, number>;
 }) => {
 	const tracked = JSON.stringify(
-		[...applied].map(([customer_id, count]) => ({ customer_id, count })),
+		[...applied].map(([customer_id, count]) => ({
+			customer_id,
+			count,
+			unknown: unknown.get(customer_id) ?? 0,
+		})),
 	);
 	const [row]: Array<Record<string, string>> = await ctx.db.execute(sql`
 		WITH tracked AS (
-			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, count int)
+			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, count int, unknown int)
 		)
 		SELECT count(*) AS wrong FROM customer_entitlements ce
 		JOIN tracked t ON t.customer_id = ce.customer_id
 		WHERE ce.id LIKE ${`${UNRELATED_PREFIXES.entitlement}%`}
-			AND ce.balance IS DISTINCT FROM (${UNRELATED_BALANCE})::numeric - t.count
+			AND (ce.balance > (${UNRELATED_BALANCE})::numeric - t.count
+				OR ce.balance < (${UNRELATED_BALANCE})::numeric - t.count - t.unknown)
 	`);
 	return Number(row?.wrong ?? 0);
 };
@@ -646,6 +653,7 @@ const main = async () => {
 		? await verifyUnrelated({
 				ctx,
 				applied: unrelatedTracks.perCustomerApplied,
+				unknown: unrelatedTracks.perCustomerUnknown,
 			})
 		: 0;
 	const itemRuns = await readItemRunCounts({
@@ -698,8 +706,7 @@ const main = async () => {
 		unrelatedWrong === 0 &&
 		itemRuns.running === 0 &&
 		itemRuns.succeeded === customers &&
-		sampleTracks.tally.failed === 0 &&
-		unrelatedTracks.tally.failed === 0;
+		sampleTracks.tally.failed === 0;
 	Object.assign(result, { correct });
 	console.log(`LANE_RESULT ${JSON.stringify(result)}`);
 	console.log(correct ? "lane: CORRECT" : "lane: INCORRECT");

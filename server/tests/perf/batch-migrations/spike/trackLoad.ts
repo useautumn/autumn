@@ -113,6 +113,7 @@ export type SteadyTracks = {
 	stop(): Promise<void>;
 	tally: TrackTally;
 	perCustomerApplied: Map<string, number>;
+	perCustomerUnknown: Map<string, number>;
 };
 
 export const startSteadyTracks = ({
@@ -126,6 +127,7 @@ export const startSteadyTracks = ({
 }): SteadyTracks => {
 	const tally = createTrackTally();
 	const perCustomerApplied = new Map<string, number>();
+	const perCustomerUnknown = new Map<string, number>();
 	const loops: Promise<void>[] = [];
 	let stopped = false;
 
@@ -134,6 +136,11 @@ export const startSteadyTracks = ({
 		while (!stopped) {
 			const status = await sendTrack({ ctx, client, customerId, tally, first });
 			first = false;
+			if (status === "failed")
+				perCustomerUnknown.set(
+					customerId,
+					(perCustomerUnknown.get(customerId) ?? 0) + 1,
+				);
 			if (status === "applied")
 				perCustomerApplied.set(
 					customerId,
@@ -159,6 +166,7 @@ export const startSteadyTracks = ({
 		},
 		tally,
 		perCustomerApplied,
+		perCustomerUnknown,
 	};
 };
 
