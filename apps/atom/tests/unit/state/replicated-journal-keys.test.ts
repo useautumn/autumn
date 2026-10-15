@@ -52,10 +52,9 @@ const keyedTrack = ({
 		overageBehavior: "overflow",
 	}),
 	identity: { ...createState().identity, customerId },
-	idempotency: {
-		key: `track:${key ?? `req_${commandId}`}`,
-		ttlMs: 24 * 60 * MINUTE_MS,
-	},
+	...(key !== null && {
+		idempotency: { key: `track:${key}`, ttlMs: 24 * 60 * MINUTE_MS },
+	}),
 });
 
 /** A key row as another replica relays it: the claim's hash as hex. */
