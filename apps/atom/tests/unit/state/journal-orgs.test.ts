@@ -3,7 +3,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { FinalizeCommand, TrackCommand } from "@autumn/balance-engine";
+import {
+	type FinalizeCommand,
+	parseTrackCommand,
+	type TrackCommand,
+} from "@autumn/balance-engine";
 import type { AtomTracksAppendRequest } from "@autumn/byoc";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
@@ -202,5 +206,21 @@ describe("journal orgs", () => {
 		close(writer);
 
 		expect(await handedIn(open(databasePath))).toEqual(commands);
+	});
+
+	test("rollback: a build from before journal_orgs reads this build's row without its org, so Autumn refuses its hand-in until a build with journal_orgs reopens the file", async () => {
+		const databasePath = journalPath();
+		const command = commandOf({ commandId: "r1", customerId: "cus_r" });
+		const writer = open(databasePath);
+		await writer.append({ customerId: "cus_r", command });
+		close(writer);
+
+		const [readByEarlierBuild] = rowsIn(databasePath).commands;
+		expect(() => parseTrackCommand({ input: readByEarlierBuild })).toThrow();
+		expect(
+			open(databasePath)
+				.owed({ customerId: "cus_r" })
+				.map((entry) => entry.command),
+		).toEqual([command]);
 	});
 });
