@@ -16,6 +16,8 @@ const FIRST_RETRY_MS = 1_000;
 const LAST_RETRY_MS = 30_000;
 /** A sent deduction no push has shown applied by now has its customer pulled: the read says how far Autumn has seen. */
 const PUSH_GRACE_MS = 60_000;
+/** A pull that did not settle it (Autumn not caught up, or the pull failed) is tried again, this many times in all. */
+const SETTLE_ROUNDS = 3;
 /** How often a drain looks again at what the journals still hold. */
 const DRAIN_POLL_MS = 20;
 
@@ -55,15 +57,19 @@ export const createJournalForwarder = ({
 		sent,
 		isStopped,
 	}: Draining & { sent: JournalEntry[] }): Promise<void> {
-		await sleep(PUSH_GRACE_MS);
-		if (isStopped()) return;
-		const stillOwed = sent.filter((entry) =>
-			journal.owed({ customerId: entry.customerId }).includes(entry),
-		);
-		for (const customerId of new Set(
-			stillOwed.map((entry) => entry.customerId),
-		))
-			pulls.request({ customerId, entityId: null });
+		for (let round = 0; round < SETTLE_ROUNDS; round++) {
+			await sleep(PUSH_GRACE_MS);
+			if (isStopped()) return;
+			const stillOwed = sent.filter((entry) =>
+				journal.owed({ customerId: entry.customerId }).includes(entry),
+			);
+			if (stillOwed.length === 0) return;
+			await Promise.all(
+				[...new Set(stillOwed.map((entry) => entry.customerId))].map(
+					(customerId) => pulls.settle({ customerId }),
+				),
+			);
+		}
 	}
 
 	/** Until nothing is left to send or the forwarding stops. */
