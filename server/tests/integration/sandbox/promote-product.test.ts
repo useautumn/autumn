@@ -164,10 +164,12 @@ const seedSub = async (sourceOrg: Organization) => {
 			items: [],
 		}) as unknown as CreateProductV2Params,
 	});
+	// createProduct skips the route's cache invalidation, and its DetectBaseVariant job can cache a pre-seed list.
 	const seeded = await ProductService.listFull({
 		db,
 		orgId: sourceOrg.id,
 		env: AppEnv.Sandbox,
+		skipCache: true,
 	});
 	const basePlan = seeded.find((p) => p.id === BASE_PLAN);
 	await db
