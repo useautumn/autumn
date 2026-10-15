@@ -1044,6 +1044,36 @@ describe("an idempotency key taken on the leaving owner just before it hands ove
 		const fresh = await b.app.request("/v1/track", keyedTrack("evt_2"));
 		expect(fresh.status).toBe(202);
 	});
+
+	test("reaching the new owner while the handoff is late and the relay has not landed is the API's, never claimed from the copy", async () => {
+		const autumn = countingAutumn();
+		const { a, b } = await agreeingPair();
+		// Neither the relay nor the handoff reaches B in time: both land after the barrier.
+		connect({
+			replicas: [a, b],
+			autumn: autumn.autumn,
+			beforeDispatch: async (request) => {
+				const { pathname } = new URL(request.url);
+				if (pathname === KEYS_RELAY.path) await Bun.sleep(400);
+				if (pathname === PEER_HANDOFF_PATH) await Bun.sleep(150);
+			},
+		});
+		expect((await a.app.request("/v1/track", keyedTrack("evt_1"))).status).toBe(
+			202,
+		);
+
+		const leaving = a.leave();
+		await until(() => b.membership.isLeaving(A));
+		const late = await b.app.request("/v1/track", keyedTrack("evt_1"));
+		await leaving;
+
+		expect(late.headers.get("x-atom-forwarded")).toBe("handoff_late");
+		expect(autumn.calls).toEqual(["/v1/track"]);
+		expect(b.stats().handoffLate).toBe(1);
+		// Landed now: the handed entry carried the key, so the next retry is refused here.
+		const retried = await b.app.request("/v1/track", keyedTrack("evt_1"));
+		expect(retried.status).toBe(409);
+	});
 });
 
 export { PEER_PORT };
