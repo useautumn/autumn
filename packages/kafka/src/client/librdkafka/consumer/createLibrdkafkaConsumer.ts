@@ -415,11 +415,15 @@ export function createLibrdkafkaConsumer({
 	async function awaitLoop(): Promise<void> {
 		const loop = state.loop;
 		if (!loop) return;
-		const ended = await Promise.race([
-			loop.then(() => true),
-			Bun.sleep(STOP_LOOP_TIMEOUT_MS).then(() => false),
-		]);
-		if (ended) return;
+		async function loopEnded(): Promise<"ended"> {
+			await loop;
+			return "ended";
+		}
+		if (
+			(await raceTimeout({ work: loopEnded(), ms: STOP_LOOP_TIMEOUT_MS })) ===
+			"ended"
+		)
+			return;
 		log(
 			"error",
 			"Kafka consumer loop did not stop; leaving the group without it",
@@ -484,4 +488,23 @@ export function createLibrdkafkaConsumer({
 	}
 	registerNativeConsumer({ consumer, readNative });
 	return consumer;
+}
+
+/** The bound's timer is cleared once the work wins: a pending one would hold a stopping process open for its full length. */
+async function raceTimeout<T>({
+	work,
+	ms,
+}: {
+	work: Promise<T>;
+	ms: number;
+}): Promise<T | "timed out"> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	function timeOut(resolve: (value: "timed out") => void): void {
+		timer = setTimeout(resolve, ms, "timed out");
+	}
+	try {
+		return await Promise.race([work, new Promise<"timed out">(timeOut)]);
+	} finally {
+		clearTimeout(timer);
+	}
 }
