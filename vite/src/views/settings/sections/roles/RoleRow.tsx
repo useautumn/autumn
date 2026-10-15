@@ -12,7 +12,12 @@ import {
 	TableCell,
 	TableRow,
 } from "@/views/settings/SettingsTable";
-import { canEditRole, type Role, summarizeAccess } from "./roleAccess";
+import {
+	canEditRole,
+	type Role,
+	summarizeAccess,
+	summarizeRules,
+} from "./roleAccess";
 
 export const RoleRow = ({
 	role,
@@ -37,6 +42,9 @@ export const RoleRow = ({
 			</TableCell>
 			<TableCell className="max-w-0 truncate">
 				{summarizeAccess({ access: role.access })}
+			</TableCell>
+			<TableCell className="text-xs text-subtle">
+				{summarizeRules({ role })}
 			</TableCell>
 			<TableCell className="tabular-nums">{role.member_count}</TableCell>
 			<TableCell className="pr-2">

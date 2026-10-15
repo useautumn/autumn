@@ -52,19 +52,29 @@ const rejectWith = ({
 	});
 };
 
-const MOCK_ROLES: [label: string, scopes: ScopeString[], members: number][] = [
-	["Owner", ROLE_SCOPES.owner, 1],
-	["Admin", ROLE_SCOPES.admin, 3],
-	["Developer", ROLE_SCOPES.developer, 6],
-	["Sales", ROLE_SCOPES.sales, 8],
-	["Support", [...ROLE_SCOPES.member, "balances:write"], 4],
-	["Finance", [...ROLE_SCOPES.member, "customers:write", "billing:write"], 0],
+const MOCK_ROLES: [
+	label: string,
+	scopes: ScopeString[],
+	members: number,
+	rules: number,
+][] = [
+	["Owner", ROLE_SCOPES.owner, 1, 0],
+	["Admin", ROLE_SCOPES.admin, 3, 0],
+	["Developer", ROLE_SCOPES.developer, 6, 0],
+	["Sales", ROLE_SCOPES.sales, 8, 2],
+	["Support", [...ROLE_SCOPES.member, "balances:write"], 4, 1],
+	[
+		"Finance",
+		[...ROLE_SCOPES.member, "customers:write", "billing:write"],
+		0,
+		1,
+	],
 ];
 
 const BUILT_IN_COUNT = 4;
 
 const seedRoles = (): Role[] =>
-	MOCK_ROLES.map(([label, scopes, members], index) => {
+	MOCK_ROLES.map(([label, scopes, members, rules], index) => {
 		const built_in = index < BUILT_IN_COUNT;
 		return {
 			name: label.toLowerCase(),
@@ -72,6 +82,7 @@ const seedRoles = (): Role[] =>
 			built_in,
 			access: scopesToAccess({ scopes }),
 			member_count: members,
+			rule_count: rules,
 			created_at: built_in ? null : Date.now(),
 			updated_at: built_in ? null : Date.now(),
 		};
@@ -137,6 +148,7 @@ export const getMockRolesClient = ({
 				...body,
 				built_in: false,
 				member_count: 0,
+				rule_count: 0,
 				created_at: Date.now(),
 				updated_at: Date.now(),
 			};

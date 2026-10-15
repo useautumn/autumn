@@ -15,6 +15,7 @@ export type Role = {
 	built_in: boolean;
 	access: RoleAccessRecord;
 	member_count: number;
+	rule_count: number;
 	created_at: number | null;
 	updated_at: number | null;
 };
@@ -132,4 +133,12 @@ export const summarizeAccess = ({
 	if (RESOURCES.some((resource) => access[resource] === "read"))
 		return "Read only";
 	return "No access";
+};
+
+const RULE_EXEMPT_ROLES = ["owner", "admin"];
+
+export const summarizeRules = ({ role }: { role: Role }) => {
+	if (RULE_EXEMPT_ROLES.includes(role.name)) return "Skips rules";
+	if (role.rule_count === 0) return "No rules";
+	return role.rule_count === 1 ? "1 rule" : `${role.rule_count} rules`;
 };

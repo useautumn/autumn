@@ -10,6 +10,7 @@ import {
 	roleToFormValues,
 	scopesToAccess,
 	summarizeAccess,
+	summarizeRules,
 } from "@/views/settings/sections/roles/roleAccess";
 
 const access = (overrides: Partial<RoleAccessRecord>): RoleAccessRecord => ({
@@ -23,6 +24,7 @@ const role = (overrides: Partial<Role>): Role => ({
 	built_in: false,
 	access: access({ balances: "write" }),
 	member_count: 0,
+	rule_count: 0,
 	created_at: 1,
 	updated_at: 1,
 	...overrides,
@@ -148,5 +150,17 @@ describe("access summary", () => {
 		},
 	])("$summary", ({ value, summary }) => {
 		expect(summarizeAccess({ access: value })).toBe(summary);
+	});
+});
+
+describe("approval rules column", () => {
+	test.each([
+		{ name: "owner", rule_count: 0, summary: "Skips rules" },
+		{ name: "admin", rule_count: 3, summary: "Skips rules" },
+		{ name: "support", rule_count: 0, summary: "No rules" },
+		{ name: "support", rule_count: 1, summary: "1 rule" },
+		{ name: "sales", rule_count: 2, summary: "2 rules" },
+	])("$name with $rule_count → $summary", ({ name, rule_count, summary }) => {
+		expect(summarizeRules({ role: role({ name, rule_count }) })).toBe(summary);
 	});
 });

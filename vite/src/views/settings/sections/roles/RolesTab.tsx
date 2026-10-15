@@ -10,9 +10,10 @@ import { getRoleInUseCount } from "./rolesClient";
 import type { RoleDialogs } from "./useRoleDialogs";
 
 const COLUMNS = [
-	{ label: "Role", width: "30%" },
-	{ label: "Access", width: "50%" },
-	{ label: "Members", width: "15%" },
+	{ label: "Role", width: "25%" },
+	{ label: "Access", width: "42%" },
+	{ label: "Approval rules", width: "16%" },
+	{ label: "Members", width: "12%" },
 ] as const;
 
 export const RolesTab = ({
