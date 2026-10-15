@@ -119,6 +119,8 @@ export type OwnerReply =
 			id: number;
 			ok: false;
 			cannotAnswer: ForwardReason | null;
+			/** The customer moved to this replica while the request waited: thrown again as CustomerMovedError, so the caller hops it on. */
+			movedTo: string | null;
 			/** The push can never apply: thrown again on the caller's thread as InvalidPushError. */
 			invalid: boolean;
 			/** The owner is still catching up: thrown again as OwnerUnavailableError, a 503 the caller's API answers. */
