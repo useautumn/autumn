@@ -1,14 +1,10 @@
-import axios, { type AxiosAdapter, AxiosHeaders } from "axios";
-import {
-	type BootResponse,
-	bootRequestKey,
-	takeBootResponse,
-} from "./bootResponses";
-
-const isOk = (
-	response: BootResponse | null | undefined,
-): response is BootResponse =>
-	!!response && response.status >= 200 && response.status < 300;
+import axios, {
+	type AxiosAdapter,
+	AxiosError,
+	AxiosHeaders,
+	type AxiosResponse,
+} from "axios";
+import { bootRequestKey, takeBootResponse } from "./bootResponses";
 
 const networkAdapter = axios.getAdapter(axios.defaults.adapter);
 
@@ -24,15 +20,29 @@ export const bootAwareAxiosAdapter: AxiosAdapter = async (config) => {
 			apiVersion: config.headers.get("x-api-version")?.toString(),
 		}),
 	);
-	if (!isOk(response)) return networkAdapter(config);
-	return {
+	// No boot response, or the boot fetch itself failed: go to the network.
+	if (!response) return networkAdapter(config);
+
+	const axiosResponse: AxiosResponse = {
 		data: response.body,
 		status: response.status,
-		statusText: "OK",
+		statusText: "",
 		headers: new AxiosHeaders(response.headers),
 		config,
 		request: null,
 	};
+	// Same outcome as the network adapter: error statuses reject, so a 404 isn't fetched twice.
+	if (config.validateStatus && !config.validateStatus(response.status))
+		throw new AxiosError(
+			`Request failed with status code ${response.status}`,
+			response.status >= 500
+				? AxiosError.ERR_BAD_RESPONSE
+				: AxiosError.ERR_BAD_REQUEST,
+			config,
+			null,
+			axiosResponse,
+		);
+	return axiosResponse;
 };
 
 /** better-auth's fetch, answering the first session check from the boot script. */
@@ -46,7 +56,7 @@ export const bootAwareFetch = async (
 			: await takeBootResponse(
 					bootRequestKey({ method: init?.method, url: input.toString() }),
 				);
-	if (!isOk(response)) return fetch(input, init);
+	if (!response) return fetch(input, init);
 	return new Response(response.body, {
 		status: response.status,
 		headers: response.headers,
