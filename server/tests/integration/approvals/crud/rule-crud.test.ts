@@ -183,6 +183,17 @@ test(`${chalk.yellowBright("rule crud: request edge cases return 4xx, duplicates
 		expect(created.data.subjects).toEqual([{ type: "everyone" }]);
 
 		const ruleId = created.data.id;
+		const malformedPatch = await dashboardFetch(
+			ctx,
+			owner,
+			`/approvals/rules/${ruleId}`,
+			{
+				method: "PATCH",
+				headers: { "content-type": "application/json" },
+				body: "{not json",
+			},
+		);
+		expect(malformedPatch.status).toBe(400);
 		await Promise.all([
 			api.update(ruleId, { enabled: false }),
 			api.update(ruleId, { name: "Renamed" }),

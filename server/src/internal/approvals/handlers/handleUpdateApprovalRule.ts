@@ -6,8 +6,12 @@ import { invalidApprovalRuleResponse } from "./invalidApprovalRuleResponse.js";
 
 export const handleUpdateApprovalRule = createRoute({
 	scopes: [Scopes.Organisation.Write],
-	// Field checks run on the merged rule, so they report as invalid_approval_rule issues.
-	body: z.record(z.string(), z.unknown()),
+	// Malformed JSON reaches here as {}, so an empty PATCH is rejected rather than saved as a no-op.
+	body: z
+		.record(z.string(), z.unknown())
+		.refine((params) => Object.keys(params).length > 0, {
+			message: "Send at least one field to update.",
+		}),
 	handler: async (c) => {
 		const { id } = c.req.param();
 		const result = await updateApprovalRule({
