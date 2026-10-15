@@ -1,5 +1,5 @@
 import type { KafkaJS } from "@autumn/librdkafka";
-import { isKafkaProtocolError } from "../../kafkaErrorClassification.js";
+import { isKafkaRefusalOfUnwritten } from "../../kafkaErrorClassification.js";
 import { KafkaPartialDeliveryError } from "../../kafkaErrors.js";
 import type { KafkaRequestTiming } from "../../types/kafkaClient.js";
 import {
@@ -131,7 +131,7 @@ export function spanOf({
 				total: outcomes.length,
 				failure,
 			});
-		throw failures.find(isLocalFailure) ?? failure;
+		throw failures.find(isFateUnknown) ?? failure;
 	}
 	const spans: RecordMetadata[] = [];
 	for (const { offsets, ...metadata } of byPartition.values()) {
@@ -154,9 +154,10 @@ export function spanOf({
 	return spans;
 }
 
-/** A client-side failure (a timeout, a lost connection) leaves a record's fate unknown; it outranks a refusal. */
-function isLocalFailure(cause: unknown): boolean {
-	return !isKafkaProtocolError({ cause });
+/** A client-side failure (a timeout, a lost connection) or a refusal of a record possibly appended leaves its fate
+ *  unknown; it outranks a refusal that proves nothing was written. */
+function isFateUnknown(cause: unknown): boolean {
+	return !isKafkaRefusalOfUnwritten({ cause });
 }
 
 function messagesOf(record: ProducerRecord): KafkaJS.ProducerRecord {

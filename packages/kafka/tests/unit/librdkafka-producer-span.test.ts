@@ -131,3 +131,25 @@ test("an idempotent batch only partly written leaves its fate unknown, never not
 		}),
 	).rejects.toBeInstanceOf(KafkaTransactionStateUnknownError);
 });
+
+// librdkafka gives up on a record whose retries ran out on REQUEST_TIMED_OUT or NOT_ENOUGH_REPLICAS_AFTER_APPEND with
+// that broker code, though the leader may have appended it.
+test("a record refused after the broker may have appended it leaves the batch's fate unknown", async () => {
+	for (const code of [7, 20]) {
+		await expect(
+			sendIdempotentBatch({
+				sender: {
+					async send() {
+						return spanOf({ outcomes: [refused(code), refused(code)] });
+					},
+				},
+				topic: "t",
+				partition: 0,
+				messages,
+			}),
+		).rejects.toBeInstanceOf(KafkaTransactionStateUnknownError);
+	}
+	expect(() => spanOf({ outcomes: [refused(3), refused(20)] })).toThrow(
+		expect.objectContaining({ code: 20 }),
+	);
+});

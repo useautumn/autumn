@@ -321,3 +321,10 @@ describe("a send's per-record delivery reports as one verdict", () => {
 		expect(failed).toEqual([]);
 	});
 });
+
+// librdkafka fails a record whose retries ran out on REQUEST_TIMED_OUT or NOT_ENOUGH_REPLICAS_AFTER_APPEND with that
+// broker code, but marks it possibly persisted: the leader may have appended it. kafkajs wrapped the same exhaustion
+// in KafkaJSNumberOfRetriesExceeded, which the writer read as unknown.
+test("a record the broker may have appended before refusing is never reported as not committed", async () => {
+	expect(await sweep({ allowPossiblyPersistedRefusals: true })).toEqual([]);
+});
