@@ -1,7 +1,7 @@
 import {
 	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	CUSTOMER_PRODUCTS_MAX_LIMIT,
-} from "../customers/cusPlans/listCustomerProductsParams.js";
+} from "../customers/cusPlans/customerProductsLimits.js";
 import { PaginationDefaults } from "./cursorPaginationSchemas.js";
 
 export enum PaginationType {

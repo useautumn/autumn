@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError, stripeRefToId } from "@autumn/shared";
 import type Stripe from "stripe";
+import { setAttachedStripeTestClock } from "@/external/redis/actions/stripeTestClockCache/stripeTestClockCache";
 
 const CLOCK_READY_POLL_MS = 1000;
 const CLOCK_READY_MAX_POLLS = 30;
@@ -58,5 +59,6 @@ export const attachStripeTestClock = async ({
 		if (!concurrentClockId) throw error;
 		clockId = concurrentClockId;
 	}
+	await setAttachedStripeTestClock({ stripeCustomerId, testClockId: clockId });
 	return waitForStripeTestClockReady({ stripe, clockId });
 };

@@ -271,8 +271,6 @@ export const handleDeleteStripe = createRoute({
 		const { db, org, logger, env } = ctx;
 		const channel = c.req.valid("json")?.channel;
 
-		await clearOrgCache({ db, orgId: org.id, logger });
-
 		// 1. Resolve which channels to disconnect
 		const { clearSecretKey, clearOauth, clearCatalogMappings } =
 			resolveDisconnectChannels({
@@ -307,6 +305,8 @@ export const handleDeleteStripe = createRoute({
 				clearCatalogMappings,
 			});
 		}
+		// After the save, so a read during the Stripe calls can't re-cache the connected org.
+		await clearOrgCache({ db, orgId: org.id, logger });
 
 		// 4. Deauthorize only after the local disconnect is saved, so the revocation
 		// webhook finds nothing left to clear and cannot race this write.

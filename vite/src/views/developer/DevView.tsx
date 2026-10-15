@@ -8,7 +8,7 @@ import { AppPortal } from "svix-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
-import { useDevQuery } from "@/hooks/queries/useDevQuery";
+import { useWebhooksPortalQuery } from "@/hooks/queries/useWebhooksPortalQuery";
 import LoadingScreen from "../general/LoadingScreen";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 
@@ -16,11 +16,13 @@ const INTEGRATION_TABS = ["stripe", "vercel", "revenuecat"];
 
 export default function DevScreen() {
 	const location = useLocation();
-	const { svixDashboardUrl, isLoading } = useDevQuery();
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
 	const { webhooks } = useAutumnFlags();
+	const { svixDashboardUrl, isLoading } = useWebhooksPortalQuery({
+		enabled: tab === "webhooks" && webhooks,
+	});
 
 	// Integrations moved to settings; old links and OAuth callbacks still land here.
 	const requestedTab = new URLSearchParams(location.search).get("tab");

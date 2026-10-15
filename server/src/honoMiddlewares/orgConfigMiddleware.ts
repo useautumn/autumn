@@ -13,10 +13,10 @@ export const orgConfigMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		try {
 			const newConfigFields = JSON.parse(orgConfigHeader);
 
-			// Merge with existing org config
-			ctx.org.config = {
-				...ctx.org.config,
-				...newConfigFields,
+			// Copy rather than mutate: ctx.org can be a cached object shared with other requests.
+			ctx.org = {
+				...ctx.org,
+				config: { ...ctx.org.config, ...newConfigFields },
 			};
 
 			ctx.logger.info("Org config overridden via header", {
