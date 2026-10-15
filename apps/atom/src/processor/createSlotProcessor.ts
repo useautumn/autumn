@@ -151,5 +151,8 @@ export const createSlotProcessor = ({
 				ctx.barrier?.arrived({ customerId });
 			return { held };
 		},
+		receiveRelayedKeys: async ({ keys }) => ({
+			held: await ctx.journal.receiveKeys({ keys }),
+		}),
 	};
 };

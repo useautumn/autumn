@@ -1,7 +1,10 @@
 import type { CatalogRow } from "@autumn/balance-engine";
 import type { SlotProcessor } from "../../processor/types/slotProcessor.js";
 import type { CustomerHandoff } from "../../replicas/handover/types/customerHandoff.js";
-import type { Journal } from "../../state/journal/types/journal.js";
+import type {
+	Journal,
+	JournalKeyRow,
+} from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -52,6 +55,13 @@ export type SubjectSource = {
 	}): Promise<AppliedSubject[]>;
 	/** The peer's catalog when it was read after `readAtAfter`; null otherwise. */
 	catalog(params: { readAtAfter: number }): Promise<CatalogRows | null>;
+	/** A page of the idempotency keys one slot took in the last 90 min, past `after`. */
+	recentKeys(params: {
+		slot: number;
+		slotCount: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]>;
 };
 
 /** One data folder: its customers, reached through the slot each lives in, and the one catalog they share. */
@@ -76,6 +86,12 @@ export type Slots = {
 		slot: number;
 		keys: SubjectKey[];
 	}): Promise<AppliedSubject[]>;
+	/** A page of the idempotency keys a slot took in the last 90 min, past `after`, answered by the slot's owner. */
+	recentKeys(params: {
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]>;
 	/** The newest write in the slots this thread owns, by this replica's clock; 0 when they are empty. */
 	maxAppliedAt(): number;
 	/** The slot files this thread owns in the folder: what it alone may drop rows from. */
@@ -93,5 +109,7 @@ export type Slots = {
 		source: SubjectSource;
 		window: number | null;
 	}): Promise<{ slots: number; written: number }>;
+	/** Copies into the journals of the slots this thread owns every idempotency key `source` took in the last 90 min. */
+	copyRecentKeys(params: { source: SubjectSource }): Promise<number>;
 	close(): void;
 };

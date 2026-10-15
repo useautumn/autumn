@@ -215,7 +215,9 @@ test("relayed idempotency keys cross to the slot's owner even while it catches u
 			.receiveRelayedKeys({ keys: [key] }),
 	).toEqual({ held: 1 });
 	expect(received).toEqual([key]);
-	await expect(recentKeys()).rejects.toBeInstanceOf(OwnerUnavailableError);
+	expect(await recentKeys().catch((error) => error)).toBeInstanceOf(
+		OwnerUnavailableError,
+	);
 
 	Atomics.store(threadsReady, 1, 1);
 	expect(await recentKeys()).toEqual([key]);

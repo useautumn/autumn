@@ -19,6 +19,13 @@ export type JournalEntry = {
 /** An owed entry as it crosses to another journal: with whether Autumn already took it, so the receiver sends it or not. */
 export type HandedEntry = JournalEntry & { sent: boolean };
 
+/** A journal_keys row as it crosses replicas, its hash as hex: the same row wherever it lands. */
+export type JournalKeyRow = {
+	customerId: string;
+	keyHash: string;
+	appendedAt: number;
+};
+
 /** One slot's commands owed to Autumn, written only by the slot's owner thread. */
 export type Journal = {
 	/** Made once with the file: Autumn counts what it has seen per writer, since seqs count within one file. */
@@ -71,4 +78,11 @@ export type Journal = {
 	close(): void;
 	/** Whether the customer's caller key (its claim key) was appended within KEY_ROW_TTL_MS, its commit landed or not. */
 	holdsKey(params: { customerId: string; key: string }): boolean;
+	/** Key rows another replica wrote, held here too; a row already held keeps its own. Resolves to how many were new. */
+	receiveKeys(params: { keys: JournalKeyRow[] }): Promise<number>;
+	/** A page of the rows written within KEY_ROW_TTL_MS, oldest first, past `after` (the last row of the page before). */
+	recentKeys(params: {
+		after: JournalKeyRow | null;
+		limit: number;
+	}): JournalKeyRow[];
 };

@@ -197,6 +197,7 @@ describe("a replica catching up from a peer", () => {
 				);
 			},
 			catalog: async () => catalog,
+			recentKeys: async () => [],
 		};
 		return { source, asked };
 	};

@@ -1,6 +1,7 @@
 import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import type { ReplicaRing } from "../replicas/types/replicaRing.js";
+import type { KeyRelay } from "../replication/keys/createKeyRelay.js";
 import { openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -24,6 +25,7 @@ export const createDeployedAuth = ({
 	journalForwarder,
 	barrier,
 	ring,
+	keyRelay,
 }: {
 	dataDir: string;
 	tokenHash: string;
@@ -35,6 +37,7 @@ export const createDeployedAuth = ({
 	journalForwarder: JournalForwarder;
 	barrier?: HandoffBarrier;
 	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
+	keyRelay?: KeyRelay;
 }): DeployedAuth => {
 	const slots = openSlots({
 		folder: dataDir,
@@ -46,6 +49,7 @@ export const createDeployedAuth = ({
 		journalForwarder,
 		barrier,
 		ring,
+		keyRelay,
 	});
 
 	function authorize({ token }: { token: string }) {

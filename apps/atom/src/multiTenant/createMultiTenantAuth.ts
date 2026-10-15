@@ -5,6 +5,7 @@ import type { Auth } from "../auth/types/auth.js";
 import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import type { ReplicaRing } from "../replicas/types/replicaRing.js";
+import type { KeyRelay } from "../replication/keys/createKeyRelay.js";
 import { CATALOG_FILE, openSlots } from "../slots/openSlots.js";
 import type { Slots } from "../slots/types/slots.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
@@ -52,6 +53,7 @@ export const createMultiTenantAuth = ({
 	clock = () => performance.now(),
 	barrier,
 	ring,
+	keyRelay,
 }: {
 	dataDir: string;
 	slotCount: number;
@@ -67,6 +69,8 @@ export const createMultiTenantAuth = ({
 	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
 	barrier?: HandoffBarrier;
 	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
+	/** Relays each folder's committed idempotency keys to the other replicas, under its own folder. */
+	keyRelay?: KeyRelay;
 }): MultiTenantAuth => {
 	const heldById = new Map<string, HeldAtom>();
 	const heldByTokenHash = new Map<string, HeldAtom>();
@@ -154,6 +158,7 @@ export const createMultiTenantAuth = ({
 			journalForwarder,
 			barrier,
 			ring,
+			keyRelay,
 		});
 		held.catalogInode = catalogInodeOf({ id: held.id });
 		return held.slots;

@@ -1,3 +1,4 @@
+import type { JournalKeyRow } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectDigest,
@@ -39,6 +40,22 @@ export const serveReplicaReads = ({ ctx }: { ctx: ReplicaSlotsContext }) => {
 		return owners.fetchSubjectsOn({ thread: owner, atomId, slot, keys });
 	}
 
+	/** A page of a slot's idempotency keys of the last 90 min, answered by the slot's owner. */
+	async function recentKeys({
+		slot,
+		after,
+		limit,
+	}: {
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]> {
+		const journal = slots[slot]?.journal;
+		if (journal) return journal.recentKeys({ after, limit });
+		const owner = owners.ownerOf({ slot });
+		return owners.recentKeysOn({ thread: owner, atomId, slot, after, limit });
+	}
+
 	/** The catalog's rows when they were read after `readAtAfter`, for a peer copying them; null otherwise. */
 	function catalogSince({
 		readAtAfter,
@@ -59,5 +76,12 @@ export const serveReplicaReads = ({ ctx }: { ctx: ReplicaSlotsContext }) => {
 		);
 	}
 
-	return { listSince, digestSince, fetchSubjects, catalogSince, maxAppliedAt };
+	return {
+		listSince,
+		digestSince,
+		fetchSubjects,
+		recentKeys,
+		catalogSince,
+		maxAppliedAt,
+	};
 };

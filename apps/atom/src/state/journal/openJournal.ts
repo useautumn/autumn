@@ -5,7 +5,12 @@ import {
 	readLastJournalSeqs,
 	readOwedJournalEntries,
 } from "../repos/journalEntries.js";
-import { PRUNE_CHUNK, readJournalKey } from "../repos/journalKeys.js";
+import {
+	journalKeyRowOf,
+	PRUNE_CHUNK,
+	readJournalKey,
+	readRecentJournalKeys,
+} from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
 import type {
@@ -13,6 +18,7 @@ import type {
 	Journal,
 	JournalEntry,
 	JournaledCommand,
+	JournalKeyRow,
 } from "./types/journal.js";
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
@@ -58,9 +64,12 @@ export const readJournalThreadStats = ({ now }: { now: number }) => {
 export const openJournal = ({
 	databasePath,
 	now = Date.now,
+	onKeysCommitted,
 }: {
 	databasePath: string;
 	now?: () => number;
+	/** The idempotency key rows each commit wrote, once it landed: what the other replicas are relayed. */
+	onKeysCommitted?: (keys: JournalKeyRow[]) => void;
 }): Journal => {
 	const file = openWrittenFile({ databasePath, kind: "journal" });
 	const ctx = { sqliteDb: file.sqliteDb };
@@ -128,6 +137,11 @@ export const openJournal = ({
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();
+			const keys = entries.flatMap(({ customerId, appendedAt, command }) => {
+				const key = command.type === "track" ? callerKeyOf({ command }) : null;
+				return key ? [journalKeyRowOf({ customerId, key, appendedAt })] : [];
+			});
+			if (keys.length > 0) onKeysCommitted?.(keys);
 		},
 	});
 
@@ -362,6 +376,32 @@ export const openJournal = ({
 		);
 	}
 
+	async function receiveKeys({
+		keys,
+	}: {
+		keys: JournalKeyRow[];
+	}): Promise<number> {
+		if (keys.length === 0) return 0;
+		return Number(
+			await file.write("insertRelayedJournalKeys", JSON.stringify(keys)),
+		);
+	}
+
+	function recentKeys({
+		after,
+		limit,
+	}: {
+		after: JournalKeyRow | null;
+		limit: number;
+	}): JournalKeyRow[] {
+		return readRecentJournalKeys({
+			ctx,
+			appendedSince: now() - KEY_ROW_TTL_MS,
+			after,
+			limit,
+		});
+	}
+
 	let closed = false;
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
@@ -414,6 +454,8 @@ export const openJournal = ({
 		forget,
 		close,
 		holdsKey,
+		receiveKeys,
+		recentKeys,
 		appendForeign,
 		handoffs,
 	};

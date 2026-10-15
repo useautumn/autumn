@@ -9,6 +9,7 @@ import { createSlotProcessor } from "../processor/createSlotProcessor.js";
 import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
 import type { CustomerHandoff } from "../replicas/handover/types/customerHandoff.js";
 import type { ReplicaRing } from "../replicas/types/replicaRing.js";
+import type { KeyRelay } from "../replication/keys/createKeyRelay.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
@@ -23,6 +24,7 @@ import type { CatalogUpdate } from "../threads/owners/types/ownerCall.js";
 import type { SlotOwners } from "../threads/owners/types/slotOwners.js";
 import { customerIdToSlot } from "./customerIdToSlot.js";
 import { catchUp } from "./replica/catchUp.js";
+import { copyRecentKeys } from "./replica/copyRecentKeys.js";
 import { serveReplicaReads } from "./replica/serveReplicaReads.js";
 import type { ReplicaSlotsContext } from "./replica/types/replicaSlotsContext.js";
 import {
@@ -65,6 +67,7 @@ export const openSlots = ({
 	journalForwarder,
 	barrier,
 	ring,
+	keyRelay,
 }: {
 	folder: string;
 	slotCount: number;
@@ -83,6 +86,8 @@ export const openSlots = ({
 	barrier?: HandoffBarrier;
 	/** Who owns each customer across the replicas: a request for one that moved away is refused, not decided here. */
 	ring?: Pick<ReplicaRing, "self" | "ownerOf">;
+	/** This thread's way to relay the idempotency keys its slots' journals take to the other replicas. */
+	keyRelay?: KeyRelay;
 }): Slots => {
 	// Counted before anything is created: an empty folder on a restart means the volume did not come back.
 	const filesFound = existsSync(folder) ? readdirSync(folder).length : 0;
@@ -114,6 +119,7 @@ export const openSlots = ({
 		if (owner !== owners.index)
 			return {
 				sqliteStore: null,
+				journal: null,
 				processor: owners.processorOn({ thread: owner, atomId }),
 			};
 		const sqliteStore = openSqliteStore({
@@ -123,6 +129,7 @@ export const openSlots = ({
 		});
 		const journal = openJournal({
 			databasePath: journalFilePath({ folder, slot, slotCount }),
+			onKeysCommitted: (keys) => keyRelay?.relayKeys({ atomId, keys }),
 		});
 		const openLocks = createOpenLocks();
 		journals.push(journal);
@@ -130,6 +137,7 @@ export const openSlots = ({
 		forwardings.push(journalForwarder.forward(forwardedOf({ journal })));
 		return {
 			sqliteStore,
+			journal,
 			processor: createSlotProcessor({
 				ctx: {
 					sqliteStore,
@@ -260,6 +268,7 @@ export const openSlots = ({
 		ownedJournals: () => [...journals],
 		ownedHandoffs,
 		catchUp: (params) => catchUp({ ctx, setCatalog, ...params }),
+		copyRecentKeys: ({ source }) => copyRecentKeys({ ctx, source }),
 		close,
 	};
 };

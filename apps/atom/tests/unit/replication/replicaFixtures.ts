@@ -19,6 +19,10 @@ import { createReplicaSync } from "../../../src/replication/createReplicaSync.js
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
+import {
+	createKeyRelay,
+	KEYS_RELAY,
+} from "../../../src/replication/keys/createKeyRelay.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import {
 	createThreadStatsBuffer,
@@ -47,6 +51,7 @@ export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
 registry.register(CATALOG_PUSH);
+registry.register(KEYS_RELAY);
 
 const cleanups: (() => void)[] = [];
 export const cleanUpReplicas = () => {
@@ -97,18 +102,6 @@ export const createReplica = ({
 		},
 	});
 	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
-	const auth = createDeployedAuth({
-		journalForwarder,
-		dataDir,
-		tokenHash: TOKEN_HASH,
-		slotCount: SLOT_COUNT,
-		owners: allSlotsOwnedHere,
-		held: freshHeld(),
-		now,
-		subjectPulls: noSubjectPulls,
-		barrier,
-		ring,
-	});
 	const replication = createReplication({
 		ctx: {
 			secret,
@@ -120,6 +113,19 @@ export const createReplica = ({
 			now,
 			sleep: async () => {},
 		},
+	});
+	const auth = createDeployedAuth({
+		journalForwarder,
+		dataDir,
+		tokenHash: TOKEN_HASH,
+		slotCount: SLOT_COUNT,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
+		now,
+		subjectPulls: noSubjectPulls,
+		barrier,
+		ring,
+		keyRelay: createKeyRelay({ ctx: { replication } }),
 	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {

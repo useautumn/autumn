@@ -16,6 +16,10 @@ import { createReplication } from "../../../src/replication/createReplication.js
 import { createMultiTenantFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
 import {
+	createKeyRelay,
+	KEYS_RELAY,
+} from "../../../src/replication/keys/createKeyRelay.js";
+import {
 	createThreadStatsBuffer,
 	openThreadCounters,
 } from "../../../src/threads/stats/threadStats.js";
@@ -47,6 +51,7 @@ registry.register(SUBJECT_PUSH);
 registry.register(CATALOG_PUSH);
 registry.register(ATOM_PUT);
 registry.register(ATOM_DELETE);
+registry.register(KEYS_RELAY);
 
 const cleanups: (() => void)[] = [];
 export const cleanUpMultiTenantReplicas = () => {
@@ -69,14 +74,6 @@ export const createMultiTenantReplica = ({
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
-	const auth = createMultiTenantAuth({
-		journalForwarder: forwardingNowhere,
-		dataDir,
-		slotCount: SLOT_COUNT,
-		owners: allSlotsOwnedHere,
-		heldSubjects: freshHeld(),
-		subjectPulls: noSubjectPulls,
-	});
 	const replication = createReplication({
 		ctx: {
 			secret: PEER_SECRET,
@@ -89,6 +86,15 @@ export const createMultiTenantReplica = ({
 			// Retries yield rather than spin: a relay the peer refuses is tried again until the test ends.
 			sleep: () => Bun.sleep(1),
 		},
+	});
+	const auth = createMultiTenantAuth({
+		journalForwarder: forwardingNowhere,
+		dataDir,
+		slotCount: SLOT_COUNT,
+		owners: allSlotsOwnedHere,
+		heldSubjects: freshHeld(),
+		subjectPulls: noSubjectPulls,
+		keyRelay: createKeyRelay({ ctx: { replication } }),
 	});
 	const httpContext = {
 		auth,

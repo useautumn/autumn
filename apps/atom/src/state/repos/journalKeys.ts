@@ -1,4 +1,5 @@
 import type { Database } from "bun:sqlite";
+import type { JournalKeyRow } from "../journal/types/journal.js";
 
 type JournalContext = { sqliteDb: Database };
 
@@ -102,3 +103,85 @@ export const readJournalKey = ({
 			"SELECT 1 AS held FROM journal_keys WHERE customer_id = ? AND key_hash = ? AND appended_at >= ?",
 		)
 		.get(customerId, journalKeyHash({ key }), appendedSince) !== null;
+
+/** The row a key is written as, its hash as hex, as it is relayed to the other replicas. */
+export const journalKeyRowOf = ({
+	customerId,
+	key,
+	appendedAt,
+}: {
+	customerId: string;
+	key: string;
+	appendedAt: number;
+}): JournalKeyRow => ({
+	customerId,
+	keyHash: Buffer.from(journalKeyHash({ key })).toString("hex"),
+	appendedAt,
+});
+
+/** A write: rows another replica wrote, JSON, in one transaction; a row already held keeps its own. Answers how many were new. */
+export const insertRelayedJournalKeys = ({
+	ctx,
+	payload,
+}: {
+	ctx: JournalContext;
+	payload: string;
+}): string => {
+	const insert = ctx.sqliteDb.query(
+		"INSERT OR IGNORE INTO journal_keys (customer_id, key_hash, appended_at) VALUES ($customerId, $keyHash, $appendedAt)",
+	);
+	let inserted = 0;
+	ctx.sqliteDb.transaction(() => {
+		for (const { customerId, keyHash, appendedAt } of JSON.parse(
+			payload,
+		) as JournalKeyRow[])
+			inserted += insert.run({
+				customerId,
+				keyHash: Buffer.from(keyHash, "hex"),
+				appendedAt,
+			}).changes;
+	})();
+	return String(inserted);
+};
+
+/** Rows written at or after `appendedSince`, in age-index order, past `after`: a page of what a booting peer copies. */
+export const readRecentJournalKeys = ({
+	ctx,
+	appendedSince,
+	after,
+	limit,
+}: {
+	ctx: JournalContext;
+	appendedSince: number;
+	after: JournalKeyRow | null;
+	limit: number;
+}): JournalKeyRow[] =>
+	ctx.sqliteDb
+		.query<
+			{ customerId: string; keyHash: Uint8Array; appendedAt: bigint },
+			{
+				from: number;
+				afterAt: number | null;
+				afterCustomerId: string | null;
+				afterKeyHash: Uint8Array | null;
+				limit: number;
+			}
+		>(
+			`SELECT customer_id AS customerId, key_hash AS keyHash, appended_at AS appendedAt FROM journal_keys
+			WHERE appended_at >= $from
+				AND ($afterAt IS NULL OR (appended_at, customer_id, key_hash) > ($afterAt, $afterCustomerId, $afterKeyHash))
+			ORDER BY appended_at, customer_id, key_hash LIMIT $limit`,
+		)
+		.all({
+			// From the cursor's own time, so each page seeks the age index instead of scanning every row before it.
+			from: Math.max(appendedSince, after?.appendedAt ?? appendedSince),
+			afterAt: after?.appendedAt ?? null,
+			afterCustomerId: after?.customerId ?? null,
+			afterKeyHash: after ? Buffer.from(after.keyHash, "hex") : null,
+			limit,
+		})
+		.map(({ customerId, keyHash, appendedAt }) => ({
+			customerId,
+			keyHash: Buffer.from(keyHash).toString("hex"),
+			appendedAt: Number(appendedAt),
+		}));

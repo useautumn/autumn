@@ -5,6 +5,7 @@ import type {
 	SubjectKey,
 	SubjectSource,
 } from "../../slots/types/slots.js";
+import type { JournalKeyRow } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -26,6 +27,7 @@ export const PEER_SUBJECTS_SINCE_PATH = "/v1/_peer/subjects.since";
 export const PEER_SUBJECTS_DIGEST_PATH = "/v1/_peer/subjects.digest";
 export const PEER_SUBJECTS_FETCH_PATH = "/v1/_peer/subjects.fetch";
 export const PEER_CATALOG_SINCE_PATH = "/v1/_peer/catalog.since";
+export const PEER_KEYS_RECENT_PATH = "/v1/_peer/keys.recent";
 /** The tenants a multi-tenant peer holds, so a replica learns them before it serves. */
 export const PEER_ATOMS_LIST_PATH = "/v1/_peer/atoms.list";
 const FETCH_TIMEOUT_MS = 10_000;
@@ -53,6 +55,13 @@ export type SubjectsSinceResponse = {
 	subjects: AppliedSubjectOnWire[];
 };
 export type CatalogSinceRequest = { readAtAfter: number };
+export type RecentKeysRequest = {
+	slot: number;
+	slotCount: number;
+	after: JournalKeyRow | null;
+	limit: number;
+};
+export type RecentKeysResponse = { keys: JournalKeyRow[] };
 export type AtomsListResponse = { atoms: { id: string; token_hash: string }[] };
 export type CatalogSinceResponse = {
 	catalog: { rows: CatalogRow[]; read_at: number } | null;
@@ -188,5 +197,13 @@ export const createPeerSubjectSource = ({
 			body: JSON.stringify(params satisfies CatalogSinceRequest),
 		});
 		return catalog && { rows: catalog.rows, readAt: catalog.read_at };
+	},
+	recentKeys: async (params) => {
+		const { keys } = await postToPeer<RecentKeysResponse>({
+			ctx,
+			path: PEER_KEYS_RECENT_PATH,
+			body: JSON.stringify(params satisfies RecentKeysRequest),
+		});
+		return keys;
 	},
 });

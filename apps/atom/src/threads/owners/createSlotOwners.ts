@@ -25,6 +25,7 @@ export const createSlotOwners = ({
 		digestSinceOn: ({ thread, ...params }) => links[thread].digestSince(params),
 		fetchSubjectsOn: ({ thread, ...params }) =>
 			links[thread].fetchSubjects(params),
+		recentKeysOn: ({ thread, ...params }) => links[thread].recentKeys(params),
 		connect: ({ thread, port }) => links[thread].connect({ port }),
 		disconnect: ({ thread }) => links[thread].disconnect(),
 	};
