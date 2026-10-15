@@ -200,7 +200,10 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+	}),
 );
 
 const slotGate =
