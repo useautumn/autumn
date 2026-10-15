@@ -384,19 +384,13 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("set-plans anchor now: an upgrade with bill_difference credits only the unused old period")}`,
+	`${chalk.yellowBright("set-plans anchor now: an upgrade with bill_difference bills the full new cycle with no credit")}`,
 	async () => {
-		const { customerId, autumnV2_4, advancedTo, premium } =
-			await setupLiveUpgrade({
-				customerId: "set-plans-anchor-now-bill-difference",
-			});
-
-		const expectedTotal = await calculateResetBillingCycleNowTotal({
-			customerId,
-			advancedTo,
-			oldAmount: 20,
-			newAmount: 50,
+		const { customerId, autumnV2_4, premium } = await setupLiveUpgrade({
+			customerId: "set-plans-anchor-now-bill-difference",
 		});
+
+		const expectedTotal = 50;
 		const params = resetNowParams({
 			customerId,
 			planId: premium.id,
