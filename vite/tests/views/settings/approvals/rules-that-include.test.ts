@@ -1,7 +1,7 @@
 /**
  * Contract: a role or member view lists the approval rules whose subjects
  * include it (directly, through the member's role, or through Everyone),
- * and says how each one includes it.
+ * most specific first, and says how each one includes it.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -82,8 +82,8 @@ describe("rules that include", () => {
 			johnInEngineering,
 			[
 				["sales_trials", ["direct", "role"]],
-				["eng_credits", ["role"]],
 				["john_credits", ["direct"]],
+				["eng_credits", ["role"]],
 				["everyone_cancel", ["everyone"]],
 			],
 		],

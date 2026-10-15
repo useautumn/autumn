@@ -43,7 +43,9 @@ export const rulesThatInclude = ({
 			);
 			return { rule, via: VIA_ORDER.filter((via) => reached.has(via)) };
 		})
-		.filter(({ via }) => via.length > 0);
+		.filter(({ via }) => via.length > 0)
+		// Most specific first, as rules are checked.
+		.sort((a, b) => VIA_ORDER.indexOf(a.via[0]) - VIA_ORDER.indexOf(b.via[0]));
 
 /** "A, B and C": vite's lib predates `Intl.ListFormat`. */
 export const joinWithAnd = (items: string[]) =>
