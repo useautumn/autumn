@@ -103,8 +103,8 @@ const openPullingFolder = () => {
 		},
 		/** Herald's push, or a pulled body as Autumn returns it: the same text into the same apply. */
 		bodyOf: (subject: StoredSubject) => subjectPushOf({ subject }).body,
-		push: (subject: StoredSubject) =>
-			processor.setSubject(subjectPushOf({ subject })),
+		push: async (subject: StoredSubject) =>
+			(await processor.setSubject(subjectPushOf({ subject }))).stored,
 		check: (params: CheckParams = {}) =>
 			checkResponseOf({ processor, request: checkRequestFor({ params }) }),
 		forwardOf: (params: CheckParams = {}) =>

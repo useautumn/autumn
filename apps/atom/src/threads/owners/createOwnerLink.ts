@@ -1,6 +1,7 @@
 import type { TrackResponseV3 } from "@autumn/shared";
 import type {
 	CheckAnswer,
+	PushedSubject,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
 import type {
@@ -87,6 +88,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	): Promise<
 		| CheckAnswer
 		| TrackResponseV3
+		| PushedSubject
 		| boolean
 		| AppliedSubjectOnWire[]
 		| SubjectDigestOnWire[]
@@ -130,7 +132,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					customerId,
 					body,
-				})) as boolean,
+				})) as PushedSubject,
 			deleteSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "deleteSubject",

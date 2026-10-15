@@ -52,7 +52,7 @@ export const createSlotProcessor = ({
 			try {
 				const stored = setSubject({ ctx, subject });
 				unwritten.delete(params.customerId);
-				return stored;
+				return { stored, entityId: subject.state.identity.entityId ?? null };
 			} catch (error) {
 				unwritten.add(params.customerId);
 				throw error;
