@@ -14,6 +14,7 @@ import {
 	Switch,
 } from "@autumn/ui";
 import { ChipMultiSelect } from "./ChipMultiSelect";
+import { PrecedenceWarning } from "./PrecedenceWarning";
 import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
@@ -160,6 +161,14 @@ export const ApprovalRuleSheet = ({
 							);
 						}}
 					</form.Field>
+
+					<form.Subscribe selector={(state) => state.values}>
+						{({ subjects, actions, enabled }) => (
+							<PrecedenceWarning
+								draft={{ id: rule?.id ?? null, subjects, actions, enabled }}
+							/>
+						)}
+					</form.Subscribe>
 
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {

@@ -9,6 +9,7 @@ import {
 import { z } from "zod/v4";
 import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useAppForm } from "@/hooks/form/form";
+import { RulesThatIncludeSection } from "../approvals/RulesThatIncludeSection";
 import {
 	type ApiRole,
 	accessError,
@@ -115,6 +116,12 @@ export const RoleFormSheet = ({
 							</div>
 						)}
 					</form.Field>
+					{role && (
+						<RulesThatIncludeSection
+							audience={{ type: "role", role: role.name }}
+							name={role.label}
+						/>
+					)}
 				</div>
 
 				{editable && (

@@ -145,7 +145,7 @@ export const summarizeAccess = ({
 	return "No access";
 };
 
-const RULE_EXEMPT_ROLES = ["owner", "admin"];
+export const RULE_EXEMPT_ROLES = ["owner", "admin"];
 
 export const summarizeRules = ({ role }: { role: ApiRole }) => {
 	if (RULE_EXEMPT_ROLES.includes(role.name)) return "Skips rules";

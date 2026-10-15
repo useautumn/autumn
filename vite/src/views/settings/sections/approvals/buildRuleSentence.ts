@@ -229,7 +229,7 @@ const whenGroups = ({ when, ctx }: { when: Filter; ctx: Ctx }) => {
 	return groups.map((filter) => filterConditions({ filter, ctx }));
 };
 
-const actionText = (action: ApprovalAction) => {
+export const actionText = (action: ApprovalAction) => {
 	const definition: { label: string; sentence_label?: string } =
 		ACTIONS[action];
 	return definition.sentence_label ?? definition.label;

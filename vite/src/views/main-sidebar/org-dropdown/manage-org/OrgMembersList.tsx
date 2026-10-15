@@ -17,6 +17,7 @@ import {
 } from "@/views/settings/sections/roles/roleAccess";
 import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";
+import { MemberEmail } from "./MemberEmail";
 import { MemberRowToolbar } from "./MemberRowToolbar";
 
 const NON_OWNER_ROLES: Role[] = ["admin", "developer", "sales", "member"];
@@ -107,7 +108,9 @@ export const OrgMembersList = () => {
 
 				return (
 					<TableRow key={user.id} className={SETTINGS_ROW_CLASS}>
-						<TableCell className="pl-4 text-foreground">{user.email}</TableCell>
+						<TableCell className="pl-4 text-foreground">
+							<MemberEmail membership={membership} />
+						</TableCell>
 						<TableCell className="text-tertiary-foreground">
 							{user.name || "No name"}
 						</TableCell>
