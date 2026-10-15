@@ -971,6 +971,50 @@ async function runBlueGreenScenario(): Promise<void> {
 	);
 	await Bun.sleep(10_000);
 	closeStep({ t0, faultClearedAt: t0, isRecovered: ok });
+
+	// A rollback to a fleet that is gone: green is no longer the active slot, but nobody can take over.
+	step = "rollback-to-gone-blue";
+	t0 = await writeSlotRecord(blue, "rollback to a fleet that is gone");
+	mark("slot record -> blue (gone)");
+	await Bun.sleep(15_000);
+	closeStep({
+		t0,
+		faultClearedAt: t0,
+		isRecovered: recovered(t0, greenWorkers),
+	});
+	await writeSlotRecord(green, "green is live");
+	await Bun.sleep(5_000);
+
+	// The next deploy flipped before it finished preparing: the slot names a fleet still cold-loading.
+	const teal = fleetNamed("teal");
+	step = "early-flip-to-teal";
+	t0 = mark("spawning teal and flipping to it at once");
+	for (let i = 0; i < FLEET_SIZE; i++) await spawnWorker(teal);
+	const tealWorkers = liveWorkers(teal);
+	await writeSlotRecord(teal, "flip before teal prepared");
+	const tealOk = await waitFor(
+		() =>
+			recovered(t0, tealWorkers) &&
+			Date.now() - Math.max(0, ...ownershipEvents.map((e) => e.seenAt)) > 5_000,
+		RECOVERY_TIMEOUT_MS,
+		"teal to own everything",
+	);
+	closeStep({ t0, faultClearedAt: t0, isRecovered: tealOk });
+
+	step = "green-leaves";
+	t0 = mark("SIGTERM every green worker");
+	for (const worker of greenWorkers) {
+		worker.killedBy = "SIGTERM";
+		worker.child.kill("SIGTERM");
+	}
+	await Promise.all(greenWorkers.map((w) => w.child.exited));
+	const tealServing = await waitFor(
+		() => recovered(t0, tealWorkers),
+		60_000,
+		"teal to keep serving",
+	);
+	await Bun.sleep(10_000);
+	closeStep({ t0, faultClearedAt: t0, isRecovered: tealServing });
 }
 
 function kafkaCli(tool: string, args: string[]): string {
