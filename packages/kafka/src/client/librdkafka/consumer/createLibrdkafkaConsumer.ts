@@ -444,13 +444,34 @@ export function createLibrdkafkaConsumer({
 		);
 	}
 
+	/** Leaving serves the revocation through polls; one that never answers must not hold the stop past its bound. */
+	async function leaveGroupWithin({
+		native,
+	}: {
+		native: NativeConsumer;
+	}): Promise<void> {
+		async function left(): Promise<"left"> {
+			await leaveGroup(native);
+			return "left";
+		}
+		async function leaveTimedOut(): Promise<"timed out"> {
+			await Bun.sleep(LEAVE_TIMEOUT_MS + STOP_LOOP_TIMEOUT_MS);
+			return "timed out";
+		}
+		if ((await Promise.race([left(), leaveTimedOut()])) === "left") return;
+		log("error", "Kafka consumer did not finish leaving; closing without it", {
+			timeoutMs: LEAVE_TIMEOUT_MS + STOP_LOOP_TIMEOUT_MS,
+		});
+	}
+
 	async function stop(): Promise<void> {
 		state.running = false;
 		state.wake.abort();
 		await awaitLoop();
 		state.loop = null;
 		const native = state.native;
-		if (native && !state.leaving && !state.gaveUp) await leaveGroup(native);
+		if (native && !state.leaving && !state.gaveUp)
+			await leaveGroupWithin({ native });
 	}
 
 	async function disconnect(): Promise<void> {
