@@ -55,7 +55,7 @@ export const createSlotProcessor = ({
 		setSubject: async (params) => {
 			const subject = subjectPushToStoredSubject(params);
 			try {
-				const stored = setSubject({ ctx, subject });
+				const stored = await setSubject({ ctx, subject });
 				unwritten.delete(params.customerId);
 				return { stored, entityId: subject.state.identity.entityId ?? null };
 			} catch (error) {

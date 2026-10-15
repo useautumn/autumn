@@ -146,7 +146,7 @@ describe("the subject a check runs on", () => {
 		]);
 	});
 
-	test("is joined once per change to its parts: checks share one view until the next push", () => {
+	test("is joined once per change to its parts: checks share one view until the next push", async () => {
 		const ctx = createContext({ shared: null });
 		const read = () =>
 			readCurrentSubject({ ctx, customerId: "cus_1", entityId: null });
@@ -154,7 +154,7 @@ describe("the subject a check runs on", () => {
 		const first = read();
 		expect(read()).toBe(first);
 
-		ctx.sqliteStore.setSubject({
+		await ctx.sqliteStore.setSubject({
 			subject: {
 				state,
 				catalog: customerCatalog,

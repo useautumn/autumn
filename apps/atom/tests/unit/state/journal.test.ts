@@ -193,7 +193,7 @@ describe("journal", () => {
 		expect(journal.owed({ customerId: "cus_1" })).toBe(owed);
 		expect(owed.map(({ seq }) => seq)).toEqual([1, 2]);
 
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
 		});
@@ -210,7 +210,7 @@ describe("journal", () => {
 				command: commandOf({ commandId }),
 			});
 
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
 		});
@@ -234,12 +234,12 @@ describe("journal", () => {
 		});
 		const owed = journal.owed({ customerId: "cus_1" });
 
-		journal.reconcile({ customerId: "cus_1", atomSeqs: null });
-		journal.reconcile({
+		await journal.reconcile({ customerId: "cus_1", atomSeqs: null });
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { other_writer: 7 } },
 		});
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: 0 } },
 		});
@@ -306,7 +306,7 @@ describe("journal", () => {
 
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
 		expect(journal.isBackedUp({ customerId: "cus_2" })).toBe(false);
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: 1 } },
 		});
@@ -341,7 +341,7 @@ describe("journal", () => {
 			command: commandOf({ commandId: "a" }),
 		});
 
-		fresh.reconcile({
+		await fresh.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [old.writerId]: 7 } },
 		});
@@ -383,7 +383,7 @@ describe("journal", () => {
 			command: commandOf({ commandId: "b", customerId: "cus_2" }),
 		});
 
-		journal.forget({ customerId: "cus_1" });
+		await journal.forget({ customerId: "cus_1" });
 
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
 		expect(
@@ -442,7 +442,7 @@ describe("journal", () => {
 		const late = await appendAt("d");
 		clock += MAX_UNSENT_AGE_MS;
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: late.seq } },
 		});
@@ -451,7 +451,7 @@ describe("journal", () => {
 		await appendAt("e");
 		clock += MAX_UNSENT_AGE_MS;
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(true);
-		journal.forget({ customerId: "cus_1" });
+		await journal.forget({ customerId: "cus_1" });
 		expect(journal.isBackedUp({ customerId: "cus_1" })).toBe(false);
 	});
 
@@ -494,14 +494,14 @@ describe("journal", () => {
 		};
 
 		const pushed = await appendParked("a");
-		journal.reconcile({
+		await journal.reconcile({
 			customerId: "cus_1",
 			atomSeqs: { atom_1: { [journal.writerId]: pushed.seq } },
 		});
 		expect(journal.parked()).toEqual([]);
 
 		await appendParked("b");
-		journal.forget({ customerId: "cus_1" });
+		await journal.forget({ customerId: "cus_1" });
 		expect(journal.parked()).toEqual([]);
 	});
 

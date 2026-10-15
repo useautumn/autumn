@@ -33,10 +33,10 @@ import {
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 /** Every promise continuation already queued runs before a macrotask: a settled pull is fully stored after this. */
-const drainMicrotasks = () =>
-	new Promise<void>((resolve) => setImmediate(resolve));
+const drainMicrotasks = settleSqliteWrites;
 
 type CheckParams = Partial<CheckRequest["params"]>;
 

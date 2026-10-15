@@ -58,12 +58,12 @@ import {
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 const HOUR = 3_600_000;
 const quiet = { warn() {} };
 
-const drainMicrotasks = () =>
-	new Promise<void>((resolve) => setImmediate(resolve));
+const drainMicrotasks = settleSqliteWrites;
 
 const folders: string[] = [];
 const closers: (() => void)[] = [];

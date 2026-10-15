@@ -1,9 +1,10 @@
 import type { HeldSubjects } from "./heldSubjects/types/heldSubjects.js";
-import { openSlotDatabase } from "./openSlotDatabase.js";
 import {
 	countSubjects,
+	type DroppedRows,
 	dataBytes,
-	deleteCustomersWrittenBefore,
+	decodeSubjectWriteResults,
+	encodeSubjectWrites,
 	listDigestsAppliedAfter,
 	listEntityIds,
 	listSubjectsAppliedAfter,
@@ -14,7 +15,6 @@ import {
 	type SubjectWrite,
 	type SubjectWriteResult,
 	subjectToSlice,
-	upsertSubjects,
 } from "./repos/subjectStates.js";
 import type { SqliteStore } from "./types/sqliteStore.js";
 import {
@@ -22,6 +22,7 @@ import {
 	type StoredSubject,
 	type SubjectRow,
 } from "./types/storedSubject.js";
+import { openWrittenFile } from "./writer/openWrittenFile.js";
 
 /** Tells this thread's stores apart in the one held-subjects budget. */
 let storesOpened = 0;
@@ -84,8 +85,11 @@ export const openSqliteStore = ({
 	/** This replica's clock, stamped on every write so a peer can ask for what was written since. */
 	now?: () => number;
 }): SqliteStore => {
-	const ctx = { sqliteDb: openSlotDatabase({ databasePath }) };
+	const file = openWrittenFile({ databasePath, kind: "slot" });
+	const ctx = { sqliteDb: file.sqliteDb };
 	const storePrefix = `${storesOpened++}\u0000`;
+	/** Subjects with a write still on its way to the writer: what their held copies say of the file may already be stale. */
+	const writing = new Map<string, number>();
 
 	function readSubject(params: {
 		customerId: string;
@@ -124,14 +128,15 @@ export const openSqliteStore = ({
 		const slice = subjectToSlice({ subject });
 		if (isDeletedSubject(subject))
 			return { subject, slice, sliceStored: false };
-		const heldCopy = held.get(storePrefix + keyOf(subject));
+		const key = storePrefix + keyOf(subject);
+		const heldCopy = held.get(key);
 		return {
 			subject: {
 				...subject,
 				...sharedSlice({ hash: slice.hash, slice: subject }),
 			},
 			slice,
-			sliceStored: heldCopy?.sliceHash === slice.hash,
+			sliceStored: heldCopy?.sliceHash === slice.hash && !writing.has(key),
 		};
 	}
 
@@ -171,22 +176,62 @@ export const openSqliteStore = ({
 		});
 	}
 
-	/** After the commit: only the store decides which part settles a customer's version, and rows still mean "stored". */
-	function setSubjects({ subjects }: { subjects: SubjectRow[] }): boolean[] {
+	function trackWriting(writes: SubjectWrite[], by: 1 | -1): void {
+		for (const { subject } of writes) {
+			const key = storePrefix + keyOf(subject);
+			const count = (writing.get(key) ?? 0) + by;
+			if (count === 0) writing.delete(key);
+			else writing.set(key, count);
+		}
+	}
+
+	/**
+	 * After the commit: only the store decides which part settles a customer's version, and rows still mean "stored".
+	 * `onStored` runs in the same turn as the held copies change, so nothing reads them before it.
+	 */
+	async function setSubjects({
+		subjects,
+		onStored,
+	}: {
+		subjects: SubjectRow[];
+		onStored?: (stored: boolean[]) => void;
+	}): Promise<boolean[]> {
 		const writes = subjects.map(writeOf);
-		const results = upsertSubjects({ ctx, writes, appliedAt: now() });
+		const encoded = encodeSubjectWrites({ writes, appliedAt: now() });
+		trackWriting(writes, 1);
+		let answer: string;
+		try {
+			answer = await file.write("upsertSubjects", encoded.payload);
+		} finally {
+			trackWriting(writes, -1);
+		}
+		const results = decodeSubjectWriteResults({
+			...encoded,
+			writes,
+			results: answer,
+		});
 		writes.forEach((write, index) => {
 			const result = results[index];
 			if (result) holdWritten({ write, result });
 		});
-		return results.map(({ bytes }) => bytes !== null);
+		const stored = results.map(({ bytes }) => bytes !== null);
+		onStored?.(stored);
+		return stored;
 	}
 
-	function dropCustomersWrittenBefore(params: {
+	async function dropCustomersWrittenBefore({
+		before,
+		limit,
+	}: {
 		before: number;
 		limit: number;
 	}) {
-		const dropped = deleteCustomersWrittenBefore({ ctx, ...params });
+		const dropped: DroppedRows = JSON.parse(
+			await file.write(
+				"deleteCustomersWrittenBefore",
+				`${before}\u0000${limit}`,
+			),
+		);
 		for (const row of dropped)
 			held.drop(
 				storePrefix + subjectKey({ ...row, entityId: row.entityId || null }),
@@ -199,15 +244,15 @@ export const openSqliteStore = ({
 
 	function close(): void {
 		held.dropPrefix(storePrefix);
-		ctx.sqliteDb.close(true);
+		file.close({ throwOnError: true });
 	}
 
 	return {
 		readSubject,
 		readVersion,
 		entityIdsOf: ({ customerId }) => listEntityIds({ ctx, customerId }),
-		setSubject: ({ subject }) =>
-			setSubjects({ subjects: [subject] })[0] ?? false,
+		setSubject: async ({ subject }) =>
+			(await setSubjects({ subjects: [subject] }))[0] ?? false,
 		setSubjects,
 		countSubjects: () => countSubjects({ ctx }),
 		listAppliedAfter: (params) => listSubjectsAppliedAfter({ ctx, ...params }),

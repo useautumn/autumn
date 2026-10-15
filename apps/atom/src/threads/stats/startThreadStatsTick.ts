@@ -1,6 +1,7 @@
 import { readViewFoldThreadStats } from "../../processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import { readJournalThreadStats } from "../../state/journal/openJournal.js";
+import { readSqliteWriterThreadStats } from "../../state/writer/getSqliteWriter.js";
 import type { ThreadCounters, ThreadStatField } from "./threadStats.js";
 
 const TICK_MS = 1000;
@@ -33,7 +34,10 @@ export const startThreadStatsTick = ({
 		counters.set("journalOldestUnsentMs", journals.journalOldestUnsentMs);
 		counters.set("tracksAppended", journals.tracksAppended);
 		counters.set("appendFailed", journals.appendFailed);
-		for (const [field, value] of Object.entries(readViewFoldThreadStats()))
+		for (const [field, value] of Object.entries({
+			...readViewFoldThreadStats(),
+			...readSqliteWriterThreadStats(),
+		}))
 			counters.set(field as ThreadStatField, value);
 	}, TICK_MS);
 	timer.unref();
