@@ -85,4 +85,6 @@ export type Journal = {
 		after: JournalKeyRow | null;
 		limit: number;
 	}): JournalKeyRow[];
+	/** The rows written within KEYS_HANDED_WINDOW_MS, by customer: what a handoff carries beside the owed entries. */
+	keysToHand(): Map<string, JournalKeyRow[]>;
 };

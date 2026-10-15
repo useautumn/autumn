@@ -31,6 +31,8 @@ export const MAX_UNSENT_PER_THREAD = 50_000;
 
 /** A caller's key is held this long after its append; past it the row is only waiting for the prune. */
 export const KEY_ROW_TTL_MS = 90 * 60_000;
+/** A relay under load lands seconds late; a handoff carries this much of a moved customer's keys so a retry at its new owner is refused. */
+export const KEYS_HANDED_WINDOW_MS = 10_000;
 const PRUNE_EVERY_MS = 60_000;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
@@ -402,6 +404,21 @@ export const openJournal = ({
 		});
 	}
 
+	function keysToHand(): Map<string, JournalKeyRow[]> {
+		const byCustomer = new Map<string, JournalKeyRow[]>();
+		for (const row of readRecentJournalKeys({
+			ctx,
+			appendedSince: now() - KEYS_HANDED_WINDOW_MS,
+			after: null,
+			limit: Number.MAX_SAFE_INTEGER,
+		})) {
+			const rows = byCustomer.get(row.customerId) ?? [];
+			rows.push(row);
+			byCustomer.set(row.customerId, rows);
+		}
+		return byCustomer;
+	}
+
 	let closed = false;
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
@@ -456,6 +473,7 @@ export const openJournal = ({
 		holdsKey,
 		receiveKeys,
 		recentKeys,
+		keysToHand,
 		appendForeign,
 		handoffs,
 	};

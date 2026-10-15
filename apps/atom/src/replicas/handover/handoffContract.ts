@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { JournalKeyRowSchema } from "../../replication/keys/createKeyRelay.js";
 
 export const PEER_HANDOFF_PATH = "/v1/_peer/journal.handoff";
 /** On a request hopped to a customer's owner: the peer the customer came from, whose handoff its first requests wait for. */
@@ -25,11 +26,12 @@ const HandedLockSchema = z.object({
 	row: z.record(z.string(), z.unknown()),
 });
 
-/** One customer's owed entries and open locks for the replica that owns it now; idempotent on (writerId, seq) and lock_id. */
+/** One customer's owed entries, open locks and recent keys for the replica that owns it now; idempotent on (writerId, seq), lock_id and key. */
 export const HandoffSchema = z.object({
 	customerId: z.string().min(1),
 	entries: z.array(HandedEntrySchema),
 	locks: z.array(HandedLockSchema),
+	keys: z.array(JournalKeyRowSchema),
 });
 
 export type Handoff = z.infer<typeof HandoffSchema>;

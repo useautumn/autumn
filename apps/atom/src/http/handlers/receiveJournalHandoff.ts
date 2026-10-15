@@ -39,10 +39,11 @@ export const receiveJournalHandoff = ({
 		const held = await Promise.all(
 			[...bySlot].map(([processor, handoffs]) =>
 				processor.receiveHandoff({
-					handoffs: handoffs.map(({ customerId, entries, locks }) => ({
+					handoffs: handoffs.map(({ customerId, entries, locks, keys }) => ({
 						customerId,
 						entries: entries as HandedEntry[],
 						locks: locks as OpenLock[],
+						keys,
 					})),
 				}),
 			),
