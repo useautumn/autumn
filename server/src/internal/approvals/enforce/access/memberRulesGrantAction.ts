@@ -16,7 +16,7 @@ export const memberRulesGrantAction = async ({
 	ctx: AutumnContext;
 	action: ApprovalAction;
 }): Promise<boolean> => {
-	if (ctx.org.config?.approvals_enforced !== true) return false;
+	if (ctx.org?.config?.approvals_enforced !== true) return false;
 
 	const principal = ctxToApprovalPrincipal({ ctx });
 	if (!principal) return false;
