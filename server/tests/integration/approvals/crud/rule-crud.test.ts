@@ -7,11 +7,14 @@
  * - PATCH merges into the rule, re-validates it and bumps version; GET .../versions lists every save.
  * - DELETE returns { deleted: true }; later reads 404.
  * - An invalid rule returns 400 invalid_approval_rule with one issue per problem.
+ * - Malformed bodies and incomplete filters are 400s; versions of an unknown id 404.
+ * - Repeated subjects collapse to one; concurrent PATCHes both apply.
  */
 
 import { expect, test } from "bun:test";
 import type { ApprovalRule } from "@autumn/shared";
 import { rules } from "@tests/utils/fixtures/rules.js";
+import { dashboardFetch } from "@tests/utils/testInitUtils/dashboardSession.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { approvalRulesApi } from "../utils/approvalRulesApi.js";
@@ -150,6 +153,46 @@ test(`${chalk.yellowBright("rule crud: rules are org-scoped and live-only, whate
 		).toBe(true);
 		await api.delete(created.data.id);
 		expect((await api.delete(created.data.id)).status).toBe(404);
+	} finally {
+		await owner.cleanup();
+	}
+});
+
+test(`${chalk.yellowBright("rule crud: request edge cases return 4xx, duplicates collapse, concurrent edits both land")}`, async () => {
+	const { ctx, members } = await initScenario({
+		setup: [s.member({ role: "owner" })],
+		actions: [],
+	});
+	const [owner] = members;
+	const api = approvalRulesApi({ ctx, session: owner });
+
+	try {
+		const malformed = await dashboardFetch(ctx, owner, "/approvals/rules", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "{not json",
+		});
+		expect(malformed.status).toBe(400);
+		expect((await api.list({ subject_type: "role" })).status).toBe(400);
+		expect((await api.versions("apr_missing")).status).toBe(404);
+
+		const created = await api.create(
+			rules.rule({ subjects: [{ type: "everyone" }, { type: "everyone" }] }),
+		);
+		expect(created.status).toBe(200);
+		expect(created.data.subjects).toEqual([{ type: "everyone" }]);
+
+		const ruleId = created.data.id;
+		await Promise.all([
+			api.update(ruleId, { enabled: false }),
+			api.update(ruleId, { name: "Renamed" }),
+		]);
+		expect((await api.get(ruleId)).data).toMatchObject({
+			name: "Renamed",
+			enabled: false,
+			version: 3,
+		});
+		await api.delete(ruleId);
 	} finally {
 		await owner.cleanup();
 	}
