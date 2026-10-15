@@ -3,6 +3,7 @@ import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
+import { applyPlanPerCustomerOnWorker } from "../actions/planPerCustomerOnWorker/applyPlanPerCustomerOnWorker.js";
 import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 import { removeCustomerEntitlementsOnWorker } from "../actions/removeCustomerEntitlementsOnWorker/removeCustomerEntitlementsOnWorker.js";
 import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEntitlementsForPage/replaceCustomerEntitlementsForPage.js";
@@ -82,6 +83,23 @@ export const executeBatchMigrationPage = async ({
 	const workerGate = createWorkerPageGate({ signal });
 
 	for (const patch of plan.patches) {
+		// BENCH ONLY: one applyBillingPlan per customer carrying every op of the patch.
+		if (process.env.BENCH_PLAN_PER_CUSTOMER === "1") {
+			const result = await applyPlanPerCustomerOnWorker({
+				ctx,
+				gate: workerGate,
+				patch,
+				customers: customers.filter(
+					({ internalId }) => !Object.hasOwn(failReasons, internalId),
+				),
+				now,
+				phases,
+			});
+			removedItems.push(...result.removedItems);
+			insertedItems.push(...result.insertedItems);
+			Object.assign(failReasons, result.failureReasons);
+			continue;
+		}
 		// A customer the worker failed gets no later writes this page; a retry run finishes it.
 		if (onWorker) {
 			const result = await removeCustomerEntitlementsOnWorker({

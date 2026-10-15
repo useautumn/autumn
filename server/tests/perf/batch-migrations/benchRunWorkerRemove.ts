@@ -47,6 +47,35 @@ const PREFIXES: BenchPlanItemPrefixes = {
 	entitlement: "ce_bench_wrm_msg_",
 };
 const KEPT_ENTITLEMENT_PREFIX = "ce_bench_wrm_kept_";
+const SEED_STARTS_AT = Date.UTC(2026, 8, 20);
+const WORDS_SEED_BALANCE = 60;
+
+/** 1 op: remove Messages. 3 ops: remove Messages, replace Words 100→200, add Action1. */
+const customizeFor = ({ ops }: { ops: 1 | 3 }) =>
+	ops === 1
+		? { remove_items: [{ feature_id: TestFeature.Messages }] }
+		: {
+				remove_items: [
+					{ feature_id: TestFeature.Messages },
+					{
+						feature_id: TestFeature.Words,
+						interval: "month",
+						interval_count: 1,
+					},
+				],
+				add_items: [
+					{
+						feature_id: TestFeature.Words,
+						included: 200,
+						reset: { interval: "month" },
+					},
+					{
+						feature_id: TestFeature.Action1,
+						included: 50,
+						reset: { interval: "month" },
+					},
+				],
+			};
 const WARM_CONCURRENCY = 64;
 const CLOCK_TICKS_PER_SECOND = 100;
 
@@ -57,10 +86,13 @@ const parseArgs = () => {
 		return index === -1 ? undefined : args[index + 1];
 	};
 	const path = get("--path");
-	if (path !== "sql" && path !== "worker")
-		throw new Error("--path sql|worker is required");
+	if (path !== "sql" && path !== "worker" && path !== "plan")
+		throw new Error("--path sql|worker|plan is required");
+	const ops = Number(get("--ops") ?? "1");
+	if (ops !== 1 && ops !== 3) throw new Error("--ops 1|3");
 	return {
 		path,
+		ops,
 		customers: Number(get("--customers") ?? "1000"),
 		workerPid: get("--worker-pid"),
 		pgCgroup: get("--pg-cgroup"),
@@ -106,7 +138,8 @@ const percentile = (sorted: number[], p: number) =>
 const main = async () => {
 	const args = parseArgs();
 	process.env.BALANCE_WORKER_ROLLOUT_ENABLED =
-		args.path === "worker" ? "true" : "false";
+		args.path === "sql" ? "false" : "true";
+	process.env.BENCH_PLAN_PER_CUSTOMER = args.path === "plan" ? "1" : "0";
 	const { ctx, org, benchProducts } = await getBenchContext();
 	const { db } = ctx;
 	const features = ctx.features;
@@ -145,7 +178,8 @@ const main = async () => {
 		name: "Bench Worker Remove",
 	});
 
-	const startsAt = Date.now();
+	// Fixed so reset anchors (and so next_reset_at) match across runs and paths.
+	const startsAt = SEED_STARTS_AT;
 	await seedBenchPlanItems({
 		db,
 		count: args.customers,
@@ -171,6 +205,7 @@ const main = async () => {
 		orgId: org.id,
 		env: ctx.env,
 		prefixes: { ...PREFIXES, entitlement: KEPT_ENTITLEMENT_PREFIX },
+		balance: WORDS_SEED_BALANCE,
 	});
 	// The shared seeder predates billing_version; the worker's subject schema rejects NULL.
 	await db.execute(sql`
@@ -268,9 +303,7 @@ const main = async () => {
 					{
 						type: "update_plan",
 						plan_filter: { plan_id: PREFIXES.productId, custom: false },
-						customize: {
-							remove_items: [{ feature_id: TestFeature.Messages }],
-						},
+						customize: customizeFor({ ops: args.ops }),
 					},
 				],
 			}),
@@ -359,8 +392,15 @@ const main = async () => {
 			(SELECT count(*) FROM customer_products WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}) AS products,
 			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${PREFIXES.entitlement}%`}) AS removed_left,
 			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${KEPT_ENTITLEMENT_PREFIX}%`}) AS kept_left,
-			(SELECT md5(string_agg(id || ':' || balance || ':' || coalesce(adjustment, 0), ',' ORDER BY id))
-			 FROM customer_entitlements WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}) AS entitlement_hash,
+			(SELECT md5(string_agg(row_text, ',' ORDER BY row_text)) FROM (
+				SELECT concat_ws(':', ce.internal_customer_id, ce.customer_product_id, ce.feature_id, e.allowance, e.interval,
+					ce.balance, ce.adjustment, ce.additional_balance, ce.unlimited, ce.usage_allowed,
+					ce.reset_cycle_anchor, ce.next_reset_at, ce.internal_entity_id, coalesce(ce.expired, false), ce.invoice_credit) AS row_text
+				FROM customer_entitlements ce JOIN entitlements e ON e.id = ce.entitlement_id
+				WHERE ce.internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}) AS state) AS entitlement_hash,
+			(SELECT json_object_agg(feature_id || ':' || balance, n) FROM (
+				SELECT ce.feature_id, ce.balance, count(*) AS n FROM customer_entitlements ce
+				WHERE ce.internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`} GROUP BY 1, 2) AS shape) AS shape,
 			(SELECT md5(string_agg(id || ':' || status || ':' || internal_product_id, ',' ORDER BY id))
 			 FROM customer_products WHERE internal_customer_id LIKE ${`${PREFIXES.internalCustomer}%`}) AS product_hash
 	`);
@@ -374,7 +414,7 @@ const main = async () => {
 		path: args.path,
 		customers: args.customers,
 		concurrency:
-			args.path === "worker" ? BATCH_MIGRATION_WORKER_SEND_CONCURRENCY : null,
+			args.path === "sql" ? null : BATCH_MIGRATION_WORKER_SEND_CONCURRENCY,
 		wallMs,
 		customersPerSecond: Math.round(processed / (wallMs / 1000)),
 		processed,
