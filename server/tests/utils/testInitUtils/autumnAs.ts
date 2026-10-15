@@ -2,9 +2,12 @@ import { type AppEnv, LATEST_VERSION, type Role } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import type { DashboardSession } from "./dashboardSession.js";
 
+/** A built-in role, or the name of a custom role the test created first. */
+export type MemberRole = Role | (string & {});
+
 /** An org member created by `s.member({ role })`, with a live dashboard session. */
 export type ScenarioMember = DashboardSession & {
-	role: Role;
+	role: MemberRole;
 	env: AppEnv;
 };
 

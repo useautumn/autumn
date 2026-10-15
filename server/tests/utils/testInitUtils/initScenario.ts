@@ -14,7 +14,6 @@ import {
 	type RewardEntitlement,
 	type RewardRedemption,
 	RewardType,
-	type Role,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { warmEntityCaches as warmEntityCachesFn } from "@tests/integration/balances/utils/warmEntityCaches.js";
@@ -31,7 +30,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { createReferralProgram, createReward } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
-import type { ScenarioMember } from "./autumnAs.js";
+import type { MemberRole, ScenarioMember } from "./autumnAs.js";
 import {
 	createSubOrgTestContext,
 	type TaxRegistrationCountry,
@@ -323,7 +322,7 @@ type ScenarioConfig = {
 	rewards: RewardConfig[];
 	platformConfig?: PlatformCreateConfig;
 	featureGrants: FeatureGrantConfig[];
-	memberRoles: Role[];
+	memberRoles: MemberRole[];
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -1046,8 +1045,8 @@ const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
 	});
 };
 
-/** Adds a fresh org member with a built-in role; returned in `members`, call as them with `autumnAs`. */
-const member = ({ role }: { role: Role }): ConfigFn => {
+/** Adds a fresh org member with `role`; returned in `members`, call as them with `autumnAs`. */
+const member = ({ role }: { role: MemberRole }): ConfigFn => {
 	return (config) => ({
 		...config,
 		memberRoles: [...config.memberRoles, role],
