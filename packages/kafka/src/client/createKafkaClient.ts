@@ -5,6 +5,7 @@ import type {
 	KafkaTransportConfig,
 } from "./types/kafkaClient.js";
 import type { KafkaClientLimits } from "./types/kafkaLimits.js";
+import type { GroupProtocol } from "./types/kafkaWire.js";
 
 const maximumKafkaClientRetryCount = 10;
 
@@ -14,12 +15,14 @@ export function createKafkaClient({
 	transport,
 	limits,
 	logSink,
+	groupProtocol,
 }: {
 	clientId: string;
 	brokers: string[];
 	transport: KafkaTransportConfig;
 	limits: KafkaClientLimits;
 	logSink?: KafkaLogSink;
+	groupProtocol?: GroupProtocol;
 }): KafkaClientConfig {
 	if (clientId.trim().length === 0) throw new Error("clientId cannot be empty");
 	if (!hasNonEmptyBrokers({ brokers })) {
@@ -56,6 +59,7 @@ export function createKafkaClient({
 		brokers,
 		...transport,
 		...(logSink && { logSink }),
+		...(groupProtocol && { groupProtocol }),
 		connectionTimeout: limits.connectionTimeoutMs,
 		requestTimeout: limits.requestTimeoutMs,
 		retry: {

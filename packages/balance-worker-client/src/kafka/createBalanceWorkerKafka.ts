@@ -14,6 +14,7 @@ export function createBalanceWorkerKafka({
 	brokers,
 	authMode,
 	sasl,
+	groupProtocol,
 }: BalanceWorkerKafkaConfig): BalanceWorkerKafka {
 	return createKafka(
 		createKafkaClient({
@@ -27,6 +28,7 @@ export function createBalanceWorkerKafka({
 				initialRetryTimeMs: 100,
 				maxRetryTimeMs: 1_000,
 			},
+			groupProtocol,
 		}),
 	);
 }

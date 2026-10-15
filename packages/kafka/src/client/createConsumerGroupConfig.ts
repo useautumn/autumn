@@ -35,7 +35,7 @@ export function assertConsumerGroupTimings({
 	}
 }
 
-/** A group's config; it speaks KIP-848 unless asked otherwise, where the broker owns heartbeats and sessions. */
+/** A group's config; its protocol is the client's (`groupProtocol`, KIP-848 unless the deployment says classic). */
 export function createConsumerGroupConfig({
 	groupId,
 	timings,
@@ -49,7 +49,6 @@ export function createConsumerGroupConfig({
 	assertConsumerGroupTimings({ timings });
 	return {
 		groupId,
-		groupProtocol: "consumer",
 		...(remoteAssignor && { remoteAssignor }),
 		readUncommitted: false,
 		allowAutoTopicCreation: false,

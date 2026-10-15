@@ -5,6 +5,7 @@ import {
 import { getBalanceWorkerPartitionCount } from "./balanceWorker/balanceWorkerPartitionCount.js";
 import { brokerList } from "./balanceWorker/primitives.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
+import { createKafkaGroupProtocolEnv } from "./kafkaGroupProtocol.js";
 
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
 const MIN_PROXY_SECRET_LENGTH = 32;
@@ -53,6 +54,7 @@ export function createBalanceWorkerClientEnv(
 	const deployment = getBalanceWorkerDeployment({ runtimeEnv });
 	return {
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "SERVER" }),
+		...createKafkaGroupProtocolEnv({ runtimeEnv }),
 		KAFKA_BROKERS: brokerList.parse(
 			runtimeEnv.KAFKA_BROKERS ?? LOCAL_KAFKA_BROKERS,
 		),
