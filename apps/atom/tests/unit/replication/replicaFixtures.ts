@@ -78,6 +78,7 @@ export const createReplica = ({
 	journalForwarder = forwardingNowhere,
 	stopping = () => false,
 	bootedAt = BOOTED_AT,
+	loop = loopOnTime,
 }: {
 	address: string;
 	peers: string[];
@@ -94,6 +95,8 @@ export const createReplica = ({
 	stopping?: () => boolean;
 	/** The boot this replica answers /health from; a restart is a new one. */
 	bootedAt?: string;
+	/** The thread's event loop as admission reads it: how far behind it runs. */
+	loop?: { lagMs: () => number };
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -157,7 +160,7 @@ export const createReplica = ({
 			dataDir: dataDir,
 		},
 		counters,
-		loop: loopOnTime,
+		loop,
 		replication,
 		stopping,
 		peer: { port: PEER_PORT, secret, ring, membership },

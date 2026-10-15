@@ -1,4 +1,5 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
+import { isServing } from "../../init/atomHealth.js";
 import { FORWARDED_HEADER } from "../forward/forwardRequest.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
@@ -8,12 +9,13 @@ export const MAX_LOOP_LAG_MS = 100;
 /**
  * Outermost on checks: while the thread's loop is behind, or once it is stopping, a check is refused at once, before its
  * body is read or a line logged. Its 503 carries no x-atom-forwarded, so the SDK, Autumn's shadow and a peer ask the API.
+ * A thread still catching up is behind by nature and answers nothing itself: its checks go on, to be handed to a peer.
  */
 export function admissionMiddleware({
 	ctx,
 	retriedAtAtom = false,
 }: {
-	ctx: Pick<AtomHttpContext, "counters" | "loop" | "stopping">;
+	ctx: Pick<AtomHttpContext, "counters" | "loop" | "stopping" | "health">;
 	/** Marks the 503 x-atom-forwarded, so the SDK returns it to its caller instead of asking the API. */
 	retriedAtAtom?: boolean;
 }): MiddlewareHandler<AtomHttpEnv> {
@@ -30,7 +32,8 @@ export function admissionMiddleware({
 				503,
 				headersOf("atom_stopping"),
 			);
-		if (ctx.loop.lagMs() <= MAX_LOOP_LAG_MS) return next();
+		if (!isServing(ctx.health) || ctx.loop.lagMs() <= MAX_LOOP_LAG_MS)
+			return next();
 		ctx.counters.add("shed");
 		return context.json(
 			{
