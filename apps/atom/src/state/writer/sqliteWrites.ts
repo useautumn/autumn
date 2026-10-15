@@ -3,7 +3,6 @@ import { openJournalDatabase } from "../journal/openJournalDatabase.js";
 import { openSlotDatabase } from "../openSlotDatabase.js";
 import {
 	deleteCustomerJournalEntries,
-	deleteJournalEntries,
 	deleteJournalEntriesUpTo,
 	insertJournalEntries,
 } from "../repos/journalEntries.js";
@@ -20,7 +19,6 @@ import {
 export const SQLITE_WRITES = {
 	insertJournalEntries,
 	deleteJournalEntriesUpTo,
-	deleteJournalEntries,
 	deleteCustomerJournalEntries,
 	upsertSubjects,
 	deleteCustomersWrittenBefore,

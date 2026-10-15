@@ -3,7 +3,6 @@ import { ATOM_IDEMPOTENCY_TTL_MS } from "@autumn/byoc";
 import { getAtomLogger } from "../../lib/logging/getAtomLogger.js";
 import {
 	encodeJournalEntries,
-	encodeJournalEntryKeys,
 	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
@@ -282,38 +281,6 @@ export const openJournal = ({
 			.filter(({ entries }) => entries.length > 0);
 	}
 
-	/** The handed copies name entries by writer and seq; what leaves are the entries held here under those. */
-	function dropHandedOff({
-		entries,
-	}: {
-		entries: JournalEntry[];
-	}): Promise<void> {
-		const keyOf = ({ writerId: writer, seq }: JournalEntry) =>
-			`${writer}/${seq}`;
-		const handed = new Set(entries.map(keyOf));
-		const dropped: JournalEntry[] = [];
-		for (const customerId of new Set(
-			entries.map((entry) => entry.customerId),
-		)) {
-			const held = owed({ customerId });
-			dropped.push(...held.filter((entry) => handed.has(keyOf(entry))));
-			setOwed({
-				customerId,
-				entries: held.filter((entry) => !handed.has(keyOf(entry))),
-			});
-		}
-		for (const entry of dropped) releaseUnsent(entry);
-		for (const customerId of new Set(dropped.map((entry) => entry.customerId)))
-			oldestUnsent({ customerId });
-		if (dropped.length === 0) return Promise.resolve();
-		return file
-			.write(
-				"deleteJournalEntries",
-				encodeJournalEntryKeys({ entries: dropped }),
-			)
-			.then(() => {});
-	}
-
 	function takeUnsent({ limit }: { limit: number }): JournalEntry[] {
 		const taken: JournalEntry[] = [];
 		for (const entry of unsent) {
@@ -485,6 +452,5 @@ export const openJournal = ({
 		holdsKey,
 		appendForeign,
 		handoffs,
-		dropHandedOff,
 	};
 };

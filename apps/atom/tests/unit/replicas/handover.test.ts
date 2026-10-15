@@ -493,7 +493,12 @@ describe("a replica joining the ring", () => {
 		await b.probeOnce();
 
 		expect(b.membership.isMember(A)).toBe(true);
-		expect(journalOwing(b)).toBeUndefined();
+		// B keeps what it copied to A and hands it in itself; A holds the copies for its view.
+		expect(
+			journalOwing(b)
+				?.owed({ customerId: CUSTOMER })
+				.map(({ seq }) => seq),
+		).toEqual([1, 2]);
 		const held = journalOwing(a)?.owed({ customerId: CUSTOMER }) ?? [];
 		expect(held.map(({ seq }) => seq)).toEqual([1, 2]);
 		const reply = await b.app.request(

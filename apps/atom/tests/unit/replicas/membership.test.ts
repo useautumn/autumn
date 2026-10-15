@@ -62,7 +62,6 @@ const proberOf = ({
 							ownedJournals: () => [
 								{
 									handoffs: async () => [],
-									dropHandedOff() {},
 								},
 							],
 						},
