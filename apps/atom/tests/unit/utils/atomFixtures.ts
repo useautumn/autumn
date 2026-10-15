@@ -171,6 +171,7 @@ export const checkRequestFor = ({
 } = {}): CheckRequest => ({
 	requestId: "req_check_1",
 	occurredAt,
+	idempotencyKey: null,
 	params: { customer_id: "cus_1", feature_id: "messages", ...params },
 	query,
 	apiVersion,

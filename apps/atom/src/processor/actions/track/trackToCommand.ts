@@ -14,10 +14,13 @@ export const trackToCommand = ({
 	command,
 	subject,
 	skipEvent,
+	idempotencyKey,
 }: {
 	command: CheckCommand;
 	subject: CurrentSubject;
 	skipEvent: boolean;
+	/** The caller's Idempotency-Key, claimed raw as the API's middleware claims it; else this check's request id. */
+	idempotencyKey: string | null;
 }): TrackCommand => {
 	const feature = findFeatureById({
 		features: subject.features,
@@ -37,7 +40,8 @@ export const trackToCommand = ({
 			? null
 			: { name: command.featureId, idempotencyKey: null, id: null },
 		idempotency: {
-			key: `track:${command.requestId}`,
+			// Never the caller's key as the request id: that is the claim's owner, and an owner claiming again is resumed.
+			key: idempotencyKey ?? `track:${command.requestId}`,
 			ttlMs: TRACK_IDEMPOTENCY_TTL_MS,
 		},
 	};

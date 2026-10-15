@@ -26,12 +26,14 @@ export const checkCallToRequest = ({
 	body,
 	query,
 	apiVersionHeader,
+	idempotencyKeyHeader,
 	requestId,
 	occurredAt,
 }: {
 	body: unknown;
 	query: Record<string, string>;
 	apiVersionHeader: string | undefined;
+	idempotencyKeyHeader: string | undefined;
 	requestId: string;
 	occurredAt: number;
 }): CheckRequest => {
@@ -44,6 +46,8 @@ export const checkCallToRequest = ({
 	return {
 		requestId,
 		occurredAt,
+		// The API takes an empty key as none.
+		idempotencyKey: idempotencyKeyHeader || null,
 		params: params.data,
 		query: parsedQuery.data,
 		apiVersion,

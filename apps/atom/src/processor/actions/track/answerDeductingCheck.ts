@@ -18,19 +18,21 @@ export const answerDeductingCheck = async ({
 	ctx,
 	journal,
 	check,
+	idempotencyKey,
 	skipEvent,
 	subject,
 }: {
 	ctx: SlotProcessorContext;
 	journal: Journal;
 	check: AnswerableCheck;
+	idempotencyKey: string | null;
 	skipEvent: boolean;
 	subject: CurrentSubject;
 }): Promise<CheckResponseV3> => {
 	if (journal.isBackedUp({ customerId: check.customerId }))
 		throw new CannotAnswerError({ reason: "journal_backlog" });
 	const command = checkToCommand({ check, subject });
-	const track = trackToCommand({ command, subject, skipEvent });
+	const track = trackToCommand({ command, subject, skipEvent, idempotencyKey });
 	const result = computeCheck({ fullSubject: subject.fullSubject, command });
 	if (!result.allowed)
 		return renderCheck({

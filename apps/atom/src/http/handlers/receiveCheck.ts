@@ -3,6 +3,7 @@ import { checkCallToRequest } from "../../lib/contracts/checkContract.js";
 import type { AtomHttpEnv } from "../types/atomHttp.js";
 
 const API_VERSION_HEADER = "x-api-version";
+export const IDEMPOTENCY_KEY_HEADER = "idempotency-key";
 /** Set by the replica a check arrived at, read only on one handed on by a peer: its deduction keeps one idempotency key. */
 export const REQUEST_ID_HEADER = "x-atom-request-id";
 export const OCCURRED_AT_HEADER = "x-atom-occurred-at";
@@ -25,6 +26,7 @@ export async function receiveCheck(context: Context<AtomHttpEnv>) {
 		body: context.get("body"),
 		query: context.req.query(),
 		apiVersionHeader: context.req.header(API_VERSION_HEADER),
+		idempotencyKeyHeader: context.req.header(IDEMPOTENCY_KEY_HEADER),
 		...arrivalOf(context),
 	});
 	const processor = context

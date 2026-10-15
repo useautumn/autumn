@@ -5,6 +5,8 @@ import type { ApiVersionClass, CheckParams, CheckQuery } from "@autumn/shared";
 export type CheckRequest = {
 	requestId: string;
 	occurredAt: number;
+	/** The caller's Idempotency-Key, read as the API reads it; null when it sent none. */
+	idempotencyKey: string | null;
 	params: CheckParams;
 	query: CheckQuery;
 	/** Null when the caller named no `x-api-version`. */

@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, type Mock, test } from "bun:test";
-import { parseTrackCommand } from "@autumn/balance-engine";
 import { LATEST_VERSION } from "@autumn/shared";
-import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import {
 	ATOM_TOKEN,
 	cleanUpReplicas,
@@ -9,7 +7,7 @@ import {
 	createReplica,
 	disconnect,
 	PEER_PORT,
-	quiet,
+	recordJournals,
 	settle,
 	storeOnly,
 } from "../replication/replicaFixtures.js";
@@ -48,30 +46,6 @@ const checkFor = ({
 		send_event: sendEvent,
 	}),
 });
-
-/** Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from. */
-const recordJournals = () => {
-	const appended: { writer: string; key: string | undefined; value: number }[] =
-		[];
-	const forwarder = createJournalForwarder({
-		ctx: {
-			autumnClient: {
-				appendTracks: async ({ writer, tracks }) => {
-					for (const { command: sent } of tracks) {
-						const command = parseTrackCommand({ input: sent });
-						appended.push({
-							writer,
-							key: command.idempotency?.key,
-							value: command.value,
-						});
-					}
-				},
-			},
-			logger: quiet,
-		},
-	});
-	return { forwarder, appended };
-};
 
 /** Two replicas that agree on the ring: A owns CUSTOMER, and both hold it at a balance of 10. */
 const agreeingPair = async () => {
@@ -142,7 +116,12 @@ describe("a check on a replica that does not own the customer", () => {
 		const requestId = new Headers(hop?.[1]?.headers).get("x-atom-request-id");
 		expect(requestId).toStartWith("atom_req_");
 		expect(appended).toEqual([
-			{ writer: expect.any(String), key: `track:${requestId}`, value: 1 },
+			{
+				writer: expect.any(String),
+				owner: String(requestId),
+				key: `track:${requestId}`,
+				value: 1,
+			},
 		]);
 	});
 
