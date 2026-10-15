@@ -670,6 +670,12 @@ export async function runConsumeLoop({
 			await deliverConcurrently({ scope, native, partitions });
 		const pendingRestart = state.restartPending;
 		if (!pendingRestart || !state.running) continue;
-		await restartFromCommits({ scope, native, ...pendingRestart });
+		// An evicted member's partitions are revoked by the next poll; rewinding first would replay what it lost.
+		if (pendingRestart.pollFirst) {
+			pendingRestart.pollFirst = false;
+			continue;
+		}
+		const { cause, terminal } = pendingRestart;
+		await restartFromCommits({ scope, native, cause, terminal });
 	}
 }

@@ -49,7 +49,12 @@ export type ConsumerRunnerState = {
 	/** The loop ended on a failure it would not restart from; the next subscribe builds a fresh native client. */
 	gaveUp: boolean;
 	/** A failure the loop acts on after the batches in flight: rewind and rejoin, or end when terminal. */
-	restartPending: { cause: Error; terminal: boolean } | null;
+	restartPending: {
+		cause: Error;
+		terminal: boolean;
+		/** Poll once before rewinding, so librdkafka serves the eviction it already acted on. */
+		pollFirst?: boolean;
+	} | null;
 	/** Where the native consumer's records and partition ends go during one `consume()`. */
 	collector: {
 		onData(message: NativeMessage): void;

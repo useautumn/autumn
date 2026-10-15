@@ -179,6 +179,7 @@ export function createBatchRun({
 			requestRestart({
 				scope,
 				cause: new KafkaConsumerLeaseLostError({ topic, partition }),
+				pollFirst: true,
 			});
 		if (isStale()) throw new KafkaConsumerLeaseLostError({ topic, partition });
 	}
