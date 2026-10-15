@@ -3,16 +3,59 @@ import type {
 	CursorPaginatedResponse,
 	TrackDeduction,
 } from "@autumn/shared";
-import { StandardCursor } from "@autumn/shared";
+import { ErrCode, RecaseError, StandardCursor } from "@autumn/shared";
 import {
 	epochMicrosToDateTime,
 	epochToDateTime,
 	tinybirdTimestampToEpochMicros,
 	tinybirdTimestampToEpochMs,
 } from "@autumn/shared/api/common/epochUtils";
+import { subDays } from "date-fns";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
+import type { ListEventsCursorPipeParams } from "@/external/tinybird/pipes/listEventsCursorPipe.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
+
+const RECENT_WINDOW_DAYS = [1, 7, 30];
+
+const queryListEventsCursor = async (params: ListEventsCursorPipeParams) => {
+	try {
+		return await getTinybirdPipes().listEventsCursor(params);
+	} catch (error) {
+		if (error instanceof Error && error.message.includes("Timeout exceeded")) {
+			throw new RecaseError({
+				message:
+					"Listing events timed out; narrow the time range or add filters",
+				code: ErrCode.RequestTimeout,
+				statusCode: 504,
+			});
+		}
+		throw error;
+	}
+};
+
+const queryRecentWindowsFirst = async ({
+	params,
+	anchorMs,
+	rangeStartMs,
+}: {
+	params: ListEventsCursorPipeParams & { limit: number };
+	anchorMs: number;
+	rangeStartMs?: number;
+}) => {
+	for (const days of RECENT_WINDOW_DAYS) {
+		const windowStartMs = subDays(anchorMs, days).getTime();
+		if (rangeStartMs !== undefined && windowStartMs <= rangeStartMs) break;
+
+		const result = await queryListEventsCursor({
+			...params,
+			start_date: epochToDateTime(windowStartMs),
+		});
+		if (result.data.length >= params.limit) return result;
+	}
+
+	return queryListEventsCursor(params);
+};
 
 export const listByCursor = async ({
 	ctx,
@@ -29,7 +72,6 @@ export const listByCursor = async ({
 		filter_by?: Record<string, string>;
 	};
 }): Promise<CursorPaginatedResponse<ApiEventsListItem>> => {
-	const pipes = getTinybirdPipes();
 	const { org, env } = ctx;
 
 	const cursor = StandardCursor.decode(params.start_cursor);
@@ -64,8 +106,7 @@ export const listByCursor = async ({
 		}
 	}
 
-	const startTime = performance.now();
-	const result = await pipes.listEventsCursor({
+	const pipeParams = {
 		org_id: org.id,
 		env,
 		start_date: startDate,
@@ -81,7 +122,18 @@ export const listByCursor = async ({
 				}
 			: {}),
 		...filterParams,
-	});
+	};
+
+	const startTime = performance.now();
+	const result = params.customer_id
+		? await queryRecentWindowsFirst({
+				params: pipeParams,
+				anchorMs: cursor
+					? Math.floor(cursor.t / 1000)
+					: (params.custom_range?.end ?? Date.now()),
+				rangeStartMs: params.custom_range?.start,
+			})
+		: await queryListEventsCursor(pipeParams);
 
 	const queryDuration = performance.now() - startTime;
 	const hasMore = result.data.length > params.limit;
