@@ -12,22 +12,55 @@ type JournalEntryRow = {
 	commandJson: string;
 };
 
-const FIELDS_PER_ENTRY = 5;
+const FIELDS_PER_ENTRY = 6;
 
-/** One string for the writer thread: each entry's fields, command JSON and caller key ("" for none), NUL-separated. */
+type CommandOrg = JournalEntry["command"]["org"];
+
+/** 64-bit xxHash of the org's JSON. A file holds one row per distinct org, so two orgs would have to collide in one file. */
+const orgHashOf = (orgJson: string): string =>
+	Bun.hash.xxHash64(orgJson).toString(16);
+
+/** A tenant's org is one shared object, so it is serialized and hashed once, not on every append. */
+const encodedOrgs = new WeakMap<CommandOrg, { hash: string; json: string }>();
+
+export const encodedOrgOf = (
+	org: CommandOrg,
+): { hash: string; json: string } => {
+	const held = encodedOrgs.get(org);
+	if (held) return held;
+	const json = JSON.stringify(org);
+	const encoded = { hash: orgHashOf(json), json };
+	encodedOrgs.set(org, encoded);
+	return encoded;
+};
+
+/** Per entry, NUL-separated: its fields, its command with the org as a hash (the org would overflow the row's page),
+ * its caller key, and the org's JSON until the file holds it. */
 export const encodeJournalEntries = ({
 	entries,
+	storedOrgs,
 }: {
 	entries: JournalEntry[];
-}): string =>
-	entries
-		.map(
-			({ customerId, seq, appendedAt, command }) =>
-				`${customerId}\u0000${seq}\u0000${appendedAt}\u0000${JSON.stringify(command)}\u0000${(command.type === "track" && callerKeyOf({ command })) || ""}`,
-		)
+	storedOrgs: ReadonlySet<string>;
+}): string => {
+	const sent = new Set(storedOrgs);
+	return entries
+		.map(({ customerId, seq, appendedAt, command }) => {
+			const org = encodedOrgOf(command.org);
+			const orgJson = sent.has(org.hash) ? "" : org.json;
+			sent.add(org.hash);
+			const commandJson = JSON.stringify({
+				...command,
+				org: undefined,
+				orgHash: org.hash,
+			});
+			const key = (command.type === "track" && callerKeyOf({ command })) || "";
+			return `${customerId}\u0000${seq}\u0000${appendedAt}\u0000${commandJson}\u0000${key}\u0000${orgJson}`;
+		})
 		.join("\u0000");
+};
 
-/** Every entry or none, with each customer's highest seq raised and each caller's key taken in the same transaction. */
+/** Every entry or none, with each customer's highest seq, caller's key and new org written in the same transaction. */
 export const insertJournalEntries = ({
 	ctx,
 	payload,
@@ -39,6 +72,9 @@ export const insertJournalEntries = ({
 	const insertEntry = ctx.sqliteDb.query(
 		`INSERT INTO journal_entries (customer_id, seq, appended_at, command_json)
 		VALUES ($customerId, $seq, $appendedAt, $commandJson)`,
+	);
+	const storeOrg = ctx.sqliteDb.query(
+		"INSERT OR IGNORE INTO journal_orgs (org_hash, org_json) VALUES ($orgHash, $orgJson)",
 	);
 	const raiseLastSeq = ctx.sqliteDb.query(
 		`INSERT INTO journal_seqs (customer_id, last_seq) VALUES ($customerId, $seq)
@@ -58,18 +94,54 @@ export const insertJournalEntries = ({
 			raiseLastSeq.run({ customerId, seq });
 			const key = fields[at + 4];
 			if (key) insertJournalKey({ ctx, customerId, key, appendedAt });
+			const orgJson = fields[at + 5];
+			if (orgJson) storeOrg.run({ orgHash: orgHashOf(orgJson), orgJson });
 		}
 	})();
 	return "";
 };
 
-/** Rows were built by this Atom as the worker's commands, so reading only parses JSON. */
+/** The orgs a file holds, by hash. */
+export const readJournalOrgs = ({
+	ctx,
+}: {
+	ctx: JournalContext;
+}): Map<string, string> =>
+	new Map(
+		ctx.sqliteDb
+			.query<{ orgHash: string; orgJson: string }, []>(
+				"SELECT org_hash AS orgHash, org_json AS orgJson FROM journal_orgs",
+			)
+			.all()
+			.map(({ orgHash, orgJson }) => [orgHash, orgJson]),
+	);
+
+/** A row an earlier build wrote carries its org inline; this build's carries the hash of a journal_orgs row. */
+const commandOf = ({
+	commandJson,
+	orgs,
+}: {
+	commandJson: string;
+	orgs: Map<string, string>;
+}): JournalEntry["command"] => {
+	const { orgHash, ...command } = JSON.parse(commandJson);
+	if (orgHash === undefined) return command;
+	const orgJson = orgs.get(orgHash);
+	if (orgJson === undefined)
+		throw new Error(
+			`A journal row names org ${orgHash}, which its file does not hold`,
+		);
+	return { ...command, org: JSON.parse(orgJson) };
+};
+
+/** Rows were built by this Atom as the worker's commands, so reading only parses JSON and puts each org back. */
 export const readOwedJournalEntries = ({
 	ctx,
 }: {
 	ctx: JournalContext;
-}): JournalEntry[] =>
-	ctx.sqliteDb
+}): JournalEntry[] => {
+	const orgs = readJournalOrgs({ ctx });
+	return ctx.sqliteDb
 		.query<JournalEntryRow, []>(
 			`SELECT customer_id AS customerId, seq, appended_at AS appendedAt, command_json AS commandJson
 			FROM journal_entries ORDER BY customer_id, seq`,
@@ -79,8 +151,9 @@ export const readOwedJournalEntries = ({
 			customerId: row.customerId,
 			seq: Number(row.seq),
 			appendedAt: Number(row.appendedAt),
-			command: JSON.parse(row.commandJson),
+			command: commandOf({ commandJson: row.commandJson, orgs }),
 		}));
+};
 
 export const readLastJournalSeqs = ({
 	ctx,

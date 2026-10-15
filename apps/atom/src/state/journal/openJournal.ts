@@ -1,6 +1,8 @@
 import { callerKeyOf } from "@autumn/balance-engine";
 import {
+	encodedOrgOf,
 	encodeJournalEntries,
+	readJournalOrgs,
 	readJournalWriterId,
 	readLastJournalSeqs,
 	readOwedJournalEntries,
@@ -129,12 +131,17 @@ export const openJournal = ({
 		return oldest;
 	}
 
+	/** Orgs the file holds: a commit carries an org's JSON only until one holding it has committed. */
+	const storedOrgs = new Set(readJournalOrgs({ ctx }).keys());
+
 	const groupCommit = createGroupCommit({
 		commit: async (entries: JournalEntry[]) => {
 			await file.write(
 				"insertJournalEntries",
-				encodeJournalEntries({ entries }),
+				encodeJournalEntries({ entries, storedOrgs }),
 			);
+			for (const { command } of entries)
+				storedOrgs.add(encodedOrgOf(command.org).hash);
 			appendedOnThread += entries.length;
 			for (const entry of entries) holdUnsent(entry);
 			notifyCommitted();

@@ -10,6 +10,7 @@ const dropJournalSchema = ({ database }: { database: Database }) => {
 	database.run("DROP TABLE IF EXISTS journal_seqs");
 	database.run("DROP TABLE IF EXISTS journal_meta");
 	database.run("DROP TABLE IF EXISTS journal_keys");
+	database.run("DROP TABLE IF EXISTS journal_orgs");
 };
 
 const createJournalSchema = ({ database }: { database: Database }) => {
@@ -54,5 +55,12 @@ export const openJournalDatabase = ({
 		createSchema: createJournalSchema,
 	});
 	createJournalKeysTable({ database });
+	// Additive, as journal_keys: a file an earlier build wrote gains it on open, and its rows with the org inline still read.
+	database.run(`
+		CREATE TABLE IF NOT EXISTS journal_orgs (
+			org_hash TEXT PRIMARY KEY,
+			org_json TEXT NOT NULL
+		) WITHOUT ROWID
+	`);
 	return database;
 };
