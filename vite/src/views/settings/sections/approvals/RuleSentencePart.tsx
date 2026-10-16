@@ -1,13 +1,6 @@
-import { GlobeIcon, UserIcon, UsersIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import type { RuleSubject } from "./approvalsStub";
 import type { SentencePart } from "./buildRuleSentence";
-
-const SUBJECT_ICONS: Record<RuleSubject["type"], typeof UserIcon> = {
-	everyone: GlobeIcon,
-	role: UsersIcon,
-	user: UserIcon,
-};
+import { SUBJECT_ICONS } from "./subjectIcons";
 
 const CHIP_CLASS =
 	"inline-flex items-center gap-1 rounded-md border bg-interactive-secondary px-1.5 py-0.5 text-foreground";
