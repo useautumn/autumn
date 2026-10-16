@@ -307,3 +307,40 @@ test.concurrent(
 		);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout pending update: switching the edit to an invoice bills it and closes the link")}`,
+	async () => {
+		const {
+			autumnV2_2,
+			ctx,
+			customerId,
+			pro,
+			checkoutId,
+			listCustomerProducts,
+		} = await setupOpenedLongLivedLink({ name: "ll-pending-update-invoice" });
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+			invoice_mode: { enabled: true, enable_plan_immediately: true },
+		});
+
+		expect(await listCustomerProducts(CusProductStatus.Active)).toHaveLength(1);
+		expect(await listCustomerProducts(CusProductStatus.Pending)).toHaveLength(
+			0,
+		);
+
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		const invoices = await ctx.stripeCli.invoices.list({
+			customer: dbCustomer!.processor!.id,
+		});
+		expect(invoices.data.map((invoice) => invoice.total)).toEqual([100_000]);
+
+		const reopen = await requestLongLivedCheckoutStart(checkoutId);
+		expect(reopen.status).toBe(409);
+	},
+);

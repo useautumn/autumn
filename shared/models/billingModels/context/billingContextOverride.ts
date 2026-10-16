@@ -33,7 +33,7 @@ export interface StripeBillingContextOverride {
 export interface BillingContextOverride {
 	fullCustomer?: FullCustomer;
 
-	/** Carries consumable usage, not balances, from a plan replaced without being the current product. */
+	/** Carries usage and rollovers, not balances, from a plan replaced without being the current product. */
 	carryUsagesFromCustomerProduct?: FullCusProduct;
 
 	stripeBillingContext?: StripeBillingContextOverride;

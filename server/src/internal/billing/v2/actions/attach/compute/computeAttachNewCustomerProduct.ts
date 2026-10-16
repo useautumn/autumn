@@ -110,7 +110,9 @@ const computeAttachNewCustomerProductResult = ({
 	// multiAttach / scheduled-activation contexts don't set the carry-over source;
 	// fall back to the same-group product so their carry-over is preserved.
 	const carryOverSource =
-		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+		carryOverSourceCustomerProduct ??
+		currentCustomerProduct ??
+		attachBillingContext.carryUsagesFromCustomerProduct;
 
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = billingStartsAt ?? (isScheduled ? endOfCycleMs : undefined);

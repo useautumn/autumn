@@ -83,7 +83,7 @@ export const pendingReplacementToLiveUpdate = async ({
 			customer_product_id: livePlan.id,
 			feature_quantities: pendingChange.feature_quantities,
 			customize: pendingChange.customize,
-			invoice_mode: params.invoice_mode ?? pendingChange.invoice_mode,
+			invoice_mode: pendingChange.invoice_mode,
 		},
 		contextOverride,
 	};
