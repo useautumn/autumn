@@ -58,6 +58,7 @@ const toSelection = ({ plan_id, version }: PlanSelection): PlanSelection =>
 const isPlanSelection = (value: unknown): value is PlanSelection =>
 	isPlainObject(value) &&
 	typeof value.plan_id === "string" &&
+	value.plan_id !== "" &&
 	(value.version === undefined || typeof value.version === "number");
 
 /** Null when the picker has no valid choice yet. */

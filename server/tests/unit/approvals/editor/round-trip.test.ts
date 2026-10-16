@@ -285,6 +285,7 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "customer", operator: "is_any_of", value: [1, 2] },
 			{ field: "billing_cycle_anchor", operator: "is", value: "tomorrow" },
 			{ field: "customer", operator: "is", value: "" },
+			{ field: "customer_plan", operator: "has", value: { plan_id: "" } },
 			{ field: "discount", operator: "is_any_of", value: [""] },
 		].map((row) => ({
 			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
