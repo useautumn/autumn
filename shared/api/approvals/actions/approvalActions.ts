@@ -1,15 +1,16 @@
 import { z } from "zod/v4";
 import { type ScopeString, Scopes } from "../../../utils/scopeDefinitions";
-import type { WhenKey } from "../schemas/when/whenSchemas";
+import type { ApprovalFilterKey } from "../schemas/filters/approvalFilterShapes";
 
-/** Rule areas. A rule's actions all come from one area. */
+/** Rule areas, named after the route prefix. A rule's actions all come from one area. */
 export const APPROVAL_AREAS = {
 	billing: "Billing",
 	invoices: "Invoices",
 	balances: "Balances",
 	rewards: "Rewards",
 	customers: "Customers",
-	catalog: "Catalog",
+	plans: "Plans",
+	features: "Features",
 	api_keys: "API keys",
 	migrations: "Migrations",
 	members: "Members",
@@ -22,141 +23,191 @@ type ActionDefinition = {
 	label: string;
 	/** Label for a rule sentence when `label` is a bare verb ("Create" → "Create invoices"). */
 	sentence_label?: string;
-	/** Coarse scope that allows this action when no rule covers it. */
+	/** Required before any rule applies; rules only narrow it. */
 	scope: ScopeString;
-	/** Which `when` fields a rule on this action can use; null = who-only. */
-	when: WhenKey | null;
+	/** Which filter fields a rule on this action can use; null = who-only. */
+	filter: ApprovalFilterKey | null;
 };
 
-const billingChangeAction = ({ label }: { label: string }) =>
-	({
-		area: "billing",
-		label,
-		scope: Scopes.Billing.Write,
-		when: "billing_change",
-	}) as const satisfies ActionDefinition;
-
-const billingCancelAction = ({ label }: { label: string }) =>
-	({
-		area: "billing",
-		label,
-		scope: Scopes.Billing.Write,
-		when: "billing_cancel",
-	}) as const satisfies ActionDefinition;
-
-const invoiceAction = ({
-	label,
-	sentence_label,
-}: {
-	label: string;
-	sentence_label: string;
-}) =>
-	({
-		area: "invoices",
-		label,
-		sentence_label,
-		scope: Scopes.Billing.Write,
-		when: "invoice",
-	}) as const satisfies ActionDefinition;
-
+/** Every action a rule can name. Ids are the RPC route names they gate. */
 export const ACTIONS = {
-	"billing.attach": billingChangeAction({ label: "Attach" }),
-	"billing.update_subscription": billingChangeAction({
+	"billing.attach": {
+		area: "billing",
+		label: "Attach",
+		scope: Scopes.Billing.Write,
+		filter: "billing_change",
+	},
+	"billing.update": {
+		area: "billing",
 		label: "Update subscription",
-	}),
-	"billing.set_plans": billingChangeAction({ label: "Set plans" }),
-	"billing.schedule": billingChangeAction({ label: "Schedule" }),
-	"billing.cancel": billingCancelAction({ label: "Cancel" }),
-	"billing.uncancel": billingCancelAction({ label: "Uncancel" }),
+		scope: Scopes.Billing.Write,
+		filter: "billing_change",
+	},
+	"billing.set_plans": {
+		area: "billing",
+		label: "Set plans",
+		scope: Scopes.Billing.Write,
+		filter: "billing_change",
+	},
+	"billing.create_schedule": {
+		area: "billing",
+		label: "Create schedule",
+		scope: Scopes.Billing.Write,
+		filter: "billing_change",
+	},
+	"billing.cancel": {
+		area: "billing",
+		label: "Cancel",
+		scope: Scopes.Billing.Write,
+		filter: "billing_cancel",
+	},
+	"billing.uncancel": {
+		area: "billing",
+		label: "Uncancel",
+		scope: Scopes.Billing.Write,
+		filter: "billing_uncancel",
+	},
 
-	"invoices.create": invoiceAction({
+	"invoices.create": {
+		area: "invoices",
 		label: "Create",
 		sentence_label: "Create invoices",
-	}),
-	"invoices.finalize": invoiceAction({
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.finalize": {
+		area: "invoices",
 		label: "Finalize",
 		sentence_label: "Finalize invoices",
-	}),
-	"invoices.pay": invoiceAction({
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.pay": {
+		area: "invoices",
 		label: "Pay",
 		sentence_label: "Pay invoices",
-	}),
-	"invoices.void": invoiceAction({
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.void": {
+		area: "invoices",
 		label: "Void",
 		sentence_label: "Void invoices",
-	}),
-	"invoices.update": invoiceAction({
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.update": {
+		area: "invoices",
 		label: "Update",
 		sentence_label: "Update invoices",
-	}),
-	"invoices.reissue": invoiceAction({
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.reissue": {
+		area: "invoices",
 		label: "Reissue",
 		sentence_label: "Reissue invoices",
-	}),
-	"invoices.credit_note": invoiceAction({
-		label: "Credit note",
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
+	"invoices.issue_credit_note": {
+		area: "invoices",
+		label: "Issue credit note",
 		sentence_label: "Issue credit notes",
-	}),
+		scope: Scopes.Billing.Write,
+		filter: "invoice",
+	},
 
 	"balances.create": {
 		area: "balances",
 		label: "Grant credits",
 		scope: Scopes.Balances.Write,
-		when: "balance_create",
+		filter: "balance_create",
 	},
 	"balances.update": {
 		area: "balances",
 		label: "Set balance",
 		scope: Scopes.Balances.Write,
-		when: "balance_update",
+		filter: "balance_update",
 	},
 
 	"rewards.create": {
 		area: "rewards",
 		label: "Create reward",
 		scope: Scopes.Rewards.Write,
-		when: null,
+		filter: null,
 	},
-	"rewards.apply": {
+	"rewards.redeem": {
 		area: "rewards",
-		label: "Apply reward",
+		label: "Redeem reward",
 		scope: Scopes.Rewards.Write,
-		when: "reward_apply",
+		filter: "reward_redeem",
 	},
 
-	"customers.create": {
+	"customers.get_or_create": {
 		area: "customers",
 		label: "Create",
 		sentence_label: "Create customers",
 		scope: Scopes.Customers.Write,
-		when: null,
+		filter: null,
 	},
 	"customers.update": {
 		area: "customers",
 		label: "Update",
 		sentence_label: "Update customers",
 		scope: Scopes.Customers.Write,
-		when: "customer",
+		filter: "customer_change",
 	},
 	"customers.delete": {
 		area: "customers",
 		label: "Delete",
 		sentence_label: "Delete customers",
 		scope: Scopes.Customers.Write,
-		when: "customer",
+		filter: "customer_change",
 	},
 
-	"catalog.edit_plans": {
-		area: "catalog",
-		label: "Edit plans",
+	"plans.create": {
+		area: "plans",
+		label: "Create",
+		sentence_label: "Create plans",
 		scope: Scopes.Plans.Write,
-		when: "catalog_plan",
+		filter: "plan",
 	},
-	"catalog.edit_features": {
-		area: "catalog",
-		label: "Edit features",
+	"plans.update": {
+		area: "plans",
+		label: "Update",
+		sentence_label: "Update plans",
+		scope: Scopes.Plans.Write,
+		filter: "plan",
+	},
+	"plans.delete": {
+		area: "plans",
+		label: "Delete",
+		sentence_label: "Delete plans",
+		scope: Scopes.Plans.Write,
+		filter: "plan",
+	},
+
+	"features.create": {
+		area: "features",
+		label: "Create",
+		sentence_label: "Create features",
 		scope: Scopes.Features.Write,
-		when: "catalog_feature",
+		filter: "feature",
+	},
+	"features.update": {
+		area: "features",
+		label: "Update",
+		sentence_label: "Update features",
+		scope: Scopes.Features.Write,
+		filter: "feature",
+	},
+	"features.delete": {
+		area: "features",
+		label: "Delete",
+		sentence_label: "Delete features",
+		scope: Scopes.Features.Write,
+		filter: "feature",
 	},
 
 	"api_keys.create": {
@@ -164,7 +215,7 @@ export const ACTIONS = {
 		label: "Create",
 		sentence_label: "Create API keys",
 		scope: Scopes.ApiKeys.Write,
-		when: null,
+		filter: null,
 	},
 
 	"migrations.create": {
@@ -172,14 +223,14 @@ export const ACTIONS = {
 		label: "Create",
 		sentence_label: "Create migrations",
 		scope: Scopes.Migrations.Write,
-		when: null,
+		filter: null,
 	},
 	"migrations.run": {
 		area: "migrations",
 		label: "Run",
 		sentence_label: "Run migrations",
 		scope: Scopes.Migrations.Write,
-		when: null,
+		filter: null,
 	},
 
 	"members.invite": {
@@ -187,14 +238,14 @@ export const ACTIONS = {
 		label: "Invite",
 		sentence_label: "Invite members",
 		scope: Scopes.Organisation.Write,
-		when: null,
+		filter: null,
 	},
 	"members.change_role": {
 		area: "members",
 		label: "Change role",
 		sentence_label: "Change member roles",
 		scope: Scopes.Organisation.Write,
-		when: null,
+		filter: null,
 	},
 } as const satisfies Record<string, ActionDefinition>;
 
@@ -203,3 +254,10 @@ export type ApprovalAction = keyof typeof ACTIONS;
 export const ApprovalActionSchema = z.enum(
 	Object.keys(ACTIONS) as [ApprovalAction, ...ApprovalAction[]],
 );
+
+/** Routes that are checked as another action rather than named in rules. */
+export const ACTION_ALIASES = {
+	"billing.multi_attach": "billing.attach",
+	"billing.multi_update": "billing.update",
+	"migrations.lazy_run": "migrations.run",
+} as const satisfies Record<string, ApprovalAction>;

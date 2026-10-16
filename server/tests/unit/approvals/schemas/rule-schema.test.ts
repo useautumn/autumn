@@ -1,43 +1,67 @@
 /**
- * S3 contract: `CreateApprovalRuleParamsSchema` / `ApprovalRuleSchema` accept
- * every When fields board shape and reject cross-area or misplaced conditions.
+ * S3 contract: a rule is `{ name, effect, subjects, actions, filter, note, enabled }`,
+ * every PRD §8 rule is valid, and a filter only holds its area's fields.
+ * The stored and API schemas never refine, and they convert to JSON Schema.
  *
- * Red (before):  the approval schemas don't exist.
- * Green (after): each row parses (or fails) as listed.
+ * Red (before):  no `effect`/`position`/`filter`/`role_id`, `z.custom` filter, refining stored schema.
+ * Green (after): each row parses, validates or fails as listed.
  */
 
 import { describe, expect, test } from "bun:test";
 import {
 	type ApprovalRuleParams,
 	ApprovalRuleSchema,
+	ApprovalRuleVersionSchema,
 	CreateApprovalRuleParamsSchema,
+	UpdateApprovalRuleParamsSchema,
+	validateApprovalRule,
 } from "@autumn/shared";
 import { rules } from "@tests/utils/fixtures/rules.js";
+import { z } from "zod/v4";
 
 const issuePaths = (rule: unknown) => {
-	const result = CreateApprovalRuleParamsSchema.safeParse(rule);
-	return result.success ? [] : result.error.issues.map((i) => i.path.join("."));
+	const result = validateApprovalRule({ rule });
+	return result.ok ? [] : result.issues.map((issue) => issue.path);
 };
 
+/** Builds a rule from raw JSON, so invalid shapes don't need casts. */
+const raw = (overrides: Record<string, unknown>) => ({
+	...rules.block(),
+	...overrides,
+});
+
 const VALID: { name: string; rule: ApprovalRuleParams }[] = [
-	{ name: "case 1: enterprise trials", rule: rules.enterpriseTrials() },
-	{ name: "case 2: recurring discounts", rule: rules.recurringDiscounts() },
-	{ name: "case 3: support cancellations", rule: rules.supportCancellations() },
+	{ name: "A1: no billing changes", rule: rules.noBillingChanges() },
+	{ name: "A2: Sales Enterprise trials", rule: rules.salesEnterpriseTrials() },
 	{
-		name: "case 4: user-level credit grant",
-		rule: rules.creditGrants({
-			maxGrant: 50,
+		name: "B: credit add-ons on the customer",
+		rule: rules.creditAddonsOnCustomer(),
+	},
+	{ name: "C: plans on deployments", rule: rules.plansOnDeployments() },
+	{ name: "D1: no Enterprise cancels", rule: rules.noEnterpriseCancels() },
+	{
+		name: "D2: Taylor and Kyle cancel",
+		rule: rules.enterpriseCancellers({ userIds: ["usr_taylor", "usr_kyle"] }),
+	},
+	{ name: "E: trials for new customers", rule: rules.trialsForNewCustomers() },
+	{ name: "F: Sales no custom pricing", rule: rules.salesNoCustomPricing() },
+	{
+		name: "grant cap for one user",
+		rule: rules.grantCap({
 			subjects: [{ type: "user", user_id: "usr_john" }],
+			max: 50,
 		}),
 	},
 	{
 		name: "billing change: every board field",
-		rule: rules.rule({
-			when: {
+		rule: rules.allow({
+			filter: {
 				customer: {
 					customer_id: { $in: ["cus_1"] },
+					has_paid: false,
 					plan: { $some: { plan_id: "pro" } },
 				},
+				entity: { feature_id: "deployments" },
 				paid: false,
 				checkout: true,
 				total: { $lte: 500 },
@@ -50,7 +74,11 @@ const VALID: { name: string; rule: ApprovalRuleParams }[] = [
 						recurring: true,
 						addon: false,
 						customized: false,
-						free_trial: { card_required: true, on_end: { $in: ["bill"] } },
+						free_trial: {
+							duration: { $lte: { length: 1, unit: "month" } },
+							card_required: true,
+							on_end: { $in: ["bill"] },
+						},
 						feature_quantities: {
 							$every: { feature_id: "seats", quantity: { $lte: 10 } },
 						},
@@ -66,15 +94,16 @@ const VALID: { name: string; rule: ApprovalRuleParams }[] = [
 				},
 				plan_schedule: "immediate",
 				proration_behavior: { $in: ["prorate_immediately", "none"] },
+				billing_cycle_anchor: "now",
 				starts_at: { $gte: { days_from_now: -7 } },
 				invoice_mode: { enabled: true },
 			},
 		}),
 	},
 	{
-		name: "incoming element: $and of two $or groups (pinned version + free trial)",
-		rule: rules.rule({
-			when: {
+		name: "incoming element: $and of two $or groups",
+		rule: rules.allow({
+			filter: {
 				incoming: {
 					$every: {
 						$and: [
@@ -84,8 +113,7 @@ const VALID: { name: string; rule: ApprovalRuleParams }[] = [
 									{ free_trial: null },
 									{
 										free_trial: {
-											duration_type: "day",
-											duration_length: { $lt: 31 },
+											duration: { $lt: { length: 31, unit: "day" } },
 										},
 									},
 								],
@@ -97,210 +125,233 @@ const VALID: { name: string; rule: ApprovalRuleParams }[] = [
 		}),
 	},
 	{
-		name: "feature_quantities element: $and / $or rows",
-		rule: rules.rule({
-			when: {
-				incoming: {
-					$every: {
-						feature_quantities: {
-							$every: {
-								$or: [
-									{ feature_id: "seats", quantity: { $lte: 10 } },
-									{ feature_id: "projects", quantity: { $lte: 3 } },
-								],
-								$and: [{ quantity: { $gte: 1 } }],
-							},
-						},
-					},
-				},
+		name: "billing cancel: timing, plan, refund, entity",
+		rule: rules.block({
+			actions: ["billing.cancel"],
+			filter: {
+				cancel_action: "cancel_immediately",
+				outgoing: { $some: { plan_id: "starter" } },
+				refund: { amount: { $gt: 50 } },
+				entity: null,
 			},
 		}),
 	},
 	{
-		name: "billing cancel: timing, plan, refund",
-		rule: rules.rule({
+		name: "billing uncancel: plan and entity",
+		rule: rules.block({
+			actions: ["billing.uncancel"],
+			filter: { outgoing: { $some: { plan_id: "starter" } }, entity: null },
+		}),
+	},
+	{
+		name: "cancel + uncancel share customer, outgoing and entity",
+		rule: rules.block({
 			actions: ["billing.cancel", "billing.uncancel"],
-			when: {
-				customer: { plan: { $none: { plan_id: "enterprise" } } },
-				cancel_action: { $in: ["cancel_end_of_cycle"] },
-				outgoing: { $every: { plan_id: "starter" } },
-				refund: { amount: { $lte: 50 } },
-			},
+			filter: { outgoing: { $some: { plan_id: "pro" } } },
 		}),
 	},
 	{
-		name: "invoices: total and refund",
-		rule: rules.rule({
-			actions: ["invoices.create", "invoices.credit_note"],
-			when: { total: { $lte: 1000 }, refund: { amount: { $lte: 100 } } },
+		name: "invoices: total and credit amount",
+		rule: rules.block({
+			actions: ["invoices.create", "invoices.issue_credit_note"],
+			filter: { total: { $gt: 1000 }, refund: { amount: { $gt: 100 } } },
 		}),
 	},
 	{
 		name: "balances grant: every board field",
-		rule: rules.rule({
+		rule: rules.block({
 			actions: ["balances.create"],
-			when: {
+			filter: {
 				feature_id: { $in: ["ai_credits", "messages"] },
-				included_grant: { $lte: 100 },
-				unlimited: false,
-				expires_at: { $lte: { days_from_now: 30 } },
+				included_grant: { $gt: 100 },
+				unlimited: true,
+				expires_at: { $gt: { days_from_now: 30 } },
 				reset: { interval: { $in: ["month"] } },
 			},
 		}),
 	},
 	{
 		name: "balances set: every board field",
-		rule: rules.rule({
+		rule: rules.block({
 			actions: ["balances.update"],
-			when: {
+			filter: {
 				feature_id: "ai_credits",
-				add_to_balance: { $lte: 500 },
-				remaining: { $lte: 1000 },
-				usage: { $gte: 0 },
-				included_grant: { $lte: 2000 },
+				add_to_balance: { $gt: 500 },
+				remaining: { $gt: 1000 },
+				usage: { $lt: 0 },
+				included_grant: { $gt: 2000 },
 			},
 		}),
 	},
 	{
-		name: "balances grant + set share feature and amount",
-		rule: rules.rule({
-			actions: ["balances.create", "balances.update"],
-			when: { feature_id: "ai_credits", included_grant: { $lte: 100 } },
-		}),
-	},
-	{
-		name: "rewards apply: reward",
-		rule: rules.rule({
-			actions: ["rewards.apply"],
-			when: { reward_id: "LAUNCH20" },
+		name: "rewards redeem: reward",
+		rule: rules.block({
+			actions: ["rewards.redeem"],
+			filter: { reward_id: "LAUNCH20" },
 		}),
 	},
 	{
 		name: "customers update/delete: customer",
-		rule: rules.rule({
+		rule: rules.block({
 			actions: ["customers.update", "customers.delete"],
-			when: { customer: { customer_id: "cus_1" } },
+			filter: { customer: { customer_id: "cus_1" } },
 		}),
 	},
 	{
-		name: "catalog edit plans: plan",
-		rule: rules.rule({
-			actions: ["catalog.edit_plans"],
-			when: { plan_id: { $ne: "enterprise" } },
+		name: "plans: plan id",
+		rule: rules.block({
+			actions: ["plans.update", "plans.delete"],
+			filter: { plan_id: "enterprise" },
 		}),
 	},
 	{
-		name: "catalog edit features: feature",
-		rule: rules.rule({
-			actions: ["catalog.edit_features"],
-			when: { feature_id: "ai_credits" },
+		name: "features: feature id",
+		rule: rules.block({
+			actions: ["features.delete"],
+			filter: { feature_id: "ai_credits" },
 		}),
 	},
 	{
-		name: "who-only area with no when",
-		rule: rules.whoOnly({ actions: ["api_keys.create"] }),
+		name: "who-only area with no filter",
+		rule: rules.block({ actions: ["api_keys.create"] }),
 	},
+	{ name: "billing with no filter (always)", rule: rules.allow() },
 	{
-		name: "billing with no when (always)",
-		rule: rules.rule({ when: null }),
+		name: "a rule may name Everyone and a role",
+		rule: rules.block({
+			subjects: [{ type: "everyone" }, { type: "role", role_id: "sales" }],
+		}),
 	},
 ];
 
-/** Builds a rule from raw JSON, so invalid shapes don't need casts. */
-const invalid = (overrides: Record<string, unknown>) => ({
-	...rules.rule(),
-	...overrides,
-});
-
 const INVALID: { name: string; rule: unknown; path: string }[] = [
-	{ name: "no subjects", rule: invalid({ subjects: [] }), path: "subjects" },
+	{ name: "no effect", rule: raw({ effect: undefined }), path: "effect" },
+	{ name: "unknown effect", rule: raw({ effect: "deny" }), path: "effect" },
+	{ name: "no subjects", rule: raw({ subjects: [] }), path: "subjects" },
 	{
-		name: "API key subject (not a v1 subject)",
-		rule: invalid({ subjects: [{ type: "api_key", key_id: "k" }] }),
+		name: "API key subject",
+		rule: raw({ subjects: [{ type: "api_key", key_id: "k" }] }),
 		path: "subjects.0.type",
 	},
 	{
-		name: "role subject without a role",
-		rule: invalid({ subjects: [{ type: "role", role: "" }] }),
-		path: "subjects.0.role",
+		name: "role subject by name",
+		rule: raw({ subjects: [{ type: "role", role: "sales" }] }),
+		path: "subjects.0.role_id",
 	},
-	{ name: "no actions", rule: invalid({ actions: [] }), path: "actions" },
+	{ name: "no actions", rule: raw({ actions: [] }), path: "actions" },
 	{
-		name: "unknown action",
-		rule: invalid({ actions: ["billing.refund"] }),
+		name: "old action id",
+		rule: raw({ actions: ["billing.update_subscription"] }),
+		path: "actions.0",
+	},
+	{
+		name: "alias isn't nameable",
+		rule: raw({ actions: ["billing.multi_attach"] }),
 		path: "actions.0",
 	},
 	{
 		name: "actions from two areas",
-		rule: invalid({ actions: ["billing.attach", "balances.create"] }),
+		rule: raw({ actions: ["billing.attach", "balances.create"] }),
 		path: "actions",
 	},
 	{
-		name: "when on a who-only area",
-		rule: invalid({
-			actions: ["api_keys.create"],
-			when: { customer: { customer_id: "x" } },
-		}),
-		path: "when",
+		name: "plans and features are separate areas",
+		rule: raw({ actions: ["plans.update", "features.update"] }),
+		path: "actions",
 	},
 	{
-		name: "when on customers.create mixed with update",
-		rule: invalid({
-			actions: ["customers.create", "customers.update"],
-			when: { customer: { customer_id: "x" } },
+		name: "filter on a who-only action",
+		rule: raw({
+			actions: ["api_keys.create"],
+			filter: { customer: { customer_id: "x" } },
 		}),
-		path: "when",
+		path: "filter",
+	},
+	{
+		name: "filter on customers.get_or_create mixed with update",
+		rule: raw({
+			actions: ["customers.get_or_create", "customers.update"],
+			filter: { customer: { customer_id: "x" } },
+		}),
+		path: "filter",
 	},
 	{
 		name: "billing change field on a cancel rule",
-		rule: invalid({ actions: ["billing.cancel"], when: { paid: false } }),
-		path: "when.paid",
+		rule: raw({ actions: ["billing.cancel"], filter: { paid: false } }),
+		path: "filter.paid",
 	},
 	{
 		name: "cancel field on an attach rule",
-		rule: invalid({ when: { cancel_action: "cancel_immediately" } }),
-		path: "when.cancel_action",
+		rule: raw({ filter: { cancel_action: "cancel_immediately" } }),
+		path: "filter.cancel_action",
 	},
 	{
-		name: "grant-only field on a grant + set rule",
-		rule: invalid({
-			actions: ["balances.create", "balances.update"],
-			when: { feature_id: "ai_credits", unlimited: true },
+		name: "refund on uncancel",
+		rule: raw({ actions: ["billing.uncancel"], filter: { refund: null } }),
+		path: "filter.refund",
+	},
+	{
+		name: "cancel action on uncancel",
+		rule: raw({
+			actions: ["billing.uncancel"],
+			filter: { cancel_action: "cancel_immediately" },
 		}),
-		path: "when.unlimited",
+		path: "filter.cancel_action",
 	},
 	{
-		name: "unknown field nested in an embedded plan filter",
-		rule: invalid({ when: { incoming: { $every: { plan_idd: "pro" } } } }),
-		path: "when.incoming.$every.plan_idd",
+		name: "old trial length fields",
+		rule: raw({
+			filter: {
+				incoming: { $some: { free_trial: { duration_length: { $lt: 2 } } } },
+			},
+		}),
+		path: "filter.incoming.$some.free_trial.duration_length",
 	},
 	{
-		name: "unknown field inside $or",
-		rule: invalid({ when: { $or: [{ paid: false }, { charges: true }] } }),
-		path: "when.$or.1.charges",
-	},
-	{
-		name: "unknown field named like an Object.prototype key",
-		rule: invalid({ when: { valueOf: true } }),
-		path: "when.valueOf",
-	},
-	{
-		name: "unknown field inside a feature_quantities $or",
-		rule: invalid({
-			when: {
+		name: "unknown duration unit",
+		rule: raw({
+			filter: {
 				incoming: {
-					$every: {
-						feature_quantities: { $every: { $or: [{ seat: "x" }] } },
+					$some: {
+						free_trial: { duration: { $lt: { length: 2, unit: "week" } } },
 					},
 				},
 			},
 		}),
-		path: "when.incoming.$every.feature_quantities.$every.$or.0.seat",
+		path: "filter.incoming.$some",
+	},
+	{
+		name: "unknown billing cycle anchor",
+		rule: raw({ filter: { billing_cycle_anchor: "tomorrow" } }),
+		path: "filter.billing_cycle_anchor",
+	},
+	{
+		name: "grant-only field on a grant + set rule",
+		rule: raw({
+			actions: ["balances.create", "balances.update"],
+			filter: { feature_id: "x", unlimited: true },
+		}),
+		path: "filter.unlimited",
+	},
+	{
+		name: "unknown field in an embedded plan filter",
+		rule: raw({ filter: { incoming: { $some: { plan_idd: "pro" } } } }),
+		path: "filter.incoming.$some.plan_idd",
+	},
+	{
+		name: "unknown field inside $or",
+		rule: raw({ filter: { $or: [{ paid: false }, { charges: true }] } }),
+		path: "filter.$or.1.charges",
+	},
+	{
+		name: "unknown field named like an Object.prototype key",
+		rule: raw({ filter: { valueOf: true } }),
+		path: "filter.valueOf",
 	},
 	{
 		name: "bad enum value",
-		rule: invalid({ when: { plan_schedule: "tomorrow" } }),
-		path: "when.plan_schedule",
+		rule: raw({ filter: { plan_schedule: "tomorrow" } }),
+		path: "filter.plan_schedule",
 	},
 ];
 
@@ -316,28 +367,92 @@ describe("rule schema: invalid rules", () => {
 	});
 });
 
+const storedRule = {
+	...rules.salesEnterpriseTrials(),
+	position: 2,
+	id: "apr_1",
+	version: 3,
+	updated_by: { user_id: "usr_1", name: "Ada" },
+	created_at: 1,
+	updated_at: 2,
+};
+
 describe("stored rule", () => {
-	test("ApprovalRuleSchema adds id, version and audit fields", () => {
-		const stored = {
-			...rules.enterpriseTrials(),
-			id: "apr_1",
-			version: 3,
-			updated_by: { user_id: "usr_1", name: "Ada" },
-			created_at: 1,
-			updated_at: 2,
-		};
-		expect(ApprovalRuleSchema.safeParse(stored).success).toBe(true);
+	test("ApprovalRuleSchema adds position, id, version and audit fields", () => {
+		expect(ApprovalRuleSchema.parse(storedRule)).toEqual(storedRule);
 		expect(
-			ApprovalRuleSchema.safeParse({
-				...stored,
-				actions: ["billing.attach", "rewards.apply"],
-			}).success,
+			ApprovalRuleSchema.safeParse({ ...storedRule, position: -1 }).success,
 		).toBe(false);
 	});
 
-	test("enabled defaults to true", () => {
-		const { enabled: _, ...rule } = rules.rule();
-		const parsed = CreateApprovalRuleParamsSchema.parse(rule);
-		expect(parsed.enabled).toBe(true);
+	test("never re-validates the filter against its actions", () => {
+		const outOfArea = { ...storedRule, actions: ["balances.create"] };
+		expect(ApprovalRuleSchema.safeParse(outOfArea).success).toBe(true);
+	});
+
+	test("reads any area's filter back without dropping keys", () => {
+		const grantRule = {
+			...storedRule,
+			...rules.grantCap({ subjects: [{ type: "everyone" }], max: 5 }),
+		};
+		expect(ApprovalRuleSchema.parse(grantRule).filter).toEqual(
+			grantRule.filter,
+		);
+	});
+
+	test("version rows carry the rule snapshot", () => {
+		const {
+			id: _,
+			version,
+			updated_by,
+			created_at,
+			updated_at: __,
+			...snapshot
+		} = storedRule;
+		const row = {
+			rule_id: "apr_1",
+			version,
+			rule: snapshot,
+			updated_by,
+			created_at,
+		};
+		expect(ApprovalRuleVersionSchema.parse(row)).toEqual(row);
+	});
+});
+
+describe("route params", () => {
+	test("create defaults filter, note and enabled", () => {
+		const { filter: _, note: __, enabled: ___, ...rule } = rules.block();
+		expect(CreateApprovalRuleParamsSchema.parse(rule)).toMatchObject({
+			filter: null,
+			note: null,
+			enabled: true,
+		});
+	});
+
+	test("create has no position; the server appends", () => {
+		expect(
+			CreateApprovalRuleParamsSchema.parse({ ...rules.block(), position: 0 }),
+		).not.toHaveProperty("position");
+	});
+
+	test("update takes an id and any subset of fields", () => {
+		expect(
+			UpdateApprovalRuleParamsSchema.parse({ id: "apr_1", enabled: false }),
+		).toEqual({ id: "apr_1", enabled: false });
+		expect(
+			UpdateApprovalRuleParamsSchema.safeParse({ enabled: false }).success,
+		).toBe(false);
+	});
+
+	test.each([
+		["create params", CreateApprovalRuleParamsSchema],
+		["update params", UpdateApprovalRuleParamsSchema],
+		["rule", ApprovalRuleSchema],
+		["rule version", ApprovalRuleVersionSchema],
+	] as const)("%s convert to JSON Schema for the public API", (_, schema) => {
+		expect(() =>
+			z.toJSONSchema(schema, { io: "input", unrepresentable: "throw" }),
+		).not.toThrow();
 	});
 });

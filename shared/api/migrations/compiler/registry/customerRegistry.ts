@@ -30,9 +30,18 @@ export const PLAN_RECURRING_EXISTS_SQL = [
 ].join(" ");
 
 /**
+ * Customer-level: any paid invoice with a positive total, ever. Correlated on
+ * `internal_customer_id` only, since `invoices.org_id`/`env` stay nullable
+ * until the backfill; `idx_invoices_customer_created` serves the lookup.
+ */
+export const CUSTOMER_HAS_PAID_EXISTS_SQL =
+	"EXISTS (SELECT 1 FROM invoices i WHERE i.internal_customer_id = c.internal_id AND i.status = 'paid' AND i.total > 0)";
+
+/**
  * Phase 1 field registry, rooted at the `customers` table.
  *
  * Supported paths:
+ *   has_paid
  *   plan.plan_id
  *   plan.item.feature_id, plan.item.price (existence only: null / $ne null)
  *   plan.item.rollover (existence only: null / $ne null)
@@ -134,6 +143,7 @@ export const customerRegistry: RootScope = {
 	],
 	fields: {
 		customer_id: { kind: "leaf", sql: "c.id" },
+		has_paid: { kind: "leaf", sql: CUSTOMER_HAS_PAID_EXISTS_SQL },
 		plan: { kind: "nav", scope: planScope },
 	},
 };

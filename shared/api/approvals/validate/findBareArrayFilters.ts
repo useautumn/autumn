@@ -1,5 +1,5 @@
-import { ARRAY_QUANTIFIERS } from "../schemas/when/whenFields";
-import type { ApprovalRuleIssue, WhenEntry } from "./types";
+import { ARRAY_QUANTIFIERS } from "../schemas/filters/filterFields";
+import type { ApprovalRuleIssue, FilterEntry } from "./types";
 
 const ARRAY_FILTER_KEYS = new Set([
 	"incoming",
@@ -10,7 +10,7 @@ const ARRAY_FILTER_KEYS = new Set([
 	"item",
 ]);
 
-const isBareArrayFilter = ({ key, value }: WhenEntry) =>
+const isBareArrayFilter = ({ key, value }: FilterEntry) =>
 	ARRAY_FILTER_KEYS.has(key) &&
 	typeof value === "object" &&
 	value !== null &&
@@ -23,7 +23,7 @@ const isBareArrayFilter = ({ key, value }: WhenEntry) =>
 export const findBareArrayFilters = ({
 	entries,
 }: {
-	entries: WhenEntry[];
+	entries: FilterEntry[];
 }): ApprovalRuleIssue[] =>
 	entries.filter(isBareArrayFilter).map((entry) => ({
 		path: entry.path.join("."),
