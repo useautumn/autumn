@@ -94,8 +94,6 @@ export const previewPendingReattach = async ({
 			params,
 		});
 
-	const replacementTrialContext =
-		replacementPreview.billingContext?.trialContext;
 	// A granted plan's payment is tied to its rows by the Stripe session, so any edit re-grants it.
 	const rebills =
 		isGranted ||
@@ -105,10 +103,7 @@ export const previewPendingReattach = async ({
 			replacementProduct,
 			replacementQuantities:
 				replacementPreview.billingContext?.featureQuantities ?? [],
-			// An explicit free_trial lands on the trial context, not the plan.
-			replacementFreeTrial: replacementTrialContext
-				? replacementTrialContext.freeTrial
-				: replacementProduct?.free_trial,
+			replacementTrialContext: replacementPreview.billingContext?.trialContext,
 		});
 
 	return {

@@ -49,13 +49,12 @@ export const findUnpaidLongLivedCustomerProduct = async ({
 	const session = await stripeCli.checkout.sessions.retrieve(
 		customerProduct.stripe_checkout_session_id,
 	);
-	const metadataId = session.metadata?.autumn_metadata_id;
-	const isUnpaidLongLived =
-		session.status !== "complete" &&
-		session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY] &&
-		metadataId &&
-		(await MetadataService.get({ db: ctx.db, id: metadataId }));
-	if (!isUnpaidLongLived) return;
+	if (session.status === "complete") return;
+	if (!session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY]) return;
+
+	const metadataId = session.metadata.autumn_metadata_id;
+	if (!metadataId) return;
+	if (!(await MetadataService.get({ db: ctx.db, id: metadataId }))) return;
 
 	return { ...customerProduct, metadata_id: metadataId };
 };

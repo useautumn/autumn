@@ -1,12 +1,12 @@
 import {
 	cusProductToProduct,
 	type FeatureOptions,
-	type FreeTrial,
 	type FullCusProduct,
 	type FullProduct,
 	featureOptionsAreSame,
 	freeTrialsAreSame,
 	productsAreSame,
+	type TrialContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -15,13 +15,13 @@ export const pendingPlanRebills = ({
 	customerProduct,
 	replacementProduct,
 	replacementQuantities,
-	replacementFreeTrial,
+	replacementTrialContext,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	replacementProduct?: FullProduct;
 	replacementQuantities: FeatureOptions[];
-	replacementFreeTrial?: FreeTrial | null;
+	replacementTrialContext?: TrialContext;
 }) => {
 	if (!replacementProduct) return true;
 
@@ -36,9 +36,12 @@ export const pendingPlanRebills = ({
 		newFeatureOptions: replacementQuantities,
 	});
 
+	// An explicit free_trial lands on the trial context, not the plan.
 	const freeTrialsSame = freeTrialsAreSame({
 		ft1: customerProduct.free_trial,
-		ft2: replacementFreeTrial,
+		ft2: replacementTrialContext
+			? replacementTrialContext.freeTrial
+			: replacementProduct.free_trial,
 	});
 
 	return !onlyEntsChanged || !freeTrialsSame || !quantitiesSame;
