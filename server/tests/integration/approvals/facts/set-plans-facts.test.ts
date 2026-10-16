@@ -45,8 +45,13 @@ test.concurrent(
 				{ starts_at: advancedTo + ms.days(80), plans: [{ plan_id: small.id }] },
 			],
 		};
-		const { _permission_facts: facts } =
-			await permissionFactsClient().billing.previewSetPlans(params);
+		// Test-only field, outside the typed set plans preview.
+		const preview = (await permissionFactsClient().billing.previewSetPlans(
+			params,
+		)) as {
+			_permission_facts: { paid: boolean; incoming: { plan_id: string }[] };
+		};
+		const facts = preview._permission_facts;
 
 		expect(
 			facts.incoming.map(({ plan_id }: { plan_id: string }) => plan_id),
