@@ -4,6 +4,7 @@
  */
 
 import { expect, mock, test } from "bun:test";
+import type { QueryClient } from "@tanstack/react-query";
 
 const CATALOG: Record<string, { products: object[]; features: object[] }> = {
 	live: {
@@ -19,6 +20,7 @@ const actualEnv = await import("@/utils/envUtils");
 const actualKeys = await import("@/hooks/common/useQueryKeyFactory");
 const actualPersistence = await import("@/lib/queryPersistence");
 const actualAxios = await import("@/services/useAxiosInstance");
+const fallbackClient = new actualQuery.QueryClient();
 
 mock.module("@/utils/envUtils", () => ({
 	...actualEnv,
@@ -45,7 +47,14 @@ mock.module("@/services/useAxiosInstance", () => ({
 
 mock.module("@tanstack/react-query", () => ({
 	...actualQuery,
-	useQueryClient: () => new actualQuery.QueryClient(),
+	// Later files render their own provider; only fall back when there isn't one.
+	useQueryClient: (client?: QueryClient) => {
+		try {
+			return actualQuery.useQueryClient(client);
+		} catch {
+			return fallbackClient;
+		}
+	},
 	useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
 		const catalog = CATALOG[String(queryKey.at(-1))];
 		const isFeatures = queryKey[0] === "features";
