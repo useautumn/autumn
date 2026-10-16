@@ -10,6 +10,7 @@ import type {
 import { getRoleInUseCount } from "@/views/settings/sections/roles/roleErrors";
 
 const ROLES_KEY = ["roles"] as const;
+const MEMBERS_KEY = ["organization-members"] as const;
 
 export const useRolesQuery = () => {
 	const axios = useAxiosInstance();
@@ -27,8 +28,12 @@ export const useRolesQuery = () => {
 export const useRoleMutations = () => {
 	const axios = useAxiosInstance();
 	const queryClient = useQueryClient();
+	// Renames and deletes change members' roles too, so refresh both lists.
 	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: ROLES_KEY });
+		Promise.all([
+			queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
+			queryClient.invalidateQueries({ queryKey: MEMBERS_KEY }),
+		]);
 
 	const save = useMutation({
 		mutationFn: ({ name, body }: { name: string | null; body: RoleBody }) =>
