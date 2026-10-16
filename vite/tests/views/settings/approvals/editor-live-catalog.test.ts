@@ -28,10 +28,18 @@ mock.module("@/services/useAxiosInstance", () => ({
 
 // Keep the real exports: bun module mocks last the whole run, and later files need them.
 const actual = await import("@tanstack/react-query");
+const fallbackClient = new actual.QueryClient();
 
 mock.module("@tanstack/react-query", () => ({
 	...actual,
-	useQueryClient: () => new actual.QueryClient(),
+	// Later files render a real provider; only hooks outside one get the fallback.
+	useQueryClient: (client?: InstanceType<typeof actual.QueryClient>) => {
+		try {
+			return actual.useQueryClient(client);
+		} catch {
+			return fallbackClient;
+		}
+	},
 	useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
 		const catalog = CATALOG[String(queryKey.at(-1))];
 		const isFeatures = queryKey[0] === "features";
