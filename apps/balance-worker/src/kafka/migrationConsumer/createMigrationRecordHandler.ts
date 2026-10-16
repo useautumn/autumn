@@ -8,7 +8,7 @@ import { z } from "zod/v4";
 import type { PartitionRuntimePort } from "../../partitions/types/partitions.js";
 import type { MigrationLaneItem } from "../../processor/commands/applyMigrationBatch/types/migrationLaneItem.js";
 
-const MAX_ITEMS_PER_APPLY = 500;
+const MAX_ITEMS_PER_APPLY = 125;
 const RECORDS_PER_TURN = 50;
 const HEARTBEAT_EVERY_MS = 3_000;
 
