@@ -1,0 +1,188 @@
+import {
+	RESOURCE_METADATA,
+	RESOURCES,
+	type ResourceType,
+	type ScopeString,
+} from "@autumn/shared";
+import type { RoleOption } from "@/components/v2/selects/RoleSelect";
+
+import type { ApiRole } from "@/hooks/queries/useRolesQuery";
+
+export type { ApiRole };
+export type RoleAccess = "none" | "read" | "write";
+export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
+
+export type RoleCreateBody = Pick<ApiRole, "id" | "name"> & {
+	access: RoleAccessRecord;
+};
+export type RoleUpdateBody = Pick<ApiRole, "id"> &
+	Partial<Pick<RoleCreateBody, "name" | "access">>;
+export type RoleFormValues = Pick<RoleCreateBody, "name" | "access">;
+
+const READ_ONLY_RESOURCES: readonly ResourceType[] = ["analytics"];
+
+const capAccess = ({
+	resource,
+	value,
+}: {
+	resource: ResourceType;
+	value: RoleAccess;
+}): RoleAccess =>
+	value === "write" && READ_ONLY_RESOURCES.includes(resource) ? "read" : value;
+
+const buildAccess = (pick: (resource: ResourceType) => RoleAccess) =>
+	Object.fromEntries(
+		RESOURCES.map((resource) => [
+			resource,
+			capAccess({ resource, value: pick(resource) }),
+		]),
+	) as RoleAccessRecord;
+
+// The API's access map isn't keyed by ResourceType yet, so missing keys read as none.
+const capRecord = ({
+	access,
+}: {
+	access: Partial<Record<string, RoleAccess>>;
+}) => buildAccess((resource) => access[resource] ?? "none");
+
+export const emptyAccess = () => buildAccess(() => "none");
+
+export const accessToScopes = ({
+	access,
+}: {
+	access: RoleAccessRecord;
+}): ScopeString[] =>
+	Object.entries(capRecord({ access }))
+		.filter(([, value]) => value !== "none")
+		.map(([resource, value]) => `${resource}:${value}` as ScopeString);
+
+export const scopesToAccess = ({
+	scopes,
+}: {
+	scopes: readonly ScopeString[];
+}): RoleAccessRecord => {
+	const has = (scope: string) => scopes.includes(scope as ScopeString);
+	return buildAccess((resource) => {
+		if (has(`${resource}:write`)) return "write";
+		if (has(`${resource}:read`)) return "read";
+		return "none";
+	});
+};
+
+export const accessError = ({ access }: { access: RoleAccessRecord }) =>
+	Object.values(access).some((value) => value !== "none")
+		? undefined
+		: "Choose access to at least one resource";
+
+export const canEditRole = ({ role }: { role: ApiRole }) => !role.built_in;
+
+export const roleToFormValues = ({
+	role,
+}: {
+	role: ApiRole | null;
+}): RoleFormValues => ({
+	name: role?.name ?? "",
+	access: role ? capRecord({ access: role.access }) : emptyAccess(),
+});
+
+const ROLE_ID_MAX_LENGTH = 63;
+
+/** Ids are fixed at create, so this only runs for new roles. */
+export const nameToRoleId = ({ name }: { name: string }) =>
+	name
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9\s_]/g, "")
+		.replace(/\s+/g, "_")
+		.replace(/^_+/, "")
+		.slice(0, ROLE_ID_MAX_LENGTH);
+
+export const formValuesToCreateBody = ({
+	values,
+}: {
+	values: RoleFormValues;
+}): RoleCreateBody => ({
+	id: nameToRoleId({ name: values.name }),
+	name: values.name.trim(),
+	access: capRecord({ access: values.access }),
+});
+
+export const formValuesToUpdateBody = ({
+	role,
+	values,
+}: {
+	role: ApiRole;
+	values: RoleFormValues;
+}): RoleUpdateBody => ({
+	id: role.id,
+	name: values.name.trim(),
+	access: capRecord({ access: values.access }),
+});
+
+const SUMMARY_LIMIT = 3;
+
+// Lowercases words but keeps acronyms, so "API Keys" reads "API keys".
+const resourceName = ({ resource }: { resource: ResourceType }) =>
+	RESOURCE_METADATA[resource].namePlural
+		.split(" ")
+		.map((word) => (word === word.toUpperCase() ? word : word.toLowerCase()))
+		.join(" ");
+
+const listResources = ({ resources }: { resources: ResourceType[] }) => {
+	const names = resources
+		.slice(0, SUMMARY_LIMIT)
+		.map((resource) => resourceName({ resource }))
+		.join(", ");
+	const hidden = resources.length - SUMMARY_LIMIT;
+	return hidden > 0 ? `${names} +${hidden} more` : names;
+};
+
+export const summarizeAccess = ({
+	access: rawAccess,
+}: {
+	access: Partial<Record<string, RoleAccess>>;
+}): string => {
+	const access = capRecord({ access: rawAccess });
+	const written = RESOURCES.filter((resource) => access[resource] === "write");
+	if (
+		RESOURCES.every(
+			(resource) =>
+				access[resource] === capAccess({ resource, value: "write" }),
+		)
+	)
+		return "Full access";
+	if (written.length > 0)
+		return `Write ${listResources({ resources: written })}`;
+	if (RESOURCES.some((resource) => access[resource] === "read"))
+		return "Read only";
+	return "No access";
+};
+
+export const summarizeRules = ({ role }: { role: ApiRole }) => {
+	if (role.rule_count === 0) return "No rules";
+	return role.rule_count === 1 ? "1 rule" : `${role.rule_count} rules`;
+};
+
+/** A deleted role's members still carry its id, so fall back to the raw id. */
+export const roleName = ({
+	roles,
+	roleId,
+}: {
+	roles: ApiRole[];
+	roleId: string;
+}) => roles.find((role) => role.id === roleId)?.name ?? roleId;
+
+export const memberRoleOptions = ({
+	roles,
+	allowOwner,
+}: {
+	roles: ApiRole[];
+	allowOwner: boolean;
+}): RoleOption[] =>
+	roles
+		.filter((role) => allowOwner || role.id !== "owner")
+		.map((role) => ({
+			value: role.id,
+			label: role.name,
+			description: summarizeAccess({ access: role.access }),
+		}));
