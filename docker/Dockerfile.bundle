@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1
+
+# Bundle image: the same services as docker/Dockerfile, shipped as bun-built bundles plus
+# only the node_modules they can't inline (docker/bundle/externals.ts). leaf is not included.
+ARG BUN_VERSION=1.4.2
+
+FROM oven/bun:${BUN_VERSION} AS manifests
+COPY . /src
+WORKDIR /
+RUN bun -e 'const { cpSync } = require("node:fs"); \
+	for (const w of require("/src/package.json").workspaces.packages) \
+		cpSync(`/src/${w}/package.json`, `/out/${w}/package.json`);'
+
+# Identical to docker/Dockerfile's deps stage, so both images bundle from the same install.
+FROM oven/bun:${BUN_VERSION} AS deps
+ARG BUN_VERSION
+WORKDIR /app
+COPY package.json bun.lock bunfig.toml ./
+COPY patches/ patches/
+COPY --from=manifests /out/ ./
+RUN mkdir -p scripts && touch scripts/preload-env.ts
+RUN --mount=type=cache,id=bun-install-${BUN_VERSION},target=/root/.bun/install/cache \
+	bun install --ignore-scripts --frozen-lockfile
+
+FROM deps AS bundle
+COPY . .
+RUN NODE_ENV=production bun docker/bundle/buildBundles.ts /out
+
+FROM oven/bun:${BUN_VERSION}
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Same CA bundle as docker/Dockerfile (DuckDB's native TLS needs it).
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
+COPY --from=bundle /out/ ./
+
+EXPOSE 8080
+
+WORKDIR /app/server
+CMD ["bun", "start"]
