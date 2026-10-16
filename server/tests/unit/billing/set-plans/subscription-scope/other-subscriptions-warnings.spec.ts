@@ -19,7 +19,6 @@ const warningsFor = (otherStripeSubscriptionIds?: string[]) =>
 		},
 		stripeBillingPlan: {},
 		replacedOpenInvoices: [],
-		liveOpenInvoices: [],
 	});
 
 describe(chalk.yellowBright("other_subscriptions_unaffected warning"), () => {

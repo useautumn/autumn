@@ -21,9 +21,6 @@ await mockModuleWithRestore("@server/external/connect/createStripeCli", () => ({
 	createStripeCli: () => ({ invoices: { list: listInvoicePage } }),
 }));
 
-const { fetchPastDueOpenInvoices } = await import(
-	"@/internal/billing/v2/actions/setPlans/preview/fetchPastDueOpenInvoices"
-);
 const { fetchReplacedSubscriptionPreviewInputs } = await import(
 	"@/internal/billing/v2/actions/setPlans/preview/fetchReplacedSubscriptionPreviewInputs"
 );
@@ -31,20 +28,6 @@ const { fetchReplacedSubscriptionPreviewInputs } = await import(
 const ctx = { org: { id: "org_123" }, env: "sandbox" } as AutumnContext;
 
 describe("set_plans preview open-invoice fetches read every page", () => {
-	test("past_due subscription", async () => {
-		const invoices = await fetchPastDueOpenInvoices({
-			ctx,
-			billingContext: {
-				stripeSubscription: { id: "sub_live", status: "past_due" },
-			} as BillingContext,
-		});
-
-		expect(invoices.map((invoice) => invoice.id)).toEqual([
-			"in_page1",
-			"in_page2",
-		]);
-	});
-
 	test("replaced subscription", async () => {
 		const { replacedOpenInvoices } =
 			await fetchReplacedSubscriptionPreviewInputs({
