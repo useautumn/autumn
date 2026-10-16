@@ -9,6 +9,8 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { checkCatalogEditApprovals } from "@/internal/approvals/enforce/checkCatalogEditApprovals";
+import { planUpdateToEditedPlanIds } from "@/internal/approvals/facts/catalog/planUpdateToEditedPlanIds";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
@@ -541,6 +543,26 @@ export const updateCatalog = async ({
 				products: productsBeforeUpdate,
 				plans: params.plans ?? [],
 			}).filter((removal) => !params.skip_plan_ids.includes(removal.planId));
+
+	// Approvals: every plan and feature this update writes or deletes, before the first write
+	await checkCatalogEditApprovals({
+		ctx,
+		planIds: [
+			...(params.plans ?? []).flatMap(planUpdateToEditedPlanIds),
+			...replacePlanIds.map(({ planId }) => planId),
+		],
+		featureIds: [
+			...(params.features ?? []).map(({ feature_id }) => feature_id),
+			...(params.skip_deletions
+				? []
+				: deriveReplaceFeatureIds({
+						features: ctx.features,
+						desiredFeatures: params.features ?? [],
+					}).filter(
+						(featureId) => !params.skip_feature_ids.includes(featureId),
+					)),
+		],
+	});
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	await upsertPlans({ ctx, params });

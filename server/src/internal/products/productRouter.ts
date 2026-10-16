@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { handleListRevenueCatMappings } from "@/external/revenueCat/handlers/handleListRevenueCatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { catalogEditApproval } from "@/internal/approvals/enforce/access/catalogEditApproval.js";
+import { planUpdateToEditedPlanIds } from "@/internal/approvals/facts/catalog/planUpdateToEditedPlanIds.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleGetLicenseProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
@@ -43,7 +44,10 @@ honoProductRouter.post(
 	"/:product_id",
 	catalogEditApproval({
 		action: "catalog.edit_plans",
-		ids: ({ body, params }) => [params.product_id, body.id],
+		ids: ({ body, params }) => [
+			params.product_id,
+			...planUpdateToEditedPlanIds({ ...body, plan_id: body.id }),
+		],
 	}),
 	...handleUpdatePlanV1,
 ); // will be deprecated
@@ -51,7 +55,10 @@ honoProductRouter.patch(
 	"/:product_id",
 	catalogEditApproval({
 		action: "catalog.edit_plans",
-		ids: ({ body, params }) => [params.product_id, body.id],
+		ids: ({ body, params }) => [
+			params.product_id,
+			...planUpdateToEditedPlanIds({ ...body, plan_id: body.id }),
+		],
 	}),
 	...handleUpdatePlanV1,
 ); // will be deprecated
@@ -100,7 +107,7 @@ plansRpcRouter.post(
 	"/plans.update",
 	catalogEditApproval({
 		action: "catalog.edit_plans",
-		ids: ({ body }) => [body.plan_id, body.new_plan_id],
+		ids: ({ body }) => planUpdateToEditedPlanIds(body),
 	}),
 	...handleUpdatePlanV2,
 );

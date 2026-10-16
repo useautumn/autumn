@@ -4,7 +4,6 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { checkCatalogEditApprovals } from "@/internal/approvals/enforce/checkCatalogEditApprovals.js";
 import { assertCatalogConfigResourceScope } from "../actions/catalogConfigResources.js";
 import { updateCatalog } from "../actions/updateCatalog/updateCatalog.js";
 
@@ -19,15 +18,6 @@ export const handleUpdateCatalog = createRoute({
 			ctx,
 			params,
 			scope: Scopes.Rewards.Write,
-		});
-		await checkCatalogEditApprovals({
-			ctx,
-			planIds: params.plans.flatMap(({ plan_id, new_plan_id }) => [
-				plan_id,
-				new_plan_id,
-			]),
-			featureIds: params.features.map(({ feature_id }) => feature_id),
-			includeExisting: !params.skip_deletions,
 		});
 		const response = await updateCatalog({
 			ctx,

@@ -5,9 +5,12 @@ import {
 	postRaw,
 } from "@tests/integration/approvals/utils/expectPermissionDenied";
 import { setupApprovalRules } from "@tests/integration/approvals/utils/setupApprovalRules";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
 import { rules } from "@tests/utils/fixtures/rules";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { ProductService } from "@/internal/products/ProductService";
 
 /** Plan and feature edits are checked against the member's rules on the plan or feature id (E5d). */
 
@@ -141,13 +144,19 @@ test.concurrent(
 				}),
 				violations: [{ field: "plan_id" }],
 			});
+			const gone = products.base({
+				id: `approvals_bulk_gone_${suffix}`,
+				items: [items.monthlyMessages({ includedUsage: 10 })],
+			});
+			await initScenario({
+				setup: [s.products({ list: [gone] })],
+				actions: [],
+			});
 			expectPermissionDenied({
 				res: await postRaw({
 					client,
 					path: "/catalogV2.update",
-					body: {
-						remove_plans: [{ plan_id: `approvals_bulk_gone_${suffix}` }],
-					},
+					body: { remove_plans: [{ plan_id: gone.id }] },
 				}),
 				violations: [{ field: "plan_id" }],
 			});
@@ -176,6 +185,138 @@ test.concurrent(
 				body: { plan_id: allowedPlan, name: "Granted" },
 			});
 			expect(created).toMatchObject({ status: 200 });
+		} finally {
+			await cleanup();
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalog enforce 4: variants, license parents and internal-id renames are judged on the plans they write")}`,
+	async () => {
+		const suffix = Date.now();
+		const allowedPlan = `approvals_variant_base_${suffix}`;
+		const { client, cleanup } = await setupCatalogRules({
+			customerId: "approvals-catalog-variants",
+			role: "developer",
+			allowedPlan,
+			allowedFeature: `approvals_variant_feature_${suffix}`,
+		});
+		const source = products.base({
+			id: `approvals_rename_source_${suffix}`,
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const { ctx } = await initScenario({
+			setup: [s.products({ list: [source] })],
+			actions: [],
+		});
+		const sourcePlan = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: source.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		try {
+			// Renaming another plan onto the allowed id still edits that other plan.
+			expectPermissionDenied({
+				res: await postRaw({
+					client,
+					path: "/catalogV2.update",
+					body: {
+						plans: [
+							{
+								plan_id: allowedPlan,
+								internal_id: sourcePlan.internal_id,
+								name: "Renamed",
+							},
+						],
+					},
+				}),
+				violations: [{ field: "plan_id" }],
+			});
+			const created = await postRaw({
+				client,
+				path: "/plans.create",
+				body: { plan_id: allowedPlan, name: "Base" },
+			});
+			expect(created).toMatchObject({ status: 200 });
+
+			const variantRes = await postRaw({
+				client,
+				path: "/plans.update",
+				body: {
+					plan_id: allowedPlan,
+					update_variant_ids: [`approvals_variant_no_${suffix}`],
+				},
+			});
+			expectPermissionDenied({
+				res: variantRes,
+				violations: [{ field: "plan_id" }],
+			});
+		} finally {
+			await cleanup();
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalog enforce 5: a full-state update is judged only on what it changes or deletes")}`,
+	async () => {
+		const suffix = Date.now();
+		const keep = products.base({
+			id: "keep",
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const { ctx, members } = await initScenario({
+			customerId: `approvals-catalog-full-state-${suffix}`,
+			setup: [
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: `approvals-catalog-full-state-${suffix}@autumn.test`,
+				}),
+				s.products({ list: [keep] }),
+				s.member({ role: "owner" }),
+				s.member({ role: "developer" }),
+			],
+			actions: [],
+		});
+		const [owner, developer] = members;
+		const { client, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: developer,
+			rules: [
+				rules.rule({
+					name: "No plan edits",
+					subjects: [{ type: "user", user_id: developer.userId }],
+					actions: ["catalog.edit_plans"],
+					when: { plan_id: "approvals_no_such_plan" },
+				}),
+			],
+		});
+		enforceApprovals(client);
+
+		try {
+			// Plans are omitted, so none is edited or deleted; every feature is kept.
+			const listed = await postRaw({
+				client,
+				path: "/features.list",
+				body: {},
+			});
+			const featureIds = (listed.body.list as { id: string }[]).map(
+				({ id }) => id,
+			);
+			const res = await postRaw({
+				client,
+				path: "/catalogV2.update",
+				body: {
+					features: [],
+					skip_deletions: false,
+					skip_feature_ids: featureIds,
+				},
+			});
+			expect(res).toMatchObject({ status: 200 });
 		} finally {
 			await cleanup();
 		}

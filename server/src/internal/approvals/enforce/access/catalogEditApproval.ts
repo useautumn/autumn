@@ -8,8 +8,6 @@ type CatalogEditRequest = {
 	params: Record<string, string>;
 };
 
-const readId = (value: unknown) => (typeof value === "string" ? value : null);
-
 /**
  * Router middleware for a single plan or feature route: names its action for the
  * scope check, then checks every id the request edits (a rename edits two).
@@ -27,7 +25,7 @@ export const catalogEditApproval =
 		setRouteApprovalAction({ ctx, action });
 
 		const body = (ctx.requestBody ?? {}) as Record<string, unknown>;
-		const editedIds = ids({ body, params: c.req.param() }).map(readId);
+		const editedIds = ids({ body, params: c.req.param() });
 		await checkCatalogEditApprovals({
 			ctx,
 			...(action === "catalog.edit_plans"
