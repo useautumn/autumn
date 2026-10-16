@@ -32,7 +32,7 @@ const trimmedCountOf = ({
 
 /** Which guard a push failed, so the fold was replayed from it: and where Autumn's copy first differs, when that is known. */
 export type FoldRebuilt = {
-	rebuiltFor: "trim" | "catalog" | "state";
+	rebuiltFor: "trim" | "catalog" | "state" | "entity";
 	difference: StructuralDifference | null;
 };
 
@@ -51,6 +51,9 @@ export const foldAcrossPush = ({
 	owed: readonly JournalEntry[];
 	catalog: Catalog;
 }): { kept: ReplayBase } | FoldRebuilt => {
+	// An entity's entries moved rows its own push may have replaced too: only the customer's copy is compared here.
+	if (fold.entityCopies.size > 0)
+		return { rebuiltFor: "entity", difference: null };
 	const trimmed = trimmedCountOf({ fold, owed });
 	if (trimmed === null) return { rebuiltFor: "trim", difference: null };
 	// Bun's compare decides; the path finder, ten times slower, runs only to name what differs.
@@ -67,9 +70,13 @@ export const foldAcrossPush = ({
 			? fold.customer.state
 			: replayOwed({
 					owed: fold.owed.slice(0, trimmed),
-					state: fold.customer.state,
+					parts: {
+						customer: fold.customer.state,
+						entities: fold.parts.entities,
+					},
 					catalog,
-				});
+					entityPartOf: () => null,
+				}).customer;
 	if (
 		!Bun.deepEquals(
 			subjectStateRowsOf(acknowledged),
@@ -84,17 +91,20 @@ export const foldAcrossPush = ({
 			}),
 		};
 	// The fold's own steps past the acknowledged ones, counted on from Autumn's revision so the next replay starts there.
-	const stepsPastPush = fold.customerState.revision - acknowledged.revision;
+	const stepsPastPush = fold.parts.customer.revision - acknowledged.revision;
 	return {
 		kept: {
 			// The worker's apply of the trimmed entries raised the push's atom_seqs; the Atom's replay never writes it.
-			state: {
-				...fold.customerState,
-				revision: customer.state.revision + stepsPastPush,
+			parts: {
 				customer: {
-					...fold.customerState.customer,
-					atom_seqs: customer.state.customer.atom_seqs,
+					...fold.parts.customer,
+					revision: customer.state.revision + stepsPastPush,
+					customer: {
+						...fold.parts.customer.customer,
+						atom_seqs: customer.state.customer.atom_seqs,
+					},
 				},
+				entities: fold.parts.entities,
 			},
 			applied: fold.applied - trimmed,
 			fullSubject: null,

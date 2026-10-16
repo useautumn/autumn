@@ -22,21 +22,10 @@ const FORWARD_RULES: {
 		reason: "product_check",
 		applies: ({ params }) => !params.feature_id || Boolean(params.product_id),
 	},
-	// Atom deducts a customer's own send_event; an entity's is the API's.
-	{
-		reason: "send_event",
-		applies: ({ params }) =>
-			params.send_event === true && Boolean(params.entity_id),
-	},
 	{
 		reason: "lock_version",
 		applies: ({ params, apiVersion }) =>
 			params.lock !== undefined && Boolean(apiVersion?.lt(ApiVersion.V2_6)),
-	},
-	{
-		reason: "lock",
-		applies: ({ params }) =>
-			params.lock !== undefined && Boolean(params.entity_id),
 	},
 	// A preview reads the org's plans from Postgres.
 	{

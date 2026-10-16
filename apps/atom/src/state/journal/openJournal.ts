@@ -15,6 +15,7 @@ import {
 } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
+import { seenSeqOf } from "./seenSeqOf.js";
 import type {
 	HandedEntry,
 	Journal,
@@ -338,13 +339,10 @@ export const openJournal = ({
 		atomSeqs: Record<string, Record<string, number>> | null;
 	}): Promise<void> {
 		const entries = owed({ customerId });
-		// How far Autumn has seen each writer's seqs for the customer, whatever atom id it holds them under.
 		const seen = new Map(
-			[...new Set(entries.map((entry) => entry.writerId))].map((writer) => [
-				writer,
-				Object.values(atomSeqs ?? {}).find(
-					(writerSeqs) => writer in writerSeqs,
-				)?.[writer] ?? 0,
+			[...new Set(entries.map((entry) => entry.writerId))].map((writerId) => [
+				writerId,
+				seenSeqOf({ atomSeqs, writerId }),
 			]),
 		);
 		const isSeen = (entry: JournalEntry) =>

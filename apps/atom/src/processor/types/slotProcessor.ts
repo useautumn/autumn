@@ -8,6 +8,7 @@ import type {
 	Journal,
 	JournalKeyRow,
 } from "../../state/journal/types/journal.js";
+import type { LaggingEntities } from "../../state/laggingEntities/createLaggingEntities.js";
 import type { OpenLocks } from "../../state/openLocks/createOpenLocks.js";
 import type { CatalogStore } from "../../state/types/catalogStore.js";
 import type { SqliteStore } from "../../state/types/sqliteStore.js";
@@ -25,6 +26,8 @@ export type SlotProcessorContext = {
 	journal: Journal;
 	/** The locks this slot took: a retried lock_id is compared with its track, a finalize carries its row. */
 	openLocks: OpenLocks;
+	/** Entities whose copy lags an entry a push already trimmed: their requests are the API's until their own push lands. */
+	laggingEntities: LaggingEntities;
 	/** Holds a moved customer's first requests until the old owner's entries for it have landed on this thread. */
 	barrier?: HandoffBarrier;
 	/** Who owns each customer now: a request for one that moved away is refused here, so its new owner decides it. */

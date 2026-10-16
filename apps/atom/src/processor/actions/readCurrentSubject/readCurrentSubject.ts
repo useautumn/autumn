@@ -1,6 +1,5 @@
 import {
 	type Catalog,
-	mergeCatalogs,
 	mergeSubjectStates,
 	type SubjectState,
 	subjectStateToFullSubject,
@@ -22,8 +21,8 @@ import {
 	type FoldRebuilt,
 	foldAcrossPush,
 } from "./foldAcrossPush.js";
-import { freshestCatalog } from "./freshestCatalog.js";
-import { replayOwed } from "./replayOwed.js";
+import { joinedCatalogOf, withOwedEntityCopies } from "./owedEntityCopies.js";
+import { replayOwed, type SubjectParts } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
@@ -135,6 +134,7 @@ const viewFoldRebuilt: Record<RebuildReason, number> = {
 	trim: 0,
 	catalog: 0,
 	state: 0,
+	entity: 0,
 };
 let rebuiltWarnedAt = Number.NEGATIVE_INFINITY;
 
@@ -148,6 +148,7 @@ export const readViewFoldThreadStats = () => ({
 	viewFoldRebuiltTrim: viewFoldRebuilt.trim,
 	viewFoldRebuiltCatalog: viewFoldRebuilt.catalog,
 	viewFoldRebuiltState: viewFoldRebuilt.state,
+	viewFoldRebuiltEntity: viewFoldRebuilt.entity,
 });
 
 const loggedValueOf = (
@@ -232,10 +233,50 @@ const keepFold = ({
 	if (last) foldByLastEntry.set(last, fold);
 };
 
+/** The fold's entity copies are still the ones held: a push of one replaces it, and its entries replay on the new one. */
+const areCopiesHeld = ({
+	ctx,
+	customerId,
+	copies,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	copies: ReadonlyMap<string, StoredSubject>;
+}): boolean => {
+	for (const [entityId, copy] of copies)
+		if (ctx.sqliteStore.readSubject({ customerId, entityId }) !== copy)
+			return false;
+	return true;
+};
+
+/** A view built on an entity copy older than what a push already trimmed for it is the API's, until that entity's push lands. */
+const refuseLaggingCopies = ({
+	ctx,
+	customerId,
+	copies,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	copies: ReadonlyMap<string, StoredSubject>;
+}): void => {
+	if (!ctx.laggingEntities.hasLagging({ customerId })) return;
+	for (const entityId of copies.keys())
+		if (ctx.laggingEntities.isLagging({ customerId, entityId }))
+			throw subjectNotStored({
+				ctx,
+				customerId,
+				entityId,
+				reason: "entity_stale",
+			});
+};
+
+const NO_ENTITY_COPIES: ReadonlyMap<string, StoredSubject> = new Map();
+const NO_ENTITY_PARTS: ReadonlyMap<string, SubjectState> = new Map();
+
 /**
  * The subject a request is decided on: as Autumn last sent it, with what the Atom owes Autumn for the customer replayed
  * on top; for an entity, the customer's rows and its own as one. Joined once per change to its parts, not per check.
- * A customer or entity Atom does not hold is left to the API.
+ * A customer or entity Atom does not hold, or whose copy lags what a push already trimmed, is left to the API.
  */
 export const readCurrentSubject = ({
 	ctx,
@@ -251,12 +292,63 @@ export const readCurrentSubject = ({
 	const owed = ctx.journal.owed({ customerId });
 	const target = entity ?? customer;
 	const joined = subjectJoinCache.get(target);
-	const isSameCopy = joined?.customer === customer && joined.shared === shared;
-	if (isSameCopy && joined.owed === owed && joined.applied === owed.length)
-		return joined.current;
-	const catalog = joinedCatalogOf({ customer, entity, shared });
+	const isSameCopy =
+		joined?.customer === customer &&
+		joined.shared === shared &&
+		areCopiesHeld({ ctx, customerId, copies: joined.entityCopies });
+	const fold =
+		isSameCopy && joined.owed === owed && joined.applied === owed.length
+			? joined
+			: foldView({
+					ctx,
+					customerId,
+					entityId,
+					customer,
+					entity,
+					shared,
+					owed,
+					joined: isSameCopy ? joined : null,
+				});
+	refuseLaggingCopies({ ctx, customerId, copies: fold.entityCopies });
+	return fold.current;
+};
+
+/** The view rebuilt for a change to its parts or to what is owed: continued from the cached fold where only appends happened. */
+const foldView = ({
+	ctx,
+	customerId,
+	entityId,
+	customer,
+	entity,
+	shared,
+	owed,
+	joined,
+}: {
+	ctx: SlotProcessorContext;
+	customerId: string;
+	entityId: string | null;
+	customer: StoredSubject;
+	entity: StoredSubject | null;
+	shared: SharedCatalog | null;
+	owed: readonly JournalEntry[];
+	/** The cached fold, when it was joined from these very copies. */
+	joined: ViewFold | null;
+}): ViewFold => {
+	const isAppended = joined !== null && isAppendedTo({ owed, fold: joined });
+	const ownCopies: ReadonlyMap<string, StoredSubject> =
+		entity && entityId ? new Map([[entityId, entity]]) : NO_ENTITY_COPIES;
+	const entityCopies = withOwedEntityCopies({
+		ctx,
+		customerId,
+		copies: isAppended ? joined.entityCopies : ownCopies,
+		owed: isAppended ? owed.slice(joined.applied) : owed,
+	});
+	const catalog = joinedCatalogOf({
+		parts: [customer, ...entityCopies.values()],
+		shared,
+	});
 	// A customer's own fold survives a new copy: a push that only acknowledged its deductions replays nothing.
-	const isOwedOnNewCopy = !entity && !isSameCopy && owed.length > 0;
+	const isOwedOnNewCopy = !entity && !joined && owed.length > 0;
 	const carried = isOwedOnNewCopy ? foldStillOwed({ owed }) : null;
 	const acrossPush = carried
 		? foldAcrossPush({ fold: carried, customer, owed, catalog })
@@ -276,16 +368,21 @@ export const readCurrentSubject = ({
 	// An append continues the cached fold, so n deductions between pushes cost n engine steps, not n²/2.
 	const base: ReplayBase =
 		carriedBase ??
-		(isSameCopy && isAppendedTo({ owed, fold: joined })
+		(isAppended
 			? {
-					state: joined.customerState,
+					parts: joined.parts,
 					applied: joined.applied,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
-			: { state: customer.state, applied: 0, fullSubject: null });
-	const { current, customerState } = joinSubject({
+			: {
+					parts: { customer: customer.state, entities: NO_ENTITY_PARTS },
+					applied: 0,
+					fullSubject: null,
+				});
+	const { current, parts } = joinSubject({
 		customer,
 		entity,
+		entityCopies,
 		shared,
 		owed,
 		base,
@@ -297,38 +394,19 @@ export const readCurrentSubject = ({
 		shared,
 		owed,
 		applied: owed.length,
-		customerState,
+		parts,
+		entityCopies,
 		current,
 	};
-	subjectJoinCache.set(target, fold);
-	if (!entity) keepFold({ fold, previous: isSameCopy ? joined : carried });
-	return current;
-};
-
-/** The part read later is merged last, so where both hold a row its copy is the one kept. */
-const joinedCatalogOf = ({
-	customer,
-	entity,
-	shared,
-}: {
-	customer: StoredSubject;
-	entity: StoredSubject | null;
-	shared: SharedCatalog | null;
-}): Catalog => {
-	const parts = entity ? [customer, entity] : [customer];
-	const partsOldestFirst = [...parts].sort(
-		(left, right) => left.readAt - right.readAt,
-	);
-	return mergeCatalogs({
-		catalogs: partsOldestFirst.map((stored) =>
-			freshestCatalog({ stored, shared }),
-		),
-	});
+	subjectJoinCache.set(entity ?? customer, fold);
+	if (!entity) keepFold({ fold, previous: joined ?? carried });
+	return fold;
 };
 
 const joinSubject = ({
 	customer,
 	entity,
+	entityCopies,
 	shared,
 	owed,
 	base,
@@ -337,29 +415,32 @@ const joinSubject = ({
 }: {
 	customer: StoredSubject;
 	entity: StoredSubject | null;
+	entityCopies: ReadonlyMap<string, StoredSubject>;
 	shared: SharedCatalog | null;
 	owed: readonly JournalEntry[];
 	base: ReplayBase;
 	catalog: Catalog;
 	entityId: string | null;
-}): { current: CurrentSubject; customerState: SubjectState } => {
-	// Only a customer's own deductions are owed, and they move only the customer's own rows.
+}): { current: CurrentSubject; parts: SubjectParts } => {
 	const unapplied = owed.slice(base.applied);
-	const customerState =
+	const parts =
 		unapplied.length === 0
-			? base.state
+			? base.parts
 			: replayOwed({
 					owed: unapplied,
-					state: base.state,
+					parts: base.parts,
 					catalog,
+					entityPartOf: (id) => entityCopies.get(id)?.state ?? null,
 					fullSubject: base.fullSubject,
 				});
+	const entityState =
+		entity && entityId ? (parts.entities.get(entityId) ?? entity.state) : null;
 
 	const current: CurrentSubject = {
 		fullSubject: subjectStateToFullSubject({
 			state: mergeSubjectStates({
-				customer: customerState,
-				entity: entity?.state ?? null,
+				customer: parts.customer,
+				entity: entityState,
 			}),
 			catalog,
 			entityId,
@@ -372,5 +453,5 @@ const joinSubject = ({
 		}),
 		org: customer.org,
 	};
-	return { current, customerState };
+	return { current, parts };
 };

@@ -6,14 +6,26 @@ import {
 	type FinalizeCommand,
 	LockAlreadyExistsError,
 	LockNotFoundError,
+	mergeSubjectStates,
 	type SubjectState,
 	type SubjectStateMutation,
+	splitSubjectState,
 	subjectStateToFullSubject,
 	type TrackCommand,
 	UnsupportedCommandError,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
+
+/** The customer's own rows and those of each entity an owed entry moved, as the replay leaves them. */
+export type SubjectParts = {
+	customer: SubjectState;
+	entities: ReadonlyMap<string, SubjectState>;
+};
+
+/** The entity an owed entry deducts or settles on; null for the customer's own, and for a finalize left to Autumn. */
+export const owedEntityIdOf = ({ command }: JournalEntry): string | null =>
+	command.type === "undecidedFinalize" ? null : command.identity.entityId;
 
 const computeOwed = ({
 	fullSubject,
@@ -33,40 +45,61 @@ const isRefusedForGood = (error: unknown): boolean =>
 	error instanceof LockNotFoundError;
 
 /**
- * The snapshot with each owed command applied as the balance worker applies it: decided on the rows so far, then applied.
- * A command the worker would refuse moves nothing here either, nor does a finalize left to the worker to decide.
+ * The parts with each owed command applied as the balance worker applies it: decided on the rows so far (an entity's on
+ * the customer's rows and its own as one, split back as the worker stores them), then applied. A command the worker would
+ * refuse moves nothing here either, nor does a finalize left to the worker to decide, nor one for an entity not held.
  */
 export const replayOwed = ({
 	owed,
-	state,
+	parts,
 	catalog,
-	fullSubject: stateFullSubject = null,
+	entityPartOf,
+	fullSubject: customerFullSubject = null,
 	onApplied,
 }: {
 	owed: readonly JournalEntry[];
-	state: SubjectState;
+	parts: SubjectParts;
+	/** Covers the customer and every entity the owed entries name. */
 	catalog: Catalog;
-	/** `state` already joined to `catalog`, when a cached view holds it: the first step need not build it again. */
+	/** An entity's own rows as the Atom holds them; null when it holds no live copy. */
+	entityPartOf: (entityId: string) => SubjectState | null;
+	/** `parts.customer` already joined to `catalog`, when a cached view holds it: the first step need not build it again. */
 	fullSubject?: WorkerFullSubject | null;
 	/** Told each mutation applied, for a caller that keeps what a step wrote, such as a lock's row. */
 	onApplied?: (mutation: SubjectStateMutation) => void;
-}): SubjectState =>
-	owed.reduce((current, { command }) => {
-		if (command.type === "undecidedFinalize") return current;
+}): SubjectParts => {
+	let current = parts;
+	for (const entry of owed) {
+		const { command } = entry;
+		if (command.type === "undecidedFinalize") continue;
+		const entityId = owedEntityIdOf(entry);
+		const entity =
+			entityId === null
+				? null
+				: (current.entities.get(entityId) ?? entityPartOf(entityId));
+		if (entityId !== null && !entity) continue;
+		const state = mergeSubjectStates({ customer: current.customer, entity });
 		const fullSubject =
-			current === state && stateFullSubject
-				? stateFullSubject
-				: subjectStateToFullSubject({
-						state: current,
-						catalog,
-						entityId: command.identity.entityId,
-					});
+			state === parts.customer && customerFullSubject
+				? customerFullSubject
+				: subjectStateToFullSubject({ state, catalog, entityId });
+		let next: SubjectState;
 		try {
 			const mutation = computeOwed({ fullSubject, command });
 			onApplied?.(mutation);
-			return applyMutation({ state: current, mutation });
+			next = applyMutation({ state, mutation });
 		} catch (error) {
-			if (isRefusedForGood(error)) return current;
+			if (isRefusedForGood(error)) continue;
 			throw error;
 		}
-	}, state);
+		if (entityId === null) {
+			current = { customer: next, entities: current.entities };
+			continue;
+		}
+		const split = splitSubjectState({ state: next });
+		const entities = new Map(current.entities);
+		if (split.entity) entities.set(entityId, split.entity);
+		current = { customer: split.customer, entities };
+	}
+	return current;
+};

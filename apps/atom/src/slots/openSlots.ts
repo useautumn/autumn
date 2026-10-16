@@ -13,6 +13,7 @@ import type { KeyRelay } from "../replication/keys/createKeyRelay.js";
 import type { HeldSubjects } from "../state/heldSubjects/types/heldSubjects.js";
 import { openJournal } from "../state/journal/openJournal.js";
 import type { Journal } from "../state/journal/types/journal.js";
+import { createLaggingEntities } from "../state/laggingEntities/createLaggingEntities.js";
 import { openCatalogStore } from "../state/openCatalogStore.js";
 import {
 	createOpenLocks,
@@ -146,6 +147,7 @@ export const openSlots = ({
 					subjectPulls,
 					journal,
 					openLocks,
+					laggingEntities: createLaggingEntities(),
 					barrier,
 					ring,
 				},
