@@ -3,6 +3,7 @@ import type { SettingsTab } from "./SettingsView";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
+import { ApprovalsSection } from "./sections/ApprovalsSection";
 import { AtomSection, AtomSectionSkeleton } from "./sections/AtomSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
@@ -32,6 +33,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	invoices: InvoicesSection,
 	"usage-alerts": UsageAlertsSection,
 	"transition-rules": TransitionRulesSection,
+	approvals: ApprovalsSection,
 	stripe: StripeSection,
 	vercel: VercelSection,
 	revenuecat: RevenueCatSection,

@@ -1,27 +1,16 @@
 import { RemoveButton } from "@/components/v2/rule-builder/RemoveButton";
-import { AddButton } from "../shared/AddButton";
+import { AddButton } from "@/views/migrations/migration/shared/AddButton";
 import { FilterRow } from "./FilterRow";
-import {
-	FIELD_CONFIGS,
-	FILTER_FIELD_OPTIONS,
-	type FilterField,
-	type FilterGroupData,
-	type FilterRule,
-} from "./filterRowTypes";
+import type {
+	FilterRegistry,
+	FilterRow as FilterRowData,
+	FilterRowGroup,
+	FilterValueInputs,
+} from "./types";
 
-function getNextAvailableField(usedFields: Set<string>): FilterRule {
-	const available = FILTER_FIELD_OPTIONS.find(
-		(opt) => !usedFields.has(opt.value),
-	);
-	const field: FilterField = available?.value ?? "plan_id";
-	return {
-		field,
-		operator: FIELD_CONFIGS[field].operators[0].value,
-		values: [],
-	};
-}
-
-export function FilterGroup({
+export function FilterGroup<TFilter, TPath extends string, TOp extends string>({
+	registry,
+	valueInputs,
 	group,
 	onChange,
 	onDelete,
@@ -29,14 +18,16 @@ export function FilterGroup({
 	groupIndex,
 	autoOpenField = false,
 }: {
-	group: FilterGroupData;
-	onChange: (group: FilterGroupData) => void;
+	registry: FilterRegistry<TFilter, TPath, TOp>;
+	valueInputs: FilterValueInputs;
+	group: FilterRowGroup<TPath, TOp>;
+	onChange: (group: FilterRowGroup<TPath, TOp>) => void;
 	onDelete: () => void;
 	showDelete: boolean;
 	groupIndex: number;
 	autoOpenField?: boolean;
 }) {
-	const updateRule = (index: number, rule: FilterRule) => {
+	const updateRule = (index: number, rule: FilterRowData<TPath, TOp>) => {
 		const newRules = [...group.rules];
 		newRules[index] = rule;
 		onChange({ rules: newRules });
@@ -48,9 +39,8 @@ export function FilterGroup({
 	};
 
 	const addRule = () => {
-		const usedFields = new Set(group.rules.map((r) => r.field));
 		onChange({
-			rules: [...group.rules, getNextAvailableField(usedFields)],
+			rules: [...group.rules, registry.nextRow({ rows: group.rules })],
 		});
 	};
 
@@ -73,6 +63,8 @@ export function FilterGroup({
 			{group.rules.map((rule, index) => (
 				<FilterRow
 					key={`rule-${index}`}
+					registry={registry}
+					valueInputs={valueInputs}
 					rule={rule}
 					connector={index > 0 ? "And" : undefined}
 					onChange={(updated) => updateRule(index, updated)}

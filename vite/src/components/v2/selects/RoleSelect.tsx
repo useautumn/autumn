@@ -49,9 +49,18 @@ const ROLE_META: Record<Role, { label: string; description: string }> = {
 
 const DEFAULT_ALLOWED: Role[] = ["admin", "developer", "sales", "member"];
 
-export type RoleSelectProps = {
-	value: Role;
-	onChange: (role: Role) => void;
+export type RoleOption = { value: string; label: string; description: string };
+
+const builtInOptions = ({ allowed }: { allowed: Role[] }): RoleOption[] =>
+	allowed.map((role) => ({ value: role, ...ROLE_META[role] }));
+
+export type RoleSelectProps<T extends string = Role> = {
+	value: T;
+	onChange: (role: T) => void;
+	/** Overrides `allowed`, e.g. to include the org's custom roles. */
+	options?: RoleOption[];
+	/** Trigger text when `value` isn't a built-in role. */
+	valueLabel?: string;
 	/**
 	 * Allowed role choices. Defaults to all roles EXCEPT owner (you can't
 	 * invite someone as owner; ownership transfer is a separate flow).
@@ -67,26 +76,28 @@ export type RoleSelectProps = {
 	className?: string;
 };
 
-export function RoleSelect({
+export function RoleSelect<T extends string = Role>({
 	value,
 	onChange,
 	allowed = DEFAULT_ALLOWED,
+	options = builtInOptions({ allowed }),
+	valueLabel,
 	disabled,
 	placeholder,
 	className,
-}: RoleSelectProps) {
+}: RoleSelectProps<T>) {
 	// Radix `SelectValue` normally projects the selected item's children
 	// into the trigger. Because each item renders `label + description`,
 	// that would push the description into the cramped trigger area. We
 	// override the projection by passing an explicit `children` prop to
 	// `SelectValue`, showing only the label on the trigger while the
 	// dropdown itself keeps the rich layout.
-	const selectedLabel = ROLE_META[value]?.label ?? value;
+	const selectedLabel = valueLabel ?? ROLE_META[value as Role]?.label ?? value;
 
 	return (
 		<Select
 			value={value}
-			onValueChange={(v) => onChange(v as Role)}
+			onValueChange={(v) => onChange(v as T)}
 			disabled={disabled}
 		>
 			<SelectTrigger className={className}>
@@ -101,14 +112,18 @@ export function RoleSelect({
 			  from the Radix select item styling.
 			*/}
 			<SelectContent className="max-w-[340px]">
-				{allowed.map((role) => (
-					<SelectItem key={role} value={role} className="items-start py-1.5">
+				{options.map((option) => (
+					<SelectItem
+						key={option.value}
+						value={option.value}
+						className="items-start py-1.5"
+					>
 						<div className="flex w-full flex-col items-start gap-0.5">
 							<span className="text-sm font-medium text-foreground">
-								{ROLE_META[role].label}
+								{option.label}
 							</span>
 							<span className="text-xs leading-4 text-tertiary-foreground whitespace-normal break-words">
-								{ROLE_META[role].description}
+								{option.description}
 							</span>
 						</div>
 					</SelectItem>

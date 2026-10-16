@@ -21,6 +21,9 @@ const isSentInvoice = (data: BillingMutationResponse) =>
 	Boolean(data.invoice?.hosted_invoice_url) &&
 	data.payment_url === data.invoice?.hosted_invoice_url;
 
+/** Lets a sheet read its latest failed submit; gcTime 0 drops it once the sheet unmounts. */
+export const BILLING_MUTATION_KEY = ["billing-mutation"] as const;
+
 export type BillingMutationParams = BillingStageParams & {
 	skipDefaultSuccess?: boolean;
 };
@@ -58,6 +61,8 @@ export function useBillingMutation<
 		invalidateCustomerBillingQueries({ queryClient });
 
 	return useMutation({
+		mutationKey: BILLING_MUTATION_KEY,
+		gcTime: 0,
 		mutationFn: async ({
 			skipDefaultSuccess,
 			...stageParams
