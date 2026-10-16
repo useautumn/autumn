@@ -1,4 +1,8 @@
-import type { AtomFinalizeCommand, WorkerLock } from "@autumn/balance-engine";
+import {
+	type AtomFinalizeCommand,
+	atomFinalizeOnLockEntity,
+	type WorkerLock,
+} from "@autumn/balance-engine";
 import type { CommandRecord } from "@autumn/kafka";
 import type { PartitionRuntimePort } from "../partitions/types/partitions.js";
 import { resolveLockRow } from "./resolveLockRow.js";
@@ -49,6 +53,9 @@ export async function consumeAtomFinalize({
 		rows: batch?.lockRows ?? [],
 		command,
 	});
-	const decided = await ctx.processor.decideAtomFinalize({ command, lock });
+	const decided = await ctx.processor.decideAtomFinalize({
+		command: atomFinalizeOnLockEntity({ command, lock }),
+		lock,
+	});
 	return { decided };
 }

@@ -29,6 +29,7 @@ export type {
 	BillingPlanUpdateOp,
 	ExpectedProduct,
 } from "./commands/applyBillingPlan/types/billingPlanOp.js";
+export { atomFinalizeOnLockEntity } from "./commands/atomFinalize/atomFinalizeOnLockEntity.js";
 export { atomFinalizeToFinalize } from "./commands/atomFinalize/atomFinalizeToFinalize.js";
 export { atomFinalizeToTrackOfNothing } from "./commands/atomFinalize/atomFinalizeToTrackOfNothing.js";
 export {
