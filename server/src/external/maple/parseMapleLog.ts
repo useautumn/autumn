@@ -2,7 +2,7 @@ const STRIPE_WEBHOOK_MARKER = '"stripe_event":{';
 // Every billing route is a POST.
 const BILLING_ROUTE_PREFIX = "POST /v1/";
 const BILLING_ROUTE_MARKER = `"name":"${BILLING_ROUTE_PREFIX}`;
-const BILLING_PATHS = [
+export const BILLING_PATHS = [
 	"billing",
 	"attach",
 	"cancel",
