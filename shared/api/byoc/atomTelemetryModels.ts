@@ -53,6 +53,17 @@ export const AtomMetricsPointSchema = z.object({
 		.number()
 		.nullable()
 		.describe("Average share of the memory limit used, 0–1."),
+	disk: z
+		.number()
+		.nullable()
+		.describe(
+			"The fullest replica's used share of its data volume at its fullest in the period, 0–1; null when no replica reported its volume.",
+		),
+	evicted: z
+		.number()
+		.describe(
+			"Customers the replicas evicted from disk to stay under 80% full, summed across replicas: eviction events, not unique customers.",
+		),
 	maximum: AtomMetricsRatesSchema.describe(
 		"The period's busiest window, 10s or 60s for 7d, split as that window was.",
 	),
@@ -69,6 +80,15 @@ export const AtomMetricsLatestSchema = AtomMetricsRatesSchema.extend({
 		),
 });
 
+export const AtomVolumeSchema = z.object({
+	replica_id: z.string(),
+	used_bytes: z.number(),
+	total_bytes: z.number(),
+	at: z
+		.number()
+		.describe("When the replica last reported it, in epoch milliseconds."),
+});
+
 export const GetAtomMetricsResponseSchema = z.object({
 	period_seconds: z
 		.number()
@@ -79,6 +99,11 @@ export const GetAtomMetricsResponseSchema = z.object({
 	latest: AtomMetricsLatestSchema.nullable().describe(
 		"Rates over the last minute, or null when the Atom logged nothing in it.",
 	),
+	volumes: z
+		.array(AtomVolumeSchema)
+		.describe(
+			"Each replica's data volume as it last reported it in the last 5 minutes, fullest first; a replica that reported nothing is missing.",
+		),
 });
 
 export type AtomCheck = z.infer<typeof AtomCheckSchema>;
@@ -91,6 +116,7 @@ export type GetAtomMetricsParams = z.infer<typeof GetAtomMetricsParamsSchema>;
 export type AtomMetricsRates = z.infer<typeof AtomMetricsRatesSchema>;
 export type AtomMetricsPoint = z.infer<typeof AtomMetricsPointSchema>;
 export type AtomMetricsLatest = z.infer<typeof AtomMetricsLatestSchema>;
+export type AtomVolume = z.infer<typeof AtomVolumeSchema>;
 export type GetAtomMetricsResponse = z.infer<
 	typeof GetAtomMetricsResponseSchema
 >;
