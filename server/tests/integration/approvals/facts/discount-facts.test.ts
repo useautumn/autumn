@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { UpdateSubscriptionV1ParamsInput } from "@autumn/shared";
+import { ProductItemInterval } from "@autumn/shared";
 import { expectFactsMatchPreview } from "@tests/integration/approvals/utils/expectFactsMatchPreview";
 import { permissionFactsClient } from "@tests/integration/approvals/utils/permissionFactsClient";
 import {
@@ -132,6 +133,69 @@ test.concurrent(
 
 		expect(facts.total).toBeLessThanOrEqual(0);
 		expect(facts.paid).toBe(false);
+	},
+	300_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("discount facts 4: more annual units under a coupon that runs out raise a later bill, so it's paid")}`,
+	async () => {
+		const customerId = "approvals-facts-units-temp-coupon";
+		const billingUnits = 10;
+		const product = products.base({
+			id: "monthly-annual-units-coupon",
+			items: [
+				items.monthlyPrice({ price: 20 }),
+				items.prepaid({
+					featureId: TestFeature.Messages,
+					billingUnits,
+					price: 5,
+					interval: ProductItemInterval.Year,
+				}),
+			],
+		});
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [product] }),
+			],
+			actions: [
+				s.attach({
+					productId: product.id,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: 10 * billingUnits },
+					],
+				}),
+			],
+		});
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 100,
+			duration: "repeating",
+			durationInMonths: 6,
+		});
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
+
+		const { _permission_facts: facts } =
+			await permissionFactsClient().subscriptions.previewUpdate({
+				customer_id: customerId,
+				plan_id: product.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 20 * billingUnits },
+				],
+				proration_behavior: "none",
+			});
+
+		expect(facts.total).toBe(0);
+		expect(facts.paid).toBe(true);
 	},
 	300_000,
 );

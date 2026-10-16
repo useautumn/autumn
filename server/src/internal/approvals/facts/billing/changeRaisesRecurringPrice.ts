@@ -19,7 +19,7 @@ const discountedRecurringTotals = ({
 		[...customerProductsToRecurringTotals({ customerProducts, currency })].map(
 			([interval, total]) => [
 				interval,
-				applyDiscountsToRecurringTotal({ total, discounts, currency }),
+				applyDiscountsToRecurringTotal({ total, discounts }),
 			],
 		),
 	);
