@@ -1,4 +1,4 @@
-import { ResetInterval } from "@autumn/shared";
+import { AppEnv, ResetInterval } from "@autumn/shared";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { ENUM_LABELS } from "../../buildRuleSentence";
 import { useApprovalsCatalog } from "../../useApprovalsCatalog";
@@ -40,7 +40,9 @@ const enumOptions = (values: string[]) =>
 	values.map((value) => ({ value, label: enumLabel(value) }));
 
 const useFeatureOptions = () => useApprovalsCatalog().features.map(toOption);
-const useRewardOptions = () => useRewardsQuery().rewards.map(toOption);
+// Rules are live, like the plan and feature options from useApprovalsCatalog.
+const useRewardOptions = () =>
+	useRewardsQuery({ env: AppEnv.Live }).rewards.map(toOption);
 const usePlanOptions = () => {
 	const { products } = useApprovalsCatalog();
 	return [...new Map(products.map((plan) => [plan.id, plan])).values()].map(

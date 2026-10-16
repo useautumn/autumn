@@ -50,10 +50,15 @@ const rowIssue = ({
 	return null;
 };
 
+const isBlank = (value: unknown) =>
+	value === undefined || value === null || value === "";
+
+/** An empty id ("" or [""]) is an unfinished picker, not a condition. */
 const hasValue = (row: EditorRow) => {
 	if (VALUELESS_OPERATORS.includes(row.operator)) return true;
-	if (Array.isArray(row.value)) return row.value.length > 0;
-	return row.value !== undefined && row.value !== null;
+	if (Array.isArray(row.value))
+		return row.value.length > 0 && !row.value.some(isBlank);
+	return !isBlank(row.value);
 };
 
 /** The strict schema for one shape, so a row's filter is checked against its own area. */
