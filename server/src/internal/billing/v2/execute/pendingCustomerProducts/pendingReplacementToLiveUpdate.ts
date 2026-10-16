@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	cp,
+	type FullCusProduct,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -15,9 +16,11 @@ import { CusService } from "@/internal/customers/CusService";
 export const pendingReplacementToLiveUpdate = async ({
 	ctx,
 	params,
+	customerProduct,
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
+	customerProduct?: FullCusProduct;
 }): Promise<
 	| {
 			params: UpdateSubscriptionV1Params;
@@ -25,20 +28,22 @@ export const pendingReplacementToLiveUpdate = async ({
 	  }
 	| undefined
 > => {
-	const customerProduct = await findPendingCustomerProduct({
-		ctx,
-		customerId: params.customer_id,
-		productId: params.plan_id,
-		entityId: params.entity_id,
-		customerProductId: params.customer_product_id,
-		subscriptionId: params.subscription_id,
-	});
-	const stripeSubscriptionId = customerProduct?.subscription_ids?.[0];
-	if (!customerProduct || !stripeSubscriptionId) return;
+	const pendingCustomerProduct =
+		customerProduct ??
+		(await findPendingCustomerProduct({
+			ctx,
+			customerId: params.customer_id,
+			productId: params.plan_id,
+			entityId: params.entity_id,
+			customerProductId: params.customer_product_id,
+			subscriptionId: params.subscription_id,
+		}));
+	const stripeSubscriptionId = pendingCustomerProduct?.subscription_ids?.[0];
+	if (!pendingCustomerProduct || !stripeSubscriptionId) return;
 
 	const deferredData = await getDeferredBillingPlanData({
 		ctx,
-		customerProduct,
+		customerProduct: pendingCustomerProduct,
 	});
 	if (!deferredData) return;
 
@@ -52,15 +57,18 @@ export const pendingReplacementToLiveUpdate = async ({
 	const livePlan = customer_products.find(
 		(live) =>
 			cp(live)
-				.hasProductId({ productId: customerProduct.product.id })
+				.hasProductId({ productId: pendingCustomerProduct.product.id })
 				.onEntity({
-					internalEntityId: customerProduct.internal_entity_id ?? undefined,
+					internalEntityId:
+						pendingCustomerProduct.internal_entity_id ?? undefined,
 				})
 				.onStripeSubscription({ stripeSubscriptionId }).valid,
 	);
 	if (!livePlan) return;
 
-	const contextOverride = { supersededPendingCustomerProduct: customerProduct };
+	const contextOverride = {
+		supersededPendingCustomerProduct: pendingCustomerProduct,
+	};
 	const { customer_id, entity_id } = params;
 
 	// Cancelling only discards the pending change: the live plan updates to itself.
@@ -75,7 +83,7 @@ export const pendingReplacementToLiveUpdate = async ({
 		ctx,
 		params,
 		billingContext: deferredData.billingContext,
-		customerProduct,
+		customerProduct: pendingCustomerProduct,
 	});
 	return {
 		params: {

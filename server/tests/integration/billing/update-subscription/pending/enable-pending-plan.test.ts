@@ -1,12 +1,16 @@
 import { expect, test } from "bun:test";
 import {
+	ALL_STATUSES,
 	type AttachParamsV1Input,
 	BillingInterval,
 	CusProductStatus,
+	ErrCode,
+	ms,
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -269,5 +273,66 @@ test.concurrent(
 			inStatuses: [CusProductStatus.Pending],
 		});
 		expect(pendingRows[0].id).toBe(pending.id);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("enable pending plan: rejects deferred future phases")}`,
+	async () => {
+		const pro = products.pro({
+			id: "future-phase-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const basic = products.base({
+			id: "future-phase-basic",
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const { autumnV2_2, autumnV2_4, ctx, customer, customerId, advancedTo } =
+			await initScenario({
+				customerId: "enable-pending-future-phases",
+				setup: [
+					s.customer({ testClock: false, paymentMethod: "success" }),
+					s.products({ list: [pro, basic] }),
+				],
+				actions: [],
+			});
+		await autumnV2_4.billing.setPlans({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: "now", plans: [{ plan_id: pro.id }] },
+				{
+					starts_at: advancedTo + ms.days(30),
+					plans: [{ plan_id: basic.id }],
+				},
+			],
+			invoice_mode: { enabled: true, issue_method: "send" },
+		});
+
+		const pendingRowsForFuturePhases = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: [CusProductStatus.Pending],
+		});
+		const pending = pendingRowsForFuturePhases.find(
+			(row) => row.product.id === pro.id,
+		);
+		expect(pending).toBeDefined();
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.subscriptions.update(
+					enablePending({
+						customerId,
+						pendingId: pending!.id,
+						planId: pro.id,
+					}),
+				),
+		});
+		const pendingAfter = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: ALL_STATUSES,
+		});
+		expect(pendingAfter.map((row) => row.id)).toContain(pending!.id);
 	},
 );

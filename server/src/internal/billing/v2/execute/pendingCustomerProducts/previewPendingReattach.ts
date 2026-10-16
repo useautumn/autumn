@@ -4,6 +4,8 @@ import type {
 	FullCusProduct,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { CusProductStatus, ErrCode, RecaseError } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { handleUnknownFeatureQuantityErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUnknownFeatureQuantityErrors";
@@ -11,6 +13,7 @@ import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendin
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 import { isPlanEnabledOnFinalize } from "@/internal/billing/v2/utils/billingContext/isPlanEnabledOnFinalize";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
 export const previewPendingReattach = async ({
@@ -24,6 +27,27 @@ export const previewPendingReattach = async ({
 	customerProduct: FullCusProduct;
 	deferredData: DeferredAutumnBillingPlanData;
 }) => {
+	const hasFuturePhases =
+		(deferredData.billingPlan.autumn.schedulePhases?.length ?? 0) > 1;
+	const pendingProductsWithPayment = customerProduct.metadata_id
+		? await CusProductService.getByMetadataId({
+				db: ctx.db,
+				metadataId: customerProduct.metadata_id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				inStatuses: [CusProductStatus.Pending],
+			})
+		: [];
+	const hasSharedPendingPayment = pendingProductsWithPayment.length > 1;
+	if (hasFuturePhases || hasSharedPendingPayment) {
+		throw new RecaseError({
+			message:
+				"Cannot enable this pending plan immediately because it belongs to a scheduled set of plans. Enable this from set plans instead.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	const reattachParams = buildPendingReattachParams({
 		ctx,
 		params,

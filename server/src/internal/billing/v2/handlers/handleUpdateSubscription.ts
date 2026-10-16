@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { enablesPendingPlan } from "@/internal/billing/v2/execute/pendingCustomerProducts/enablesPendingPlan";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -42,11 +43,22 @@ export const handleUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+		const pendingCustomerProduct = await findPendingCustomerProduct({
+			ctx,
+			customerId: body.customer_id,
+			productId: body.plan_id,
+			entityId: body.entity_id,
+			customerProductId: body.customer_product_id,
+			subscriptionId: body.subscription_id,
+		});
 		const liveUpdate = await pendingReplacementToLiveUpdate({
 			ctx,
 			params: body,
+			customerProduct: pendingCustomerProduct,
 		});
-		const shouldEnablePendingPlan = enablesPendingPlan({ params: body });
+		const requestedImmediateEnable = enablesPendingPlan({ params: body });
+		const shouldEnablePendingPlan =
+			requestedImmediateEnable && !!pendingCustomerProduct;
 
 		if (
 			!liveUpdate &&
@@ -60,7 +72,12 @@ export const handleUpdateSubscription = createRoute({
 		}
 
 		const pendingUpdate =
-			!liveUpdate && (await updatePendingPlanIfAny({ ctx, params: body }));
+			!liveUpdate &&
+			(await updatePendingPlanIfAny({
+				ctx,
+				params: body,
+				customerProduct: pendingCustomerProduct,
+			}));
 
 		if (pendingUpdate) {
 			const { billingContext, billingResult } = pendingUpdate;
