@@ -7,10 +7,13 @@ import {
 	isBooleanEntitlement,
 	isCustomerProductFree,
 	isCustomerProductPaidRecurring,
+	isCustomerProductRevertingTrial,
+	isCustomerProductTrialing,
 	isPooledBalanceSourceCustomerEntitlement,
 	isUnlimitedEntitlement,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
+import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 import { customerEntitlementCompetes } from "../competing/customerEntitlementCompetes";
 import type {
 	MutablePooledCustomerEntitlement,
@@ -26,6 +29,20 @@ export const isPaidSubscriptionPoolHost = ({
 	customerProductHasActiveStatus(customerProduct) &&
 	!customerProduct.customer_license_link_id &&
 	isCustomerProductPaidRecurring(customerProduct);
+
+/** A paid plan mid-trial that Autumn runs itself. Once the trial ends it bills onto a
+ * Stripe subscription, which needs a pool of its own to stamp. */
+export const isOngoingTrialWithoutSubscription = ({
+	customerProduct,
+	now,
+}: {
+	customerProduct: FullCusProduct;
+	now: number;
+}) =>
+	!customerProduct.subscription_ids?.length &&
+	(isCustomerProductAutumnManagedTrial(customerProduct) ||
+		isCustomerProductRevertingTrial(customerProduct)) &&
+	Boolean(isCustomerProductTrialing(customerProduct, { nowMs: now }));
 
 export const addPaidCustomerProductToPool = ({
 	paidCustomerProductIdsByPoolId,
@@ -52,8 +69,8 @@ export const poolHasPaidHost = ({
 	(computeContext.paidCustomerProductIdsByPoolId.get(poolId)?.size ?? 0) > 0;
 
 /**
- * A free source joins the customer's subscription pool for the same feature and
- * cycle instead of opening a lazy pool of its own, so one balance covers both.
+ * A source with no subscription of its own (free, or a trial Autumn runs) joins the customer's
+ * subscription pool for the same feature and cycle, so one balance covers both.
  * It inherits that pool's anchor and reset cadence, and stays in it after the
  * subscription ends. A pool a paid plan still feeds wins, then the oldest.
  */
