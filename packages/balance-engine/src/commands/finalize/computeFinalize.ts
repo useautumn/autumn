@@ -12,6 +12,7 @@ import type { DeductionRequest } from "../../deduction/types/deductionRequest.js
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
+import { findOpenLockById } from "../../utils/subjectStateUtils/openLockIndex.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { splitFinalize, unwoundLockToForwardValue } from "./splitFinalize.js";
 import type { FinalizeCommand } from "./types/finalizeCommand.js";
@@ -32,9 +33,9 @@ export const computeFinalizeDecision = ({
 	const { lock } = command;
 
 	// Checked before anything moves: a lock already settled, or expired, is simply gone.
-	const isOpen = fullSubject.open_locks.some(
-		(openLock) => openLock.id === lock.id,
-	);
+	const isOpen =
+		findOpenLockById({ openLocks: fullSubject.open_locks, id: lock.id }) !==
+		null;
 
 	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
 
