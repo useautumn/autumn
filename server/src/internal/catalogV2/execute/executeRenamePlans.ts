@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { rewriteApprovalRuleIds } from "@/internal/approvals/renames/rewriteApprovalRuleIds";
 import type { RenameProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/renameProductPlan";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
@@ -132,5 +133,11 @@ export const executeRenamePlans = async ({
 				renamePlan,
 			}),
 		);
+		await rewriteApprovalRuleIds({
+			ctx,
+			key: "plan_id",
+			fromId: renamePlan.planId,
+			toId: renamePlan.toId,
+		});
 	}
 };
