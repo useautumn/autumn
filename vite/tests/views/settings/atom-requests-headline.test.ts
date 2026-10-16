@@ -18,6 +18,8 @@ const points = (requestsPerPeriod: number[]): AtomMetricsPoint[] =>
 		at: NOW - 10 * MINUTE_MS + index * 30_000,
 		cpu: 0.05,
 		memory: 0.2,
+		disk: null,
+		evicted: 0,
 		maximum: rates(requests),
 		average: rates(requests),
 	}));

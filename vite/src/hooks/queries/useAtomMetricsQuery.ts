@@ -5,7 +5,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const REFETCH_INTERVAL_MS = 60_000;
 
-/** The scoped Atom's CPU, memory and traffic per period over the range, and its last minute, refreshed every minute. */
+/** The scoped Atom's CPU, memory, disk and traffic per period over the range, its last minute and its volumes, refreshed every minute. */
 export const useAtomMetricsQuery = ({
 	range,
 	enabled = true,
@@ -37,6 +37,7 @@ export const useAtomMetricsQuery = ({
 		periodSeconds: data?.period_seconds ?? 0,
 		points: data?.points ?? [],
 		latest: data?.latest ?? null,
+		volumes: data?.volumes ?? [],
 		fetchedAt: data?.fetchedAt ?? 0,
 		isLoading: isLoading || !enabled,
 	};
