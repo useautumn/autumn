@@ -122,6 +122,35 @@ const REJECTED: { name: string; rule: unknown; path: string }[] = [
 		}),
 		path: "filter.feature_id",
 	},
+	{
+		name: "empty feature matcher",
+		rule: raw({
+			actions: ["balances.create"],
+			filter: { feature_id: {}, included_grant: { $gt: 50 } },
+		}),
+		path: "filter.feature_id",
+	},
+	{
+		name: "feature only excluded",
+		rule: raw({
+			actions: ["balances.create"],
+			filter: { feature_id: { $ne: "messages" } },
+		}),
+		path: "filter.feature_id",
+	},
+	{
+		name: "feature set to none",
+		rule: raw({ actions: ["balances.update"], filter: { feature_id: null } }),
+		path: "filter.feature_id",
+	},
+	{
+		name: "empty feature list",
+		rule: raw({
+			actions: ["balances.create"],
+			filter: { feature_id: { $in: [] } },
+		}),
+		path: "filter.feature_id",
+	},
 	// Each subject and action is stored once.
 	{
 		name: "duplicate role",
@@ -266,6 +295,20 @@ describe("validateApprovalRule: accepted", () => {
 			},
 		});
 		expect(validateApprovalRule({ rule })).toEqual({ ok: true, rule });
+	});
+
+	test("balances rules may choose one feature or a list", () => {
+		for (const feature_id of [
+			"ai_credits",
+			{ $eq: "ai_credits" },
+			{ $in: ["ai_credits", "messages"] },
+		]) {
+			const rule = rules.block({
+				actions: ["balances.create"],
+				filter: { feature_id, included_grant: { $gt: 5 } },
+			});
+			expect(validateApprovalRule({ rule })).toEqual({ ok: true, rule });
+		}
 	});
 
 	test("money is major units and isn't range-checked", () => {
