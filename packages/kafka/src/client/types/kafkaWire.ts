@@ -206,6 +206,7 @@ export type ConsumerConfig = {
 	statisticsIntervalMs?: number;
 	/** Records one poll hands out across every assigned partition, all landed before the next poll. Defaults to 500. */
 	maxRecordsPerPoll?: number;
+	batchByPartition?: boolean;
 	retry?: {
 		/** False ends the consumer after a failed batch instead of rewinding to the last commit. */
 		restartOnFailure?: (error: Error) => Promise<boolean>;
