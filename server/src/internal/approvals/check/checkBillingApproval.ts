@@ -3,6 +3,7 @@ import { billingContextToApprovalAction } from "./billingContextToApprovalAction
 import { evaluateBillingApproval } from "./evaluateBillingApproval";
 import { lazyBillingApprovalFacts } from "./lazyBillingApprovalFacts";
 import { logBillingApprovalDecision } from "./logBillingApprovalDecision";
+import { throwIfEnforcedDeny } from "./throwIfEnforcedDeny";
 import type { BillingApprovalOutcome } from "./types/billingApprovalOutcome";
 import type { CheckBillingApprovalParams } from "./types/checkBillingApprovalParams";
 
@@ -23,6 +24,7 @@ export const checkBillingApproval = async (
 	if (ctx.skipApproval) return outcome;
 	await evaluateBillingApproval({ params, outcome, facts });
 	await logBillingApprovalDecision({ params, outcome, facts });
+	throwIfEnforcedDeny({ params, outcome });
 
 	if (preview) await attachTestFacts({ params, outcome, facts });
 	return outcome;
