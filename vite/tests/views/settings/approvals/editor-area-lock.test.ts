@@ -19,7 +19,7 @@ describe("editor area lock", () => {
 		[["billing.attach"], "billing"],
 		[["billing.attach", "billing.cancel"], "billing"],
 		[["balances.create"], "balances"],
-		[["members.change_role"], "members"],
+		[["api_keys.create"], "api_keys"],
 	])("%p leaves only %s open", (actions, open) => {
 		const locked = lockedAreas(actions);
 		expect(locked).toHaveLength(open ? areaCount - 1 : 0);
@@ -58,5 +58,15 @@ describe("editor area lock", () => {
 		[[], "balances.create", ["balances.create"]],
 	])("%p + %s → %p", (actions, action, expected) => {
 		expect(toggleAction({ actions, action })).toEqual(expected);
+	});
+
+	test("member actions are deferred, so Members isn't offered", () => {
+		const areas = actionAreas({ actions: [] });
+		expect(areas.map(({ area }) => area)).not.toContain("members");
+		const offered = areas.flatMap(({ actions }) =>
+			actions.map(({ value }) => value),
+		);
+		expect(offered).not.toContain("members.invite");
+		expect(offered).not.toContain("members.change_role");
 	});
 });
