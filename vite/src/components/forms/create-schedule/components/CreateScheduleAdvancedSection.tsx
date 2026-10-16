@@ -51,6 +51,7 @@ export function CreateScheduleAdvancedSection() {
 		carriesUsageNow,
 		defaultFirstPhaseProration,
 		prorationOverride,
+		trialAnchorsBillingCycle,
 		canScheduleTrial,
 		isExistingSchedule,
 		previewQuery,
@@ -74,9 +75,11 @@ export function CreateScheduleAdvancedSection() {
 		state: {
 			hasPaidRecurringPlan: hasPaidRecurringSchedulePlan({ phases, products }),
 			carriesUsageNow,
+			trialAnchorsBillingCycle,
 		},
 	});
 	const resetRule = rules.resetBillingCycle;
+	const resetsBillingCycle = resetBillingCycle && !resetRule.disabled;
 	const lastPhaseStartsAt = phases[phases.length - 1]?.startsAt ?? 0;
 	const endDateMin = Math.max(nowMs, lastPhaseStartsAt);
 	const anchorBounds = scheduleBillingCycleAnchorBounds({
@@ -182,14 +185,14 @@ export function CreateScheduleAdvancedSection() {
 						visible: resetRule.visible,
 						locked: resetRule.disabled,
 						summary: anchorSummary({
-							enabled: resetBillingCycle,
+							enabled: resetsBillingCycle,
 							mode: anchorMode,
 							customAnchor: billingCycleAnchorDate,
 						}),
 						row: (
 							<BillingCycleAnchorConfigRow
 								rule={resetRule}
-								enabled={resetBillingCycle}
+								enabled={resetsBillingCycle}
 								mode={anchorMode}
 								customAnchor={billingCycleAnchorDate}
 								allowCustomAnchor={anchorBounds.allowCustomAnchor}

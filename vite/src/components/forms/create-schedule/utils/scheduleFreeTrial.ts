@@ -177,6 +177,51 @@ export const scheduleFreeTrialParam = ({
 	return freeTrialFormValuesToParams(formValues);
 };
 
+type ScheduleTrialRequestInputs = {
+	phases: CustomerStatePhase[];
+	nowMs: number;
+	formValues: FreeTrialFormValues;
+	currentTrial: CurrentScheduleTrial | null;
+	catalogFreeTrial: FreeTrial | null;
+};
+
+/** The `free_trial` the request sends; omitted when the first phase can't take a trial. */
+export const scheduleFreeTrialRequestParam = ({
+	phases,
+	nowMs,
+	formValues,
+	currentTrial,
+	catalogFreeTrial,
+}: ScheduleTrialRequestInputs) =>
+	canScheduleFreeTrial({
+		phases,
+		nowMs,
+		liveSubscriptionTrialing: currentTrial !== null,
+	})
+		? scheduleFreeTrialParam({ formValues, currentTrial, catalogFreeTrial })
+		: undefined;
+
+/** set_plans ends up with a trial: the one sent, else the running or catalog trial it falls back to when `free_trial` is omitted. */
+export const scheduleRequestHasTrial = ({
+	phases,
+	nowMs,
+	formValues,
+	currentTrial,
+	catalogFreeTrial,
+}: ScheduleTrialRequestInputs) => {
+	const liveSubscriptionTrialing = currentTrial !== null;
+	if (!canScheduleFreeTrial({ phases, nowMs, liveSubscriptionTrialing })) {
+		return false;
+	}
+	const param = scheduleFreeTrialParam({
+		formValues,
+		currentTrial,
+		catalogFreeTrial,
+	});
+	if (param !== undefined) return param !== null;
+	return liveSubscriptionTrialing || catalogFreeTrial !== null;
+};
+
 /** A plan change re-seeds the row with its new default, unless the user has edited the row. */
 export const reseededScheduleTrialFormValues = ({
 	trialEdited,

@@ -1,16 +1,27 @@
-import { type BillingContext, ErrCode, RecaseError } from "@autumn/shared";
+import {
+	type BillingContext,
+	ErrCode,
+	RecaseError,
+	trialAnchorsBillingCycle,
+} from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 export const assertNoBillingCycleAnchorWithTrial = ({
 	billingContext,
+	backdatesTrialingSubscription = false,
 }: {
 	billingContext: Pick<
 		BillingContext,
 		"requestedBillingCycleAnchor" | "trialContext"
 	>;
+	backdatesTrialingSubscription?: boolean;
 }) => {
 	if (billingContext.requestedBillingCycleAnchor === undefined) return;
-	if (!billingContext.trialContext?.trialEndsAt) return;
+	const anchoredByTrial = trialAnchorsBillingCycle({
+		hasTrial: !!billingContext.trialContext?.trialEndsAt,
+		backdatesTrialingSubscription,
+	});
+	if (!anchoredByTrial) return;
 
 	throw new RecaseError({
 		message:
