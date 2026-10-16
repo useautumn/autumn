@@ -1,7 +1,7 @@
 import { cn } from "@autumn/ui/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
+import { useNow } from "@/hooks/common/useNow";
 import type { RolloutPercent } from "./rolloutTypes";
-import { useNow } from "./useNow";
 
 const Dot = ({ pending }: { pending: boolean }) => (
 	<span className="relative flex size-2">

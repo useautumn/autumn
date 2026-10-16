@@ -2,13 +2,13 @@ import { IconButton } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Trash2 } from "lucide-react";
+import { useNow } from "@/hooks/common/useNow";
 import { ROW_ACTIONS_REVEAL, ROW_LAYOUT } from "./rolloutRowStyles";
 import type {
 	RolloutCustomer,
 	RolloutCustomerName,
 	RolloutOrg,
 } from "./rolloutTypes";
-import { useNow } from "./useNow";
 
 export const CUSTOMER_ROW_COLUMNS =
 	"md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_200px_40px]";
