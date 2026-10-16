@@ -32,6 +32,8 @@ export type PrecedenceNote =
 			subject: Exclude<RuleSubject, { type: "everyone" }>;
 			broader: BroaderSubject;
 			rules: RuleRef[];
+			/** Some of those rules also name these people more specifically, and decide for them. */
+			namesNarrower?: true;
 			actions: ApprovalAction[];
 	  }
 	| {
@@ -160,6 +162,9 @@ export const precedenceNotes = ({
 					subject,
 					broader: level.subject,
 					rules: hits.map(({ rule }) => ruleRef(rule)),
+					...(hits.some(({ rule }) => namesNarrowerThan({ rule, subject })) && {
+						namesNarrower: true as const,
+					}),
 					actions: draft.actions.filter((action) => hitActions.has(action)),
 				},
 			];
@@ -194,5 +199,8 @@ export const precedenceNoteText = ({
 	}
 	const plural = note.rules.length === 1 ? "rule" : "rules";
 	const effect = EFFECT_WORDS[note.rules[0].effect];
-	return `When both match, this rule beats ${nameOf(note.broader)}'s ${effect} ${plural} for ${nameOf(note.subject)} on ${actions}.`;
+	const exception = note.namesNarrower
+		? `, except for anyone that ${plural === "rule" ? "rule names" : "rules name"} more specifically`
+		: "";
+	return `When both match, this rule beats ${nameOf(note.broader)}'s ${effect} ${plural} for ${nameOf(note.subject)} on ${actions}${exception}.`;
 };

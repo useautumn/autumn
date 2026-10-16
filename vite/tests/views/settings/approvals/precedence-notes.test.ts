@@ -269,6 +269,21 @@ describe("precedence notes", () => {
 				},
 			],
 		],
+		[
+			"a role beats a broader rule that also names a member directly",
+			draft({ subjects: [engineering] }),
+			[rule({ id: "mixed", subjects: [everyone, john] })],
+			[
+				{
+					kind: "beats_broader",
+					subject: engineering,
+					broader: everyone,
+					rules: [{ id: "mixed", name: "mixed", effect: "block" }],
+					namesNarrower: true,
+					actions: ["balances.create"],
+				},
+			],
+		],
 	])("%s", (_name, d, rules, expected) => {
 		expect(precedenceNotes({ draft: d, rules, roleOf })).toEqual(expected);
 	});
@@ -292,6 +307,17 @@ describe("precedence note text", () => {
 				actions: ["balances.create"],
 			},
 			"When both match, this rule beats Engineering's block rule for John Doe on Grant credits.",
+		],
+		[
+			{
+				kind: "beats_broader",
+				subject: sales,
+				broader: everyone,
+				rules: [ref(allBlock)],
+				namesNarrower: true,
+				actions: ["balances.create"],
+			},
+			"When both match, this rule beats Everyone's block rule for Sales on Grant credits, except for anyone that rule names more specifically.",
 		],
 		[
 			{
