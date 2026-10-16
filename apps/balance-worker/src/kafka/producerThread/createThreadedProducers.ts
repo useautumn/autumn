@@ -45,6 +45,7 @@ export function createThreadedProducers({
 		acks: createRingReader({ ring: rings.ack }),
 		pending: new Map(),
 		requestListeners: new Map(),
+		statisticsListeners: new Map(),
 		stopped: Promise.withResolvers<void>(),
 		state: {
 			thread: null,

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type {
 	KafkaProducerClient,
+	KafkaProducerStatistics,
 	KafkaRequestTiming,
 	KafkaTransaction,
 } from "../../src/client/types/kafkaClient.js";
@@ -397,6 +398,55 @@ test("reports each broker's request latency, and survives a throwing listener", 
 	listener?.(timing);
 	expect(() => listener?.(timing)).not.toThrow();
 	expect(timings[0]).toEqual(timing);
+});
+
+test("forwards each statistics window, and survives a throwing listener", () => {
+	let listener: ((statistics: KafkaProducerStatistics) => void) | undefined;
+	async function noop(): Promise<void> {}
+	async function unused(): Promise<KafkaTransaction> {
+		throw new Error("unused");
+	}
+	function onStatistics(
+		handler: (statistics: KafkaProducerStatistics) => void,
+	): void {
+		listener = handler;
+	}
+	const client: KafkaProducerClient = {
+		connect: noop,
+		disconnect: noop,
+		transaction: unused,
+		onStatistics,
+	};
+	const received: KafkaProducerStatistics[] = [];
+	function producer(): KafkaProducerClient {
+		return client;
+	}
+	function recordStatistics(statistics: KafkaProducerStatistics): void {
+		received.push(statistics);
+		throw new Error("listener failed");
+	}
+	createProducerSession({
+		ctx: { kafka: { producer }, onStatistics: recordStatistics },
+		config,
+	});
+	const statistics: KafkaProducerStatistics = {
+		brokers: [
+			{
+				broker: "b-1:9092/1",
+				nodeId: 1,
+				requests: 4,
+				responses: 0,
+				timeouts: 0,
+				rttP50Ms: null,
+				rttP99Ms: null,
+				outbufCount: 0,
+				waitRespCount: 4,
+				stalled: true,
+			},
+		],
+	};
+	expect(() => listener?.(statistics)).not.toThrow();
+	expect(received).toEqual([statistics]);
 });
 
 async function closesAConnectStillRunningAtDisconnect(): Promise<void> {

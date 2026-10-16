@@ -1,12 +1,18 @@
 import type {
 	GroupProtocol,
+	KafkaBrokerStatistics,
+	KafkaProducerStatistics,
 	KafkaRequestTiming,
 	Producer,
 	ProducerConfig,
 	Transaction,
 } from "./kafkaWire.js";
 
-export type { KafkaRequestTiming };
+export type {
+	KafkaBrokerStatistics,
+	KafkaProducerStatistics,
+	KafkaRequestTiming,
+};
 
 export type KafkaSaslCredentials = {
 	mechanism: "scram-sha-256" | "scram-sha-512" | "plain";
@@ -64,6 +70,8 @@ export type KafkaProducerClient = KafkaProducer & {
 	disconnect(): Promise<void>;
 	/** Called once per broker per statistics window; absent on test doubles. */
 	onRequestTimings?(listener: (timing: KafkaRequestTiming) => void): void;
+	/** Called once per statistics window; absent on test doubles. */
+	onStatistics?(listener: (statistics: KafkaProducerStatistics) => void): void;
 };
 
 export type KafkaProducerFactory = {

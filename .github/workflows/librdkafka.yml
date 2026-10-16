@@ -14,6 +14,7 @@ on:
       - "patches/@confluentinc%2Fkafka-javascript@*.patch"
       - "docker/Dockerfile"
       - ".github/workflows/librdkafka.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -110,3 +111,58 @@ jobs:
         run: |
           docker run --rm --network host -w /app/packages/librdkafka autumn:librdkafka-probe \
             bun scripts/probeAddon.ts | tee -a "$GITHUB_STEP_SUMMARY"
+
+  twd:
+    name: Publish the addon for twd's Debian base
+    # twd's Modal sandboxes run gVisor, where the compile outlives the warm; warmup.sh downloads this by build key.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Same distro and compiler as scripts/tw/helpers/modalImage.ts, so the build key matches the warm's.
+      - name: Build the addon on Debian bookworm
+        id: build
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/addon"
+          docker run --rm -v "$PWD:/src:ro" -v "$RUNNER_TEMP/addon:/out" debian:bookworm-slim bash -euo pipefail -c '
+            apt-get update -qq
+            apt-get install -y -qq --no-install-recommends ca-certificates curl unzip git perl python3 build-essential >/dev/null
+            curl -fsSL https://bun.sh/install | bash -s "bun-v$(cat /src/.bun-version)" >/dev/null
+            export PATH=/root/.bun/bin:$PATH
+            mkdir -p /build/patches /build/packages && cd /build
+            cp "/src/patches/@confluentinc%2Fkafka-javascript@1.10.0.patch" patches/
+            cp -r /src/packages/librdkafka packages/
+            bun -e "await Bun.write(\"package.json\", JSON.stringify({ name: \"librdkafka-build\", private: true, workspaces: [\"packages/librdkafka\"], patchedDependencies: { \"@confluentinc/kafka-javascript@1.10.0\": \"patches/@confluentinc%2Fkafka-javascript@1.10.0.patch\" } }))"
+            bun install --ignore-scripts >/dev/null
+            key=$(bun run --silent --cwd packages/librdkafka native:key)
+            echo "$key" > /out/key
+            if curl -fsI "https://github.com/useautumn/autumn/releases/download/librdkafka-addon-$key/$key.node" >/dev/null; then
+              echo "addon $key already published"
+              exit 0
+            fi
+            LIBRDKAFKA_CACHE_DIR=/out bun run --cwd packages/librdkafka build
+          '
+          key=$(cat "$RUNNER_TEMP/addon/key")
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          if [ -f "$RUNNER_TEMP/addon/$key.node" ]; then echo "built=true" >> "$GITHUB_OUTPUT"; fi
+          echo "twd addon build key: $key" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish it as a release asset
+        if: steps.build.outputs.built == 'true'
+        shell: bash
+        run: |
+          key=${{ steps.build.outputs.key }}
+          gh release create "librdkafka-addon-$key" "$RUNNER_TEMP/addon/$key.node" \
+            --repo "$GITHUB_REPOSITORY" --target "${{ github.event.pull_request.head.sha || github.sha }}" --prerelease \
+            --title "librdkafka addon $key" \
+            --notes "Prebuilt @confluentinc/kafka-javascript addon for twd warm images (Debian bookworm, build key $key)." \
+            || gh release view "librdkafka-addon-$key" --repo "$GITHUB_REPOSITORY" >/dev/null
