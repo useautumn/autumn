@@ -345,26 +345,28 @@ function SendInvoiceContent() {
 		(taxStatus === "requires_location" || hasTypedDetails);
 
 	return (
-		<SendInvoiceStageWithPreview
-			billingAddressSection={
-				showBillingAddress ? (
-					<InvoiceBillingAddressSection taxIncomplete={taxIncomplete} />
-				) : undefined
-			}
-			submitBlocked={
-				showBillingAddress &&
-				(taxStatus === "requires_location" || taxIncomplete)
-			}
-			onEmailSaved={() => previewQuery.refetch()}
-			productName={product?.name}
-			previewQuery={previewQuery}
-			isPending={isPending}
-			onSubmit={handleInvoiceAttach}
-			stripeAccount={stripeAccount ?? undefined}
-			env={env}
-			onBack={() => setSheet({ type: "attach-review", itemId })}
-			scheduledStartDate={scheduledStartDate}
-		/>
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<SendInvoiceStageWithPreview
+				billingAddressSection={
+					showBillingAddress ? (
+						<InvoiceBillingAddressSection taxIncomplete={taxIncomplete} />
+					) : undefined
+				}
+				submitBlocked={
+					showBillingAddress &&
+					(taxStatus === "requires_location" || taxIncomplete)
+				}
+				onEmailSaved={() => previewQuery.refetch()}
+				productName={product?.name}
+				previewQuery={previewQuery}
+				isPending={isPending}
+				onSubmit={handleInvoiceAttach}
+				stripeAccount={stripeAccount ?? undefined}
+				env={env}
+				onBack={() => setSheet({ type: "attach-review", itemId })}
+				scheduledStartDate={scheduledStartDate}
+			/>
+		</PermissionDenialProvider>
 	);
 }
 
