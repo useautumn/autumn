@@ -171,18 +171,6 @@ export const getStripeWebhookSecret = (org: Organization, env: AppEnv) => {
 	return decryptData(webhookSecret);
 };
 
-const initDefaultConfig = () => {
-	return {
-		free_trial_paid_to_paid: false,
-
-		// 1. Upgrade prorates immediately
-		bill_upgrade_immediately: true,
-
-		// 2. Convert invoice to charge automatically
-		convert_to_charge_automatically: false,
-	};
-};
-
 export const createOrgResponse = ({
 	org,
 	env,
