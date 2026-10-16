@@ -1,28 +1,8 @@
 import {
 	type FullCusProduct,
 	isCustomerProductCanceling,
-	type StripeDiscountWithCoupon,
 } from "@autumn/shared";
-import { applyDiscountsToRecurringTotal } from "./applyDiscountsToRecurringTotal";
 import { customerProductsToRecurringTotals } from "./customerProductsToRecurringTotals";
-
-const discountedRecurringTotals = ({
-	customerProducts,
-	discounts,
-	currency,
-}: {
-	customerProducts: FullCusProduct[];
-	discounts: StripeDiscountWithCoupon[];
-	currency: string;
-}) =>
-	new Map(
-		[...customerProductsToRecurringTotals({ customerProducts, currency })].map(
-			([interval, total]) => [
-				interval,
-				applyDiscountsToRecurringTotal({ total, discounts }),
-			],
-		),
-	);
 
 // Incoming rows live in phases: each bills from its start until it ends or is replaced.
 const isActiveAt = ({
@@ -37,25 +17,20 @@ const isActiveAt = ({
 	!isCustomerProductCanceling(customerProduct);
 
 /**
- * Whether any billing interval costs more after the change, phase by phase and
- * after coupons. Catches raises the next invoice doesn't show, like annual units on a monthly plan.
+ * Whether any billing interval's list price rises, phase by phase. Coupons are
+ * left out on purpose: when unsure, a change reads as paid, never as free.
  */
 export const changeRaisesRecurringPrice = ({
 	incoming,
 	outgoing,
-	currentDiscounts,
-	incomingDiscounts,
 	currency,
 }: {
 	incoming: FullCusProduct[];
 	outgoing: FullCusProduct[];
-	currentDiscounts: StripeDiscountWithCoupon[];
-	incomingDiscounts: StripeDiscountWithCoupon[];
 	currency: string;
 }): boolean => {
-	const before = discountedRecurringTotals({
+	const before = customerProductsToRecurringTotals({
 		customerProducts: outgoing,
-		discounts: currentDiscounts,
 		currency,
 	});
 	const phaseStarts = [
@@ -63,11 +38,10 @@ export const changeRaisesRecurringPrice = ({
 	];
 
 	return phaseStarts.some((atMs) => {
-		const after = discountedRecurringTotals({
+		const after = customerProductsToRecurringTotals({
 			customerProducts: incoming.filter((customerProduct) =>
 				isActiveAt({ customerProduct, atMs }),
 			),
-			discounts: incomingDiscounts,
 			currency,
 		});
 		return [...after].some(

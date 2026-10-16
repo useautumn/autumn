@@ -83,7 +83,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("discount facts 3: more units under a forever 100% coupon cost nothing, so it isn't paid")}`,
+	`${chalk.yellowBright("discount facts 3: more units under a 100% coupon still read as paid: list prices rose, and coupons can change")}`,
 	async () => {
 		const customerId = "approvals-facts-units-free-coupon";
 		const billingUnits = 10;
@@ -132,7 +132,7 @@ test.concurrent(
 			});
 
 		expect(facts.total).toBeLessThanOrEqual(0);
-		expect(facts.paid).toBe(false);
+		expect(facts.paid).toBe(true);
 	},
 	300_000,
 );

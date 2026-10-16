@@ -74,8 +74,6 @@ export const buildBillingChangeFacts = ({
 			raisesRecurringPrice: changeRaisesRecurringPrice({
 				incoming: incomingCustomerProducts,
 				outgoing,
-				currentDiscounts,
-				incomingDiscounts: billingContext.stripeDiscounts ?? [],
 				currency,
 			}),
 			addsPayPerUsePrice: changeAddsPayPerUsePrice({
