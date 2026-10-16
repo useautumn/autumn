@@ -170,18 +170,22 @@ export function CreateScheduleReviewContent() {
 				<SchedulePreview />
 			</div>
 
-			<BillingFooter layout="stacked">
-				<DisabledTooltipButton
-					variant="secondary"
-					className="w-full"
-					disabled={isPending || isDisabled}
-					disabledReason={invoiceDisabledReason}
-					tooltipClassName="max-w-(--anchor-width)"
-					isLoading={isInvoiceOnlyStart && isPending}
-					onClick={handleInvoiceButtonClick}
-				>
-					{invoiceButtonLabel}
-				</DisabledTooltipButton>
+			<BillingFooter
+				layout="stacked"
+				invoiceAction={
+					<DisabledTooltipButton
+						variant="secondary"
+						className="w-full"
+						disabled={isPending || isDisabled}
+						disabledReason={invoiceDisabledReason}
+						tooltipClassName="max-w-(--anchor-width)"
+						isLoading={isInvoiceOnlyStart && isPending}
+						onClick={handleInvoiceButtonClick}
+					>
+						{invoiceButtonLabel}
+					</DisabledTooltipButton>
+				}
+			>
 				<Button
 					variant="primary"
 					className="w-full"
