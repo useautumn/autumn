@@ -3,6 +3,7 @@ import type { BalanceWorkerClient } from "../types/balanceWorkerClient.js";
 import { createBalanceWorkerKafka } from "./createBalanceWorkerKafka.js";
 import { createCatalogInvalidationsFromKafka } from "./createCatalogInvalidationsFromKafka.js";
 import { createCommandLogFromKafka } from "./createCommandLogFromKafka.js";
+import { createMigrationLogFromKafka } from "./createMigrationLogFromKafka.js";
 import { createOwnersFromKafka } from "./createOwnersFromKafka.js";
 import type {
 	BalanceWorkerKafka,
@@ -33,6 +34,12 @@ export function createKafkaBalanceWorkerClient({
 		ctx: { kafka },
 		config: { topic: config.commandTopic },
 	});
+	const migrationLog = config.migrationTopic
+		? createMigrationLogFromKafka({
+				ctx: { kafka },
+				config: { topic: config.migrationTopic },
+			})
+		: undefined;
 	const catalogInvalidations = createCatalogInvalidationsFromKafka({
 		ctx: { kafka },
 		config: { topic: config.catalogInvalidationTopic },
@@ -63,6 +70,7 @@ export function createKafkaBalanceWorkerClient({
 	async function stop(): Promise<void> {
 		await owners.stop();
 		await commandLog.stop();
+		await migrationLog?.stop();
 		await catalogInvalidations.stop();
 	}
 
@@ -70,6 +78,7 @@ export function createKafkaBalanceWorkerClient({
 		ctx: {
 			owners,
 			commandLog,
+			migrationLog,
 			catalogInvalidations,
 			lifecycle: { start, stop },
 		},

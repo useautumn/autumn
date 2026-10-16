@@ -16,10 +16,11 @@ import { batchMigrationPlanToExecutionPlan } from "@/internal/migrations/v2/batc
 import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
 import { BATCH_MIGRATION_PAGE_SIZE } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import { prepareMigration } from "@/internal/migrations/v2/run/runMigration.js";
+import { PreparedMigrationSnapshotSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import { getMigrationEventInternalId } from "@/internal/migrations/v2/types/migrationDefinition.js";
 import { shouldRunBatchLane } from "@/internal/migrations/v2/utils/shouldRunBatchLane.js";
 import { generateId } from "@/utils/genUtils.js";
-import { getBenchContext } from "../utils/benchContext.js";
+import { BENCH_ORG_SLUG, getBenchContext } from "../utils/benchContext.js";
 import {
 	type BenchPlanItemPrefixes,
 	ensureBenchPlanItemProduct,
@@ -31,6 +32,11 @@ import {
 	UNRELATED_BALANCE,
 	UNRELATED_PREFIXES,
 } from "./laneScenarios.js";
+import {
+	inlineChunkRunner,
+	runChunks,
+	triggerChunkRunner,
+} from "./runChunks.js";
 import {
 	produceRecords,
 	readItemRunCounts,
@@ -80,34 +86,100 @@ const parseArgs = () => {
 		keepRows: args.includes("--keep-rows"),
 		tracksOut: get("--tracks-out"),
 		tracksOnlyMs: Number(get("--tracks-only-ms") ?? "2000"),
+		driver: (get("--driver") ?? "inline") as "inline" | "chunk" | "trigger",
+		triggerVersion: get("--trigger-version"),
+		sharedDb: args.includes("--shared-db"),
+		dropOrg: args.includes("--drop-org"),
 	};
 };
 
+const DELETE_BATCH_SIZE = 10_000;
+
 const deleteSeededRows = async ({
 	ctx,
+	orgId,
 	prefixes,
 	withCustomers,
 }: {
 	ctx: AutumnContext;
+	orgId: string;
 	prefixes: BenchPlanItemPrefixes;
 	withCustomers: boolean;
 }) => {
-	await ctx.db.execute(
-		sql`DELETE FROM customer_entitlements WHERE id LIKE ${`${prefixes.entitlement}%`}`,
+	let after = "";
+	for (;;) {
+		const rows: Array<{ internal_id: string }> = await ctx.db.execute(sql`
+			SELECT internal_id FROM customers
+			WHERE org_id = ${orgId} AND env = ${ctx.env}
+				AND internal_id LIKE ${`${prefixes.internalCustomer}%`}
+				AND internal_id > ${after}
+			ORDER BY internal_id
+			LIMIT ${DELETE_BATCH_SIZE}
+		`);
+		const last = rows.at(-1)?.internal_id;
+		if (!last) return;
+		const ids = JSON.stringify(rows.map((row) => row.internal_id));
+		await ctx.db.execute(sql`
+			DELETE FROM customer_entitlements WHERE internal_customer_id IN (
+				SELECT jsonb_array_elements_text(${ids}::jsonb))
+		`);
+		await ctx.db.execute(sql`
+			DELETE FROM customer_products WHERE internal_customer_id IN (
+				SELECT jsonb_array_elements_text(${ids}::jsonb))
+		`);
+		await ctx.db.execute(sql`
+			DELETE FROM migration_item_runs WHERE item_kind = 'customer' AND item_id IN (
+				SELECT jsonb_array_elements_text(${ids}::jsonb))
+		`);
+		await ctx.db.execute(sql`
+			DELETE FROM subject_snapshots WHERE internal_customer_id IN (
+				SELECT jsonb_array_elements_text(${ids}::jsonb))
+		`);
+		if (withCustomers)
+			await ctx.db.execute(sql`
+				DELETE FROM customers WHERE internal_id IN (
+					SELECT jsonb_array_elements_text(${ids}::jsonb))
+			`);
+		after = last;
+	}
+};
+
+const dropBenchOrg = async ({
+	ctx,
+	orgId,
+}: {
+	ctx: AutumnContext;
+	orgId: string;
+}) => {
+	const [org]: Array<{ slug: string }> = await ctx.db.execute(
+		sql`SELECT slug FROM organizations WHERE id = ${orgId}`,
 	);
+	if (org?.slug !== BENCH_ORG_SLUG)
+		throw new Error("Only the synthetic bench org can be dropped");
+	await ctx.db.execute(sql`DELETE FROM customer_lsns WHERE org_id = ${orgId}`);
 	await ctx.db.execute(
-		sql`DELETE FROM customer_products WHERE id LIKE ${`${prefixes.customerProduct}%`}`,
+		sql`DELETE FROM subject_snapshots WHERE org_id = ${orgId}`,
 	);
+	await ctx.db.execute(sql`
+		DELETE FROM migration_item_runs WHERE migration_internal_id IN (
+			SELECT internal_id FROM migrations WHERE org_id = ${orgId})
+	`);
+	await ctx.db.execute(sql`DELETE FROM migrations WHERE org_id = ${orgId}`);
+	await ctx.db.execute(sql`
+		DELETE FROM prices WHERE internal_product_id IN (
+			SELECT internal_id FROM products WHERE org_id = ${orgId})
+	`);
+	await ctx.db.execute(sql`
+		DELETE FROM entitlements WHERE internal_product_id IN (
+			SELECT internal_id FROM products WHERE org_id = ${orgId})
+	`);
+	await ctx.db.execute(sql`DELETE FROM products WHERE org_id = ${orgId}`);
+	await ctx.db.execute(sql`DELETE FROM features WHERE org_id = ${orgId}`);
 	await ctx.db.execute(
-		sql`DELETE FROM migration_item_runs WHERE item_id LIKE ${`${prefixes.internalCustomer}%`}`,
+		sql`DELETE FROM member WHERE organization_id = ${orgId}`,
 	);
-	await ctx.db.execute(
-		sql`DELETE FROM subject_snapshots WHERE customer_id LIKE ${`${prefixes.customerId}%`}`,
-	);
-	if (withCustomers)
-		await ctx.db.execute(
-			sql`DELETE FROM customers WHERE internal_id LIKE ${`${prefixes.internalCustomer}%`}`,
-		);
+	await ctx.db.execute(sql`DELETE FROM organizations WHERE id = ${orgId}`);
+	console.log(`lane: dropped the bench org`);
 };
 
 const seedScenario = async ({
@@ -367,20 +439,24 @@ const main = async () => {
 	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 	const { ctx, org, benchProducts } = await getBenchContext({
 		startBalanceWorker: !options.cleanup,
+		addEveryUserAsMember: !options.sharedDb,
 	});
 
 	const cleanupStartedAt = Date.now();
 	await deleteSeededRows({
 		ctx,
+		orgId: org.id,
 		prefixes: scenario.prefixes,
 		withCustomers: options.cleanup,
 	});
 	await deleteSeededRows({
 		ctx,
+		orgId: org.id,
 		prefixes: UNRELATED_PREFIXES,
 		withCustomers: options.cleanup,
 	});
 	console.log(`lane: cleanup ${Date.now() - cleanupStartedAt}ms`);
+	if (options.dropOrg) await dropBenchOrg({ ctx, orgId: org.id });
 	if (options.cleanup) process.exit(0);
 
 	const seedStartedAt = Date.now();
@@ -403,10 +479,12 @@ const main = async () => {
 			allowance: UNRELATED_BALANCE,
 			balance: UNRELATED_BALANCE,
 		});
-	await ctx.db.execute(sql`VACUUM (ANALYZE) customer_entitlements`);
-	await ctx.db.execute(sql`VACUUM (ANALYZE) customer_products`);
-	await ctx.db.execute(sql`VACUUM (ANALYZE) customers`);
-	await ctx.db.execute(sql`VACUUM (ANALYZE) migration_item_runs`);
+	if (!options.sharedDb) {
+		await ctx.db.execute(sql`VACUUM (ANALYZE) customer_entitlements`);
+		await ctx.db.execute(sql`VACUUM (ANALYZE) customer_products`);
+		await ctx.db.execute(sql`VACUUM (ANALYZE) customers`);
+		await ctx.db.execute(sql`VACUUM (ANALYZE) migration_item_runs`);
+	}
 	console.log(
 		`lane: seeded ${customers} ${scenario.name} customers in ${Date.now() - seedStartedAt}ms`,
 	);
@@ -507,7 +585,47 @@ const main = async () => {
 		windowStartedAt,
 	};
 
-	if (mode === "baseline") {
+	if (options.driver !== "inline") {
+		const onTrigger = await runChunks({
+			ctx,
+			migrationRunId,
+			migration: PreparedMigrationSnapshotSchema.parse(preparedMigration),
+			plan,
+			queuedLane: mode === "spike" ? { scenario: scenario.name } : undefined,
+			runChunk:
+				options.driver === "trigger"
+					? triggerChunkRunner({ version: options.triggerVersion })
+					: inlineChunkRunner({ ctx }),
+		});
+		const drained =
+			mode === "spike"
+				? await waitForLaneDrain({
+						ctx,
+						migrationInternalId,
+						migrationRunId,
+						expectedRunning: 0,
+						stableForMs: 0,
+						timeoutMs: 900_000,
+					})
+				: undefined;
+		const workerPathMs = drained
+			? drained.detectedAt - windowStartedAt
+			: BASELINE_WORKER_PATH_PHASES.reduce(
+					(total, phase) => total + (onTrigger.phases[phase] ?? 0),
+					0,
+				);
+		Object.assign(result, {
+			...onTrigger,
+			driver: options.driver,
+			chunksWallMs: onTrigger.chunksEndedAt - windowStartedAt,
+			workerPathMs,
+			wallMs: Date.now() - windowStartedAt,
+			...(drained && {
+				itemRuns: drained,
+				lastCommitByDbClockMs: drained.lastUpdatedAt - windowStartedAt,
+			}),
+		});
+	} else if (mode === "baseline") {
 		let cursor: string | undefined;
 		const phaseTotals: Record<string, number> = {};
 		let processed = 0;
@@ -750,11 +868,13 @@ const main = async () => {
 	if (!options.keepRows) {
 		await deleteSeededRows({
 			ctx,
+			orgId: org.id,
 			prefixes: scenario.prefixes,
 			withCustomers: false,
 		});
 		await deleteSeededRows({
 			ctx,
+			orgId: org.id,
 			prefixes: UNRELATED_PREFIXES,
 			withCustomers: false,
 		});

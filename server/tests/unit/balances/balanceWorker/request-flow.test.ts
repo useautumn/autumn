@@ -353,6 +353,9 @@ test.concurrent(
 				enqueue: async () => {
 					throw cause;
 				},
+				appendMigrationRecords: async () => {
+					throw cause;
+				},
 				queue: {
 					track: async () => {
 						throw cause;

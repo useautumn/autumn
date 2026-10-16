@@ -1,3 +1,4 @@
+import { type MigrationMessage, migrationMessageOf } from "@autumn/kafka";
 import { createCatalogInvalidations } from "./catalog/createCatalogInvalidations.js";
 import { sendApplyBillingPlan } from "./commands/sendApplyBillingPlan.js";
 import { sendCheck } from "./commands/sendCheck.js";
@@ -19,6 +20,7 @@ import type { EnqueueParams } from "./queue/types/queue.js";
 import { createRouteHints } from "./routing/createRouteHints.js";
 import { createTrackBatcher } from "./routing/createTrackBatcher.js";
 import type {
+	AppendMigrationRecordsParams,
 	ApplyBillingPlanParams,
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,
@@ -131,6 +133,23 @@ export function createBalanceWorkerClient({
 		return enqueueCommands({ ctx: queue, ...params });
 	}
 
+	async function appendMigrationRecords({
+		records,
+	}: AppendMigrationRecordsParams): Promise<void> {
+		if (!dependencies.migrationLog)
+			throw new Error("This balance worker client has no migration topic");
+		const messages: MigrationMessage[] = [];
+		for (const { identity, value } of records)
+			messages.push(
+				migrationMessageOf({
+					identity,
+					value,
+					partitionCount: config.partitionCount,
+				}),
+			);
+		await dependencies.migrationLog.append({ messages });
+	}
+
 	async function start(): Promise<void> {
 		await dependencies.lifecycle?.start();
 	}
@@ -155,6 +174,7 @@ export function createBalanceWorkerClient({
 		recalculateBalance,
 		queue: createCommandQueue({ ctx: queue }),
 		enqueue,
+		appendMigrationRecords,
 		catalog: createCatalogInvalidations({
 			ctx: {
 				publisher: dependencies.catalogInvalidations,

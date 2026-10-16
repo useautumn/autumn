@@ -26,6 +26,7 @@ import {
 import { heldFailureOf } from "../http/handlers/inline/heldFailureOf.js";
 import { createInlineCounters } from "../http/handlers/inline/inlineCounters.js";
 import { createOwnershipHandoffLink } from "../kafka/createOwnershipHandoffLink.js";
+import { readMigrationTopic } from "../kafka/migrationConsumer/readMigrationTopic.js";
 import type { ThreadedProducers } from "../kafka/producerThread/createThreadedProducers.js";
 import {
 	commitSummaries,
@@ -227,6 +228,16 @@ export async function createBalanceWorker({
 			return { runtime: resources.registerRuntime(runtime), publication };
 		}
 
+		const migrationTopic = await readMigrationTopic({
+			kafka: resources.kafka,
+			topic: env.BALANCE_WORKER_MIGRATION_TOPIC,
+			partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
+		});
+		dependencies.logger.info(
+			migrationTopic
+				? `Migration lane consuming ${migrationTopic}`
+				: `Migration lane off: ${env.BALANCE_WORKER_MIGRATION_TOPIC} is missing, unreadable or has the wrong partition count`,
+		);
 		const partitions = createWorkerPartitions({
 			ctx: {
 				consumer,
@@ -247,7 +258,7 @@ export async function createBalanceWorker({
 			config: {
 				topic: env.BALANCE_WORKER_METERING_TOPIC,
 				commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
-				migrationTopic: env.BALANCE_WORKER_MIGRATION_TOPIC,
+				migrationTopic,
 				partitionsConsumedConcurrently: env.BALANCE_WORKER_PARTITION_COUNT,
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},

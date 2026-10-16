@@ -39,6 +39,8 @@ export function runProxyCall({
 			return client.recalculateBalance(call.params);
 		case "enqueue":
 			return client.enqueue(call.params);
+		case "appendMigrationRecords":
+			return client.appendMigrationRecords(call.params);
 		case "invalidateOrgCatalog":
 			return client.catalog.invalidateOrgCatalog(call.params);
 	}

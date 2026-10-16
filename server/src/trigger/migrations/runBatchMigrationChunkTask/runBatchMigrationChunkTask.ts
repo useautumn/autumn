@@ -1,7 +1,5 @@
 import { task } from "@trigger.dev/sdk/v3";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
-import { runBatchMigrationChunk } from "@/internal/migrations/v2/batchOperations/execute/runBatchMigrationChunk.js";
-import { BATCH_MIGRATION_PAGES_PER_CHUNK } from "@/internal/migrations/v2/batchOperations/execute/utils/batchMigrationExecutionConstants.js";
 import { RunBatchMigrationChunkPayloadSchema } from "@/internal/migrations/v2/run/types/migrationRunPayloads.js";
 import {
 	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
@@ -9,6 +7,7 @@ import {
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
+import { runBatchMigrationChunkPayload } from "./runBatchMigrationChunkPayload.js";
 
 /** One budgeted batch slice (up to PAGES_PER_CHUNK pages). Shares
  * migrationTaskQueue with per-customer chunks so concurrent migrations
@@ -39,16 +38,6 @@ export const runBatchMigrationChunkTask = task({
 			);
 		});
 
-		return runBatchMigrationChunk({
-			ctx,
-			migration: payload.migration,
-			migrationRunId: payload.migrationRunId,
-			plan: payload.plan,
-			afterInternalId: payload.cursor,
-			maxPages: BATCH_MIGRATION_PAGES_PER_CHUNK,
-			webhooks: payload.webhooks,
-			controls: payload.controls,
-			deadlineAt,
-		});
+		return runBatchMigrationChunkPayload({ ctx, payload, deadlineAt });
 	},
 });

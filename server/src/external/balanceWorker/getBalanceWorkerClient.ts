@@ -35,6 +35,7 @@ function balanceWorkerClientConfig(): KafkaBalanceWorkerClientConfig {
 		}),
 		ownershipTopic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,
 		commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
+		migrationTopic: env.BALANCE_WORKER_MIGRATION_TOPIC,
 		catalogInvalidationTopic: env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC,
 		groupIdPrefix: "autumn-server-ownership",
 		partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,

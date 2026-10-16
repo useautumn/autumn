@@ -20,6 +20,10 @@ export type {
 	OwnersFromKafka,
 	OwnersFromKafkaConfig,
 } from "./kafka/types/kafkaBalanceWorkerClient.js";
+export type {
+	MigrationLog,
+	MigrationRecord,
+} from "./migrations/types/migrationLog.js";
 export { createProxyBalanceWorkerClient } from "./proxy/createProxyBalanceWorkerClient.js";
 export { errorToProxyError } from "./proxy/proxyErrors.js";
 export {
@@ -43,6 +47,7 @@ export type {
 	PartitionOwners,
 } from "./routing/types/routing.js";
 export type {
+	AppendMigrationRecordsParams,
 	ApplyBillingPlanParams,
 	BalanceWorkerClient,
 	BalanceWorkerClientConfig,

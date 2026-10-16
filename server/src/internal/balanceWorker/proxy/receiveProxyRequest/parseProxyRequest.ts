@@ -7,6 +7,7 @@ import {
 	parseFinalizeCommand,
 	parseFlushCommand,
 	parseInitializeRequest,
+	parseMeteringIdentity,
 	parseReadSubjectStateCommand,
 	parseRecalculateBalanceCommand,
 	parseResetCommand,
@@ -16,6 +17,7 @@ import {
 import type {
 	BalanceWorkerProxyCall,
 	BalanceWorkerProxyRequest,
+	MigrationRecord,
 } from "@autumn/balance-worker-client";
 import type { CommandRecord } from "@autumn/kafka";
 
@@ -57,6 +59,26 @@ function parseQueuedCommands({ input }: { input: unknown }): CommandRecord[] {
 	if (!Array.isArray(input))
 		throw new Error("Balance worker proxy expected a list of commands");
 	return input.map((command) => parseQueuedCommand({ input: command }));
+}
+
+function parseMigrationRecord({ input }: { input: unknown }): MigrationRecord {
+	const { identity, value } = readRecord({ input });
+	return {
+		identity: parseMeteringIdentity({ input: identity }),
+		value: readNonEmptyString({ input: value }),
+	};
+}
+
+function parseMigrationRecords({
+	input,
+}: {
+	input: unknown;
+}): MigrationRecord[] {
+	if (!Array.isArray(input))
+		throw new Error(
+			"Balance worker proxy expected a list of migration records",
+		);
+	return input.map((record) => parseMigrationRecord({ input: record }));
 }
 
 function parseProxyCall({
@@ -137,6 +159,11 @@ function parseProxyCall({
 			return {
 				method,
 				params: { commands: parseQueuedCommands({ input: params.commands }) },
+			};
+		case "appendMigrationRecords":
+			return {
+				method,
+				params: { records: parseMigrationRecords({ input: params.records }) },
 			};
 		case "invalidateOrgCatalog":
 			return {

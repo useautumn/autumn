@@ -142,6 +142,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		deleteBalance: track,
 		recalculateBalance: track,
 		enqueue: queueNothing,
+		appendMigrationRecords: queueNothing,
 		queue: {
 			track: queueNothing,
 			reset: queueNothing,
@@ -198,6 +199,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 		},
 		ownershipTopic: "serving-ownership",
 		commandTopic: "serving-commands",
+		migrationTopic: "serving-migrations",
 		catalogInvalidationTopic: "serving-catalog-invalidations",
 		groupIdPrefix: "autumn-server-ownership",
 		partitionCount: balanceWorkerEnv.BALANCE_WORKER_PARTITION_COUNT,

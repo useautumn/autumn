@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import type { EvictCommand } from "@autumn/balance-engine";
+import {
+	type EvictCommand,
+	meteringIdentityToPartitionKey,
+} from "@autumn/balance-engine";
 import {
 	BALANCE_WORKER_PROXY_SIGNATURE_HEADER,
 	BalanceWorkerClientError,
@@ -8,9 +11,10 @@ import {
 	type HttpClient,
 	type HttpRequest,
 	type HttpResponse,
+	type MigrationRecord,
 	signProxyBody,
 } from "@autumn/balance-worker-client";
-import type { CommandAppend } from "@autumn/kafka";
+import type { CommandAppend, MigrationMessage } from "@autumn/kafka";
 import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
 import {
 	type ProxyReceiverContext,
@@ -43,6 +47,7 @@ function createApi({
 	const workerRequests: HttpRequest[] = [];
 	const appends: CommandAppend[] = [];
 	const invalidations: { orgId: string; env: string }[] = [];
+	const migrationMessages: MigrationMessage[] = [];
 	const client = createBalanceWorkerClient({
 		ctx: {
 			owners: {
@@ -69,6 +74,11 @@ function createApi({
 					invalidations.push({ orgId, env });
 				},
 			},
+			migrationLog: {
+				append: async ({ messages }) => {
+					migrationMessages.push(...messages);
+				},
+			},
 		},
 		config: { partitionCount: API_PARTITION_COUNT, timeoutMs: 1_000 },
 	});
@@ -77,7 +87,13 @@ function createApi({
 		secret: SECRET,
 		logger: silentLogger,
 	};
-	return { receiver, workerRequests, appends, invalidations };
+	return {
+		receiver,
+		workerRequests,
+		appends,
+		invalidations,
+		migrationMessages,
+	};
 }
 
 /** Delivers the proxy client's POST to the receiver, through JSON as the wire would. */
@@ -148,6 +164,43 @@ test("a proxied catalog invalidation reaches the API's publisher", async () => {
 		env: "sandbox",
 	});
 	expect(api.invalidations).toEqual([{ orgId: "org", env: "sandbox" }]);
+});
+
+test("proxied migration records land keyed and partitioned by the API's client, like its commands", async () => {
+	const api = createApi();
+	const records: MigrationRecord[] = [
+		{ identity: command.identity, value: '{"a":1}' },
+		{
+			identity: { ...command.identity, customerId: "customer_2" },
+			value: '{"b":2}',
+		},
+	];
+	await createProxyClient(api).appendMigrationRecords({ records });
+	expect(api.migrationMessages).toEqual(
+		records.map(({ identity, value }) => ({
+			key: meteringIdentityToPartitionKey({ identity }),
+			value,
+			partition: meteringIdentityToPartition({
+				identity,
+				partitionCount: API_PARTITION_COUNT,
+			}),
+		})),
+	);
+});
+
+test("a migration record without a valid identity is refused before the API appends it", async () => {
+	const api = createApi();
+	const response = await receiveSigned({
+		api,
+		body: {
+			method: "appendMigrationRecords",
+			params: { records: [{ identity: { orgId: "org" }, value: "v" }] },
+			caller: "trigger",
+			sentAt: Date.now(),
+		},
+	});
+	expect(response.status).toBe(400);
+	expect(api.migrationMessages).toHaveLength(0);
 });
 
 test("a worker error comes back as the same client error, so callers' fallbacks still match it", async () => {

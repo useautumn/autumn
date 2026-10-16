@@ -62,6 +62,9 @@ export function createBalanceWorkerClientEnv(
 		BALANCE_WORKER_COMMAND_TOPIC: balanceWorkerDeploymentToKafkaNames({
 			deployment,
 		}).commandTopic,
+		BALANCE_WORKER_MIGRATION_TOPIC: balanceWorkerDeploymentToKafkaNames({
+			deployment,
+		}).migrationTopic,
 		BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC:
 			balanceWorkerDeploymentToKafkaNames({ deployment })
 				.catalogInvalidationTopic,

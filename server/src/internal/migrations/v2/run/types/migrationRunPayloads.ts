@@ -3,6 +3,7 @@ import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/mig
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
 import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { QueuedLaneSchema } from "@/internal/migrations/v2/batchOperations/queuedLane/types/queuedLane.js";
 import { BatchMigrationExecutionPlanSchema } from "@/internal/migrations/v2/batchOperations/types/batchMigrationExecutionPlan.js";
 import { PreparedStateSchema } from "@/internal/migrations/v2/prepare/types/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
@@ -87,6 +88,7 @@ export const RunBatchMigrationChunkPayloadSchema = z.object({
 	webhooks: WebhookControlsSchema.optional(),
 	/** Claim-time controls (only / retryItemStatuses) — never lane selectors. */
 	controls: ControlsSchema,
+	queuedLane: QueuedLaneSchema.optional(),
 });
 
 export type RunBatchMigrationChunkPayload = z.infer<

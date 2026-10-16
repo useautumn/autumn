@@ -1,28 +1,19 @@
-import {
-	meteringIdentityToPartitionKey,
-	parseApplyBillingPlanRequest,
-} from "@autumn/balance-engine";
+import { meteringIdentityToPartitionKey } from "@autumn/balance-engine";
+import type { MigrationRecord } from "@autumn/balance-worker-client";
 import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
 import { sql } from "drizzle-orm";
 import { CompressionTypes, type Producer } from "kafkajs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { requestContextToCommandBase } from "@/internal/balances/balanceWorker/requestContextToCommandBase.js";
-import type { WorkerMigrationPlan } from "@/internal/balanceWorker/migrationPlan/types/workerMigrationPlan.js";
-import { removeCandidatesToMigrationPlan } from "@/internal/migrations/v2/batchOperations/actions/removeCustomerEntitlementsThroughWorker/removeCandidatesToMigrationPlan.js";
-import { selectPatchRemoveCandidates } from "@/internal/migrations/v2/batchOperations/actions/removeCustomerEntitlementsThroughWorker/selectPatchRemoveCandidates.js";
-import { replaceRowsToMigrationPlan } from "@/internal/migrations/v2/batchOperations/actions/replaceCustomerEntitlementsThroughWorker/replaceRowsToMigrationPlan.js";
-import { selectPatchReplaceRows } from "@/internal/migrations/v2/batchOperations/actions/replaceCustomerEntitlementsThroughWorker/selectPatchReplaceRows.js";
-import { isHeldByWorker } from "@/internal/migrations/v2/batchOperations/actions/throughWorker/isHeldByWorker.js";
-import type { HeldRow } from "@/internal/migrations/v2/batchOperations/actions/throughWorker/types/heldRow.js";
 import {
 	claimNextBatchMigrationPage,
 	markPageItemRuns,
 } from "@/internal/migrations/v2/batchOperations/execute/claim/index.js";
 import { splitPageByRouting } from "@/internal/migrations/v2/batchOperations/execute/routing/splitPageByRouting.js";
 import type { RoutedPageCustomer } from "@/internal/migrations/v2/batchOperations/execute/routing/types/routedPageCustomer.js";
+import { laneRecordOf } from "@/internal/migrations/v2/batchOperations/queuedLane/laneRecordOf.js";
+import { plansForLanePage } from "@/internal/migrations/v2/batchOperations/queuedLane/plansForLanePage.js";
 import type { BatchMigrationExecutionPlan } from "@/internal/migrations/v2/batchOperations/types/index.js";
 import type { MigrationRuntimeWithEventId } from "@/internal/migrations/v2/types/migrationDefinition.js";
-import { generateId } from "@/utils/genUtils.js";
 import type { LaneScenario } from "./laneScenarios.js";
 
 const MESSAGES_PER_SEND = 400;
@@ -52,130 +43,22 @@ export type QueuedLaneResult = {
 	records: Map<string, ProducedRecord>;
 };
 
-const rowsByCustomerOf = <Row extends { internalCustomerId: string }>({
-	rows,
-}: {
-	rows: Row[];
-}): Map<string, Row[]> => {
-	const byCustomer = new Map<string, Row[]>();
-	for (const row of rows) {
-		const list = byCustomer.get(row.internalCustomerId) ?? [];
-		list.push(row);
-		byCustomer.set(row.internalCustomerId, list);
-	}
-	return byCustomer;
-};
-
-const plansForPage = async ({
-	ctx,
-	scenario,
-	plan,
-	customers,
-}: {
-	ctx: AutumnContext;
-	scenario: LaneScenario;
-	plan: BatchMigrationExecutionPlan;
-	customers: RoutedPageCustomer[];
-}): Promise<{
-	plans: Map<string, WorkerMigrationPlan>;
-	candidatesMs: number;
-}> => {
-	const internalCustomerIds = customers.map(({ internalId }) => internalId);
-	const plans = new Map<string, WorkerMigrationPlan>();
-	let candidatesMs = 0;
-	for (const patch of plan.patches) {
-		const startedAt = Date.now();
-		if (scenario.name === "remove") {
-			const rows = await selectPatchRemoveCandidates({
-				ctx,
-				patch,
-				internalCustomerIds,
-			});
-			candidatesMs += Date.now() - startedAt;
-			addPlans({
-				plans,
-				rows: rows.filter((row) => isHeldByWorker({ row })),
-				toPlan: removeCandidatesToMigrationPlan,
-			});
-			continue;
-		}
-		const { rows } = await selectPatchReplaceRows({
-			ctx,
-			patch,
-			internalCustomerIds,
-			now: Date.now(),
-		});
-		candidatesMs += Date.now() - startedAt;
-		addPlans({
-			plans,
-			rows: rows.filter((row) => isHeldByWorker({ row })),
-			toPlan: replaceRowsToMigrationPlan,
-		});
-	}
-	return { plans, candidatesMs };
-};
-
-const addPlans = <Row extends HeldRow>({
-	plans,
-	rows,
-	toPlan,
-}: {
-	plans: Map<string, WorkerMigrationPlan>;
-	rows: Row[];
-	toPlan: ({ rows }: { rows: Row[] }) => WorkerMigrationPlan;
-}): void => {
-	for (const [internalCustomerId, customerRows] of rowsByCustomerOf({ rows })) {
-		if (plans.has(internalCustomerId))
-			throw new Error("Spike lane plans one phase per customer");
-		plans.set(internalCustomerId, toPlan({ rows: customerRows }));
-	}
-};
-
-export const laneRecordOf = ({
-	ctx,
-	customer,
-	plan,
-	migrationInternalId,
-	migrationRunId,
+const toProducedRecord = ({
+	record,
 	partitionCount,
-	forceColdRollback,
 }: {
-	ctx: AutumnContext;
-	customer: RoutedPageCustomer;
-	plan: WorkerMigrationPlan;
-	migrationInternalId: string;
-	migrationRunId: string;
+	record: MigrationRecord;
 	partitionCount: number;
-	forceColdRollback: boolean;
-}): ProducedRecord => {
-	const request = parseApplyBillingPlanRequest({
-		input: {
-			command: {
-				...requestContextToCommandBase({ ctx, customerId: customer.id }),
-				type: "applyBillingPlan",
-				commandId: generateId("mig"),
-				entityIds: plan.entityIds,
-				ops: plan.ops,
-			},
-			catalogRows: plan.catalogRows,
-		},
-	});
-	const { identity } = request.command;
-	return {
-		key: Buffer.from(meteringIdentityToPartitionKey({ identity })),
-		value: Buffer.from(
-			JSON.stringify({
-				request,
-				migrationInternalId,
-				migrationRunId,
-				internalCustomerId: customer.internalId,
-				producedAt: Date.now(),
-				...(forceColdRollback && { forceColdRollback }),
-			}),
-		),
-		partition: meteringIdentityToPartition({ identity, partitionCount }),
-	};
-};
+}): ProducedRecord => ({
+	key: Buffer.from(
+		meteringIdentityToPartitionKey({ identity: record.identity }),
+	),
+	value: Buffer.from(record.value),
+	partition: meteringIdentityToPartition({
+		identity: record.identity,
+		partitionCount,
+	}),
+});
 
 export const produceRecords = async ({
 	producer,
@@ -271,9 +154,9 @@ export const runQueuedLane = async ({
 		});
 		if (unrouted.length > 0)
 			throw new Error("Spike lane runs with every customer routed");
-		const { plans, candidatesMs } = await plansForPage({
+		const { plans, candidatesMs } = await plansForLanePage({
 			ctx,
-			scenario,
+			scenario: scenario.name,
 			plan,
 			customers: routed,
 		});
@@ -296,14 +179,16 @@ export const runQueuedLane = async ({
 				},
 				partitionCount,
 			});
-			const record = laneRecordOf({
-				ctx,
-				customer,
-				plan: customerPlan,
-				migrationInternalId,
-				migrationRunId,
+			const record = toProducedRecord({
+				record: laneRecordOf({
+					ctx,
+					customer,
+					plan: customerPlan,
+					migrationInternalId,
+					migrationRunId,
+					forceColdRollback: pages === 1 && partition === rollbackPartition,
+				}),
 				partitionCount,
-				forceColdRollback: pages === 1 && partition === rollbackPartition,
 			});
 			if (rollbackPartition !== null) records.set(customer.internalId, record);
 			pageRecords.push(record);

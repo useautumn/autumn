@@ -29,6 +29,10 @@ import type { TrackReply } from "../contracts/track.js";
 import type { UpdateBalanceReply } from "../contracts/updateBalance.js";
 import type { HttpClient } from "../http/types/httpClient.js";
 import type {
+	MigrationLog,
+	MigrationRecord,
+} from "../migrations/types/migrationLog.js";
+import type {
 	CommandLog,
 	CommandQueue,
 	EnqueueParams,
@@ -69,6 +73,10 @@ export type InitializeParams = {
 	request: InitializeRequest;
 	signal?: AbortSignal;
 };
+export type AppendMigrationRecordsParams = {
+	records: MigrationRecord[];
+	signal?: AbortSignal;
+};
 export type BalanceWorkerClient = {
 	track(params: TrackParams): Promise<TrackReply>;
 	check(params: CheckParams): Promise<CheckReply>;
@@ -102,6 +110,7 @@ export type BalanceWorkerClient = {
 	queue: CommandQueue;
 	/** A mixed batch of commands; the typed doors on `queue` are the usual way in. */
 	enqueue(params: EnqueueParams): Promise<void>;
+	appendMigrationRecords(params: AppendMigrationRecordsParams): Promise<void>;
 	/** Tells every worker and herald that an org's catalog changed, so their cached rows are dropped. */
 	catalog: CatalogInvalidations;
 	/** Reads the ownership log through, retrying until it does; routing answers nothing before. */
@@ -118,6 +127,7 @@ export type BalanceWorkerClientDependencies = {
 	owners: PartitionOwners;
 	http?: HttpClient;
 	commandLog?: CommandLog;
+	migrationLog?: MigrationLog;
 	catalogInvalidations?: CatalogInvalidations;
 	lifecycle?: ClientLifecycle;
 };

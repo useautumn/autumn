@@ -190,6 +190,10 @@ export type {
 	MeteringPublisherContext,
 } from "./topics/metering/publisher/types/meteringPublisher.js";
 export type { MeteringRecord } from "./topics/metering/types/meteringRecord.js";
+export {
+	type MigrationMessage,
+	migrationMessageOf,
+} from "./topics/migration/migrationMessageOf.js";
 export { createKafkaOwnershipLog } from "./topics/ownership/consumer/createKafkaOwnershipLog.js";
 export { createOwnershipConsumer } from "./topics/ownership/consumer/createOwnershipConsumer.js";
 export { createOwnershipTail } from "./topics/ownership/consumer/createOwnershipTail.js";

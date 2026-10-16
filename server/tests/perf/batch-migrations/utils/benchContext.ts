@@ -256,8 +256,10 @@ const ensureBenchProducts = async ({
  * its features, and the three bench plans covering every anchor-ladder rung. */
 export const getBenchContext = async ({
 	startBalanceWorker = false,
+	addEveryUserAsMember = true,
 }: {
 	startBalanceWorker?: boolean;
+	addEveryUserAsMember?: boolean;
 } = {}): Promise<BenchContext> => {
 	assertBenchDatabaseSafe();
 	const { db } = initDrizzle();
@@ -273,7 +275,7 @@ export const getBenchContext = async ({
 		});
 	}
 
-	await ensureAllUsersAreMembers({ db, org });
+	if (addEveryUserAsMember) await ensureAllUsersAreMembers({ db, org });
 	const features = await ensureFeatures({ db, org });
 	const benchProducts = await ensureBenchProducts({ db, org, features });
 	if (startBalanceWorker) await startBalanceWorkerClient();
