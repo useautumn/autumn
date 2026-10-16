@@ -24,6 +24,7 @@ const initWithUnbilledAddOn = async ({
 		customer_id: customerId,
 		plan_id: scenario.plans.monthlyAddOn.id,
 		no_billing_changes: true,
+		new_billing_subscription: true,
 		redirect_mode: "never",
 	});
 	await timeout(2000);

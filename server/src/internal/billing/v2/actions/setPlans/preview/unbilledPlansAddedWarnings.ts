@@ -2,6 +2,7 @@ import {
 	boldText,
 	type FullCusProduct,
 	plainText,
+	punctuationText,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 	type SetPlansTextPart,
@@ -15,7 +16,7 @@ const joinedNames = (names: string[]): SetPlansTextPart[] =>
 	names.flatMap((name, index) => [
 		...(index === 0
 			? []
-			: [plainText(index === names.length - 1 ? "and" : ",")]),
+			: [index === names.length - 1 ? plainText("and") : punctuationText(",")]),
 		boldText(name),
 	]);
 
