@@ -50,7 +50,16 @@ export const PEER_PORT = 8002;
 export const PUBLIC_PORT = 8001;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
-export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
+type FixtureLogger = {
+	info: (fields: unknown, message: unknown) => void;
+	warn: (fields: unknown, message: unknown) => void;
+	error: (fields: unknown, message: unknown) => void;
+};
+export const quiet: FixtureLogger = {
+	info: () => {},
+	warn: () => {},
+	error: () => {},
+};
 /** Every fixture replica's boot unless a test gives it its own. */
 export const BOOTED_AT = "2026-10-12T00:00:00.000Z";
 
@@ -79,6 +88,7 @@ export const createReplica = ({
 	stopping = () => false,
 	bootedAt = BOOTED_AT,
 	loop = loopOnTime,
+	logger = quiet,
 }: {
 	address: string;
 	peers: string[];
@@ -97,6 +107,8 @@ export const createReplica = ({
 	bootedAt?: string;
 	/** The thread's event loop as admission reads it: how far behind it runs. */
 	loop?: { lagMs: () => number };
+	/** The HTTP layer's logger: quiet unless a test reads the request lines. */
+	logger?: FixtureLogger;
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
@@ -148,7 +160,7 @@ export const createReplica = ({
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {
 		auth,
-		logger: quiet,
+		logger,
 		autumnApiUrl: AUTUMN_API_URL,
 		health: {
 			bootedAt,

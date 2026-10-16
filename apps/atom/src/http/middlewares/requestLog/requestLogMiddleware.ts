@@ -1,6 +1,7 @@
 import { ATOM_CUSTOMER_ID_HEADER } from "@autumn/byoc";
 import type { Context, ErrorHandler, MiddlewareHandler, Next } from "hono";
 import { logOrg } from "../../../lib/logging/getAtomLogger.js";
+import { PROXIED_HEADER } from "../../forward/hopToPeer.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
 import { countRequest } from "./countRequest.js";
 import {
@@ -16,7 +17,8 @@ import {
 const UNLOGGED_PATHS = new Set(["/health"]);
 /** A line per allowed check costs a saturated Atom about an eighth of its capacity, so 1 in 100 is kept; denies all are. */
 const ALLOWED_CHECK_SAMPLE_RATE = 0.01;
-/** Autumn's pushes run at a third of the checks and each is counted in /health, so a stored one is only sampled too. */
+/** Autumn's pushes run at a third of the checks and each is counted in /health, so a stored one is only sampled too; so is a
+ *  check answered by the owner it hopped to, which logs the answer itself (on staging at 1.6k rps the hops were 72 % of the lines). */
 const PUSH_PATHS = new Set(["/v1/subjects.set", "/v1/catalog.set"]);
 /** A thread's first allowed checks are all logged, so the dashboard can show an org its first checks arriving. */
 export const FIRST_ALLOWED_CHECKS_LOGGED = 10;
@@ -54,8 +56,13 @@ export function requestLogMiddleware({
 		const allowed = context.get("allowed") === true;
 		if (allowed) allowedChecks++;
 		const isStoredPush = PUSH_PATHS.has(context.req.path) && statusCode < 300;
+		// The owner the check hopped to logs its answer itself, allow or deny; this replica's line is only the hop.
+		const isHopAnswered =
+			context.res.headers.has(PROXIED_HEADER) && statusCode < 300;
 		const sampled =
-			(allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED) || isStoredPush;
+			(allowed && allowedChecks > FIRST_ALLOWED_CHECKS_LOGGED) ||
+			isStoredPush ||
+			isHopAnswered;
 		if (sampled && Math.random() >= ALLOWED_CHECK_SAMPLE_RATE) return;
 
 		const durationMs = Date.now() - startedAt;
