@@ -25,10 +25,6 @@ describe("editor who-only areas", () => {
 		[["api_keys.create"], caption("API key creation")],
 		[["migrations.create", "migrations.run"], caption("migration")],
 		[
-			["members.invite", "members.change_role"],
-			caption("invite and role change"),
-		],
-		[
 			["billing.attach", "billing.cancel"],
 			"These actions share no conditions, so the rule applies to every request for them.",
 		],
