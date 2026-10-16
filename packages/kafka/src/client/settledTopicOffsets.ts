@@ -58,7 +58,27 @@ export function isEmptyTopicMetadataFailure(cause: unknown): boolean {
 	);
 }
 
+/** A partition leader moved under a cached Metadata reply. kafkajs bails on it without refreshing, so every read on
+ *  that admin keeps asking the old leader until metadataMaxAge passes. */
+const STALE_LEADER_TYPES: ReadonlySet<string> = new Set([
+	"NOT_LEADER_FOR_PARTITION",
+	"LEADER_NOT_AVAILABLE",
+]);
+
+function isStaleLeaderFailure(cause: unknown): boolean {
+	for (let depth = 0; depth < 5; depth++) {
+		if (typeof cause !== "object" || cause === null) return false;
+		const { type } = cause as { type?: unknown };
+		if (typeof type === "string" && STALE_LEADER_TYPES.has(type)) return true;
+		cause = (cause as { cause?: unknown }).cause;
+	}
+	return false;
+}
+
 type TopicOffsets = Awaited<ReturnType<Admin["fetchTopicOffsets"]>>;
+type TopicOffsetsAtTimestamp = Awaited<
+	ReturnType<Admin["fetchTopicOffsetsByTimestamp"]>
+>;
 
 type SettledAdminState = {
 	current: Admin;
@@ -131,8 +151,35 @@ export function createSettledAdmin({
 		}
 	}
 
-	const overrides: Pick<Admin, "connect" | "disconnect" | "fetchTopicOffsets"> =
-		{ connect, disconnect, fetchTopicOffsets };
+	/** Retried on a fresh admin, whose metadata names the new leader. */
+	async function fetchTopicOffsetsByTimestamp(
+		topic: string,
+		timestamp?: number,
+	): Promise<TopicOffsetsAtTimestamp> {
+		const startedAt = retry.now();
+		for (;;) {
+			try {
+				return await state.current.fetchTopicOffsetsByTimestamp(
+					topic,
+					timestamp,
+				);
+			} catch (error) {
+				if (!isStaleLeaderFailure(error)) throw error;
+				const waitedMs = retry.now() - startedAt;
+				if (waitedMs + retry.backoffMs > retry.deadlineMs) throw error;
+			}
+			await retry.sleep(retry.backoffMs);
+			await replaceAdminOnce();
+		}
+	}
+
+	const overrides: Pick<
+		Admin,
+		| "connect"
+		| "disconnect"
+		| "fetchTopicOffsets"
+		| "fetchTopicOffsetsByTimestamp"
+	> = { connect, disconnect, fetchTopicOffsets, fetchTopicOffsetsByTimestamp };
 
 	/** Everything else reads through to whichever admin is current, so a
 	 *  replacement also heals the other metadata-backed calls. */

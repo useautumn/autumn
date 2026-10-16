@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Admin } from "kafkajs";
-import { KafkaJSNumberOfRetriesExceeded } from "kafkajs";
+import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
 import { KafkaTopicPartitionsUnavailableError } from "../../../src/client/kafkaErrors.js";
 import {
 	createSettledAdmin,
@@ -211,5 +211,76 @@ describe("settled topic offsets", () => {
 		await admin.fetchTopicOffsetsByTimestamp(topic, 1);
 		expect(poisoned.byTimestampReads).toBe(0);
 		expect(healthy.byTimestampReads).toBe(1);
+	});
+});
+
+/** What kafkajs throws, unretried and without a metadata refresh, when ListOffsets reaches a broker that lost the lead. */
+function notLeader(): Error {
+	return new KafkaJSProtocolError({
+		message: "This server is not the leader for that topic-partition",
+		type: "NOT_LEADER_FOR_PARTITION",
+		code: 6,
+	} as unknown as Error);
+}
+
+/** An admin whose timestamp lookups go to a broker that lost the partition's lead. */
+function createStaleLeaderAdmin(): FakeAdmin {
+	const fake = createFakeAdmin({ failures: 0 });
+	fake.admin.fetchTopicOffsetsByTimestamp = async () => {
+		fake.byTimestampReads += 1;
+		throw notLeader();
+	};
+	return fake;
+}
+
+describe("settled offsets at a timestamp", () => {
+	test("a lookup that hit a moved leader is retried on a fresh admin, which reads current metadata", async () => {
+		const stale = createStaleLeaderAdmin();
+		const healthy = createFakeAdmin({ failures: 0 });
+		const factory = createFactory([stale, healthy]);
+		const admin = createSettledAdmin({
+			createAdmin: factory.createAdmin,
+			retry: createFastRetry(),
+		});
+		await admin.connect();
+		expect(await admin.fetchTopicOffsetsByTimestamp(topic, 1_000)).toEqual([
+			{ partition: 0, offset: "3" },
+		]);
+		expect(stale.byTimestampReads).toBe(1);
+		expect(healthy.byTimestampReads).toBe(1);
+		expect(healthy.connects).toBe(1);
+	});
+
+	test("a leader that stays gone past the deadline still fails, with the broker's error", async () => {
+		const factory = createFactory([
+			createStaleLeaderAdmin(),
+			createStaleLeaderAdmin(),
+			createStaleLeaderAdmin(),
+			createStaleLeaderAdmin(),
+		]);
+		const admin = createSettledAdmin({
+			createAdmin: factory.createAdmin,
+			retry: createFastRetry(),
+		});
+		await expect(
+			admin.fetchTopicOffsetsByTimestamp(topic, 1_000),
+		).rejects.toMatchObject({ type: "NOT_LEADER_FOR_PARTITION" });
+		expect(factory.created).toHaveLength(4);
+	});
+
+	test("any other failure is not retried", async () => {
+		const broken = createFakeAdmin({ failures: 0 });
+		broken.admin.fetchTopicOffsetsByTimestamp = async () => {
+			throw new Error("topic authorization failed");
+		};
+		const factory = createFactory([broken]);
+		const admin = createSettledAdmin({
+			createAdmin: factory.createAdmin,
+			retry: createFastRetry(),
+		});
+		await expect(
+			admin.fetchTopicOffsetsByTimestamp(topic, 1_000),
+		).rejects.toThrow("topic authorization failed");
+		expect(factory.created).toHaveLength(1);
 	});
 });
