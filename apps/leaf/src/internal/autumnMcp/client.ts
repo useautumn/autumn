@@ -14,12 +14,10 @@ type AutumnTool = {
 };
 
 const withAuthFetch =
-	({ appEnv, token }: { appEnv: AppEnv; token: string }) =>
+	(authHeaders: Record<string, string>) =>
 	(input: RequestInfo | URL, init?: RequestInit) => {
 		const headers = new Headers(init?.headers);
-		for (const [name, value] of Object.entries(
-			autumnMcpHeaders({ appEnv, token }),
-		)) {
+		for (const [name, value] of Object.entries(authHeaders)) {
 			headers.set(name, value);
 		}
 		return fetch(input, { ...init, headers });
@@ -28,14 +26,16 @@ const withAuthFetch =
 export const createAutumnMcpClient = ({
 	token,
 	appEnv,
+	approvalsActingUser,
 	options = {},
 }: {
 	token: string;
 	appEnv: AppEnv;
+	approvalsActingUser?: string;
 	options?: { requireApproval?: boolean };
 }) => {
-	const fetchWithAuth = withAuthFetch({ appEnv, token });
-	const headers = autumnMcpHeaders({ appEnv, token });
+	const headers = autumnMcpHeaders({ appEnv, token, approvalsActingUser });
+	const fetchWithAuth = withAuthFetch(headers);
 
 	return new MCPClient({
 		id: `autumn-${token.slice(0, 14)}`,
@@ -80,39 +80,55 @@ const clientPool = createTtlCache<PooledAutumnClient>({
 const pooledAutumnClient = ({
 	appEnv,
 	token,
+	approvalsActingUser,
 }: {
 	appEnv: AppEnv;
 	token: string;
+	approvalsActingUser?: string;
 }) =>
-	clientPool.getOrCreate(`${token}:${appEnv}`, async () => {
-		const mcpClient = createAutumnMcpClient({ appEnv, token });
-		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
-		if (Object.keys(errors).length) {
-			void mcpClient.disconnect().catch(() => undefined);
-			throw new Error(
-				`Could not load Autumn MCP tools: ${JSON.stringify(errors)}`,
-			);
-		}
-		return {
-			disconnectRequested: false,
-			inUse: 0,
-			mcpClient,
-			tools: (toolsets.autumn ?? {}) as Record<string, AutumnTool>,
-		};
-	});
+	clientPool.getOrCreate(
+		`${token}:${appEnv}:${approvalsActingUser ?? ""}`,
+		async () => {
+			const mcpClient = createAutumnMcpClient({
+				appEnv,
+				token,
+				approvalsActingUser,
+			});
+			const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
+			if (Object.keys(errors).length) {
+				void mcpClient.disconnect().catch(() => undefined);
+				throw new Error(
+					`Could not load Autumn MCP tools: ${JSON.stringify(errors)}`,
+				);
+			}
+			return {
+				disconnectRequested: false,
+				inUse: 0,
+				mcpClient,
+				tools: (toolsets.autumn ?? {}) as Record<string, AutumnTool>,
+			};
+		},
+	);
 
 export const executeAutumnMcpTool = async ({
 	args,
 	env: appEnv,
 	token,
 	toolName,
+	approvalsActingUser,
 }: {
 	args: Record<string, unknown>;
 	env: AppEnv;
 	token: string;
 	toolName: string;
+	/** Set for an approved Slack card's writes and re-previews. */
+	approvalsActingUser?: string;
 }) => {
-	const pooled = await pooledAutumnClient({ appEnv, token });
+	const pooled = await pooledAutumnClient({
+		appEnv,
+		token,
+		approvalsActingUser,
+	});
 	const tool = pooled.tools[toolName.replace(/^autumn_/, "")];
 	if (!tool?.execute) throw new Error(`Unknown Autumn MCP tool: ${toolName}`);
 	pooled.inUse += 1;

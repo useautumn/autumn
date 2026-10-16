@@ -18,10 +18,12 @@ const runWrite = async ({
 	env,
 	token,
 	write,
+	actingUserId,
 }: {
 	env: ChatApproval["env"];
 	token: string;
 	write: ChatApprovalWrite;
+	actingUserId?: string;
 }): Promise<WriteExecutionOutcome> => {
 	try {
 		const result = await executeAutumnMcpTool({
@@ -29,6 +31,7 @@ const runWrite = async ({
 			env,
 			token,
 			toolName: write.tool_name,
+			approvalsActingUser: actingUserId,
 		});
 		return classifyWriteExecution({ result });
 	} catch (error) {
@@ -45,10 +48,12 @@ const executeWrites = async ({
 	env,
 	writes,
 	token,
+	actingUserId,
 }: {
 	env: ChatApproval["env"];
 	writes: ReadonlyArray<ChatApprovalWrite>;
 	token: string;
+	actingUserId?: string;
 }): Promise<ExecutedWrite[]> => {
 	const executed: ExecutedWrite[] = [];
 	let stopped = false;
@@ -69,7 +74,7 @@ const executeWrites = async ({
 			status: "running",
 			writeId: write.id,
 		});
-		const outcome = await runWrite({ env, token, write: write });
+		const outcome = await runWrite({ env, token, write, actingUserId });
 		await chatApprovalWritesRepo.setStatus({
 			db,
 			result:
@@ -98,9 +103,12 @@ const stepOutcomes = (
 export const executeApprovalWrites = async ({
 	approval,
 	providerUserId,
+	actingUserId,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
+	/** Named on each write, so the API checks and logs the approval rules for the clicker. */
+	actingUserId?: string;
 }): Promise<ApprovalRunResult | undefined> => {
 	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
@@ -119,6 +127,7 @@ export const executeApprovalWrites = async ({
 		env: approval.env,
 		writes,
 		token: accessToken,
+		actingUserId,
 	});
 	const allApplied = executed.every(
 		({ outcome }) => outcome.status === "applied",

@@ -6,14 +6,20 @@ import type { AppEnv } from "@autumn/shared";
 export const autumnMcpHeaders = ({
 	appEnv,
 	token,
+	approvalsActingUser,
 }: {
 	appEnv: AppEnv;
 	token: string;
+	/** The Autumn user who approved a Slack card, so rules are checked against them. */
+	approvalsActingUser?: string;
 }) => {
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${token}`,
 		"x-autumn-environment": appEnv,
 	};
+	if (approvalsActingUser) {
+		headers["x-approvals-acting-user"] = approvalsActingUser;
+	}
 	if (isSecretKeyPrefix({ token })) {
 		headers["secret-key"] = token;
 	}
