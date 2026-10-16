@@ -49,6 +49,7 @@ export async function attach({
 	preview = false,
 	skipAutumnCheckout = false,
 	longLivedCheckout: existingLongLivedCheckout,
+	approvalAction = "billing.attach",
 
 	contextOverride,
 }: {
@@ -58,6 +59,8 @@ export async function attach({
 	skipAutumnCheckout?: boolean;
 	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
 	longLivedCheckout?: BillingContext["longLivedCheckout"];
+	/** A pending-plan edit re-attaches, but is checked as the update it is. */
+	approvalAction?: "billing.attach" | "billing.update_subscription";
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -149,7 +152,7 @@ export async function attach({
 		ctx,
 		billingContext,
 		billingPlan,
-		action: "billing.attach",
+		action: approvalAction,
 	});
 
 	const shouldCreateLongLivedCheckout =

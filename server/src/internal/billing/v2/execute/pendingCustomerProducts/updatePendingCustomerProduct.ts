@@ -76,7 +76,7 @@ export const updatePendingCustomerProduct = async ({
 			ctx,
 			billingContext: replacementPreview.billingContext,
 			billingPlan: replacementPreview.billingPlan,
-			action: "billing.attach",
+			action: "billing.update_subscription",
 			logDecision: false,
 		});
 	}
@@ -85,6 +85,7 @@ export const updatePendingCustomerProduct = async ({
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
 		params: attachParams,
+		approvalAction: "billing.update_subscription",
 		longLivedCheckout: longLivedCheckout && {
 			id: longLivedCheckout.id,
 			expiresAt: longLivedCheckout.expires_at,
