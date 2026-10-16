@@ -2,8 +2,14 @@ import type { ApprovalAction } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { z } from "zod/v4";
 
-// Local copies of approvals-api-schema §3 and §R until F1 (preview), E2 (403) and E3 (can) export them.
+// Local copies of F1's PreviewPermissionSchema, the E1 403 body and E3 can-do until the stack exports them.
 const ViolationValueSchema = z.union([z.string(), z.boolean()]);
+
+const DecidedBySchema = z.object({
+	level: z.enum(["user", "role", "everyone"]),
+	rule_id: z.string(),
+	rule_name: z.string(),
+});
 
 const PermissionDenialSchema = z.object({
 	violations: z.array(
@@ -14,17 +20,16 @@ const PermissionDenialSchema = z.object({
 			actual: ViolationValueSchema,
 		}),
 	),
-	decided_by: z.object({
-		level: z.enum(["user", "role", "everyone"]),
-		rule_id: z.string(),
-		rule_name: z.string(),
-	}),
+	decided_by: DecidedBySchema,
 	allowed_roles: z.array(z.string()),
 	message: z.string(),
 });
 
 const PreviewPermissionSchema = z.discriminatedUnion("verdict", [
-	z.object({ verdict: z.literal("allow") }),
+	z.object({
+		verdict: z.literal("allow"),
+		decided_by: DecidedBySchema.nullable(),
+	}),
 	PermissionDenialSchema.extend({ verdict: z.literal("deny") }),
 ]);
 
@@ -33,6 +38,7 @@ const PermissionDeniedErrorSchema = z.object({
 		status: z.literal(403),
 		data: PermissionDenialSchema.extend({
 			code: z.literal("permission_denied"),
+			env: z.string(),
 		}),
 	}),
 });

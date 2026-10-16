@@ -45,13 +45,28 @@ const allowedPreview = {
 	total: 0,
 	permission: { verdict: "allow", decided_by: null },
 };
+const allowedByRulePreview = {
+	total: 99,
+	permission: {
+		verdict: "allow",
+		decided_by: {
+			level: "role",
+			rule_id: "apr_2",
+			rule_name: "Finance changes",
+		},
+	},
+};
 const noRulePreview = { total: 99 };
 
 const permissionDeniedError = {
 	isAxiosError: true,
 	response: {
 		status: 403,
-		data: { code: "permission_denied", ...denyPermission },
+		data: {
+			code: "permission_denied",
+			env: "live",
+			...denyPermission,
+		},
 	},
 };
 
@@ -80,6 +95,7 @@ describe("resolvePermissionDenial", () => {
 	test.each([
 		["a missing field", noRulePreview, null, null],
 		["an allow verdict", allowedPreview, null, null],
+		["an allow decided by a rule", allowedByRulePreview, null, null],
 		[
 			"a non-permission 403",
 			noRulePreview,
@@ -171,6 +187,7 @@ describe("billing footer", () => {
 	test.each([
 		["a missing field", noRulePreview],
 		["an allow verdict", allowedPreview],
+		["an allow decided by a rule", allowedByRulePreview],
 	])("%s leaves the footer unchanged", (_name, preview) => {
 		expect(render({ preview, children: footer() })).toBe(
 			renderToStaticMarkup(footer()),
