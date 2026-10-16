@@ -3,6 +3,7 @@
  * disables submit and puts each matched condition on its field; a shadow-mode
  * deny, an allow or no `permission` leaves the sheet as it is. A 403
  * `permission_denied` reads its rule from `details` and never locks the retry.
+ * Plan, feature and reward ids in violation values show as their live names.
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
@@ -17,6 +18,15 @@ mock.module("@/hooks/queries/useRolesQuery", () => ({
 		isLoading: false,
 		error: null,
 	}),
+}));
+
+const DENIAL_NAMES = {
+	plan: { enterprise: "Enterprise", pro: "Pro" },
+	feature: { ai_credits: "AI credits" },
+	reward: { launch20: "Launch 20%" },
+};
+mock.module("@/components/forms/shared/permission/useDenialNames", () => ({
+	useDenialNames: () => DENIAL_NAMES,
 }));
 
 const { QueryClient, QueryClientProvider } = await import(
@@ -41,6 +51,9 @@ const { violationsInSection } = await import(
 const { formatAskRoles, formatViolation } = await import(
 	"@/components/forms/shared/permission/formatDenial"
 );
+const { nameViolationIds } = await import(
+	"@/components/forms/shared/permission/nameViolationIds"
+);
 
 const denial: Denial = {
 	message: "Only Finance gives trials on Enterprise.",
@@ -48,8 +61,8 @@ const denial: Denial = {
 		{
 			field: "incoming[0].plan_id",
 			label: "Plan",
-			limit: "Enterprise",
-			actual: "Enterprise",
+			limit: "enterprise",
+			actual: "enterprise",
 		},
 		{
 			field: "billing_cycle_anchor",
@@ -173,7 +186,7 @@ describe("violations on their fields", () => {
 	});
 
 	test.each([
-		["a matched value", denial.violations[0], "Plan: Enterprise"],
+		["a matched value", denial.violations[0], "Plan: enterprise"],
 		[
 			"a comparison",
 			{ field: "total", label: "Total", limit: "≥ 500", actual: "900" },
@@ -192,6 +205,55 @@ describe("violations on their fields", () => {
 		["a boolean", denial.violations[3], "Charges customer: yes"],
 	])("formats %s", (_name, violation, expected) => {
 		expect(formatViolation({ violation })).toBe(expected);
+	});
+});
+
+describe("ids in violation values", () => {
+	test.each([
+		["a plan id", "incoming[0].plan_id", "enterprise", "Enterprise"],
+		[
+			"a plan list",
+			"outgoing[0].plan_id",
+			"pro or enterprise",
+			"Pro or Enterprise",
+		],
+		["an excluded plan", "customer.plan", "not pro", "not Pro"],
+		[
+			"a feature id",
+			"incoming[0].feature_quantities[0].feature_id",
+			"ai_credits",
+			"AI credits",
+		],
+		["a reward id", "discounts[0].reward_id", "launch20", "Launch 20%"],
+		["an unknown id", "incoming[0].plan_id", "legacy", "legacy"],
+		["a field without ids", "billing_cycle_anchor", "custom", "custom"],
+	])("names %s", (_name, field, value, expected) => {
+		const named = nameViolationIds({
+			violation: { field, label: "Field", limit: value, actual: value },
+			names: DENIAL_NAMES,
+		});
+		expect([named.limit, named.actual]).toEqual([expected, expected]);
+	});
+
+	test("a boolean stays a boolean", () => {
+		const violation = {
+			field: "paid",
+			label: "Paid",
+			limit: true,
+			actual: true,
+		};
+		expect(nameViolationIds({ violation, names: DENIAL_NAMES })).toEqual(
+			violation,
+		);
+	});
+
+	test("the plan section shows the plan's name", () => {
+		const html = render({
+			preview: enforcedDeny,
+			children: <PermissionDenial section="plan" />,
+		});
+		expect(html).toContain("Plan: Enterprise");
+		expect(html).not.toContain("Plan: enterprise");
 	});
 });
 

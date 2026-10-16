@@ -9,13 +9,16 @@ import {
 	formatDecidedBy,
 	formatViolation,
 } from "./formatDenial";
+import { nameViolationIds } from "./nameViolationIds";
 import { usePermissionDenial } from "./PermissionDenialContext";
+import { useDenialNames } from "./useDenialNames";
 import { useRoleName } from "./useRoleName";
 
 /** A section's violations under its fields; `summary` adds the rule, its note and who can approve. */
 export function PermissionDenial({ section }: { section: PermissionSection }) {
 	const resolved = usePermissionDenial();
 	const roleName = useRoleName();
+	const names = useDenialNames();
 	if (!resolved) return null;
 
 	const { denial } = resolved;
@@ -26,7 +29,9 @@ export function PermissionDenial({ section }: { section: PermissionSection }) {
 				className="flex items-center gap-1.5 text-xs text-destructive dark:text-red-400"
 			>
 				<ProhibitIcon className="size-3.5 shrink-0" />
-				{formatViolation({ violation })}
+				{formatViolation({
+					violation: nameViolationIds({ violation, names }),
+				})}
 			</p>
 		),
 	);
