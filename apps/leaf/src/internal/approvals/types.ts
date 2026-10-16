@@ -38,14 +38,21 @@ export type ApprovalRunResult =
 	  };
 
 export type ApprovalAuthorization =
-	// `actingUserId` is the clicker's Autumn user, when Leaf resolved one.
-	{ allowed: true; actingUserId?: string } | { allowed: false; text: string };
+	| {
+			allowed: true;
+			/** The clicker's Autumn user, when Leaf resolved one. */
+			actingUserId?: string;
+			/** Their role lacks the scope, so only approval rules can let them approve. */
+			rulesMustAllow?: boolean;
+	  }
+	| { allowed: false; text: string };
 
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
 		providerUserId: string;
 		actingUserId?: string;
+		rulesMustAllow?: boolean;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;
