@@ -41,6 +41,8 @@ export const ShadowAtomSettingsSchema = z.object({
 	endpointUrl: z.url().nullable().default(null),
 	/** How herald sends pushes: HTTP to `endpointUrl`, or through the deployment's `pushes` queue. */
 	pushTransport: z.enum(["http", "queue"]).default("http"),
+	/** Open shadow checks per server process before the next is shed as a timeout; raised only to benchmark an Atom past the server's cap. */
+	checkMaxInFlight: z.number().int().min(1).max(1024).default(16),
 });
 
 /** Our own multi-tenant Atom, apart from every org's, that load-tests Atom on real traffic from both envs. Staff-only; an empty file is off. */

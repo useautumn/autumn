@@ -38,5 +38,6 @@ export const shadowAtomTarget = ({
 	return {
 		endpointUrl: config.endpointUrl,
 		token: decryptData(config.orgs[ctx.org.id].encryptedTokens[ctx.env]),
+		maxInFlight: config.checkMaxInFlight,
 	};
 };

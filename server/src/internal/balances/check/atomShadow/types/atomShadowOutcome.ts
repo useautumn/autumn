@@ -11,5 +11,9 @@ export type AtomShadowOutcome =
 	| { status: "timeout" }
 	| { status: "atom_error"; reason: string };
 
-/** Where the shadow check goes: our shadow Atom and the token that opens it. */
-export type AtomShadowTarget = { endpointUrl: string; token: string };
+/** Where the shadow check goes: our shadow Atom, the token that opens it, and how many may be open at once per process. */
+export type AtomShadowTarget = {
+	endpointUrl: string;
+	token: string;
+	maxInFlight: number;
+};
