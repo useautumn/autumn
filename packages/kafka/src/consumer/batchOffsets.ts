@@ -1,8 +1,9 @@
-import { type EachBatchPayload, KafkaJSProtocolError } from "kafkajs";
+import type { EachBatchPayload } from "kafkajs";
 import {
 	parseKafkaOffset,
 	parseKafkaTimestamp,
 } from "../client/kafkaOffsetUtils.js";
+import { groupChurnCauseOf } from "./consumerErrors.js";
 import type {
 	TopicBatchParams,
 	TopicConsumerContext,
@@ -40,10 +41,17 @@ export async function reconcilePartitionOffset({
 }): Promise<void> {
 	const { topic, partition } = payload.batch;
 	if (!hasCurrentBatchGeneration({ state, payload, generation })) return;
-	if (commitsGroupOffsets({ ctx }))
-		await ctx.consumer.commitOffsets([
-			{ topic, partition, offset: nextOffset.toString() },
-		]);
+	if (commitsGroupOffsets({ ctx })) {
+		function commitResumeOffset(): Promise<void> {
+			return ctx.consumer.commitOffsets([
+				{ topic, partition, offset: nextOffset.toString() },
+			]);
+		}
+		const committed = await commitUnlessSuperseded({
+			commit: commitResumeOffset,
+		});
+		if (!committed) return;
+	}
 	if (!hasCurrentBatchGeneration({ state, payload, generation })) return;
 	ctx.consumer.seek({ topic, partition, offset: nextOffset.toString() });
 	ctx.progress.advance({ topic, partition, nextOffset });
@@ -64,9 +72,14 @@ export async function commitBatchOffsets({
 		return;
 	const offset = readPendingOffset(payload);
 	if (offset !== null && commitsGroupOffsets({ ctx })) {
+		const pendingOffset = offset;
+		function commitPendingOffset(): Promise<void> {
+			return payload.commitOffsetsIfNecessary({
+				topics: [{ topic, partitions: [{ partition, offset: pendingOffset }] }],
+			});
+		}
 		const committed = await commitUnlessSuperseded({
-			payload,
-			offsets: { topics: [{ topic, partitions: [{ partition, offset }] }] },
+			commit: commitPendingOffset,
 		});
 		if (!committed) return;
 	}
@@ -93,26 +106,21 @@ export async function commitBatchOffsets({
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
 }
 
+/** A commit refused for a superseded generation is dropped; any other group churn is rethrown
+ *  unwrapped, because kafkajs crashes the consumer on its non-retriable wrapper instead of rejoining. */
 async function commitUnlessSuperseded({
-	payload,
-	offsets,
+	commit,
 }: {
-	payload: EachBatchPayload;
-	offsets: Parameters<EachBatchPayload["commitOffsetsIfNecessary"]>[0];
+	commit: () => Promise<void>;
 }): Promise<boolean> {
 	try {
-		await payload.commitOffsetsIfNecessary(offsets);
+		await commit();
 		return true;
 	} catch (cause) {
-		if (isSupersededGeneration(cause)) return false;
-		throw cause;
+		const churn = groupChurnCauseOf({ cause });
+		if (churn?.type === "ILLEGAL_GENERATION") return false;
+		throw churn ?? cause;
 	}
-}
-
-function isSupersededGeneration(cause: unknown): boolean {
-	return (
-		cause instanceof KafkaJSProtocolError && cause.type === "ILLEGAL_GENERATION"
-	);
 }
 
 function commitsGroupOffsets({ ctx }: { ctx: TopicConsumerContext }): boolean {
