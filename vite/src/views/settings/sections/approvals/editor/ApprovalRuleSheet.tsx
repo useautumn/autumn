@@ -39,10 +39,11 @@ export const ApprovalRuleSheet = ({
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
-	const { form, isSaving, serverIssue, changeActions } = useApprovalRuleForm({
-		rule,
-		onSaved: () => onOpenChange(false),
-	});
+	const { form, isSaving, serverIssue, unplacedIssue, changeActions } =
+		useApprovalRuleForm({
+			rule,
+			onSaved: () => onOpenChange(false),
+		});
 	const subjectGroups = useRuleSubjectGroups();
 
 	return (
@@ -182,6 +183,9 @@ export const ApprovalRuleSheet = ({
 					</form.Field>
 				</div>
 
+				{unplacedIssue && (
+					<p className="px-4 pb-2 text-destructive text-xs">{unplacedIssue}</p>
+				)}
 				<div className="flex gap-2 border-t px-4 pt-4 pb-4">
 					<Button
 						variant="secondary"
