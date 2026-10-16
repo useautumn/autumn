@@ -418,7 +418,7 @@ export const recordJournals = () => {
 			autumnClient: {
 				appendTracks: async ({ tracks }) => {
 					for (const track of tracks) {
-						if ("finalize" in track) {
+						if ("finalize" in track || "undecidedFinalize" in track) {
 							handedIn.push({ type: "finalize", writer: track.writerId });
 							continue;
 						}

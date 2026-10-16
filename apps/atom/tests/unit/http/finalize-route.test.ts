@@ -77,6 +77,13 @@ const remainingOn = async (replica: Replica) => {
 	return (await reply.json()).balance.remaining;
 };
 
+/** What the replica's journals owe the customer, oldest first: the lock's track, then each finalize behind it. */
+const owedTypesOn = (replica: Replica) =>
+	replica.slots
+		.ownedJournals()
+		.flatMap((journal) => journal.owed({ customerId: CUSTOMER }))
+		.map(({ command }) => command.type);
+
 const replicaAt100 = async ({
 	autumn,
 }: {
@@ -94,7 +101,7 @@ const replicaAt100 = async ({
 };
 
 describe("a finalize of a lock the Atom took", () => {
-	test("is answered here as the API answers it: 200 and { success: true }, and the held units come back", async () => {
+	test("is answered here as the API answers it: 200 and { success: true }, journaled behind its lock; the view holds the lock until Autumn's push", async () => {
 		const replica = await replicaAt100();
 		await lockOn(replica);
 		expect(await remainingOn(replica)).toBe(70);
@@ -104,7 +111,8 @@ describe("a finalize of a lock the Atom took", () => {
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(await reply.json()).toEqual({ success: true });
-		expect(await remainingOn(replica)).toBe(100);
+		expect(await remainingOn(replica)).toBe(70);
+		expect(owedTypesOn(replica)).toEqual(["track", "undecidedFinalize"]);
 	});
 
 	test("L1: on a replica that does not own the customer is answered by the owner", async () => {
@@ -124,7 +132,8 @@ describe("a finalize of a lock the Atom took", () => {
 
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
-		expect(await remainingOn(b)).toBe(100);
+		expect(owedTypesOn(a)).toEqual(["track", "undecidedFinalize"]);
+		expect(owedTypesOn(b)).toEqual([]);
 	});
 });
 

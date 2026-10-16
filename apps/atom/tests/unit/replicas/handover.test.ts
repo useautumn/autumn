@@ -161,6 +161,11 @@ const owedSeqs = (replica: Replica, customerId = CUSTOMER) =>
 		?.owed({ customerId })
 		.map(({ seq }) => seq) ?? [];
 
+const owedTypes = (replica: Replica, customerId = CUSTOMER) =>
+	journalOwing(replica, customerId)
+		?.owed({ customerId })
+		.map(({ command }) => command.type) ?? [];
+
 const remainingAt = async (replica: Replica) =>
 	(
 		await (
@@ -789,7 +794,7 @@ describe("a lock taken on the leaving owner", () => {
 			lockCall({ customer_id: CUSTOMER, lock_id: "lock_1", action: "release" }),
 		);
 
-	test("still unsent at the move is handed with its lock row, settled on the new owner, and handed in once before its finalize", async () => {
+	test("still unsent at the move is handed with its lock row, finalized on the new owner, and handed in once before its finalize", async () => {
 		const journals = recordJournals();
 		const { a, b } = await agreeingPair({ bForwarder: journals.forwarder });
 		connect({ replicas: [a, b] });
@@ -804,7 +809,8 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(await reply.json()).toEqual({ success: true });
-		expect(await remainingAt(b)).toBe(10);
+		// Journaled undecided: the view holds the lock until Autumn's push shows it settled.
+		expect(await remainingAt(b)).toBe(7);
 		// B hands the lock's track in under A's writer, then its own finalize after it, so Autumn applies them in order.
 		await until(() => journals.handedIn.length === 2);
 		expect(
@@ -818,7 +824,7 @@ describe("a lock taken on the leaving owner", () => {
 		]);
 	});
 
-	test("already sent to Autumn by the leaver is still settled on the new owner, which hands in the finalize alone", async () => {
+	test("already sent to Autumn by the leaver is still finalized on the new owner, which hands in the finalize alone", async () => {
 		const journals = recordJournals();
 		const { a, b } = await agreeingPair({
 			aForwarder: journals.forwarder,
@@ -834,7 +840,7 @@ describe("a lock taken on the leaving owner", () => {
 		const reply = await finalizeOn(b);
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
-		expect(await remainingAt(b)).toBe(10);
+		expect(await remainingAt(b)).toBe(7);
 		await until(() => journals.handedIn.length === 2);
 		await Bun.sleep(60);
 		expect(
@@ -848,7 +854,7 @@ describe("a lock taken on the leaving owner", () => {
 		]);
 	});
 
-	test("whose track Autumn already applied (nothing owed) is still settled on the new owner, from the row the leaver hands with its entries", async () => {
+	test("whose track Autumn already applied (nothing owed) is still finalized on the new owner, which hands the finalize in", async () => {
 		const calls: string[] = [];
 		const journals = recordJournals();
 		const { a, b } = await agreeingPair({
@@ -889,7 +895,7 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(await reply.json()).toEqual({ success: true });
 		expect(calls).toEqual([]);
-		expect(await remainingAt(b)).toBe(10);
+		expect(await remainingAt(b)).toBe(7);
 		await until(() => journals.handedIn.length === 2);
 		expect(journals.handedIn[1]).toEqual({
 			type: "finalize",
@@ -897,7 +903,7 @@ describe("a lock taken on the leaving owner", () => {
 		});
 	});
 
-	test("finalized on the new owner while its handoff is still on the way waits at the barrier like a check, then settles here", async () => {
+	test("finalized on the new owner while its handoff is still on the way waits at the barrier like a check, then is journaled here behind the lock", async () => {
 		const calls: string[] = [];
 		const { a, b } = await agreeingPair();
 		connect({ replicas: [a, b] });
@@ -923,11 +929,11 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.status).toBe(200);
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(calls).toEqual([]);
-		expect(await remainingAt(b)).toBe(10);
+		expect(owedTypes(b)).toEqual(["track", "undecidedFinalize"]);
 		expect(b.stats().handoffLate).toBe(0);
 	});
 
-	test("taken on the stand-in after the flip is taken on the new owner instead, so its finalize settles there", async () => {
+	test("taken on the stand-in after the flip is taken on the new owner instead, so its finalize is journaled there", async () => {
 		const calls: string[] = [];
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
 		const b = createReplica({
@@ -968,10 +974,11 @@ describe("a lock taken on the leaving owner", () => {
 		expect(reply.headers.get("x-atom-proxied")).toBe("owner");
 		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		expect(calls).toEqual([]);
-		expect(await remainingAt(a)).toBe(9);
+		// B's deduction handed over, the lock taken on A, then its finalize behind it.
+		expect(owedTypes(a)).toEqual(["track", "track", "undecidedFinalize"]);
 	});
 
-	test("never handed (the peer was down at the leave) is lock_not_held on the new owner, so the API settles it", async () => {
+	test("never handed (the peer was down at the leave) is journaled on the new owner all the same, for Autumn to decide from its own row", async () => {
 		const calls: string[] = [];
 		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
 		const b = createReplica({ address: B, peers: [A], ringPeers: [A] });
@@ -999,8 +1006,9 @@ describe("a lock taken on the leaving owner", () => {
 
 		const reply = await finalizeOn(b);
 		expect(reply.status).toBe(200);
-		expect(reply.headers.get("x-atom-forwarded")).toBe("lock_not_held");
-		expect(calls).toEqual(["/v1/balances.finalize"]);
+		expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		expect(calls).toEqual([]);
+		expect(owedTypes(b)).toEqual(["undecidedFinalize"]);
 	});
 });
 
