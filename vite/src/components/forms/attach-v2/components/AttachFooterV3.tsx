@@ -79,7 +79,7 @@ export function AttachFooterV3() {
 	return (
 		<BillingFooter
 			layout="stacked"
-			invoiceAction={
+			stageAction={
 				<DisabledTooltipButton
 					variant="secondary"
 					className="w-full"
