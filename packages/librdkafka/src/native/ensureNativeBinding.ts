@@ -17,7 +17,7 @@ import { nativeLibcOf } from "./nativeLibc.js";
 import {
 	CONFLUENT_PACKAGE,
 	NATIVE_BINARY_FILE,
-	PREBUILT_ADDON_URL,
+	PREBUILT_ADDON_REPOSITORY,
 } from "./nativePackage.js";
 
 export type NativeBindingOutcome =
@@ -188,6 +188,35 @@ function loadsHere({ addon }: { addon: string }): boolean {
 	);
 }
 
+/** Pulls the addon's single layer from GHCR with an anonymous token; undefined when the key isn't published. */
+async function fetchPrebuilt({
+	key,
+}: {
+	key: string;
+}): Promise<Response | undefined> {
+	const registry = `https://ghcr.io/v2/${PREBUILT_ADDON_REPOSITORY}`;
+	const auth = await fetch(
+		`https://ghcr.io/token?scope=repository:${PREBUILT_ADDON_REPOSITORY}:pull`,
+	);
+	if (!auth.ok) return undefined;
+	const { token } = (await auth.json()) as { token: string };
+	const headers = { Authorization: `Bearer ${token}` };
+	const manifest = await fetch(`${registry}/manifests/${key}`, {
+		headers: {
+			...headers,
+			Accept: "application/vnd.oci.image.manifest.v1+json",
+		},
+	});
+	if (!manifest.ok) return undefined;
+	const { layers } = (await manifest.json()) as {
+		layers: { digest: string }[];
+	};
+	const blob = await fetch(`${registry}/blobs/${layers[0]?.digest}`, {
+		headers,
+	});
+	return blob.ok ? blob : undefined;
+}
+
 /** CI publishes Linux glibc x64 builds only; anything else compiles. */
 async function downloadPrebuilt({
 	key,
@@ -197,8 +226,8 @@ async function downloadPrebuilt({
 	paths: NativeBuildPaths;
 }): Promise<boolean> {
 	if (nativeLibcOf() !== "glibc" || process.arch !== "x64") return false;
-	const response = await fetch(PREBUILT_ADDON_URL(key)).catch(() => undefined);
-	if (!response?.ok) return false;
+	const response = await fetchPrebuilt({ key }).catch(() => undefined);
+	if (!response) return false;
 	const download = `${paths.cached}.${process.pid}.download`;
 	mkdirSync(dirname(paths.cached), { recursive: true });
 	await Bun.write(download, response);

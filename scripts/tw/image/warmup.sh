@@ -134,21 +134,11 @@ fi
 
 # ---------------------------------------------------------------------------
 # 2b. librdkafka addon, which every Kafka client loads. Compiling it under gVisor
-#     takes over 30 min, so CI publishes one per build key (librdkafka.yml).
+#     takes over 30 min, so the build pulls CI's from GHCR by build key (librdkafka.yml).
 #     The warm snapshot keeps the cache, so an unchanged key restores in a second.
 # ---------------------------------------------------------------------------
-LIBRDKAFKA_KEY="$(bun run --silent --cwd packages/librdkafka native:key)"
 export LIBRDKAFKA_CACHE_DIR="$TW_PREFIX/librdkafka"
-LIBRDKAFKA_ADDON="$LIBRDKAFKA_CACHE_DIR/$LIBRDKAFKA_KEY.node"
-if [ ! -f "$LIBRDKAFKA_ADDON" ]; then
-  log "librdkafka addon $LIBRDKAFKA_KEY not cached — downloading CI's build"
-  mkdir -p "$LIBRDKAFKA_CACHE_DIR"
-  curl -fsSL --retry 3 -o "$LIBRDKAFKA_ADDON.download" \
-    "https://github.com/useautumn/autumn/releases/download/librdkafka-addon-$LIBRDKAFKA_KEY/$LIBRDKAFKA_KEY.node" \
-    || die "no librdkafka addon published for build key $LIBRDKAFKA_KEY; the librdkafka workflow publishes it"
-  mv "$LIBRDKAFKA_ADDON.download" "$LIBRDKAFKA_ADDON"
-fi
-bun run --cwd packages/librdkafka build || die "librdkafka addon install FAILED"
+bun run --cwd packages/librdkafka build --prebuilt-only || die "no librdkafka addon on GHCR for this build key; the librdkafka workflow publishes it"
 
 # ---------------------------------------------------------------------------
 # Ensure services are up for migrate + seed (idempotent).

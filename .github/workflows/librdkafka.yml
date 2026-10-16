@@ -114,20 +114,20 @@ jobs:
 
   publish:
     name: Publish the Linux addon
-    # Every Linux glibc x64 machine (twd, QA, Capy, bun d) downloads this by build key instead of compiling.
+    # Every Linux glibc x64 machine (twd, QA, Capy, bun d) pulls this from GHCR by build key instead of compiling.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: peak-ubuntu-24.04-4
+    runs-on: peak-ubuntu-24.04-8
     timeout-minutes: 40
     permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       # Bookworm's glibc 2.36 is older than every machine that downloads it, so the addon loads on all of them.
+      # The build pulls an already published key from GHCR instead of compiling; only a compile is pushed.
       - name: Build the addon on Debian bookworm
         id: build
         shell: bash
@@ -145,24 +145,28 @@ jobs:
             bun install --ignore-scripts >/dev/null
             key=$(bun run --silent --cwd packages/librdkafka native:key)
             echo "$key" > /out/key
-            if curl -fsI "https://github.com/useautumn/autumn/releases/download/librdkafka-addon-$key/$key.node" >/dev/null; then
-              echo "addon $key already published"
-              exit 0
-            fi
-            LIBRDKAFKA_CACHE_DIR=/out bun run --cwd packages/librdkafka build
+            LIBRDKAFKA_CACHE_DIR=/out bun run --cwd packages/librdkafka build | tee /out/build.log
+            if grep -q "native addon downloaded" /out/build.log; then rm -f "/out/$key.node"; fi
           '
           key=$(cat "$RUNNER_TEMP/addon/key")
           echo "key=$key" >> "$GITHUB_OUTPUT"
           if [ -f "$RUNNER_TEMP/addon/$key.node" ]; then echo "built=true" >> "$GITHUB_OUTPUT"; fi
           echo "addon build key: $key" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish it as a release asset
+      - name: Set up ORAS
+        if: steps.build.outputs.built == 'true'
+        uses: oras-project/setup-oras@v1
+
+      - name: Push it to GHCR
         if: steps.build.outputs.built == 'true'
         shell: bash
+        env:
+          KEY: ${{ steps.build.outputs.key }}
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}/addon
         run: |
-          key=${{ steps.build.outputs.key }}
-          gh release create "librdkafka-addon-$key" "$RUNNER_TEMP/addon/$key.node" \
-            --repo "$GITHUB_REPOSITORY" --target "${{ github.event.pull_request.head.sha || github.sha }}" --prerelease \
-            --title "librdkafka addon $key" \
-            --notes "Prebuilt @confluentinc/kafka-javascript addon for Linux glibc x64 (built on Debian bookworm, build key $key)." \
-            || gh release view "librdkafka-addon-$key" --repo "$GITHUB_REPOSITORY" >/dev/null
+          echo "$GH_TOKEN" | oras login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          oras push "ghcr.io/useautumn/librdkafka-addon:$KEY" \
+            --artifact-type application/vnd.autumn.librdkafka-addon \
+            --annotation "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            "$KEY.node:application/octet-stream"
