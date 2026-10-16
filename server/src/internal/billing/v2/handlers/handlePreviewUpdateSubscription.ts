@@ -82,6 +82,9 @@ export const handlePreviewUpdateSubscription = createRoute({
 			billingPlan,
 			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
+		// Rules don't decide collection-method switches, so their preview carries no verdict.
+		if (isSwitch) return c.json(previewResponse, 200);
+
 		const permissionFields = await billingPreviewPermissionFields({
 			ctx,
 			billingContext,

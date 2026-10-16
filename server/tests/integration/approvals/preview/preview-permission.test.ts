@@ -271,3 +271,49 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("preview permission 6: a collection-method switch preview carries no permission, since rules don't decide switches")}`,
+	async () => {
+		const customerId = "approvals-preview-permission-switch";
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, members } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+				s.member({ role: "owner" }),
+				s.member({ role: "sales" }),
+			],
+			actions: [s.attach({ productId: pro.id })],
+		});
+		const [owner, sales] = members;
+		const { client, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: sales,
+			rules: [
+				rules.rule({
+					name: "Card updates only",
+					subjects: [{ type: "user", user_id: sales.userId }],
+					actions: ["billing.update_subscription"],
+					when: { invoice_mode: { enabled: false } },
+				}),
+			],
+		});
+
+		try {
+			const preview = await client.billing.previewUpdate({
+				customer_id: customerId,
+				plan_id: pro.id,
+				invoice_mode: { enabled: true },
+			});
+			expect(preview.permission).toBeUndefined();
+		} finally {
+			await cleanup();
+		}
+	},
+);
