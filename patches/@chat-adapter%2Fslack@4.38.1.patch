@@ -19,8 +19,24 @@ index 770dc6f3db52e2297da0c71ed44a18502508acc1..2fb8e7bb8f8a237878960849145473b9
    const rows = [
      element.headers.map((header) => rawText(header, state.convertEmoji)),
      ...element.rows.map(
+diff --git a/dist/chunk-PZZPYSMI.js b/dist/chunk-PZZPYSMI.js
+index 5fa6fbc5ce0a4686b20ab02e034c9c879b61283e..c6c25c3860870effa29a6e4563bdc021bb958350 100644
+--- a/dist/chunk-PZZPYSMI.js
++++ b/dist/chunk-PZZPYSMI.js
+@@ -64,7 +64,10 @@ function slackMrkdwnToMarkdown(mrkdwn) {
+     /<(?!https?:\/\/)([^<>|]+)\|(https?:\/\/[^|<>]+)>/g,
+     "<$2|$1>"
+   );
+-  markdown = markdown.replace(/<(https?:\/\/[^|<>]+)\|([^<>]+)>/g, "[$2]($1)");
++  markdown = markdown.replace(
++    /<(https?:\/\/[^|<>]+)\|([^<>]+)>/g,
++    (_, url, label) => label === url || label === url.replace(/^https?:\/\//, "") ? `[${label}](${url})` : `[${label}](${url}) (${url})`
++  );
+   markdown = markdown.replace(/<(https?:\/\/[^<>]+)>/g, "$1");
+   markdown = markdown.replace(/(?<![_*\\])\*([^*\n]+)\*(?![_*])/g, "**$1**");
+   markdown = markdown.replace(/(?<!~)~([^~\n]+)~(?!~)/g, "~~$1~~");
 diff --git a/dist/index.js b/dist/index.js
-index b41717425871152307a87326b7d2f8178b7484cb..5bd19bbbf02aec8987874054f6b103f47a3d7108 100644
+index 25d6a9ba983acc30c5743a08c25e67c4417fc71a..6166c0708103a14c446d086c6bec563ee8941180 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -332,12 +332,11 @@ var DATA_TABLE_MIN_PAGE_SIZE = 1;
