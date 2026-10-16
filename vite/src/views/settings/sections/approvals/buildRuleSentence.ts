@@ -147,7 +147,9 @@ const matcherConditions = ({
 		? Object.entries(matcher)
 		: [["$eq", matcher]];
 	const conditions = entries.map(([operator, operand]) => {
-		const values = [operand].flat().map((value) => format({ value, ctx }));
+		const values = [operand]
+			.flat()
+			.map((value) => (value === null ? null : format({ value, ctx })));
 		if (values.includes(null)) return CUSTOM;
 		return {
 			field: label,
