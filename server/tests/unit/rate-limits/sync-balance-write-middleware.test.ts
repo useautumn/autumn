@@ -38,17 +38,20 @@ const { rateLimitMiddleware } = await import(
 const request = async ({
 	path,
 	body,
+	apiVersion = ApiVersion.V2_5,
 }: {
 	path: string;
 	body: Record<string, unknown>;
+	apiVersion?: ApiVersion;
 }) => {
 	const app = new Hono<HonoEnv>();
 	app.use("*", async (c, next) => {
 		c.set("ctx", {
 			env: "live",
 			org: { id: "org_123", slug: "test-org" },
-			customerId: "cus_123",
-			apiVersion: new ApiVersionClass(ApiVersion.V2_5),
+			// baseMiddleware resolves the customer from the body's customer_id.
+			customerId: body.customer_id,
+			apiVersion: new ApiVersionClass(apiVersion),
 			requestBody: body,
 			features: [],
 			logger: { error: () => undefined },
@@ -92,6 +95,40 @@ describe("synchronous balance write limiters", () => {
 			RateLimitType.SyncBalanceWriteOrg,
 			RateLimitType.SyncBalanceWrite,
 		]);
+	});
+
+	test("a finalize with customer_id runs SyncBalanceWriteOrg then SyncBalanceWrite", async () => {
+		const response = await request({
+			path: "/v1/balances.finalize",
+			apiVersion: ApiVersion.V2_6,
+			body: { customer_id: "cus_123", lock_id: "lock_1", action: "confirm" },
+		});
+
+		expect(response.status).toBe(200);
+		expect(limiterCalls).toEqual([
+			RateLimitType.SyncBalanceWriteOrg,
+			RateLimitType.SyncBalanceWrite,
+		]);
+	});
+
+	test("a finalize without customer_id runs only SyncBalanceWriteOrg", async () => {
+		const response = await request({
+			path: "/v1/balances.finalize",
+			body: { lock_id: "lock_1", action: "confirm" },
+		});
+
+		expect(response.status).toBe(200);
+		expect(limiterCalls).toEqual([RateLimitType.SyncBalanceWriteOrg]);
+	});
+
+	test("a queued track still runs TrackOrg then Track", async () => {
+		const response = await request({
+			path: "/v1/balances.track",
+			body: { customer_id: "cus_123", feature_id: "messages", async: true },
+		});
+
+		expect(response.status).toBe(200);
+		expect(limiterCalls).toEqual([RateLimitType.TrackOrg, RateLimitType.Track]);
 	});
 });
 

@@ -70,8 +70,8 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			c as Context,
 			getRateLimitKey({ c, rateLimitType: orgLimit.type }),
 		);
-		const skipPrimaryLimiter =
-			rateLimitType === RateLimitType.EntitiesList && !ctx.customerId;
+		// Without a customer the per-customer key is one org-wide `:undefined` bucket, so only the org cap applies.
+		const skipPrimaryLimiter = !ctx.customerId;
 
 		let innerResponse: Response | undefined;
 		const aggregateResponse = await orgLimit.limiter(

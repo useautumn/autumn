@@ -131,12 +131,21 @@ describe("synchronous balance write limits", () => {
 		expect(getRouteGroup({ async: true })).toBe(RateLimitType.Track);
 	});
 
-	test("balance updates, finalize and usage never use SyncBalanceWrite", () => {
-		for (const spec of [
-			"POST /v1/balances.update",
-			"POST /v1/balances.finalize",
-			"POST /v1/usage",
-		]) {
+	test("finalize uses SyncBalanceWrite on every version, with or without customer_id", () => {
+		for (const apiVersion of [ApiVersion.V2_6, ...ALL_VERSIONS]) {
+			for (const body of [
+				{ lock_id: "lock_1", action: "confirm", customer_id: "cus_123" },
+				{ lock_id: "lock_1", action: "release" },
+			]) {
+				expect(
+					typeFor({ spec: "POST /v1/balances.finalize", apiVersion, body }),
+				).toBe(RateLimitType.SyncBalanceWrite);
+			}
+		}
+	});
+
+	test("balance updates and usage never use SyncBalanceWrite", () => {
+		for (const spec of ["POST /v1/balances.update", "POST /v1/usage"]) {
 			expect(
 				typeFor({ spec, apiVersion: ApiVersion.V2_4, body: { async: false } }),
 			).toBe(RateLimitType.Track);
