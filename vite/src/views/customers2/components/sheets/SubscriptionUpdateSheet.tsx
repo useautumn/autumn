@@ -4,11 +4,15 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus, LONG_LIVED_CHECKOUT_PATH } from "@autumn/shared";
+import { CusProductStatus, cp, LONG_LIVED_CHECKOUT_PATH } from "@autumn/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
+import {
+	WarningBanner,
+	type WarningBannerLine,
+} from "@/components/forms/shared/WarningBanner";
 import {
 	EditPlanSection,
 	UpdateSubscriptionAdvancedSection,
@@ -86,6 +90,7 @@ function EditContent() {
 		handlePlanEditorCancel,
 		formValues,
 	} = useUpdateSubscriptionFormContext();
+	const { customer } = useCusQuery();
 
 	const { customerProduct } = formContext;
 	const isPendingPlan = customerProduct.status === CusProductStatus.Pending;
@@ -94,6 +99,47 @@ function EditContent() {
 		customerProductId: customerProduct.id,
 		enabled: isPendingPlan,
 	});
+
+	const stripeSubscriptionId = customerProduct.subscription_ids?.[0];
+	const replacedPlan =
+		isPendingPlan && stripeSubscriptionId
+			? customer?.customer_products.find(
+					(live: FullCusProduct) =>
+						cp(live)
+							.hasActiveStatus()
+							.hasProductId({ productId: customerProduct.product.id })
+							.onEntity({
+								internalEntityId:
+									customerProduct.internal_entity_id ?? undefined,
+							})
+							.onStripeSubscription({ stripeSubscriptionId }).valid,
+				)
+			: undefined;
+
+	const warningLines: WarningBannerLine[] = [];
+	if (replacedPlan) {
+		warningLines.push({
+			key: "replaces-plan",
+			severity: "warning",
+			content: `This pending plan will replace the existing ${replacedPlan.product.name} plan.`,
+		});
+	}
+	if (isPendingPlan && hasChanges && !hasNoBillingChanges) {
+		warningLines.push(
+			pendingPaymentLink?.longLived
+				? {
+						key: "payment-link",
+						severity: "info",
+						content: "Reuses the existing checkout link.",
+					}
+				: {
+						key: "payment-link",
+						severity: "warning",
+						content:
+							"Updating creates a new payment link. The existing one will stop working.",
+					},
+		);
+	}
 
 	return (
 		<LayoutGroup>
@@ -138,20 +184,7 @@ function EditContent() {
 					</div>
 				</div>
 
-				{isPendingPlan && hasChanges && !hasNoBillingChanges && (
-					<div className="px-4 pt-4">
-						{pendingPaymentLink?.longLived ? (
-							<InfoBox variant="note" classNames={{ infoBox: "w-full" }}>
-								Reuses the existing checkout link.
-							</InfoBox>
-						) : (
-							<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-								Updating creates a new payment link. The existing one will stop
-								working.
-							</InfoBox>
-						)}
-					</div>
-				)}
+				<WarningBanner lines={warningLines} />
 
 				<EditPlanSection />
 				<UpdateSubscriptionAdvancedSection />

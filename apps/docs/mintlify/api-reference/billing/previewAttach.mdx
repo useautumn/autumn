@@ -192,7 +192,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               </Expandable>
             </DynamicParamField>
 
-            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+              How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+            </DynamicParamField>
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
               Billing interval. For consumable features, should match reset.interval.
@@ -266,8 +268,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicParamField body="feature_override" type="object">
           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
           <Expandable title="properties">
-            <DynamicParamField body="credit_schema" type="object | object[]">
-              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+            <DynamicParamField body="credit_schema" type="object | object | object[]">
+              For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
               <Expandable title="properties">
                 <DynamicParamField body="metered_feature_id" type="string">
                   ID of the metered feature that draws from this credit system.
@@ -341,6 +343,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="credit_cost" type="number">
                   Credits consumed per billing-unit group.
+                </DynamicParamField>
+
+                <DynamicParamField body="excluded" type="true">
+                  Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                 </DynamicParamField>
 
               </Expandable>
@@ -474,7 +480,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               </Expandable>
             </DynamicParamField>
 
-            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+            <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+              How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+            </DynamicParamField>
 
             <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
               Billing interval. For consumable features, should match reset.interval.
@@ -548,8 +556,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         <DynamicParamField body="feature_override" type="object">
           Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
           <Expandable title="properties">
-            <DynamicParamField body="credit_schema" type="object | object[]">
-              For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+            <DynamicParamField body="credit_schema" type="object | object | object[]">
+              For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
               <Expandable title="properties">
                 <DynamicParamField body="metered_feature_id" type="string">
                   ID of the metered feature that draws from this credit system.
@@ -623,6 +631,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicParamField body="credit_cost" type="number">
                   Credits consumed per billing-unit group.
+                </DynamicParamField>
+
+                <DynamicParamField body="excluded" type="true">
+                  Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                 </DynamicParamField>
 
               </Expandable>
@@ -1014,7 +1026,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       </Expandable>
                     </DynamicParamField>
 
-                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'">
+                      How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                    </DynamicParamField>
 
                     <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
                       Billing interval. For consumable features, should match reset.interval.
@@ -1088,8 +1102,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                 <DynamicParamField body="feature_override" type="object">
                   Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                   <Expandable title="properties">
-                    <DynamicParamField body="credit_schema" type="object | object[]">
-                      For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                    <DynamicParamField body="credit_schema" type="object | object | object[]">
+                      For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                       <Expandable title="properties">
                         <DynamicParamField body="metered_feature_id" type="string">
                           ID of the metered feature that draws from this credit system.
@@ -1163,6 +1177,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                         <DynamicParamField body="credit_cost" type="number">
                           Credits consumed per billing-unit group.
+                        </DynamicParamField>
+
+                        <DynamicParamField body="excluded" type="true">
+                          Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                         </DynamicParamField>
 
                       </Expandable>
@@ -1260,7 +1278,11 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="finalize" type="boolean">
-      If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+      Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.
+    </DynamicParamField>
+
+    <DynamicParamField body="issue_method" type="'draft' | 'finalize' | 'send'">
+      How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
     </DynamicParamField>
 
     <DynamicParamField body="invoice_template_id" type="string">
@@ -1279,7 +1301,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none' | 'bill_difference'">
-  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+  How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
 </DynamicParamField>
 
 <DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'">
@@ -1345,6 +1367,105 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
     <DynamicParamField body="description" type="string" required>
       Description for the line item.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="remove_lines" type="object[]">
+  Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+  <Expandable title="properties">
+    <DynamicParamField body="plan_id" type="string" required>
+      The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request.
+    </DynamicParamField>
+
+    <DynamicParamField body="entity_id" type="string | null">
+      The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+    </DynamicParamField>
+
+    <DynamicParamField body="direction" type="'charge' | 'refund'">
+      Only remove charges or only remove refunds (credits). Omit to remove both.
+    </DynamicParamField>
+
+    <DynamicParamField body="price" type="true">
+      Remove the base price line. Pass true, or an object to narrow by interval.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_quantities" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required>
+          The feature whose line to remove.
+        </DynamicParamField>
+
+        <DynamicParamField body="billing_behavior" type="'prepaid' | 'usage_based'" required>
+          Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+        </DynamicParamField>
+
+        <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+          Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+        </DynamicParamField>
+
+        <DynamicParamField body="interval_count" type="integer">
+          Only match the price billed every this many intervals.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="license_quantities" type="object[]">
+      <Expandable title="properties">
+        <DynamicParamField body="license_plan_id" type="string" required>
+          The license plan linked to the parent plan.
+        </DynamicParamField>
+
+        <DynamicParamField body="price" type="true">
+          Remove the base price line. Pass true, or an object to narrow by interval.
+        </DynamicParamField>
+
+        <DynamicParamField body="feature_quantities" type="object[]">
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature whose line to remove.
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_behavior" type="'prepaid' | 'usage_based'" required>
+              Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="integer">
+              Only match the price billed every this many intervals.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="add_lines" type="object[]">
+  Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
+  <Expandable title="properties">
+    <DynamicParamField body="amount" type="number" required>
+      Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+    </DynamicParamField>
+
+    <DynamicParamField body="description" type="string" required>
+      Description for the line item.
+    </DynamicParamField>
+
+    <DynamicParamField body="period_start" type="integer">
+      Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+    </DynamicParamField>
+
+    <DynamicParamField body="period_end" type="integer">
+      End of the period this charge covers, in milliseconds. Given together with period_start.
     </DynamicParamField>
 
   </Expandable>
@@ -1942,7 +2063,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicResponseField>
 
-                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                </DynamicResponseField>
 
                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                   Billing interval for this price. For consumable features, should match reset.interval.
@@ -2031,8 +2154,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicResponseField name="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicResponseField name="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -2106,6 +2229,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicResponseField>
 
                   </Expandable>
@@ -2567,7 +2694,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           </Expandable>
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                          How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                        </DynamicResponseField>
 
                         <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                           Billing interval. For consumable features, should match reset.interval.
@@ -2641,8 +2770,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
-                        <DynamicResponseField name="credit_schema" type="object | object[]">
-                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                        <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                           <Expandable title="properties">
                             <DynamicResponseField name="metered_feature_id" type="string">
                               ID of the metered feature that draws from this credit system.
@@ -2716,6 +2845,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="excluded" type="true">
+                              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                             </DynamicResponseField>
 
                           </Expandable>
@@ -3106,7 +3239,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                   </Expandable>
                                 </DynamicResponseField>
 
-                                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                                </DynamicResponseField>
 
                                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                                   Billing interval. For consumable features, should match reset.interval.
@@ -3180,8 +3315,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
-                                <DynamicResponseField name="credit_schema" type="object | object[]">
-                                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                                   <Expandable title="properties">
                                     <DynamicResponseField name="metered_feature_id" type="string">
                                       ID of the metered feature that draws from this credit system.
@@ -3255,6 +3390,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                     <DynamicResponseField name="credit_cost" type="number">
                                       Credits consumed per billing-unit group.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="excluded" type="true">
+                                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                                     </DynamicResponseField>
 
                                   </Expandable>
@@ -3623,7 +3762,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   </Expandable>
                 </DynamicResponseField>
 
-                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                </DynamicResponseField>
 
                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                   Billing interval for this price. For consumable features, should match reset.interval.
@@ -3712,8 +3853,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
             <DynamicResponseField name="feature_override" type="object">
               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
               <Expandable title="properties">
-                <DynamicResponseField name="credit_schema" type="object | object[]">
-                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                   <Expandable title="properties">
                     <DynamicResponseField name="metered_feature_id" type="string">
                       ID of the metered feature that draws from this credit system.
@@ -3787,6 +3928,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                     <DynamicResponseField name="credit_cost" type="number">
                       Credits consumed per billing-unit group.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="excluded" type="true">
+                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                     </DynamicResponseField>
 
                   </Expandable>
@@ -4248,7 +4393,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           </Expandable>
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                        <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                          How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                        </DynamicResponseField>
 
                         <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                           Billing interval. For consumable features, should match reset.interval.
@@ -4322,8 +4469,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicResponseField name="feature_override" type="object">
                       Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                       <Expandable title="properties">
-                        <DynamicResponseField name="credit_schema" type="object | object[]">
-                          For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                        <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                          For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                           <Expandable title="properties">
                             <DynamicResponseField name="metered_feature_id" type="string">
                               ID of the metered feature that draws from this credit system.
@@ -4397,6 +4544,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                             <DynamicResponseField name="credit_cost" type="number">
                               Credits consumed per billing-unit group.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="excluded" type="true">
+                              Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                             </DynamicResponseField>
 
                           </Expandable>
@@ -4787,7 +4938,9 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                   </Expandable>
                                 </DynamicResponseField>
 
-                                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />
+                                <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
+                                  How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+                                </DynamicResponseField>
 
                                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                                   Billing interval. For consumable features, should match reset.interval.
@@ -4861,8 +5014,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="feature_override" type="object">
                               Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema).
                               <Expandable title="properties">
-                                <DynamicResponseField name="credit_schema" type="object | object[]">
-                                  For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+                                <DynamicResponseField name="credit_schema" type="object | object | object[]">
+                                  For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
                                   <Expandable title="properties">
                                     <DynamicResponseField name="metered_feature_id" type="string">
                                       ID of the metered feature that draws from this credit system.
@@ -4936,6 +5089,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                     <DynamicResponseField name="credit_cost" type="number">
                                       Credits consumed per billing-unit group.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="excluded" type="true">
+                                      Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
                                     </DynamicResponseField>
 
                                   </Expandable>

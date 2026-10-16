@@ -166,6 +166,18 @@ test("a producer the coordinator could not yet initialise restarts the partition
 	}
 });
 
+test("a producer the broker's policy refused to initialise restarts the partition alone: it wrote nothing", () => {
+	const cause = new OwnedPartitionRecoveryRequiredError({
+		topic,
+		partition,
+		cause: Object.assign(new Error("Broker: Policy violation"), {
+			code: 44,
+			isRetriable: false,
+		}),
+	});
+	expect(isPartitionRestartableCause({ cause })).toBe(true);
+});
+
 test("any other refusal the broker gave up retrying still stops the service", () => {
 	for (const refusal of [
 		{ type: "UNKNOWN_SERVER_ERROR", code: -1 },

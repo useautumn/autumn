@@ -1,5 +1,4 @@
 import { Scopes } from "@autumn/shared";
-import { getSvixDashboardUrl } from "../../../external/svix/svixHelpers";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { apiKeyRepo } from "../repos/index.js";
 
@@ -14,15 +13,9 @@ export const handleGetDevData = createRoute({
 			env,
 		});
 
-		const dashboardUrl = await getSvixDashboardUrl({
-			env,
-			org,
-		});
-
 		return c.json({
 			api_keys: apiKeys,
 			org,
-			svix_dashboard_url: dashboardUrl || null,
 		});
 	},
 });

@@ -7,9 +7,6 @@ import {
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
 
-/** Editor label for a paid plan with no base price. */
-export const PRICE_VARIES_LABEL = "Price varies";
-
 export type BasePriceDisplayType =
 	| "free"
 	| "price"

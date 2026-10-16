@@ -1,4 +1,4 @@
-import type { FinalizeLockParamsV0 } from "@autumn/shared";
+import type { FinalizeLockParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -11,7 +11,7 @@ export const queueFinalizeLock = async ({
 	params,
 }: {
 	ctx: AutumnContext;
-	params: FinalizeLockParamsV0;
+	params: FinalizeLockParamsV1;
 }) => {
 	try {
 		const queueUrl = process.env.TRACK_SQS_QUEUE_URL;

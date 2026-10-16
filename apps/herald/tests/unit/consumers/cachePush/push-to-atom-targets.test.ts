@@ -79,14 +79,18 @@ const createPushContext = ({
 	atomStatus,
 	shadowAtom,
 	failing = [],
+	state = { customer: {} },
 }: {
 	atomStatus: ByocCacheStatus | null;
 	shadowAtom: ShadowAtomConfig;
 	failing?: string[];
+	/** The subject as its worker holds it. */
+	state?: object;
 }) => {
 	const atomDeployments = atomDeploymentsIn({ status: atomStatus });
 	const reached: string[] = [];
 	const bodies: unknown[] = [];
+	const bodiesTo: Record<string, unknown> = {};
 	const tokens: Record<string, string> = {};
 	const queues: Record<string, AtomConnection["queue"]> = {};
 	const logged: { level: "warn" | "error"; target: unknown }[] = [];
@@ -102,7 +106,9 @@ const createPushContext = ({
 		(endpointUrl: string) => async (params?: { body?: unknown }) => {
 			if (failing.includes(endpointUrl)) throw new Error("Atom down");
 			reached.push(endpointUrl);
-			if (params?.body) bodies.push(params.body);
+			if (!params?.body) return;
+			bodies.push(params.body);
+			bodiesTo[endpointUrl] = params.body;
 		};
 	const ctx = {
 		miscCache: { resolve: () => redis, forEachTarget: async () => [] },
@@ -139,7 +145,7 @@ const createPushContext = ({
 			}),
 		},
 		balanceWorkerClient: {
-			readSubjectState: async () => ({ state: {}, catalog: {} }),
+			readSubjectState: async () => ({ state, catalog: {} }),
 		},
 		shadowAtomConfig: { get: () => shadowAtom },
 		atomPushQueueOnly: false,
@@ -152,7 +158,7 @@ const createPushContext = ({
 			};
 		},
 	} as unknown as CachePushContext;
-	return { ctx, reached, bodies, logged, tokens, queues };
+	return { ctx, reached, bodies, bodiesTo, logged, tokens, queues };
 };
 
 const pushSubject = ({
@@ -327,4 +333,23 @@ test("a customer push after an evict carries its version to every Atom; one with
 	for (const body of evicted.bodies)
 		expect(body).toMatchObject({ customer_version: "140" });
 	expect(tracked.bodies[0]).not.toHaveProperty("customer_version");
+});
+
+test("each Atom's subject carries its own journals' seqs: the org's Atom the ones the customer holds for it, the shadow Atom none", async () => {
+	const { ctx, bodiesTo } = createPushContext({
+		atomStatus: ByocCacheStatus.Ready,
+		shadowAtom: shadowWith({ endpointUrl: SHADOW_ATOM }),
+		state: {
+			customer: {
+				atom_seqs: { atom_1: { w_old: 40, w_new: 7 }, atom_other: { w_x: 3 } },
+			},
+		},
+	});
+
+	await pushSubject({ ctx });
+
+	expect(bodiesTo[ORG_ATOM]).toMatchObject({
+		atom_seqs: { w_old: 40, w_new: 7 },
+	});
+	expect(bodiesTo[SHADOW_ATOM]).toMatchObject({ atom_seqs: null });
 });

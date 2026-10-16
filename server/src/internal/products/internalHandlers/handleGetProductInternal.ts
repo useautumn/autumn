@@ -7,8 +7,8 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { buildPlanLicenseChanges } from "@/internal/catalogV2/actions/buildPlanChange/buildPlanLicenseChanges/buildPlanLicenseChanges.js";
+import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { buildCorePlanUpdatePreview } from "@/internal/product/actions/previewUpdatePlan/buildCorePlanUpdatePreview.js";
 import { ProductService } from "../ProductService.js";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse.js";
@@ -26,20 +26,18 @@ export const handleGetProductInternal = createRoute({
 		const { version } = c.req.valid("query");
 		const { db, org, env, features } = c.get("ctx");
 
+		const getProduct = (atVersion?: number) =>
+			ProductService.getFull({
+				db,
+				idOrInternalId: productId,
+				orgId: org.id,
+				env,
+				version: atVersion,
+			});
 		const [product, latestProduct, versionCounts] = await Promise.all([
-			ProductService.getFull({
-				db,
-				idOrInternalId: productId,
-				orgId: org.id,
-				env,
-				version: version,
-			}),
-			ProductService.getFull({
-				db,
-				idOrInternalId: productId,
-				orgId: org.id,
-				env,
-			}),
+			getProduct(version),
+			// Without a version the requested product is the latest one, so it isn't fetched twice.
+			version === undefined ? undefined : getProduct(),
 			CusProdReadService.getCountsPerVersion({
 				db,
 				productId,
@@ -120,7 +118,7 @@ export const handleGetProductInternal = createRoute({
 				features,
 			}),
 			variants,
-			numVersions: latestProduct.version,
+			numVersions: (latestProduct ?? product).version,
 			versionCounts,
 		});
 	},

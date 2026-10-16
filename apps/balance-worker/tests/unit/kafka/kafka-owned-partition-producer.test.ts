@@ -639,6 +639,44 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			});
 			expect(await claim).toEqual({ routeEpoch: "8" });
 		});
+		test("a claim from before this worker's ready is not taken as the answer to it", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const claim = f.publication.awaitClaim({
+				signal: controller.signal,
+				afterReadyAt: 42,
+			});
+			// An earlier allocation's own claim, still arriving on the tail after the new one listens.
+			f.deliver({
+				partition: 2,
+				offset: 27n,
+				record: record({ type: "claimed", endpoint: "http://worker.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 30n,
+				record: {
+					...record({ type: "ready", endpoint: "http://worker.test" }),
+				},
+			});
+			f.deliver({
+				partition: 2,
+				offset: 33n,
+				record: {
+					schemaVersion: 1,
+					type: "ready",
+					partition: 2,
+					endpoint: "http://worker.test",
+					readyAt: 42,
+				},
+			});
+			f.deliver({
+				partition: 2,
+				offset: 34n,
+				record: record({ type: "claimed", endpoint: "http://worker.test" }),
+			});
+			expect(await claim).toEqual({ routeEpoch: "34" });
+		});
 		test("an aborted wait rejects with the reason and stops listening", async () => {
 			const f = fixture({ withHandoff: true });
 			const controller = new AbortController();

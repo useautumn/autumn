@@ -1,0 +1,86 @@
+DESCRIPTION >
+    Row-count estimates for planning events_history_export chunks, read from the customer rollups
+    (level org_env | customer | day | hour) or the events partition counts (level months).
+    level=hour sums events_customer_hourly_mv over org/env ranges, for time-window chunks.
+    level=customer returns contiguous customer_id ranges keyed by their first customer_id, each at
+    most ~2 x bucket_rows; a customer above bucket_rows is always its own row.
+
+TOKEN events_history_export_runner READ
+
+NODE endpoint
+SQL >
+    %
+    {% set use_monthly = defined(full_month) and Int8(full_month, 0) == 1 %}
+    {% if String(level, 'months') == 'months' %}
+    SELECT toString(toYYYYMM(timestamp)) AS k, '' AS k2, count() AS c
+    FROM events
+    GROUP BY k
+    ORDER BY k
+    {% elif String(level) == 'day' %}
+    SELECT toString(toDate(day)) AS k, '' AS k2, toUInt64(sumMerge(event_count)) AS c
+    FROM events_customer_daily_mv
+    WHERE day >= toStartOfDay(toDateTime({{ String(start_ts) }}))
+      AND day < toDateTime({{ String(end_ts) }})
+      AND org_id = {{ String(org_id) }}
+      AND env = {{ String(env) }}
+      AND customer_id = {{ String(customer_id) }}
+    GROUP BY k
+    ORDER BY k
+    {% elif String(level) == 'hour' %}
+    SELECT toString(hour) AS k, '' AS k2, toUInt64(sum(event_count)) AS c
+    FROM events_customer_hourly_mv
+    WHERE hour >= toDateTime({{ String(start_ts) }})
+      AND hour < toDateTime({{ String(end_ts) }})
+      {% if defined(org_from) and String(org_from, '') != '' %} AND org_id >= {{ String(org_from) }} {% end %}
+      {% if defined(org_to) and String(org_to, '') != '' %} AND org_id < {{ String(org_to) }} {% end %}
+      {% if defined(env_from) and String(env_from, '') != '' %} AND env >= {{ String(env_from) }} {% end %}
+      {% if defined(env_to) and String(env_to, '') != '' %} AND env < {{ String(env_to) }} {% end %}
+    GROUP BY k
+    ORDER BY k
+    {% elif String(level) == 'customer' %}
+    SELECT min(customer_id) AS k, '' AS k2, toUInt64(sum(c)) AS c
+    FROM (
+        SELECT
+            customer_id,
+            c,
+            is_big,
+            sum(is_big) OVER w AS big_seen,
+            intDiv(sum(c) OVER w - c, {{ UInt64(bucket_rows, 1000000) }}) AS bucket
+        FROM (
+            SELECT
+                customer_id,
+                toUInt64(sumMerge(event_count)) AS c,
+                toUInt64(c > {{ UInt64(bucket_rows, 1000000) }}) AS is_big
+            FROM
+                {% if use_monthly %} events_customer_monthly_mv {% else %} events_customer_daily_mv {% end %}
+            WHERE
+                {% if use_monthly %}
+                month = toDateTime({{ String(start_ts) }})
+                {% else %}
+                day >= toStartOfDay(toDateTime({{ String(start_ts) }}))
+                AND day < toDateTime({{ String(end_ts) }})
+                {% end %}
+                AND org_id = {{ String(org_id) }}
+                AND env = {{ String(env) }}
+            GROUP BY customer_id
+        )
+        WINDOW w AS (ORDER BY customer_id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+    )
+    GROUP BY big_seen, is_big, if(is_big = 1, 0, bucket)
+    ORDER BY k
+    {% else %}
+    SELECT org_id AS k, env AS k2, toUInt64(sumMerge(event_count)) AS c
+    FROM
+        {% if use_monthly %} events_customer_monthly_mv {% else %} events_customer_daily_mv {% end %}
+    WHERE
+        {% if use_monthly %}
+        month = toDateTime({{ String(start_ts) }})
+        {% else %}
+        day >= toStartOfDay(toDateTime({{ String(start_ts) }}))
+        AND day < toDateTime({{ String(end_ts) }})
+        {% end %}
+    GROUP BY k, k2
+    ORDER BY k, k2
+    {% end %}
+
+TYPE endpoint

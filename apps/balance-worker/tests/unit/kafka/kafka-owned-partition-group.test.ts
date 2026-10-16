@@ -791,6 +791,74 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
+	test("a consumer that lost its group generation is rejoined with backoff, not exited: a broker roll does not take workers down", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const warnings: string[] = [];
+			// librdkafka's answer to a commit from a member epoch the group already moved past.
+			const staleEpoch = Object.assign(
+				new Error("Broker: The member epoch is stale"),
+				{ code: 113, isRetriable: false },
+			);
+			const crash = new Error("Kafka consumer crashed", { cause: staleEpoch });
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				consumerRejoin: { initialBackoffMs: 1, maxBackoffMs: 4 },
+				logger: {
+					info: (...args: unknown[]) => warnings.push(`info:${args[1]}`),
+					warn: (...args: unknown[]) => warnings.push(`warn:${args[1]}`),
+				} as never,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: () => {
+					events.push("service-stopped");
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			consumer.emitCrash(crash, { restart: false });
+			await waitFor(
+				() =>
+					consumer.lifecycle.filter((step) => step === "consumer-run")
+						.length === 2,
+			);
+			expect(stopped).toEqual([0]);
+			expect(events).toEqual([]);
+			expect(group.consumer()).toEqual({
+				status: "rejoining",
+				rejoinAttempts: 1,
+			});
+			expect(warnings[0]).toMatch(
+				/^warn:Balance worker consumer lost its group generation; rejoining in 1ms \(attempt 1\)/,
+			);
+
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 2);
+			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
+			expect(events).toEqual([]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("a rejoin that fails for any reason but the broker's refusal ends the worker: nothing else clears on its own", async () => {
 		const fixture = createStoreFixture();
 		try {
@@ -1024,6 +1092,85 @@ describe("Kafka owned partition group", () => {
 			await group.stop();
 		} finally {
 			closeStoreFixture(fixture);
+		}
+	});
+
+	test("parks and retries a producer the broker refused to initialise, keeping the task and the other partitions up", async () => {
+		const policyRefusal = Object.assign(new Error("Broker: Policy violation"), {
+			code: 44,
+			isRetriable: false,
+		});
+		const coordinatorLoading = Object.assign(
+			new Error("Broker: Coordinator load in progress"),
+			{ code: 14, isRetriable: true },
+		);
+		for (const refusal of [policyRefusal, coordinatorLoading]) {
+			const fixture = createStoreFixture();
+			try {
+				const consumer = createFakeGroupConsumer();
+				const startupFailure = new OwnedPartitionRecoveryRequiredError({
+					topic,
+					partition: 1,
+					cause: refusal,
+				});
+				const startAttempts = new Map<number, number>();
+				const events: string[] = [];
+				const group = createKafkaOwnedPartitionGroup({
+					consumer,
+					partitionOffsets: createPartitionOffsets(),
+					topic,
+					stateStore: fixture.store,
+					idempotencyKeys: createFakeIdempotencyKeys().keys,
+					partitionsConsumedConcurrently: 2,
+					healthRefreshIntervalMs: 5,
+					partitionBootstrapRetryIntervalMs: 5,
+					createRuntime: ({ partition }) => ({
+						start: async () => {
+							const attempt = (startAttempts.get(partition) ?? 0) + 1;
+							startAttempts.set(partition, attempt);
+							if (partition === 1 && attempt <= 2) throw startupFailure;
+						},
+						stop: async () => {},
+						getHealth: () =>
+							partition === 1 && (startAttempts.get(partition) ?? 0) <= 2
+								? terminalHealth({ partition, reason: "commit_unknown" })
+								: ownedPartitionHealthOf({
+										topic,
+										partition,
+										status: "ready",
+										localNextOffset: 0n,
+										consumedNextOffset: 0n,
+										highWatermark: 0n,
+										failureReason: null,
+									}),
+					}),
+					onError: () => undefined,
+					onUnhealthyPartition: () => undefined,
+					onServiceStopped: () => {
+						events.push("service-stopped");
+					},
+				});
+
+				await group.start();
+				consumer.emitGroupJoin([0, 1]);
+				await waitFor(() => startAttempts.get(1) === 3);
+				await waitFor(
+					() =>
+						group.partitions().find(({ partition }) => partition === 1)
+							?.status === "ready",
+				);
+
+				expect(events).toEqual([]);
+				expect(consumer.lifecycle).not.toContain("consumer-stop");
+				expect(startAttempts.get(0)).toBe(1);
+				expect(group.partitions()).toEqual([
+					expect.objectContaining({ partition: 0, status: "ready" }),
+					expect.objectContaining({ partition: 1, status: "ready" }),
+				]);
+				await group.stop();
+			} finally {
+				closeStoreFixture(fixture);
+			}
 		}
 	});
 

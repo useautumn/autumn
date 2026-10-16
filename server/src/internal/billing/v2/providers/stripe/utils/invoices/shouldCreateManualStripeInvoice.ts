@@ -21,6 +21,23 @@ const lineItemsCharge = ({
 		),
 	) !== 0;
 
+const editedInvoiceIsEmpty = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}) => {
+	const lineItems = autumnBillingPlan.lineItems ?? [];
+	const immediateTotal = sumValues(
+		lineItems
+			.filter((lineItem) => lineItem.chargeImmediately)
+			.map((lineItem) => lineItem.amountAfterDiscounts),
+	);
+	const hasDeferredCharges = lineItems.some(
+		(lineItem) => !lineItem.chargeImmediately && lineItem.amount !== 0,
+	);
+	return immediateTotal === 0 && !hasDeferredCharges;
+};
+
 export const shouldCreateManualStripeInvoice = ({
 	ctx,
 	billingContext,
@@ -54,6 +71,14 @@ export const shouldCreateManualStripeInvoice = ({
 	if (customLineItems?.length) {
 		const customTotal = sumValues(customLineItems.map((item) => item.amount));
 		return customTotal !== 0;
+	}
+
+	// Like custom_line_items, an edited invoice that nets to zero is skipped, unless deferred items still need creating.
+	if (
+		billingContext.invoiceLineEdits &&
+		editedInvoiceIsEmpty({ autumnBillingPlan })
+	) {
+		return false;
 	}
 
 	const { stripeSubscription } = billingContext;

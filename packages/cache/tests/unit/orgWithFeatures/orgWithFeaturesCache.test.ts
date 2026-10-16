@@ -30,7 +30,7 @@ const orgData = (orgId: string): CachedOrg => ({
 });
 
 const redisGets = () =>
-	cache.main.calls.filter((call) => call.startsWith("get:"));
+	cache.main.calls.filter((call) => call.startsWith("get:org_with_features:"));
 
 /** lru-cache stamps TTLs with performance.now(), so crossing one means moving that clock. */
 const withAdvancedClock = async (deltaMs: number, fn: () => Promise<void>) => {
@@ -255,6 +255,41 @@ describe("org-with-features cache", () => {
 			load: async () => orgData("org_1"),
 		});
 		expect(result?.org.id).toBe("org_1");
+	});
+
+	test("a clear during a read-through lookup discards the stale write-back", async () => {
+		const env = AppEnv.Live;
+		const cacheKey = buildOrgWithFeaturesCacheKey({ orgId: "org_1", env });
+		const result = await readThroughOrgWithFeatures<CachedOrg>({
+			ctx,
+			orgId: "org_1",
+			env,
+			load: async () => {
+				const stale = orgData("org_1");
+				await clearOrgWithFeaturesCache({ ctx, orgId: "org_1", env });
+				return stale;
+			},
+		});
+
+		expect(result?.org.id).toBe("org_1");
+		expect(cache.main.store.has(cacheKey)).toBe(false);
+		expect(_orgWithFeaturesL1SizeForTesting()).toBe(0);
+	});
+
+	test("a read-through with no clear in between keeps its write-back", async () => {
+		const env = AppEnv.Live;
+		await clearOrgWithFeaturesCache({ ctx, orgId: "org_1", env });
+		await readThroughOrgWithFeatures({
+			ctx,
+			orgId: "org_1",
+			env,
+			load: async () => orgData("org_1"),
+		});
+		expect(
+			cache.main.store.has(
+				buildOrgWithFeaturesCacheKey({ orgId: "org_1", env }),
+			),
+		).toBe(true);
 	});
 
 	test("a missing org is not cached", async () => {

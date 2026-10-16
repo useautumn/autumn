@@ -100,9 +100,7 @@ export const computePinnedPlanLicenses = ({
 	for (const child of upsertProductPlansToChildPlans({ upsertProducts })) {
 		const currentPlanLicense = parentLicenseLinkForChild({ parent, child });
 		if (!currentPlanLicense) continue;
-		if (
-			!shouldPin({ parent, child, currentPlanLicense, productStatesContext })
-		)
+		if (!shouldPin({ parent, child, currentPlanLicense, productStatesContext }))
 			continue;
 
 		const planLicense = pinnedPlanLicense({

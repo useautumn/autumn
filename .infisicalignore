@@ -32,3 +32,4 @@ packages/agent-docs/generated/skills/autumn-integrate/references/tracking-usage.
 packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3414
 packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3483
 packages/agent-docs/generated/mcp/catalog.md:curl-auth-header:3660
+apps/website/instrumentation-client.ts:generic-api-key:5

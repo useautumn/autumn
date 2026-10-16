@@ -36,6 +36,7 @@ export const atomDeploymentToConnection = ({
 	if (!atomDeployment.endpoint_url) return null;
 	return {
 		target: "org",
+		id: atomDeployment.id ?? null,
 		endpointUrl: atomDeployment.endpoint_url,
 		encryptedToken: atomDeployment.encrypted_token,
 		queue:

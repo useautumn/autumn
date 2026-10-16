@@ -1,4 +1,3 @@
-import { isKafkaAccessRefusal } from "@autumn/kafka";
 import {
 	beginPartitionHandoffs,
 	cancelPartitionHandoff,
@@ -6,6 +5,7 @@ import {
 } from "../lifecycle/handOffPartition.js";
 import { subscribeEntryUnavailable } from "../lifecycle/partitionStartup.js";
 import {
+	isRejoinableCrash,
 	noteConsumerJoined,
 	scheduleConsumerRejoin,
 } from "../lifecycle/rejoinConsumer.js";
@@ -133,8 +133,7 @@ function revokePartitionAllocation({
 }
 
 /** A crash the consumer will restart from rejoins and is reassigned. One it will not is the worker's to
- *  judge: a broker refusing its identity is rejoined with backoff, since the verdict has cleared on
- *  its own before; anything else leaves nothing to wait for, and the service stops. */
+ *  judge: a broker refusal or group churn is rejoined with backoff; anything else stops the service. */
 function crashPartitionAllocation({
 	ctx,
 	state,
@@ -147,7 +146,7 @@ function crashPartitionAllocation({
 	reportPartitionError({ ctx, cause: crash.cause });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 	if (crash.restart) return;
-	if (ctx.consumer.restart && isKafkaAccessRefusal({ cause: crash.cause })) {
+	if (ctx.consumer.restart && isRejoinableCrash({ cause: crash.cause })) {
 		scheduleConsumerRejoin({
 			ctx,
 			state,

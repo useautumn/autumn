@@ -20,6 +20,8 @@ export type ThreadInit = {
 	threadsReady: SharedArrayBuffer;
 	/** Every thread's counters (see threadStats), shared the same way. */
 	stats: SharedArrayBuffer;
+	/** Which listed peers count as ring members (createMembership), shared so every thread's ring flips at once. */
+	membership: SharedArrayBuffer;
 	/** The lock every SQLite connection in the process is opened under (newSqliteConnection). */
 	sqliteOpenLock: SharedArrayBuffer;
 	peers: PeerLine[];

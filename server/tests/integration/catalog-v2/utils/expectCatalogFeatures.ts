@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type {
 	CreditSchemaItem,
+	FeatureCombine,
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
@@ -15,6 +16,8 @@ type ExpectedDbFeature = {
 	creditSchema?: CreditSchemaItem[];
 	invoiceCredit?: boolean;
 	defaultMarkup?: number;
+	/** null asserts the setting is unset (sum). */
+	combine?: FeatureCombine | null;
 };
 
 const listDbFeatures = ({ ctx }: { ctx: AutumnContext }) =>
@@ -46,6 +49,9 @@ export const expectDbFeaturesCorrect = async ({
 			expect(feature?.config?.invoice_credit).toBe(
 				expectedFeature.invoiceCredit,
 			);
+		}
+		if (expectedFeature.combine !== undefined) {
+			expect(feature?.config?.combine ?? null).toBe(expectedFeature.combine);
 		}
 		if (expectedFeature.defaultMarkup !== undefined) {
 			expect(feature?.config?.default_markup).toBe(

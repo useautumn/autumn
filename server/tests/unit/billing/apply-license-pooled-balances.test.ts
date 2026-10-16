@@ -157,6 +157,7 @@ const existingPool = ({
 			stripe_subscription_id: null,
 			customer_license_link_id: LINK_ID,
 			rollover_signature: "none",
+			feature_override_signature: "none",
 			customer_entitlement_id: "cus_ent_pool",
 			last_applied_reset_at: null,
 			expires_at: null,
@@ -391,5 +392,41 @@ test(
 		expect(inserted.pooled_balance?.granted).toBe(0);
 		expect(inserted.pooled_balance?.reset_cycle_anchor).toBeNull();
 		expect(inserted.next_reset_at).toBeNull();
+	},
+);
+
+test(
+	chalk.yellowBright(
+		"applyLicensePooledBalances: a pool written before credit-rate signatures keeps its usage",
+	),
+	() => {
+		const overriddenLicense = customerLicense({ granted: 3 });
+		const seatProduct = overriddenLicense.planLicense?.product;
+		if (!seatProduct) throw new Error("seat product missing");
+		seatProduct.entitlements = [
+			{
+				...pooledMessagesEntitlement(),
+				feature_override: {
+					schema: [{ metered_feature_id: "tokens", credit_amount: 2 }],
+				},
+			} as EntitlementWithFeature,
+		];
+		const computeContext = setupPooledBalanceComputeContext({
+			pooledCustomerEntitlements: [
+				existingPool({ granted: 300, balance: 100 }),
+			],
+		});
+
+		applyLicensePooledBalances({
+			ctx,
+			computeContext,
+			customerLicenses: [overriddenLicense],
+			parentCustomerProducts: [],
+			customerCreatedAt: CUSTOMER_CREATED_AT,
+			now: NOW,
+		});
+
+		expect(computeContext.plan.insertPoolBalances).toHaveLength(0);
+		expect(computeContext.plan.updatePoolBalances).toHaveLength(0);
 	},
 );

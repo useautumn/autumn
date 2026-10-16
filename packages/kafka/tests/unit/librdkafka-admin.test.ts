@@ -114,3 +114,113 @@ test("fetchTopicOffsets reports a partition that never answers as retriable, nev
 		true,
 	);
 });
+
+/** librdkafka's own ListOffsets answer: an errored partition carries its error, which the KafkaJS shim drops. */
+function createNativeAdminFake({
+	answers,
+}: {
+	answers: { partition: number; offset: number; error?: Error }[][];
+}) {
+	const calls: { partition: number; timestamp: number }[][] = [];
+	let disconnected = 0;
+	const native = {
+		listOffsets(
+			partitions: { partition: number; offset: { timestamp: number } }[],
+			_options: unknown,
+			done: (error: unknown, offsets?: never) => void,
+		) {
+			calls.push(
+				partitions.map(({ partition, offset }) => ({
+					partition,
+					timestamp: offset.timestamp,
+				})),
+			);
+			done(null, (answers.shift() ?? []) as never);
+		},
+		disconnect() {
+			disconnected += 1;
+		},
+	};
+	const shimAdmin = {
+		connect: async () => {},
+		disconnect: async () => {},
+		fetchTopicMetadata: async ({ topics }: { topics: string[] }) =>
+			topics.map((name) => ({
+				name,
+				partitions: [
+					{ partitionId: 0, leader: 1, replicas: [1], isr: [1] },
+					{ partitionId: 1, leader: 2, replicas: [2], isr: [2] },
+				],
+			})),
+		fetchTopicOffsets: async () => [
+			{ partition: 0, offset: "40", high: "40", low: "0" },
+			{ partition: 1, offset: "70", high: "70", low: "0" },
+		],
+	};
+	const admin = createLibrdkafkaAdmin({
+		ctx: {
+			kafka: { admin: () => shimAdmin } as unknown as KafkaJS.Kafka,
+			nativeClientConfig: {},
+			createNative: () => {
+				throw new Error("unused");
+			},
+			createNativeAdmin: () => native,
+			log: createKafkaLog({ clientId: "test" }),
+		},
+	});
+	return { admin, calls, disconnects: () => disconnected };
+}
+
+// The shim answered a moving leader's partition with the log end: a takeover then forgot its dedupe window.
+test("offsets by timestamp report a partition whose leader is moving instead of answering the log end", async () => {
+	const notLeader = Object.assign(
+		new Error("Broker: Not leader for partition"),
+		{
+			code: 6,
+		},
+	);
+	const fake = createNativeAdminFake({
+		answers: [
+			[
+				{ partition: 0, offset: 12 },
+				{ partition: 1, offset: -1, error: notLeader },
+			],
+			[
+				{ partition: 0, offset: 12 },
+				{ partition: 1, offset: 55 },
+			],
+		],
+	});
+	await expect(
+		fake.admin.fetchTopicOffsetsByTimestamp("events", 1_000),
+	).rejects.toBeInstanceOf(KafkaPartitionOffsetsUnansweredError);
+	expect(
+		await fake.admin.fetchTopicOffsetsByTimestamp("events", 1_000),
+	).toEqual([
+		{ partition: 0, offset: "12" },
+		{ partition: 1, offset: "55" },
+	]);
+	expect(fake.calls[0]).toEqual([
+		{ partition: 0, timestamp: 1_000 },
+		{ partition: 1, timestamp: 1_000 },
+	]);
+	await fake.admin.disconnect();
+	expect(fake.disconnects()).toBe(1);
+});
+
+test("a partition with nothing that recent answers its log end, as the shim did", async () => {
+	const fake = createNativeAdminFake({
+		answers: [
+			[
+				{ partition: 0, offset: -1 },
+				{ partition: 1, offset: 55 },
+			],
+		],
+	});
+	expect(
+		await fake.admin.fetchTopicOffsetsByTimestamp("events", 1_000),
+	).toEqual([
+		{ partition: 0, offset: "40" },
+		{ partition: 1, offset: "55" },
+	]);
+});

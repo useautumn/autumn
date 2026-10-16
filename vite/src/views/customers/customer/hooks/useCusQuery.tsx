@@ -8,20 +8,17 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { throwBackendError } from "@/utils/genUtils";
-import {
-	type CustomerProductsStatusOption,
-	DEFAULT_PRODUCT_STATUSES,
-} from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCachedCustomer } from "./useCachedCustomer";
+import {
+	useCustomerQueryOptions,
+	useIncludeExpiredLoose,
+} from "./useCustomerQueryOptions";
 import { useCustomerScheduleQueryOptions } from "./useCustomerScheduleQueryOptions";
 
 type UseCusQueryOptions = {
@@ -41,8 +38,8 @@ export const useCusQuery = ({
 	schedule: fetchSchedule = false,
 }: UseCusQueryOptions = {}) => {
 	const { customer_id } = useParams();
-	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const customerQueryOptions = useCustomerQueryOptions();
 	const { getCachedCustomer } = useCachedCustomer(customer_id);
 	const { entityId } = useEntity();
 
@@ -64,31 +61,7 @@ export const useCusQuery = ({
 
 	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
 
-	// Same nuqs key as the Plans filter.
-	const [productStatuses] = useQueryState(
-		"customerProductsStatuses",
-		parseAsArrayOf(
-			parseAsStringEnum<CustomerProductsStatusOption>(["active", "expired"]),
-		).withDefault(DEFAULT_PRODUCT_STATUSES),
-	);
-	const includeExpiredLoose = productStatuses.includes("expired");
-
-	const fetcher = async () => {
-		try {
-			const searchParams = new URLSearchParams();
-			if (includeExpiredLoose) {
-				searchParams.set("include_expired_loose", "true");
-			}
-			if (effectiveEntityId) searchParams.set("entity_id", effectiveEntityId);
-			const query = searchParams.toString();
-			const { data } = await axiosInstance.get(
-				`/customers/${customer_id}${query ? `?${query}` : ""}`,
-			);
-			return data;
-		} catch (error) {
-			throwBackendError(error);
-		}
-	};
+	const includeExpiredLoose = useIncludeExpiredLoose();
 
 	const {
 		data,
@@ -98,15 +71,12 @@ export const useCusQuery = ({
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: buildKey([
-			"customer",
-			customer_id,
-			effectiveEntityId,
+		...customerQueryOptions({
+			customerId: customer_id,
+			entityId: effectiveEntityId,
 			includeExpiredLoose,
-		]),
-		queryFn: fetcher,
+		}),
 		enabled: enabled && !!customer_id,
-		retry: false,
 		placeholderData: keepPreviousData,
 	});
 

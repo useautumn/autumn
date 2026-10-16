@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { ACTIVE_SANDBOX_STORAGE_KEY } from "@/boot/bootRequests";
 
 export type ActiveSandbox = {
 	id: string;
@@ -7,12 +8,11 @@ export type ActiveSandbox = {
 	icon?: string;
 };
 
-const STORAGE_KEY = "autumn_active_sandbox";
 const listeners = new Set<() => void>();
 
 const read = (): ActiveSandbox | null => {
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
+		const raw = localStorage.getItem(ACTIVE_SANDBOX_STORAGE_KEY);
 		return raw ? (JSON.parse(raw) as ActiveSandbox) : null;
 	} catch {
 		return null;
@@ -30,9 +30,9 @@ export const setActiveSandbox = (sandbox: ActiveSandbox | null) => {
 	// disabled, quota). Always apply in-memory + notify regardless.
 	try {
 		if (sandbox) {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(sandbox));
+			localStorage.setItem(ACTIVE_SANDBOX_STORAGE_KEY, JSON.stringify(sandbox));
 		} else {
-			localStorage.removeItem(STORAGE_KEY);
+			localStorage.removeItem(ACTIVE_SANDBOX_STORAGE_KEY);
 		}
 	} catch {
 		// best-effort

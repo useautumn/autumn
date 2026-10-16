@@ -227,6 +227,7 @@ CreateInvoiceTierBehavior = Literal[
     "graduated",
     "volume",
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 CreateInvoiceItemInterval = Literal[
@@ -306,6 +307,7 @@ class CreateInvoiceItemPriceTypedDict(TypedDict):
     tiers: NotRequired[List[CreateInvoicePriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreateInvoiceTierBehavior]
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -330,6 +332,7 @@ class CreateInvoiceItemPrice(BaseModel):
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[CreateInvoiceTierBehavior] = None
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -878,14 +881,14 @@ class CreateInvoiceFeatureOverrideTypedDict(TypedDict):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: NotRequired[List[CreateInvoiceCreditSchemaUnionTypedDict]]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
 
 class CreateInvoiceFeatureOverride(BaseModel):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: Optional[List[CreateInvoiceCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1273,6 +1276,7 @@ CreateInvoiceLicenseQuantityTierBehavior = Literal[
     "graduated",
     "volume",
 ]
+r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
 
 CreateInvoiceLicenseQuantityItemInterval = Literal[
@@ -1352,6 +1356,7 @@ class CreateInvoiceLicenseQuantityItemPriceTypedDict(TypedDict):
     tiers: NotRequired[List[CreateInvoiceLicenseQuantityPriceTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreateInvoiceLicenseQuantityTierBehavior]
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -1376,6 +1381,7 @@ class CreateInvoiceLicenseQuantityItemPrice(BaseModel):
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
     tier_behavior: Optional[CreateInvoiceLicenseQuantityTierBehavior] = None
+    r"""How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount."""
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1954,14 +1960,14 @@ class CreateInvoiceLicenseQuantityFeatureOverrideTypedDict(TypedDict):
     credit_schema: NotRequired[
         List[CreateInvoiceLicenseQuantityCreditSchemaUnionTypedDict]
     ]
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
 
 class CreateInvoiceLicenseQuantityFeatureOverride(BaseModel):
     r"""For credit-system features: a credit rate card to use when converting `usage` on this invoice."""
 
     credit_schema: Optional[List[CreateInvoiceLicenseQuantityCreditSchemaUnion]] = None
-    r"""For credit system features: replaces the feature's credit_schema entirely for customers on this plan."""
+    r"""Replaces the feature's credit_schema entirely for this invoice."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

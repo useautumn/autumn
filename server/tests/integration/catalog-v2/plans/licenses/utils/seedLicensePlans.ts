@@ -1,6 +1,6 @@
 import {
-	type CatalogPropagateParams,
 	type CatalogPlanVersioningStrategy,
+	type CatalogPropagateParams,
 	CusProductStatus,
 	customerProducts,
 	type LicenseCustomize,
@@ -13,9 +13,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import { cleanupPlanCustomerRefs } from "../../utils/cleanupPlanCustomerRefs.js";
 import { deleteDbPlans } from "../../utils/expectCatalogPlans.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 
 export type CatalogV2Client = {
 	catalogV2: {
@@ -141,7 +141,8 @@ export const seedParentVersionWithLicense = async ({
 		plans: [
 			{
 				plan_id: parentId,
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 				licenses: [{ license_plan_id: childId, included }],
 			},
 		],

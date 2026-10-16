@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { CustomerIdSchema } from "../../api/common/customerId.js";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
 import { BalanceAllocationsSchema } from "./balanceAllocations/balanceAllocationModels.js";
@@ -28,48 +29,14 @@ export const CustomerSchema = z.object({
 			disable_overage_billing: z.boolean().optional(),
 		})
 		.nullish(),
+	/** Per Atom, per journal (writer id), the highest seq of its tracks the balance worker has applied. */
+	atom_seqs: z.record(z.string(), z.record(z.string(), z.number())).nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;
 
 export const CreateCustomerSchema = z.object({
-	id: z
-		.string()
-		.refine(
-			(val) => {
-				if (val === "") return false;
-				if (val.includes("@")) return false;
-				if (val.includes(" ")) return false;
-				if (val.includes(".")) return false;
-				return /^[a-zA-Z0-9_-]+$/.test(val);
-			},
-			{
-				error: (issue) => {
-					const input = issue.input as string;
-					if (input === "") return { message: "can't be an empty string" };
-					if (input.includes("@"))
-						return {
-							message:
-								"ID cannot contain @ symbol. Use only letters, numbers, underscores, and hyphens.",
-						};
-					if (input.includes(" "))
-						return {
-							message:
-								"ID cannot contain spaces. Use only letters, numbers, underscores, and hyphens.",
-						};
-					if (input.includes("."))
-						return {
-							message:
-								"ID cannot contain periods. Use only letters, numbers, underscores, and hyphens.",
-						};
-					const invalidChar = input.match(/[^a-zA-Z0-9_-]/)?.[0];
-					return {
-						message: `ID cannot contain '${invalidChar}'. Use only letters, numbers, underscores, and hyphens.`,
-					};
-				},
-			},
-		)
-		.nullish(),
+	id: CustomerIdSchema.nullish(),
 	name: z.string().nullish(),
 	email: z
 		.string()

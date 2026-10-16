@@ -94,6 +94,25 @@ describe("computeCreditCosts", () => {
 		expect(lookup("ce_stale")).toEqual({ creditCost: 1 });
 	});
 
+	test("an override that does not list the feature inherits the stale fallback", () => {
+		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
+		const overriddenStale = {
+			id: "ce_override",
+			entitlement: {
+				feature: staleCredits,
+				feature_override: {
+					schema: [{ metered_feature_id: "other_feature", credit_amount: 2 }],
+				},
+			},
+		} as FullCusEntWithFullCusProduct;
+		const lookup = computeCreditCosts({
+			cusEnts: [overriddenStale],
+			deduction,
+		});
+
+		expect(lookup("ce_override")).toEqual({ creditCost: 1 });
+	});
+
 	test("rejects a stale cached schema for a balance stamped as invoice credits", () => {
 		const deduction: FeatureDeduction = { feature: messages, deduction: 10 };
 		const stampedStale = {

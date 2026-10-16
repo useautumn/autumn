@@ -44,6 +44,12 @@ export type TopicRecordHandler = {
 	readResumeOffset(
 		position: TopicResumePosition,
 	): bigint | null | Promise<bigint | null>;
+	/** A handler may look at a batch once, before any of its records is applied. */
+	beginBatch?(batch: {
+		topic: string;
+		partition: number;
+		messages: TopicRecord["message"][];
+	}): void | Promise<void>;
 	applyRecord(
 		record: TopicRecord,
 	): TopicRecordResult | Promise<TopicRecordResult>;

@@ -316,6 +316,7 @@ export const previewPooledBalances = async ({
 	return setPlansPhaseBalanceChanges({
 		ctx,
 		originalFullCustomer: fullCustomer,
+		phaseStarts: phases.map(({ startsAt }) => startsAt),
 		phaseCustomers: buildSetPlansPhaseCustomers({
 			ctx,
 			fullCustomer,

@@ -1,6 +1,10 @@
 import type { AtomEnv } from "@autumn/env/atom";
+import type { JournalForwarder } from "../journalForwarder/types/journalForwarder.js";
 import { createMultiTenantAuth } from "../multiTenant/createMultiTenantAuth.js";
 import type { MultiTenantContext } from "../multiTenant/multiTenantContext.js";
+import type { HandoffBarrier } from "../replicas/handover/createHandoffBarrier.js";
+import type { ReplicaRing } from "../replicas/types/replicaRing.js";
+import type { KeyRelay } from "../replication/keys/createKeyRelay.js";
 import {
 	createHeldSubjects,
 	HELD_IDLE_EXPIRY_MS,
@@ -16,10 +20,18 @@ export const openAuth = ({
 	env,
 	owners,
 	subjectPulls,
+	journalForwarder,
+	barrier,
+	ring,
+	keyRelay,
 }: {
 	env: AtomEnv;
 	owners: SlotOwners;
 	subjectPulls: SubjectPulls;
+	journalForwarder: JournalForwarder;
+	barrier: HandoffBarrier;
+	ring: Pick<ReplicaRing, "self" | "ownerOf">;
+	keyRelay: KeyRelay;
 }): { auth: Auth; multiTenant?: MultiTenantContext; held: HeldSubjects } => {
 	// One budget per thread: it owns its slots' subjects, in every folder a multi-tenant Atom holds.
 	const held = createHeldSubjects({
@@ -34,6 +46,10 @@ export const openAuth = ({
 			owners,
 			held,
 			subjectPulls,
+			journalForwarder,
+			barrier,
+			ring,
+			keyRelay,
 		});
 		return { auth, held };
 	}
@@ -43,6 +59,10 @@ export const openAuth = ({
 		owners,
 		heldSubjects: held,
 		subjectPulls,
+		journalForwarder,
+		barrier,
+		ring,
+		keyRelay,
 	});
 	return {
 		auth,

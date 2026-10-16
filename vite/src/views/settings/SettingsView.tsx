@@ -25,6 +25,7 @@ import {
 	UserIcon,
 	UsersIcon,
 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router";
 import { LabelTag } from "@/components/general/LabelTag";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
@@ -34,23 +35,6 @@ import { cn } from "@/lib/utils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
 import { SettingsGroupContext } from "./SettingsSection";
-import { AccountSection } from "./sections/AccountSection";
-import { AgentSection } from "./sections/AgentSection";
-import { AppearanceSection } from "./sections/AppearanceSection";
-import { AtomSection, AtomSectionSkeleton } from "./sections/AtomSection";
-import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
-import { BillingSettingsSection } from "./sections/BillingSettingsSection";
-import { CustomButtonsSection } from "./sections/CustomButtonsSection";
-import { InvoicesSection } from "./sections/InvoicesSection";
-import { MembersSection } from "./sections/MembersSection";
-import { OrganizationSection } from "./sections/OrganizationSection";
-import { RevenueCatSection } from "./sections/RevenueCatSection";
-import { SsoSection } from "./sections/SsoSection";
-import { StripeSection } from "./sections/StripeSection";
-import { SubscriptionSection } from "./sections/SubscriptionSection";
-import { TransitionRulesSection } from "./sections/TransitionRulesSection";
-import { UsageAlertsSection } from "./sections/UsageAlertsSection";
-import { VercelSection } from "./sections/VercelSection";
 
 export type SettingsTab =
 	| "account"
@@ -181,33 +165,13 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 			},
 			{
 				id: "atom",
-				label: "Atom",
+				label: "Edge Cache",
 				icon: <AtomIcon className="size-4" />,
 				badge: "PREVIEW",
 			},
 		],
 	},
 ];
-
-const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
-	account: AccountSection,
-	organization: OrganizationSection,
-	subscription: SubscriptionSection,
-	members: MembersSection,
-	agent: AgentSection,
-	appearance: AppearanceSection,
-	apps: AuthorizedAppsSection,
-	sso: SsoSection,
-	"custom-buttons": CustomButtonsSection,
-	billing: BillingSettingsSection,
-	invoices: InvoicesSection,
-	"usage-alerts": UsageAlertsSection,
-	"transition-rules": TransitionRulesSection,
-	stripe: StripeSection,
-	vercel: VercelSection,
-	revenuecat: RevenueCatSection,
-	atom: AtomSection,
-};
 
 /** Tabs that only render while their feature flag is on. */
 const FLAGGED_TABS: Partial<Record<SettingsTab, "sso" | "vercel" | "atoms">> = {
@@ -339,28 +303,28 @@ const SettingsFrame = ({
 	);
 };
 
+// Sections pull in charts and integration SDKs, so they load with this page rather than the app.
+const SettingsSections = lazy(() => import("./SettingsSections"));
+
 export const SettingsView = () => {
 	const activeTab = useActiveSettingsTab();
-	const ActiveSection = SECTION_MAP[activeTab] ?? AccountSection;
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<ActiveSection />
+			<Suspense fallback={<LoadingScreen />}>
+				<SettingsSections tab={activeTab} />
+			</Suspense>
 		</SettingsFrame>
 	);
-};
-
-/** Tabs whose loading state is drawn as their layout, so the page settles in place. */
-const SECTION_SKELETONS: Partial<Record<SettingsTab, React.ComponentType>> = {
-	atom: AtomSectionSkeleton,
 };
 
 /** Settings as it will render, while the org it needs still loads. */
 export const SettingsViewSkeleton = () => {
 	const activeTab = useActiveSettingsTab();
-	const SectionSkeleton = SECTION_SKELETONS[activeTab] ?? LoadingScreen;
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<SectionSkeleton />
+			<Suspense fallback={<LoadingScreen />}>
+				<SettingsSections tab={activeTab} skeleton />
+			</Suspense>
 		</SettingsFrame>
 	);
 };

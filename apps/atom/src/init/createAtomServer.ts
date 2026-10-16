@@ -8,6 +8,8 @@ import { createPeerApp } from "../http/createPeerApp.js";
 import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
+import { leaveRing } from "../replicas/handover/leaveRing.js";
+import { startReadinessProber } from "../replicas/membership/startReadinessProber.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {
@@ -15,6 +17,9 @@ import type {
 	AtomServerConfig,
 	AtomServerDependencies,
 } from "./types/atomServer.js";
+
+/** Inside a typical 30 s grace before SIGKILL, leaving room for the replication flush (5 s) and closing the files. */
+const DRAIN_DEADLINE_MS = 20_000;
 
 /** One thread's server: it answers on the shared port and, when told to, receives Autumn's queued pushes. */
 export const createAtomServer = ({
@@ -53,6 +58,22 @@ export const createAtomServer = ({
 				})
 			: undefined;
 	const loop = startLoopWatch();
+	let stopping = false;
+	const { membership, ring } = ctx;
+	const peer = { port: env.ATOM_PEER_PORT, secret: env.ATOM_PEER_SECRET };
+	const handoverContext = {
+		ring,
+		boot: ctx.health.bootedAt,
+		membership,
+		folders: ctx.folders,
+		replication: ctx.replication,
+		thread: ctx.health.thread,
+		threads: env.ATOM_THREADS,
+		publicPort: env.ATOM_PORT,
+		peer,
+		logger: ctx.logger,
+	};
+	const prober = startReadinessProber({ ctx: handoverContext });
 	const httpContext = {
 		auth: ctx.auth,
 		multiTenant: ctx.multiTenant,
@@ -63,7 +84,8 @@ export const createAtomServer = ({
 		autumnApiUrl: env.ATOM_AUTUMN_API_URL,
 		secretKeys,
 		replication: ctx.replication,
-		peer: { port: env.ATOM_PORT },
+		stopping: () => stopping,
+		peer: { ...peer, ring, membership },
 	};
 	const app = createAtomApp({ ctx: httpContext });
 	// The other replicas are listened to on the port the stack keeps off the public endpoint.
@@ -109,12 +131,23 @@ export const createAtomServer = ({
 		listen();
 		receiving = pushReceiver?.run();
 		void diskEvictor.run();
+		void prober.run();
 	}
 
-	/** In-flight requests and leased pushes finish before the files close. */
+	/**
+	 * First the ring: this replica owns nothing and its peers are told. Leased pushes finish and the journals drain to
+	 * Autumn while both ports stay up: a public check hops to the new owner, a handed-on one is refused as leaving. Only
+	 * then do the listeners and the files close.
+	 */
 	async function stop(): Promise<void> {
+		prober.stop();
+		await leaveRing({ ctx: handoverContext });
 		pushReceiver?.stop();
-		await Promise.all([listener?.stop(), peerListener?.stop(), receiving]);
+		await receiving;
+		await ctx.journalForwarder.drainAll({ deadlineMs: DRAIN_DEADLINE_MS });
+		stopping = true;
+		await listener?.stop();
+		await peerListener?.stop();
 		// After the last push applied here: what it relays must still reach the peers before the files close.
 		await ctx.replication.stop();
 		diskEvictor.stop();
@@ -124,5 +157,5 @@ export const createAtomServer = ({
 		ctx.auth.close();
 	}
 
-	return { start, stop };
+	return { start, stop, probePeers: () => prober.probeOnce() };
 };

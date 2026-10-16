@@ -88,6 +88,7 @@ export {
 export {
 	isConsumerGroupGoneError,
 	isKafkaAccessRefusal,
+	isKafkaGroupChurn,
 	KafkaPartitionOffsetsNotFoundError,
 } from "./consumer/consumerErrors.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";

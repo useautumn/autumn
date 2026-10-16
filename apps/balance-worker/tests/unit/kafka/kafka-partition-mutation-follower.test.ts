@@ -265,6 +265,47 @@ describe("Kafka partition outcome follower", () => {
 		}
 	});
 
+	test("reads the window again when a lookup fails inside its budget, whatever the client", async () => {
+		const fixture = createStoreFixture({ nextOffset: 8n });
+		try {
+			const consumer = createPartitionControl();
+			let lookups = 0;
+			const positionTracker = createProgressTracker();
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer,
+				partitionOffsets: {
+					...createPartitionOffsets({ low: "0", high: "10" }),
+					fetchTopicOffsetsByTimestamp: async () => {
+						lookups += 1;
+						if (lookups === 1) throw new Error("not the leader");
+						return [{ partition, offset: "3" }];
+					},
+				},
+				stateStore: fixture.store,
+				positionTracker,
+				replayWindow: {
+					windowMs: 600_000,
+					lookupTimeoutMs: 1_000,
+					now: () => 0,
+				},
+			});
+			await follower.readLogRange({ topic, partition, signal: activeSignal() });
+			const catchUp = follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 10n,
+				onUnavailable: () => undefined,
+			});
+			await Bun.sleep(250);
+			expect(lookups).toBe(2);
+			expect(consumer.seeks).toEqual([{ topic, partition, offset: "3" }]);
+			positionTracker.advance({ topic, partition, nextOffset: 10n });
+			await catchUp;
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test.each([
 		[
 			"the lookup throws",

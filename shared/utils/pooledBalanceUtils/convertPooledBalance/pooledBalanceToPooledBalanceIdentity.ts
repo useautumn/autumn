@@ -15,4 +15,5 @@ export const pooledBalanceToPooledBalanceIdentity = ({
 	stripeSubscriptionId: pooledBalance.stripe_subscription_id,
 	customerLicenseLinkId: pooledBalance.customer_license_link_id,
 	rolloverSignature: pooledBalance.rollover_signature,
+	featureOverrideSignature: pooledBalance.feature_override_signature,
 });

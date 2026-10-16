@@ -662,6 +662,19 @@ export const GetCustomerFlagsType = {
  */
 export type GetCustomerFlagsType = OpenEnum<typeof GetCustomerFlagsType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const GetCustomerCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type GetCustomerCombine = OpenEnum<typeof GetCustomerCombine>;
+
 export type GetCustomerDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -1036,6 +1049,10 @@ export type GetCustomerFeature = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: GetCustomerCombine | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -2232,6 +2249,12 @@ export const GetCustomerFlagsType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerFlagsType);
 
 /** @internal */
+export const GetCustomerCombine$inboundSchema: z.ZodMiniType<
+  GetCustomerCombine,
+  unknown
+> = openEnums.inboundSchema(GetCustomerCombine);
+
+/** @internal */
 export const GetCustomerDimensions6$inboundSchema: z.ZodMiniType<
   GetCustomerDimensions6,
   unknown
@@ -2971,6 +2994,7 @@ export const GetCustomerFeature$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: GetCustomerFlagsType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(GetCustomerCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => GetCustomerCreditSchema1$inboundSchema),

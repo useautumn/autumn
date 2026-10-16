@@ -225,6 +225,19 @@ export const ListEntitiesType = {
  */
 export type ListEntitiesType = OpenEnum<typeof ListEntitiesType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const ListEntitiesCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type ListEntitiesCombine = OpenEnum<typeof ListEntitiesCombine>;
+
 export type ListEntitiesDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -599,6 +612,10 @@ export type ListEntitiesFeature = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: ListEntitiesCombine | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -1225,6 +1242,12 @@ export const ListEntitiesType$inboundSchema: z.ZodMiniType<
   ListEntitiesType,
   unknown
 > = openEnums.inboundSchema(ListEntitiesType);
+
+/** @internal */
+export const ListEntitiesCombine$inboundSchema: z.ZodMiniType<
+  ListEntitiesCombine,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesCombine);
 
 /** @internal */
 export const ListEntitiesDimensions6$inboundSchema: z.ZodMiniType<
@@ -1966,6 +1989,7 @@ export const ListEntitiesFeature$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: ListEntitiesType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(ListEntitiesCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => ListEntitiesCreditSchema1$inboundSchema),

@@ -1,4 +1,5 @@
 import {
+	lockParamsToTrackLock,
 	orgToCommandOrg,
 	type TrackCommand,
 	type TrackUsageEvent,
@@ -6,7 +7,6 @@ import {
 import { type LockParams, RecaseError, type TrackParams } from "@autumn/shared";
 import type { BalanceWorkerRequestContext } from "../../balanceWorker/balanceWorkerRequestContext.js";
 import { featureToInternalFeatureId } from "../../balanceWorker/featureToInternalFeatureId.js";
-import { lockParamsToTrackLock } from "../../balanceWorker/lockParamsToTrackLock.js";
 import { requestContextToCommandBase } from "../../balanceWorker/requestContextToCommandBase.js";
 
 /** One per feature on an event-name track, so each feature dedupes on its own and a retry can finish the rest. */
@@ -22,6 +22,9 @@ const commandIdOf = ({
 	const scope = isFanOut ? [body.feature_id] : [];
 	if (body.idempotency_key)
 		return JSON.stringify(["track", body.idempotency_key, ...scope]);
+	// A header key outlives the request id: a retry after a 503 RESULT_UNKNOWN carries it and must dedupe.
+	if (ctx.idempotencyKey)
+		return JSON.stringify(["track-header", ctx.idempotencyKey, ...scope]);
 	return [ctx.id, ...scope].join(":");
 };
 

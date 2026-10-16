@@ -11,11 +11,10 @@
 
 import { test } from "bun:test";
 import { BillingInterval } from "@autumn/shared";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { uniqueTestId } from "../../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
@@ -23,6 +22,7 @@ import {
 	seedTwoParents,
 	withCatalogPlans,
 } from "../../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../utils/seedVersionableCustomer.js";
 import {
 	dashboardAddItem,
 	expectLicenseDraftCase,
@@ -133,7 +133,10 @@ test.concurrent(
 							plan_id: childId,
 							items: [messagesItem(10), dashboardItem()],
 							propagate: {
-								license_parents: [{ plan_id: teamId, version: 1 }, { plan_id: scaleId, version: 1 }],
+								license_parents: [
+									{ plan_id: teamId, version: 1 },
+									{ plan_id: scaleId, version: 1 },
+								],
 							},
 							migration: { draft: true },
 						},
@@ -163,10 +166,7 @@ test.concurrent(
 							filter: {
 								customer: {
 									plan: orVersionPinnedFilter({
-										branches: [
-											{ planId: teamId },
-											{ planId: scaleId },
-										],
+										branches: [{ planId: teamId }, { planId: scaleId }],
 									}),
 								},
 							},

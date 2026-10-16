@@ -38,7 +38,10 @@ export const stripeLineItemsToDbLineItems = ({
 	subscriptionItemMetadata?: SubscriptionItemMetadataMap;
 }): InsertDbInvoiceLineItem[] => {
 	// Track which autumn line items have been matched
-	const remainingAutumnLineItems = [...(autumnLineItems ?? [])];
+	// Lines from add_lines have no catalog price, so they're stored from Stripe's data like custom_line_items.
+	const remainingAutumnLineItems = (autumnLineItems ?? []).filter(
+		(lineItem) => lineItem.context.price.config,
+	);
 	const allDbLineItems: InsertDbInvoiceLineItem[] = [];
 
 	// Group Stripe line items by subscription_item/invoice_item

@@ -12,7 +12,7 @@ import {
 } from "./relistTypes";
 
 /** Stripe's behaviour per re-list, from plain-Stripe test clocks; prorate_immediately maps to always_invoice.
- * bill_difference has no Stripe equivalent: it credits only the unused old period and charges the new item in full. */
+ * bill_difference has no Stripe equivalent: each plan slot bills the larger of its full difference and its proration. */
 
 type LicensedItem = { key: string; amount: number };
 
@@ -54,6 +54,29 @@ const sumCents = (items: LicensedItem[], ratio = 1) =>
 
 const has = (items: LicensedItem[], item: LicensedItem) =>
 	items.some(({ key }) => key === item.key);
+
+const billDifferenceCents = ({
+	added,
+	removed,
+	unusedRatio,
+}: {
+	added: LicensedItem[];
+	removed: LicensedItem[];
+	unusedRatio: number;
+}) =>
+	[true, false].reduce((total, isAddOn) => {
+		const inSlot = (item: LicensedItem) =>
+			(item.key === ADD_ON.key) === isAddOn;
+		const slotAdded = added.filter(inSlot);
+		const slotRemoved = removed.filter(inSlot);
+		return (
+			total +
+			Math.max(
+				sumCents(slotAdded) - sumCents(slotRemoved),
+				sumCents(slotAdded, unusedRatio) - sumCents(slotRemoved, unusedRatio),
+			)
+		);
+	}, 0);
 
 const ratioBetween = ({
 	from,
@@ -107,13 +130,11 @@ const liveTimeline = ({
 	const added = after.filter((item) => !has(BEFORE, item));
 	const removed = BEFORE.filter((item) => !has(after, item));
 	const usageCents = cents(OVERAGE);
-	const addedCents =
+	const changeCents =
 		proration === "bill_difference"
-			? sumCents(added)
-			: sumCents(added, unusedRatio);
-	const proratedChangeCents = billsNow
-		? addedCents - sumCents(removed, unusedRatio)
-		: 0;
+			? billDifferenceCents({ added, removed, unusedRatio })
+			: sumCents(added, unusedRatio) - sumCents(removed, unusedRatio);
+	const proratedChangeCents = billsNow ? changeCents : 0;
 	const renewalLicensedCents = cancelsAtRenewal ? 0 : sumCents(after);
 
 	if (anchor === "now") {
@@ -123,11 +144,15 @@ const liveTimeline = ({
 			to: newEndMs,
 			over: [changeAtMs, newEndMs],
 		});
-		const resetCents = billsNow
-			? sumCents(kept, extension) +
-				sumCents(added) -
-				sumCents(removed, unusedRatio)
-			: sumCents(added);
+		// bill_difference on a reset bills the full new cycle with no unused-time credit.
+		const resetCents =
+			proration === "bill_difference"
+				? sumCents(after)
+				: billsNow
+					? sumCents(kept, extension) +
+						sumCents(added) -
+						sumCents(removed, unusedRatio)
+					: sumCents(added);
 		return {
 			executeCents: resetCents + usageCents,
 			executeUsage: true,

@@ -21,6 +21,10 @@ import {
 } from "react";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
 import {
+	type InvoiceLineEditsController,
+	useInvoiceLineEdits,
+} from "@/components/forms/shared/invoiceLineEdits/useInvoiceLineEdits";
+import {
 	licenseRowHasBillingChanges,
 	usePlanLicenseRows,
 } from "@/components/forms/shared/plan-items/PlanLicensesSummary";
@@ -96,6 +100,7 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Preview
 	previewQuery: UseUpdateSubscriptionPreviewReturn;
+	lineEdits: InvoiceLineEditsController;
 
 	collectionMethodSwitch: CollectionMethodSwitch;
 
@@ -372,10 +377,25 @@ export function UpdateSubscriptionFormProvider({
 		onSuccess,
 	});
 
+	const lineEdits = useInvoiceLineEdits({
+		resetKey: JSON.stringify(updateBody),
+		enabled: !collectionMethodSwitch.isActive,
+	});
+	const { applyToBody: applyLineEdits } = lineEdits;
+	const editedUpdateBody = useMemo(
+		() => applyLineEdits(updateBody),
+		[applyLineEdits, updateBody],
+	);
+	const buildEditedRequestBody = useCallback(
+		(params?: Parameters<typeof buildRequestBody>[0]) =>
+			applyLineEdits(buildRequestBody(params)),
+		[applyLineEdits, buildRequestBody],
+	);
+
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody: collectionMethodSwitch.isActive
 			? collectionMethodSwitch.requestBody
-			: updateBody,
+			: editedUpdateBody,
 		apiVersion: collectionMethodSwitch.isActive
 			? collectionMethodSwitch.apiVersion
 			: undefined,
@@ -395,7 +415,7 @@ export function UpdateSubscriptionFormProvider({
 	const { handleConfirm, handleInvoiceUpdate, isPending } =
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
-			buildRequestBody,
+			buildRequestBody: buildEditedRequestBody,
 			onApplied,
 			onCheckoutRedirect,
 			onSuccess,
@@ -480,6 +500,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			lineEdits,
 			collectionMethodSwitch,
 			generation,
 			showPlanEditor,
@@ -504,6 +525,7 @@ export function UpdateSubscriptionFormProvider({
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
+			lineEdits,
 			collectionMethodSwitch,
 			generation,
 			showPlanEditor,

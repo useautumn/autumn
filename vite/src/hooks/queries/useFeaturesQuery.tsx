@@ -1,6 +1,7 @@
 import type { Feature } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { PERSIST_META } from "@/lib/queryPersistence";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useFeaturesQuery = () => {
@@ -17,6 +18,7 @@ export const useFeaturesQuery = () => {
 	}>({
 		queryKey: buildKey(["features"]),
 		queryFn: fetchFeatures,
+		meta: PERSIST_META,
 	});
 
 	return {

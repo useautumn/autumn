@@ -8,6 +8,8 @@ import {
 	digestToWire,
 	errorToReply,
 	wireToCheckRequest,
+	wireToFinalizeRequest,
+	wireToTrackRequest,
 } from "./ownerCallContract.js";
 import { OwnerUnavailableError } from "./ownerUnavailableError.js";
 import type { OwnerCall } from "./types/ownerCall.js";
@@ -20,9 +22,12 @@ type OwnerContext = {
 /** Answered from this thread's files, so refused until it has caught up: what it missed while it was down is not there yet. */
 const READS = new Set<OwnerCall["type"]>([
 	"check",
+	"track",
+	"finalize",
 	"listSince",
 	"digestSince",
 	"fetchSubjects",
+	"recentKeys",
 ]);
 
 /** The call run on the slots this thread owns: the same processor a request arriving here would use. */
@@ -38,6 +43,20 @@ const runOwnerCall = async ({
 	const slots = ctx.auth.slotsFor({ atomId: call.atomId });
 	if (!slots) throw new Error(`This Atom holds no folder ${call.atomId}`);
 	if (call.type === "setCatalog") return slots.setCatalog(call.catalog);
+	if (call.type === "receiveHandoff") {
+		const [first] = call.handoffs;
+		if (!first) return { held: 0 };
+		return slots
+			.processorFor({ customerId: first.customerId })
+			.receiveHandoff({ handoffs: call.handoffs });
+	}
+	if (call.type === "receiveRelayedKeys") {
+		const [first] = call.keys;
+		if (!first) return { held: 0 };
+		return slots
+			.processorFor({ customerId: first.customerId })
+			.receiveRelayedKeys({ keys: call.keys });
+	}
 	if (call.type === "installCatalog") return slots.installCatalog(call.catalog);
 	if (call.type === "setSubject")
 		return slots
@@ -69,6 +88,24 @@ const runOwnerCall = async ({
 		return (
 			await slots.fetchSubjects({ slot: call.slot, keys: call.keys })
 		).map(appliedSubjectToWire);
+	if (call.type === "recentKeys")
+		return slots.recentKeys({
+			slot: call.slot,
+			after: call.after,
+			limit: call.limit,
+		});
+	if (call.type === "track") {
+		const request = wireToTrackRequest({ request: call.request });
+		return slots
+			.processorFor({ customerId: request.params.customer_id })
+			.track({ request });
+	}
+	if (call.type === "finalize") {
+		const request = wireToFinalizeRequest({ request: call.request });
+		return slots
+			.processorFor({ customerId: request.params.customer_id })
+			.finalize({ request });
+	}
 	const request = wireToCheckRequest({ request: call.request });
 	return slots
 		.processorFor({ customerId: request.params.customer_id })

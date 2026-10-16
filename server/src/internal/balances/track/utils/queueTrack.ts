@@ -19,6 +19,8 @@ type QueueTrackOptions = {
 	validateTrackBodyIdempotencyKey?: boolean;
 	logFallback?: boolean;
 	markQueuedForReplay?: boolean;
+	/** When a worker-path track was spooled after its command-log append failed or stalled. */
+	spooledAt?: number;
 };
 
 export const queueTrack = async ({
@@ -41,6 +43,7 @@ export const queueTrack = async ({
 		validateTrackBodyIdempotencyKey = false,
 		logFallback = true,
 		markQueuedForReplay = true,
+		spooledAt,
 	} = options;
 
 	try {
@@ -70,12 +73,16 @@ export const queueTrack = async ({
 				customerId: body.customer_id,
 				entityId: body.entity_id,
 				requestId: requestId ?? ctx.id,
+				// A batch item has its own request id; the batch's header key must not name it.
+				...(requestId === undefined &&
+					ctx.idempotencyKey && { idempotencyKey: ctx.idempotencyKey }),
 				apiVersion: ctx.apiVersion.value,
 				body,
 				tokens,
 				// Sync/async paths claim the key at accept (default false) — only
 				// batch items ask the worker to claim.
 				validateTrackBodyIdempotencyKey,
+				spooledAt,
 			},
 		});
 

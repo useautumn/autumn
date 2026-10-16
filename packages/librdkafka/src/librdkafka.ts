@@ -10,6 +10,7 @@ export {
 	type ConfluentKafkaJS,
 	getKafkaJS,
 	getLibrdkafkaInfo,
+	getNativeAdminClient,
 	getNativeKafkaConsumer,
 	type LibrdkafkaInfo,
 	type NativeKafkaConsumerClass,

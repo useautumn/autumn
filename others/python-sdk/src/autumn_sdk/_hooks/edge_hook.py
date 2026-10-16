@@ -1,5 +1,4 @@
-import json
-from typing import Callable, Dict, Optional, Union
+from typing import Optional, Union
 
 import httpx
 
@@ -8,26 +7,8 @@ from autumn_sdk.sdkconfiguration import SDKConfiguration
 from .edge_clients import EdgeAsyncClient, EdgeBases, EdgeSyncClient, rebase_request, rebase_url
 from .types import BeforeRequestContext, BeforeRequestHook, SDKInitHook
 
-# What the edge serves, by operation id. A write never goes there, so a fallback can't make it land twice.
-EDGE_OPERATIONS: Dict[str, Optional[Callable[[dict], bool]]] = {
-    "check": lambda body: body.get("send_event") is True or body.get("lock") is not None,
-}
-
-
-def _body_of(request: httpx.Request) -> dict:
-    try:
-        body = json.loads(request.content or b"{}")
-    except (ValueError, UnicodeDecodeError):
-        return {}
-    return body if isinstance(body, dict) else {}
-
-
-def is_edge_operation(operation_id: str, request: httpx.Request) -> bool:
-    """Whether this call is one the edge answers: a listed operation, and not a write."""
-    if operation_id not in EDGE_OPERATIONS:
-        return False
-    is_write = EDGE_OPERATIONS[operation_id]
-    return is_write is None or not is_write(_body_of(request))
+# What the edge serves, by operation id. Track never goes there; finalize joins once the Atom dedupes it by key.
+EDGE_OPERATION_IDS = {"check"}
 
 
 def edge_bases_of(config: SDKConfiguration) -> Optional[EdgeBases]:
@@ -58,7 +39,7 @@ class EdgeHook(SDKInitHook, BeforeRequestHook):
         bases = edge_bases_of(hook_ctx.config)
         if bases is None or not getattr(hook_ctx.config, "use_edge", False):
             return request
-        if not is_edge_operation(hook_ctx.operation_id, request):
+        if hook_ctx.operation_id not in EDGE_OPERATION_IDS:
             return request
         # Only a call bound for the client's Autumn API: a per-call `server_url` is the caller's choice.
         edge_url = rebase_url(request.url, bases.autumn, bases.edge)

@@ -143,9 +143,8 @@ const sumPoolBalance = (state: PooledState) =>
 	}, 0);
 
 /**
- * A free plan pools alongside a paid one — the free plan resets lazily with no
- * subscription, so the two identities differ by more than the subscription id.
- * After the merge, transitioning EITHER side must leave the pooled totals alone.
+ * A free plan pools alongside a paid one: it joins the paid plan's subscription
+ * pool at attach. Transitioning EITHER side must leave the pooled totals alone.
  */
 const expectFreeAndSubscriptionMergeConserved = async ({
 	customerId,

@@ -42,9 +42,9 @@ const selectSurvivingPool = <
 	const candidates = (pools as (T & { id: string })[]).filter(
 		(pool) => pool.stripe_subscription_id != null,
 	);
-	return [...(candidates.length > 0 ? candidates : (pools as (T & { id: string })[]))].sort(
-		byPreference,
-	)[0];
+	return [
+		...(candidates.length > 0 ? candidates : (pools as (T & { id: string })[])),
+	].sort(byPreference)[0];
 };
 
 /**
@@ -124,27 +124,72 @@ export const mergePooledBalances = async ({
 			})
 			.where(eq(pooledBalances.id, survivor.id));
 
-		await tx.delete(pooledBalances).where(inArray(pooledBalances.id, loserPoolIds));
+		await tx
+			.delete(pooledBalances)
+			.where(inArray(pooledBalances.id, loserPoolIds));
 		await tx
 			.delete(customerEntitlements)
 			.where(inArray(customerEntitlements.id, loserCusEntIds));
 
 		for (const cusEnt of loserCusEnts) {
-			await tx.delete(entitlements).where(
-				and(
-					eq(entitlements.id, cusEnt.entitlement_id),
-					notExists(
-						tx
-							.select({ one: sql`1` })
-							.from(customerEntitlements)
-							.where(eq(customerEntitlements.entitlement_id, cusEnt.entitlement_id)),
+			await tx
+				.delete(entitlements)
+				.where(
+					and(
+						eq(entitlements.id, cusEnt.entitlement_id),
+						notExists(
+							tx
+								.select({ one: sql`1` })
+								.from(customerEntitlements)
+								.where(
+									eq(
+										customerEntitlements.entitlement_id,
+										cusEnt.entitlement_id,
+									),
+								),
+						),
 					),
-				),
-			);
+				);
 		}
 	});
 
 	return { survivorPoolId: survivor.id, balanceDelta, grantedDelta };
+};
+
+/** Free plans join the subscription pool at attach, which is the post-merge shape the script produces. */
+const expectFreePlanJoinedSubscriptionPool = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const state = await getPooledBalanceDbState({ db: ctx.db, customerId });
+	expect(state.pools).toHaveLength(1);
+	expect(state.contributions).toHaveLength(2);
+	const mergedPool = state.pools[0];
+	expect(mergedPool.stripe_subscription_id).not.toBeNull();
+	return { merge: null, mergedPool, afterMerge: state };
+};
+
+const mergeSplitSubscriptionPools = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}) => {
+	const beforeMerge = await getPooledBalanceDbState({ db: ctx.db, customerId });
+	expect(beforeMerge.pools).toHaveLength(2);
+	expect(
+		new Set(beforeMerge.pools.map((pool) => pool.stripe_subscription_id)).size,
+	).toBe(2);
+
+	const merge = await mergePooledBalances({ ctx, customerId });
+
+	const afterMerge = await getPooledBalanceDbState({ db: ctx.db, customerId });
+	expect(afterMerge.pools).toHaveLength(1);
+	return { merge, mergedPool: afterMerge.pools[0], afterMerge };
 };
 
 /**
@@ -159,7 +204,7 @@ export const mergePooledBalances = async ({
 export type MergedPoolVariant =
 	/** Two paid plans, each on its own Stripe subscription. */
 	| "two-subscriptions"
-	/** A free plan (lazy reset, no subscription) alongside a paid one. */
+	/** A free plan (no subscription) that joins a paid plan's pool. */
 	| "free-and-subscription";
 
 export const setupMergedPoolScenario = async ({
@@ -191,8 +236,7 @@ export const setupMergedPoolScenario = async ({
 		id: `${customerId}-paid`,
 		items: [pooledItem],
 	});
-	// Free => reset_mode lazy with no subscription id, so it mints a pool whose
-	// identity differs from the paid plan's on more than just the subscription.
+	// Free => no subscription of its own, so it joins the paid plan's subscription pool.
 	const freePlan = products.base({
 		id: `${customerId}-free`,
 		items: [pooledItem],
@@ -214,8 +258,7 @@ export const setupMergedPoolScenario = async ({
 			s.billing.attach({
 				productId: secondPlan.id,
 				entityIndex: 1,
-				// A second paid attach needs its own subscription to mint its own
-				// pool; the free plan already has a distinct identity.
+				// A second paid attach needs its own subscription to mint its own pool.
 				...(isFreeVariant ? {} : { newBillingSubscription: true }),
 			}),
 			...(usage
@@ -232,27 +275,15 @@ export const setupMergedPoolScenario = async ({
 		],
 	});
 
-	// ── Precondition: two pools, one per subscription.
-	const beforeMerge = await getPooledBalanceDbState({
-		db: scenario.ctx.db,
-		customerId,
-	});
-	expect(beforeMerge.pools).toHaveLength(2);
-	expect(
-		new Set(beforeMerge.pools.map((pool) => pool.stripe_subscription_id)).size,
-	).toBe(2);
+	const { merge, mergedPool, afterMerge } = isFreeVariant
+		? await expectFreePlanJoinedSubscriptionPool({
+				ctx: scenario.ctx,
+				customerId,
+			})
+		: await mergeSplitSubscriptionPools({ ctx: scenario.ctx, customerId });
 
-	const merge = await mergePooledBalances({ ctx: scenario.ctx, customerId });
-
-	const afterMerge = await getPooledBalanceDbState({
-		db: scenario.ctx.db,
-		customerId,
-	});
-	expect(afterMerge.pools).toHaveLength(1);
-	const mergedPool = afterMerge.pools[0];
-
-	// The plan whose contribution was repointed now sits on a pool identified by
-	// the other subscription — this is the customer product to transition.
+	// The plan whose subscription does not identify the pool is the one to transition
+	// (the repointed paid plan, or the free plan with no subscription).
 	const pooledCustomerProducts = afterMerge.sourceCustomerProducts.filter(
 		(customerProduct) =>
 			customerProduct.product_id === paidPlan.id ||

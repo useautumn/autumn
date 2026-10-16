@@ -51,6 +51,16 @@ import { resolveInternalIdsByBasePriceSort } from "./resolveByBasePriceSort.js";
 import { resolveInternalIdsByFeatureBalanceSort } from "./resolveByFeatureBalanceSort.js";
 
 const DASHBOARD_LIST_PRODUCT_PREVIEW_LIMIT = 3;
+
+/** Preview pages carry only customers and their product summaries. */
+const dashboardQueryShape = ({ preview }: { preview: boolean }) => ({
+	withSubs: !preview,
+	withEntities: !preview,
+	includeInvoices: !preview,
+	withProductsPage: !preview,
+	withBalances: !preview,
+});
+
 /** Balance-mode pages are verify-bounded: nominations + exact PG re-rank. */
 const FEATURE_BALANCE_PAGE_CAP = 250;
 
@@ -347,6 +357,7 @@ export class CusBatchService {
 		sortBasis,
 		limit,
 		sortOrder,
+		preview = false,
 	}: {
 		ctx: RequestContext;
 		search: string;
@@ -359,6 +370,7 @@ export class CusBatchService {
 		sortBasis?: FeatureBalanceSortBasis;
 		limit: number;
 		sortOrder?: SortOrder;
+		preview?: boolean;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -393,6 +405,7 @@ export class CusBatchService {
 						sortOrder,
 						cusProductLimit,
 						entitiesLimit,
+						preview,
 					});
 					span.setAttributes({
 						"customer.balance_sort.result_rows": result.fullCustomers.length,
@@ -424,6 +437,7 @@ export class CusBatchService {
 				sortOrder,
 				cusProductLimit,
 				entitiesLimit,
+				preview,
 			});
 		}
 
@@ -438,6 +452,7 @@ export class CusBatchService {
 				sortOrder,
 				cusProductLimit,
 				entitiesLimit,
+				preview,
 			});
 		}
 
@@ -485,11 +500,7 @@ export class CusBatchService {
 			orgId: ctx.org.id,
 			env: ctx.env,
 			inStatuses: RELEVANT_STATUSES,
-			withSubs: true,
-			withEntities: true,
-			includeInvoices: true,
-			// Only the dashboard renders products_page / products_total_count.
-			withProductsPage: true,
+			...dashboardQueryShape({ preview }),
 			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
 			cursor:
@@ -579,6 +590,7 @@ export class CusBatchService {
 		sortOrder,
 		cusProductLimit,
 		entitiesLimit,
+		preview,
 	}: {
 		ctx: RequestContext;
 		search: string;
@@ -589,6 +601,7 @@ export class CusBatchService {
 		sortOrder?: SortOrder;
 		cusProductLimit: number;
 		entitiesLimit: number;
+		preview: boolean;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -634,6 +647,7 @@ export class CusBatchService {
 					cusProductLimit,
 					entitiesLimit,
 					balanceFeatureInternalIds: [feature.internal_id],
+					preview,
 				});
 				span.setAttribute("customer.balance_filter.result_rows", result.length);
 				return result;
@@ -673,21 +687,20 @@ export class CusBatchService {
 		cusProductLimit,
 		entitiesLimit,
 		balanceFeatureInternalIds,
+		preview,
 	}: {
 		ctx: RequestContext;
 		internalIds: string[];
 		cusProductLimit: number;
 		entitiesLimit: number;
 		balanceFeatureInternalIds?: string[];
+		preview: boolean;
 	}): Promise<FullCustomer[]> {
 		const sqlQuery = getCursorPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			inStatuses: RELEVANT_STATUSES,
-			withSubs: true,
-			withEntities: true,
-			includeInvoices: true,
-			withProductsPage: true,
+			...dashboardQueryShape({ preview }),
 			entitiesLimit,
 			limit: internalIds.length,
 			internalCustomerIds: internalIds,
@@ -739,6 +752,7 @@ export class CusBatchService {
 		sortOrder,
 		cusProductLimit,
 		entitiesLimit,
+		preview,
 	}: {
 		ctx: RequestContext;
 		search: string;
@@ -750,6 +764,7 @@ export class CusBatchService {
 		sortOrder?: SortOrder;
 		cusProductLimit: number;
 		entitiesLimit: number;
+		preview: boolean;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -830,6 +845,7 @@ export class CusBatchService {
 					cusProductLimit,
 					entitiesLimit,
 					balanceFeatureInternalIds: [feature.internal_id],
+					preview,
 				});
 				span.setAttribute("customer.balance_sort.result_rows", result.length);
 				return result;
@@ -874,6 +890,7 @@ export class CusBatchService {
 		sortOrder,
 		cusProductLimit,
 		entitiesLimit,
+		preview,
 	}: {
 		ctx: RequestContext;
 		search: string;
@@ -883,6 +900,7 @@ export class CusBatchService {
 		sortOrder?: SortOrder;
 		cusProductLimit: number;
 		entitiesLimit: number;
+		preview: boolean;
 	}): Promise<{
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
@@ -913,6 +931,7 @@ export class CusBatchService {
 			internalIds,
 			cusProductLimit,
 			entitiesLimit,
+			preview,
 		});
 
 		ctx.logger.info(

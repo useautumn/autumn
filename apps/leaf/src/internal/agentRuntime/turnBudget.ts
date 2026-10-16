@@ -15,10 +15,6 @@ const REPLAY_IDLE_DIVISOR = 10;
  * relaying — so only a multiple of the wall can be the true ceiling. */
 const CEILING_WALLS_PER_TURN = 5;
 
-/** The caller's hard kill: the wall plus enough grace that leaf settles the
- * turn itself rather than being cut off mid-settle. */
-export const TURN_BACKSTOP_MS = TURN_WALL_MS + BACKSTOP_GRACE_MS;
-
 /** Leaf answers with whatever it has by here, one grace window inside the
  * wall, so a turn eve never resumes still produces a reply. */
 export const TURN_SETTLE_BUDGET_MS = TURN_WALL_MS - SETTLE_GRACE_MS;
@@ -68,3 +64,8 @@ export const MAX_IDLE_RETRIES = 20;
 
 export const turnDeadlineFrom = ({ startedAt }: { startedAt: number }) =>
 	startedAt + TURN_SETTLE_BUDGET_MS;
+
+/** The caller's hard kill: the ceiling plus one idle window and enough grace
+ * that leaf settles the turn itself rather than being cut off mid-settle. */
+export const TURN_BACKSTOP_MS =
+	MAX_TURN_DURATION_MS + STREAM_IDLE_TIMEOUT_MS + BACKSTOP_GRACE_MS;

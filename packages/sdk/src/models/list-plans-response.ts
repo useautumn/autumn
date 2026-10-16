@@ -14,7 +14,7 @@ import {
   ListPlansLicense$inboundSchema,
   ListPlansVariantDetails,
   ListPlansVariantDetails$inboundSchema,
-} from "./list-plans-variant-add-item-feature-override-tier.js";
+} from "./list-plans-dimensions-variant-add-item-1.js";
 import {
   ListPlansBillingControls,
   ListPlansBillingControls$inboundSchema,
@@ -32,30 +32,148 @@ import {
   ListPlansPrice$inboundSchema,
   ListPlansProcessors,
   ListPlansProcessors$inboundSchema,
-} from "./list-plans-variant-details-usage-alert.js";
+} from "./list-plans-variant-details-basis.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 import {
   ListPlansVariantCustomize,
   ListPlansVariantCustomize$inboundSchema,
-  VariantConfig,
-  VariantConfig$inboundSchema,
   VariantEnv,
   VariantEnv$inboundSchema,
   VariantFreeTrial,
   VariantFreeTrial$inboundSchema,
   VariantItem,
   VariantItem$inboundSchema,
-  VariantPlanAutoTopup,
-  VariantPlanAutoTopup$inboundSchema,
   VariantPlanPrice,
   VariantPlanPrice$inboundSchema,
-  VariantPlanSpendLimit,
-  VariantPlanSpendLimit$inboundSchema,
-  VariantPlanUsageLimitInterval,
-  VariantPlanUsageLimitInterval$inboundSchema,
   VariantProcessors,
   VariantProcessors$inboundSchema,
-} from "./variant-plan-usage-limit-interval.js";
+} from "./variant-env.js";
+
+/**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type VariantConfig = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+  /**
+   * Anchor billing and reset cycles to the 1st of the month (UTC).
+   */
+  anchorToMonthStart: boolean;
+};
+
+/**
+ * The time interval for the purchase limit window.
+ */
+export const VariantPlanAutoTopupInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type VariantPlanAutoTopupInterval = OpenEnum<
+  typeof VariantPlanAutoTopupInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type VariantPlanPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: VariantPlanAutoTopupInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type VariantPlanAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: VariantPlanPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const VariantPlanLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type VariantPlanLimitType = OpenEnum<typeof VariantPlanLimitType>;
+
+export type VariantPlanSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: VariantPlanLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const VariantPlanUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type VariantPlanUsageLimitInterval = OpenEnum<
+  typeof VariantPlanUsageLimitInterval
+>;
 
 /**
  * Window alignment. 'billing_cycle' phases the interval to the customer's renewal time; 'utc' aligns to the UTC calendar.
@@ -471,6 +589,144 @@ export type ListPlansResponse = {
 };
 
 /** @internal */
+export const VariantConfig$inboundSchema: z.ZodMiniType<
+  VariantConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+    anchor_to_month_start: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+      "anchor_to_month_start": "anchorToMonthStart",
+    });
+  }),
+);
+
+export function variantConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantConfig' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanAutoTopupInterval$inboundSchema: z.ZodMiniType<
+  VariantPlanAutoTopupInterval,
+  unknown
+> = openEnums.inboundSchema(VariantPlanAutoTopupInterval);
+
+/** @internal */
+export const VariantPlanPurchaseLimit$inboundSchema: z.ZodMiniType<
+  VariantPlanPurchaseLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: VariantPlanAutoTopupInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function variantPlanPurchaseLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanPurchaseLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanPurchaseLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanAutoTopup$inboundSchema: z.ZodMiniType<
+  VariantPlanAutoTopup,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => VariantPlanPurchaseLimit$inboundSchema),
+    ),
+    invoice_mode: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
+    });
+  }),
+);
+
+export function variantPlanAutoTopupFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanAutoTopup, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanAutoTopup$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanAutoTopup' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanLimitType$inboundSchema: z.ZodMiniType<
+  VariantPlanLimitType,
+  unknown
+> = openEnums.inboundSchema(VariantPlanLimitType);
+
+/** @internal */
+export const VariantPlanSpendLimit$inboundSchema: z.ZodMiniType<
+  VariantPlanSpendLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(VariantPlanLimitType$inboundSchema),
+    overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "limit_type": "limitType",
+      "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
+    });
+  }),
+);
+
+export function variantPlanSpendLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<VariantPlanSpendLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => VariantPlanSpendLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'VariantPlanSpendLimit' from JSON`,
+  );
+}
+
+/** @internal */
+export const VariantPlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
+  VariantPlanUsageLimitInterval,
+  unknown
+> = openEnums.inboundSchema(VariantPlanUsageLimitInterval);
+
+/** @internal */
 export const VariantPlanAnchor$inboundSchema: z.ZodMiniType<
   VariantPlanAnchor,
   unknown
@@ -622,8 +878,12 @@ export const VariantPlanBillingControls$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    auto_topups: types.optional(z.array(VariantPlanAutoTopup$inboundSchema)),
-    spend_limits: types.optional(z.array(VariantPlanSpendLimit$inboundSchema)),
+    auto_topups: types.optional(
+      z.array(z.lazy(() => VariantPlanAutoTopup$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => VariantPlanSpendLimit$inboundSchema)),
+    ),
     usage_limits: types.optional(
       z.array(z.lazy(() => VariantPlanUsageLimit$inboundSchema)),
     ),
@@ -719,7 +979,7 @@ export const ListPlansPlan$inboundSchema: z.ZodMiniType<
     created_at: types.number(),
     env: VariantEnv$inboundSchema,
     archived: types.boolean(),
-    config: VariantConfig$inboundSchema,
+    config: z.lazy(() => VariantConfig$inboundSchema),
     billing_controls: types.optional(
       z.lazy(() => VariantPlanBillingControls$inboundSchema),
     ),

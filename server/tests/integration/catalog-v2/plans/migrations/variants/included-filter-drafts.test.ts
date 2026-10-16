@@ -14,15 +14,6 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
-import {
-	childItemOp,
-	expectLicenseDraftCase,
-	messagesItemDelta,
-	orVersionPinnedFilter,
-	parentLicenseOp,
-	versionPinnedFilter,
-} from "../licenses/utils/expectLicenseMigrationDrafts.js";
 import {
 	messagesItem,
 	withCatalogPlans,
@@ -31,6 +22,15 @@ import {
 	seedBaseVariantWithChildLicense,
 	seedBaseWithVariant,
 } from "../../variants/utils/seedVariantPlans.js";
+import {
+	childItemOp,
+	expectLicenseDraftCase,
+	messagesItemDelta,
+	orVersionPinnedFilter,
+	parentLicenseOp,
+	versionPinnedFilter,
+} from "../licenses/utils/expectLicenseMigrationDrafts.js";
+import { seedVersionableCustomer } from "../utils/seedVersionableCustomer.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 variants drafts: follow 100→150 stamps included: 100 on the collapsed $or")}`,

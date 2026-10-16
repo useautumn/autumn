@@ -6,15 +6,15 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiPlanV1 } from "@autumn/shared";
+import type { ApiPlanV1 } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 import { expectLicenseLinkCorrect } from "../licenses/utils/expectLicenseLinkCorrect.js";
 import {
-	parsePlanPreview,
 	expectPlanPreviewRowCorrect,
+	parsePlanPreview,
 } from "../preview/utils/expectPlanPreview.js";
 import {
 	deleteDbPlans,
@@ -87,7 +87,11 @@ test.concurrent(
 				],
 			});
 			await renamePlan({ autumn: autumnV2_3, fromId: oldId, toId: newId });
-			await renamePlan({ autumn: autumnV2_3, fromId: childOld, toId: childNew });
+			await renamePlan({
+				autumn: autumnV2_3,
+				fromId: childOld,
+				toId: childNew,
+			});
 
 			const preview = await autumnV2_3.catalogV2.previewUpdate({
 				plans: [{ plan_id: oldId, name: "Parent Renamed" }],

@@ -1,5 +1,6 @@
 import {
 	getKafkaJS,
+	getNativeAdminClient,
 	getNativeKafkaConsumer,
 	type KafkaJS,
 } from "@autumn/librdkafka";
@@ -12,7 +13,10 @@ import type {
 	Producer,
 	ProducerConfig,
 } from "../types/kafkaWire.js";
-import { createLibrdkafkaAdmin } from "./admin/createLibrdkafkaAdmin.js";
+import {
+	createLibrdkafkaAdmin,
+	type NativeAdmin,
+} from "./admin/createLibrdkafkaAdmin.js";
 import { createLibrdkafkaConsumer } from "./consumer/createLibrdkafkaConsumer.js";
 import type {
 	NativeConsumer,
@@ -21,6 +25,12 @@ import type {
 import { createKafkaLog } from "./kafkaLog.js";
 import { nativeClientConfigOf } from "./nativeClientConfig.js";
 import { createLibrdkafkaProducer } from "./producer/createLibrdkafkaProducer.js";
+
+function createNativeAdmin(config: Record<string, unknown>): NativeAdmin {
+	return getNativeAdminClient().create(
+		config as never,
+	) as unknown as NativeAdmin;
+}
 
 function createNativeConsumer({
 	global,
@@ -76,6 +86,7 @@ export function createKafka(config: KafkaClientConfig): Kafka {
 				kafka: shim(),
 				nativeClientConfig,
 				createNative: createNativeConsumer,
+				createNativeAdmin,
 				log,
 			},
 		});

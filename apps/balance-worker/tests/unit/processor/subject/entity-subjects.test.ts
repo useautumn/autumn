@@ -170,6 +170,7 @@ const createFixture = () => {
 		getBillingCycleAnchors: async () => ({}),
 		claimCustomerByEmail: async () => null,
 		listPooledBalancesWithoutOtherContributions: async () => [],
+		readLockRows: async () => [],
 		sumPooledContributionGrants: async () => ({}),
 	};
 	const appender = new ControlledAppender();

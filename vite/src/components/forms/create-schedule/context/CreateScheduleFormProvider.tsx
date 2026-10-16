@@ -45,6 +45,10 @@ import {
 	findSubscriptionConflict,
 } from "@/components/forms/customer-state/utils/findSubscriptionConflict";
 import type { BillingGenerationState } from "@/components/forms/shared/generation/BillingPromptBar";
+import {
+	type InvoiceLineEditsController,
+	useInvoiceLineEdits,
+} from "@/components/forms/shared/invoiceLineEdits/useInvoiceLineEdits";
 import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { defaultProrationBehavior } from "@/components/forms/shared/utils/defaultProrationBehavior";
 import { filterSubscriptionDiscounts } from "@/components/forms/shared/utils/filterSubscriptionDiscounts";
@@ -114,6 +118,7 @@ interface CreateScheduleFormContextValue {
 		paymentUrl: string | null | undefined;
 	}>;
 	preview: SetPlansPreviewResponse | null | undefined;
+	lineEdits: InvoiceLineEditsController;
 	/** The preview's discounts on the edited subscription; customer-level coupons aren't removable here. */
 	appliedDiscounts: SetPlansPreviewDiscount[];
 	previewQuery: { data: SetPlansPreviewResponse | null | undefined };
@@ -420,6 +425,15 @@ export function CreateScheduleFormProvider({
 		removedRewardIds: formValues.removedRewardIds,
 	});
 
+	const lineEdits = useInvoiceLineEdits({
+		resetKey: JSON.stringify(generationRequestBody),
+	});
+	const { applyToBody: applyLineEdits } = lineEdits;
+	const editedGenerationRequestBody = useMemo(
+		() => applyLineEdits(generationRequestBody),
+		[applyLineEdits, generationRequestBody],
+	);
+
 	// Clear stale backdates when the selected scope can no longer use them.
 	useEffect(() => {
 		if (allowFirstPhaseBackdate || isExistingSchedule) return;
@@ -445,7 +459,7 @@ export function CreateScheduleFormProvider({
 		data: preview,
 		isLoading: isPreviewLoading,
 		error: previewError,
-	} = useCreateSchedulePreview({ requestBody: generationRequestBody });
+	} = useCreateSchedulePreview({ requestBody: editedGenerationRequestBody });
 
 	const startsLater = firstPhaseStartsLater({
 		phases: formValues.phases,
@@ -481,7 +495,7 @@ export function CreateScheduleFormProvider({
 		};
 	}, [form.store, appliedDiscounts]);
 
-	const buildRequestBody = useBuildCreateScheduleRequestBody({
+	const buildBaseRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
 		products,
 		features,
@@ -502,6 +516,12 @@ export function CreateScheduleFormProvider({
 		catalogFreeTrial,
 		stripeSubscriptionId,
 	});
+
+	const buildRequestBody = useCallback(
+		(params?: Parameters<typeof buildBaseRequestBody>[0]) =>
+			applyLineEdits(buildBaseRequestBody(params)),
+		[applyLineEdits, buildBaseRequestBody],
+	);
 
 	const generation = useCreateScheduleGeneration({
 		currentRequest: generationRequestBody as Record<string, unknown> | null,
@@ -550,6 +570,7 @@ export function CreateScheduleFormProvider({
 			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
+			lineEdits,
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
 		}),
 		[
@@ -580,6 +601,7 @@ export function CreateScheduleFormProvider({
 			appliedDiscounts,
 			previewQuery,
 			isPreviewLoading,
+			lineEdits,
 			phaseTimingError,
 			previewError,
 		],

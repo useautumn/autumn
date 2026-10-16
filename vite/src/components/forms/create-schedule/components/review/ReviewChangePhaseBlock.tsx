@@ -1,3 +1,4 @@
+import type { SetPlansReviewPhase } from "@autumn/shared";
 import { StatusChip } from "@autumn/ui";
 import { Fragment } from "react";
 import {
@@ -5,12 +6,8 @@ import {
 	PlanSection,
 } from "@/components/forms/customer-state/components/tray/PlanSection";
 import { PlanTraySectionTitle } from "@/components/forms/customer-state/components/tray/PlanTraySectionTitle";
+import { formatReviewText } from "../../utils/review/formatReviewText";
 import { groupRowsByScope } from "../../utils/review/groupRowsByScope";
-import type {
-	ReviewChangePhase,
-	ReviewChangeRow,
-} from "../../utils/review/types/reviewChange";
-import { ReviewChangeRowGroup } from "./ReviewChangeRowGroup";
 import { ReviewChangeRowItem } from "./ReviewChangeRowItem";
 import { ReviewScopeHeader } from "./ReviewScopeHeader";
 
@@ -27,30 +24,12 @@ function RemovedPhaseTitle({ label }: { label: string }) {
 	);
 }
 
-function ReviewChangeRowEntry({
-	row,
-	showsStatus,
-}: {
-	row: ReviewChangeRow;
-	showsStatus: boolean;
-}) {
-	return row.items ? (
-		<ReviewChangeRowGroup
-			row={row}
-			items={row.items}
-			showsStatus={showsStatus}
-		/>
-	) : (
-		<ReviewChangeRowItem row={row} showsStatus={showsStatus} />
-	);
-}
-
 export function ReviewChangePhaseBlock({
 	phase,
 	showsStatus,
 	showsScopes,
 }: {
-	phase: ReviewChangePhase;
+	phase: SetPlansReviewPhase;
 	showsStatus: boolean;
 	showsScopes: boolean;
 }) {
@@ -58,19 +37,21 @@ export function ReviewChangePhaseBlock({
 		<PlanSection
 			header={
 				phase.removed ? (
-					<RemovedPhaseTitle label={phase.label} />
+					<RemovedPhaseTitle label={formatReviewText(phase.label)} />
 				) : (
-					<PlanTraySectionTitle title={phase.label} />
+					<PlanTraySectionTitle title={formatReviewText(phase.label)} />
 				)
 			}
 			surfaceClassName={phase.removed ? "border-dashed" : undefined}
 		>
 			{showsScopes
 				? groupRowsByScope({ rows: phase.rows }).map(({ entityId, rows }) => (
-						<Fragment key={entityId ?? "customer"}>
+						<Fragment
+							key={entityId === null ? "customer" : `entity:${entityId}`}
+						>
 							<ReviewScopeHeader entityId={entityId} />
 							{rows.map((row) => (
-								<ReviewChangeRowEntry
+								<ReviewChangeRowItem
 									key={row.key}
 									row={row}
 									showsStatus={showsStatus}
@@ -79,7 +60,7 @@ export function ReviewChangePhaseBlock({
 						</Fragment>
 					))
 				: phase.rows.map((row) => (
-						<ReviewChangeRowEntry
+						<ReviewChangeRowItem
 							key={row.key}
 							row={row}
 							showsStatus={showsStatus}

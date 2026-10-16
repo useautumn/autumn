@@ -18,6 +18,7 @@ import {
 	type QueueCapacityLease,
 	reserveQueueCapacity,
 } from "@/external/redis/actions/queueCapacityLease/queueCapacityLease.js";
+import { flushBalanceBatchingManagers } from "@/internal/balances/utils/flushBalanceBatchingManagers.js";
 import {
 	isJobQueueEnabled,
 	JOB_QUEUE_IDS,
@@ -39,6 +40,7 @@ import { shutdownSqsSendBatchers } from "./queueUtils.js";
 import { getQueueRetryBudget } from "./retryBudget/getQueueRetryBudget.js";
 import { reportJobTimeout } from "./retryBudget/reportJobTimeout.js";
 import type { RetryBudget } from "./retryBudget/types/retryBudget.js";
+import { spooledTrackRedeliveryDelaySeconds } from "./spooledTrackRedelivery.js";
 import { getTrackAndUpdateBalanceWorkerQueueUrls } from "./trackAsyncQueueUrls.js";
 import {
 	createWorkerActivityTracker,
@@ -64,6 +66,7 @@ const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const SQS_RECEIVE_TIMEOUT_MS = ms.seconds(30);
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
+const IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS = ms.seconds(5);
 const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
 type JobOverride = {
@@ -324,6 +327,39 @@ export const startPollingLoop = async ({
 		);
 	};
 
+	const delaySpooledTrackRedelivery = async ({
+		sqs,
+		message,
+		job,
+		error,
+	}: {
+		sqs: SQSClient;
+		message: Message;
+		job: SqsJob;
+		error: unknown;
+	}) => {
+		const delaySeconds = spooledTrackRedeliveryDelaySeconds({
+			job,
+			error,
+			receiveCount: Number(message.Attributes?.ApproximateReceiveCount),
+		});
+		if (delaySeconds === null || !message.ReceiptHandle) return;
+		try {
+			await sqs.send(
+				new ChangeMessageVisibilityCommand({
+					QueueUrl: queueUrl,
+					ReceiptHandle: message.ReceiptHandle,
+					VisibilityTimeout: delaySeconds,
+				}),
+			);
+		} catch (visibilityError) {
+			// The receive's own visibility still redelivers it, only sooner.
+			logger.warn(`${prefix} could not delay a spooled track's redelivery`, {
+				error: visibilityError,
+			});
+		}
+	};
+
 	const handleSingleMessage = async ({
 		sqs,
 		message,
@@ -375,6 +411,7 @@ export const startPollingLoop = async ({
 				});
 			}
 		} catch (error) {
+			await delaySpooledTrackRedelivery({ sqs, message, job, error });
 			if (override?.ack !== "always-after-processing") throw error;
 
 			// The next scan rediscovers the work, so this attempt's failure is absorbed.
@@ -643,7 +680,16 @@ export const initWorkers = async ({
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
+		await withTimeout({
+			fn: () => Promise.allSettled(pollingLoops),
+			timeoutMs: IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS,
+		}).catch(() =>
+			console.warn(
+				`[SQS Worker ${process.pid}] proceeding with jobs still in flight after ${IN_FLIGHT_JOBS_SHUTDOWN_TIMEOUT_MS}ms`,
+			),
+		);
 		await stopBalanceShadow();
+		await flushBalanceBatchingManagers();
 		await shutdownSqsSendBatchers();
 		await getSqsJobs().shutdown();
 		await flushTelemetry();
@@ -666,7 +712,7 @@ export const initWorkers = async ({
 	console.log(
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
-	const pollingLoops = [];
+	const pollingLoops: Promise<void>[] = [];
 	const workerActivity = createWorkerActivityTracker({
 		idleAfterMs: IDLE_SELF_KILL_MS,
 	});

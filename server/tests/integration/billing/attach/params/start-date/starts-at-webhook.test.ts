@@ -41,6 +41,7 @@ const triggerSubscriptionUpdated = async ({
 			nowMs,
 			updatedCustomerProducts: [],
 			deletedCustomerProducts: [],
+			pooledTransitionedCustomerProductIds: new Set<string>(),
 			insertedCustomerProducts: [],
 		} as unknown as StripeSubscriptionUpdatedContext,
 	});

@@ -33,6 +33,11 @@ export function getNativeKafkaConsumer(): NativeKafkaConsumerClass {
 	return loadConfluent().KafkaConsumer;
 }
 
+/** librdkafka's own admin client factory, without the KafkaJS shim on top. */
+export function getNativeAdminClient(): typeof Confluent.AdminClient {
+	return loadConfluent().AdminClient;
+}
+
 export function getLibrdkafkaInfo(): LibrdkafkaInfo {
 	const confluent = loadConfluent();
 	return {

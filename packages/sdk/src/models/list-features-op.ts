@@ -32,6 +32,19 @@ export const ListFeaturesType = {
  */
 export type ListFeaturesType = OpenEnum<typeof ListFeaturesType>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const ListFeaturesCombine = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type ListFeaturesCombine = OpenEnum<typeof ListFeaturesCombine>;
+
 export type ListFeaturesDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -404,6 +417,10 @@ export type ListFeaturesList = {
    */
   consumable: boolean;
   /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: ListFeaturesCombine | undefined;
+  /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
   eventNames?: Array<string> | undefined;
@@ -475,6 +492,12 @@ export const ListFeaturesType$inboundSchema: z.ZodMiniType<
   ListFeaturesType,
   unknown
 > = openEnums.inboundSchema(ListFeaturesType);
+
+/** @internal */
+export const ListFeaturesCombine$inboundSchema: z.ZodMiniType<
+  ListFeaturesCombine,
+  unknown
+> = openEnums.inboundSchema(ListFeaturesCombine);
 
 /** @internal */
 export const ListFeaturesDimensions6$inboundSchema: z.ZodMiniType<
@@ -1216,6 +1239,7 @@ export const ListFeaturesList$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: ListFeaturesType$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(ListFeaturesCombine$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => ListFeaturesCreditSchema1$inboundSchema),

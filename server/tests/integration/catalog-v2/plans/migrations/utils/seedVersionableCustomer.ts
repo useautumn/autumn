@@ -1,8 +1,4 @@
-import {
-	CusProductStatus,
-	customerProducts,
-	customers,
-} from "@autumn/shared";
+import { CusProductStatus, customerProducts, customers } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";

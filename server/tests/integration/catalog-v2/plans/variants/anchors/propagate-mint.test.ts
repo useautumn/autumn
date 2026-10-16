@@ -10,7 +10,6 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import { expectLicenseLinkCorrect } from "../../licenses/utils/expectLicenseLinkCorrect.js";
 import {
 	dashboardItem,
@@ -18,11 +17,12 @@ import {
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
+import { expectPlanVersionsCorrect } from "../../utils/expectCatalogPlans.js";
 import {
 	expectVariantPlanCorrect,
 	expectVariantPointerCorrect,
 } from "../utils/expectVariantPointer.js";
-import { expectPlanVersionsCorrect } from "../../utils/expectCatalogPlans.js";
 import {
 	seedBaseVariantWithChildLicense,
 	seedBaseWithTwoVariants,

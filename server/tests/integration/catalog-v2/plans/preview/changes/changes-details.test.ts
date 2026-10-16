@@ -318,8 +318,8 @@ test.concurrent(
 				},
 			});
 			const bc =
-				findPlanPreviewRow({ preview, planId }).plan_change
-					?.previous_attributes?.billing_controls ?? {};
+				findPlanPreviewRow({ preview, planId }).plan_change?.previous_attributes
+					?.billing_controls ?? {};
 			expect(Object.keys(bc)).toEqual(["auto_topups"]);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { RepoContext } from "@/db/repoContext";
+import { isStripeResourceMissing } from "@/external/stripe/common/utils/isStripeResourceMissing";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 
@@ -44,9 +45,14 @@ export const cancelCreatedStripeSubscription = async ({
 	});
 	if (!stripeSubscriptionId) return;
 
-	const stripeSubscription =
-		await stripeCli.subscriptions.retrieve(stripeSubscriptionId);
+	const stripeSubscription = await stripeCli.subscriptions
+		.retrieve(stripeSubscriptionId)
+		.catch((error) => {
+			if (isStripeResourceMissing(error)) return null;
+			throw error;
+		});
 	const isAlreadyEnded =
+		!stripeSubscription ||
 		isStripeSubscriptionCanceled(stripeSubscription) ||
 		stripeSubscription.status === "incomplete_expired";
 	if (isAlreadyEnded) return;

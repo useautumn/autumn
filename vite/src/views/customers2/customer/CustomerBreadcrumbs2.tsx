@@ -11,13 +11,13 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 export const CustomerBreadcrumbs = () => {
 	const env = useEnv();
 	const navigate = useNavigate();
 
-	const { customer } = useCusQuery();
+	const { customer } = useCustomerContext();
 	const { entityId, setEntityId } = useEntity();
 
 	const entity = customer.entities.find((e: Entity) => e.id === entityId);

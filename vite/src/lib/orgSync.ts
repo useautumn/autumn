@@ -1,3 +1,4 @@
+import { discardBootResponses } from "@/boot/bootResponses";
 import { authClient } from "@/lib/auth-client";
 
 const LAST_ORG_KEY = "autumn_last_active_org_id";
@@ -28,6 +29,7 @@ export const clearLastSwitchedOrgId = (id?: string) => {
 // server-side switch into localStorage so DashboardGate can't read a stale
 // lastOrgId and bounce back. Use this instead of authClient.organization.setActive.
 export const setActiveOrg = async (orgId: string) => {
+	discardBootResponses();
 	const result = await authClient.organization.setActive({
 		organizationId: orgId,
 	});

@@ -150,4 +150,39 @@ describe("proration edits", () => {
 		if (!parsed.success) return;
 		expect(parsed.data.proration_behavior).toBe(expected);
 	});
+
+	test("issue_method decides the invoice billing over finalize, and an edit rewrites it", () => {
+		const withIssueMethod = (issueMethod: string) => ({
+			...request,
+			invoice_mode: {
+				...request.invoice_mode,
+				finalize: true,
+				issue_method: issueMethod,
+			},
+		});
+
+		expect(
+			attachBillingEditsFromRequest(withIssueMethod("draft")).billing,
+		).toBe("draft_invoice");
+
+		const switched = applyAttachBillingEdits({
+			edits: {
+				access: "after_payment",
+				billing: "draft_invoice",
+				proration: "immediate",
+			},
+			request: withIssueMethod("send"),
+		});
+		expect(switched.success && switched.data.invoice_mode?.issue_method).toBe(
+			"draft",
+		);
+
+		const kept = applyAttachBillingEdits({
+			edits: attachBillingEditsFromRequest(withIssueMethod("finalize")),
+			request: withIssueMethod("finalize"),
+		});
+		expect(kept.success && kept.data.invoice_mode?.issue_method).toBe(
+			"finalize",
+		);
+	});
 });

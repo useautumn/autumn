@@ -1,4 +1,4 @@
-import { isKafkaAccessRefusal } from "@autumn/kafka";
+import { isKafkaAccessRefusal, isKafkaGroupChurn } from "@autumn/kafka";
 import { isCurrentAllocation } from "../allocation/partitionAllocation.js";
 import { requestPartitionServiceStop } from "../partitionService.js";
 import type {
@@ -6,6 +6,12 @@ import type {
 	PartitionsScope,
 } from "../types/partitionState.js";
 import type { PartitionConsumerStatus } from "../types/partitions.js";
+
+/** A broker refusal clears on its own, and group churn (a stale generation, an unknown member) is a
+ *  rebalance the consumer gave up on: both are waited out in the task rather than exiting it. */
+export function isRejoinableCrash({ cause }: { cause: unknown }): boolean {
+	return isKafkaAccessRefusal({ cause }) || isKafkaGroupChurn({ cause });
+}
 
 /**
  * A broker refused this worker's identity and the consumer gave the group up for good. The verdict is the
@@ -27,13 +33,22 @@ export function scheduleConsumerRejoin({
 		initialBackoffMs * 2 ** (rejoin.attempts - 1),
 		maxBackoffMs,
 	);
+	const reason = isKafkaAccessRefusal({ cause })
+		? {
+				event: "balance_worker.consumer_refused",
+				summary: "Balance worker refused by the broker",
+			}
+		: {
+				event: "balance_worker.consumer_group_churn",
+				summary: "Balance worker consumer lost its group generation",
+			};
 	ctx.logger?.warn(
 		{
-			event: "balance_worker.consumer_refused",
+			event: reason.event,
 			error: cause,
 			data: { attempt: rejoin.attempts, delayMs },
 		},
-		`Balance worker refused by the broker; rejoining in ${delayMs}ms (attempt ${rejoin.attempts})`,
+		`${reason.summary}; rejoining in ${delayMs}ms (attempt ${rejoin.attempts})`,
 	);
 	clearConsumerRejoin({ state });
 	const timer = setTimeout(runConsumerRejoin, delayMs, {
@@ -63,10 +78,10 @@ async function runConsumerRejoin({
 		await ctx.consumer.restart?.();
 	} catch (cause) {
 		if (!isCurrentAllocation({ state, allocationGeneration })) return;
-		// Only the broker's refusal is waited out. Any other reason the rejoin fails has nothing to
+		// Only a refusal or group churn is waited out. Any other reason the rejoin fails has nothing to
 		// clear on its own, and a worker kept alive owning nothing would leave its callers failing
 		// open for good, so the service stops and the task is replaced.
-		if (isKafkaAccessRefusal({ cause })) {
+		if (isRejoinableCrash({ cause })) {
 			scheduleConsumerRejoin({ ctx, state, allocationGeneration, cause });
 			return;
 		}

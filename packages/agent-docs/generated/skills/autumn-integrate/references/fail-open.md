@@ -8,6 +8,8 @@ As a billing engine, Autumn sits in the critical path of your application. If yo
 
 Fail-open ensures your users are never blocked by an Autumn outage. Usage events may be lost during the outage, but your customers stay unaffected.
 
+If you run the [edge cache](/documentation/edge-cache), checks keep working through an outage, answered from the last balances Autumn sent it.
+
 ## Behavior
 
 Fail-open is **enabled by default**. When Autumn is unreachable (network errors, timeouts, or server errors returning 5XX status codes), the SDK returns safe defaults:

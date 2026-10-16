@@ -1,3 +1,5 @@
+import type { AtomTracksAppendRequest } from "@autumn/byoc";
+
 /** The Atom's calls to Autumn, each proven by the token hash of the folder that makes it. Rejects with AutumnClientError. */
 export type AutumnClient = {
 	/** The hashes among `keyHashes` that are not the secret keys of the Atom's org and env. */
@@ -11,4 +13,8 @@ export type AutumnClient = {
 		customerId: string;
 		entityId: string | null;
 	}): Promise<string>;
+	/** Resolves once Autumn durably holds every track; a track sent again is deduplicated by its command. */
+	appendTracks(
+		params: { tokenHash: string } & AtomTracksAppendRequest,
+	): Promise<void>;
 };

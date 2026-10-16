@@ -113,6 +113,7 @@ export const initPooledBalanceGraph = ({
 			stripe_subscription_id: identity.stripeSubscriptionId,
 			customer_license_link_id: identity.customerLicenseLinkId,
 			rollover_signature: identity.rolloverSignature,
+			feature_override_signature: identity.featureOverrideSignature,
 			customer_entitlement_id: customerEntitlementId,
 			last_applied_reset_at: null,
 			expires_at: null,

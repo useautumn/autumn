@@ -7,6 +7,7 @@ import type {
 	RowChange,
 	SubjectState,
 	SubjectStateMutation,
+	WorkerLock,
 } from "@autumn/balance-engine";
 import type {
 	ColdStartScope,
@@ -82,6 +83,11 @@ export type PartitionWriter = {
 	readFreshestState(params: {
 		identity: MeteringIdentity;
 	}): SubjectState | null;
+	/** The row of the customer's lock `lockId` while the store has yet to apply it; null once it has, or if none. */
+	pendingLockRow(params: {
+		identity: MeteringIdentity;
+		lockId: string;
+	}): WorkerLock | null;
 	/** The offset of the last record this writer appended; null until its first append. */
 	readAppendedThrough(): bigint | null;
 	/** Hides the customer's resident rows at once and drops them once Postgres holds the writes before it. */

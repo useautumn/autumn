@@ -23,6 +23,8 @@ import type { EventsTinybird } from "@autumn/tinybird";
 import type { GetAtomClient } from "../atom/types/atomClient.js";
 import { createCatalogInvalidationConsumer } from "../catalog/createCatalogInvalidationConsumer.js";
 import { createCatalogPushConsumer } from "../consumers/cachePush/catalogPushConsumer.js";
+import { createShadowAtomCatalogPush } from "../consumers/cachePush/pushCatalogToCache/createShadowAtomCatalogPush.js";
+import { pushCatalogToCache } from "../consumers/cachePush/pushCatalogToCache/pushCatalogToCache.js";
 import { createHeraldConsumers } from "../consumers/heraldConsumers.js";
 import type { HeraldEdgeConfigs } from "../edgeConfig/createHeraldEdgeConfigs.js";
 import { createSlotFollower } from "../slot/followSlot.js";
@@ -111,6 +113,21 @@ export function createHerald({
 	let jobs: RunningStreamConsumer[] = [];
 	/** The current activation's catalog push to each org's Atom; null while idle, and single-use like the jobs. */
 	let catalogPush: CatalogInvalidationConsumer | null = null;
+	const catalogPushCtx = {
+		logger: ctx.logger,
+		db: ctx.postgres.db,
+		getAtomClient: ctx.getAtomClient,
+		shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+		atomPushQueueOnly: env.HERALD_ATOM_PUSH_QUEUE_ONLY,
+	};
+	const shadowAtomCatalogPush = createShadowAtomCatalogPush({
+		ctx: {
+			shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
+			logger: ctx.logger,
+			pushCatalog: ({ orgId, env }) =>
+				pushCatalogToCache({ ctx: catalogPushCtx, orgId, env }),
+		},
+	});
 	let heartbeat: { start(): Promise<void>; stop(): void } | null = null;
 	let follower: ReturnType<typeof createSlotFollower> | null = null;
 	const started: Array<() => Promise<void>> = [];
@@ -135,14 +152,7 @@ export function createHerald({
 
 	function buildCatalogPush(): CatalogInvalidationConsumer {
 		return createCatalogPushConsumer({
-			ctx: {
-				kafka,
-				logger: ctx.logger,
-				db: ctx.postgres.db,
-				getAtomClient: ctx.getAtomClient,
-				shadowAtomConfig: ctx.edgeConfigs.shadowAtom,
-				atomPushQueueOnly: env.HERALD_ATOM_PUSH_QUEUE_ONLY,
-			},
+			ctx: { ...catalogPushCtx, kafka },
 			config: {
 				topic: env.HERALD_CATALOG_INVALIDATION_TOPIC,
 				groupId: `${env.HERALD_GROUP_ID}-catalog-push`,
@@ -160,6 +170,8 @@ export function createHerald({
 				await consumer.start();
 				running.push(consumer);
 			}
+			// Not awaited: its pushes log their own failures and must not hold the slot's activation.
+			void shadowAtomCatalogPush.start();
 		} catch (cause) {
 			await Promise.allSettled(running.map(stopConsumer));
 			jobs = [];
@@ -170,6 +182,7 @@ export function createHerald({
 
 	/** Every job and the catalog push leave, in parallel; one that fails to stop does not keep the others in their groups. */
 	async function stopJobs(): Promise<void> {
+		shadowAtomCatalogPush.stop();
 		const stopping: Stoppable[] = catalogPush ? [...jobs, catalogPush] : jobs;
 		jobs = [];
 		catalogPush = null;

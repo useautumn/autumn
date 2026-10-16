@@ -21,7 +21,7 @@ export const ListAtomChecksResponseSchema = z.object({
 
 export const ATOM_METRICS_RANGES = ["1h", "24h", "7d"] as const;
 
-/** How a period's 10s windows fold into one value: its busiest window, or its mean rate. */
+/** How a period's windows (10s, or 60s for 7d) fold into one value: its busiest window, or its mean rate. */
 export const ATOM_METRICS_STATISTICS = ["maximum", "average"] as const;
 
 export const GetAtomMetricsParamsSchema = z.object({
@@ -51,7 +51,7 @@ export const AtomMetricsPointSchema = z.object({
 		.nullable()
 		.describe("Average share of the memory limit used, 0–1."),
 	maximum: AtomMetricsRatesSchema.describe(
-		"The period's busiest 10s window, split as that window was.",
+		"The period's busiest window, 10s or 60s for 7d, split as that window was.",
 	),
 	average: AtomMetricsRatesSchema.describe(
 		"The period's totals over the seconds it covers.",

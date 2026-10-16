@@ -1,0 +1,110 @@
+---
+title: "Edge cache"
+description: "Check balances and track usage from a cache in your own cloud"
+---
+
+<Note>
+The edge cache is in private preview. Email [support@useautumn.com](mailto:support@useautumn.com) to turn it on for your organization.
+</Note>
+
+## Why use the edge cache?
+
+Every `check` and `track` is a network call from your server to Autumn. For most apps that is fast enough. For hot paths, like gating every AI request, you may want the answer without leaving your own network.
+
+The edge cache is a small service that runs in your own AWS or GCP account. It holds a copy of your customers' balances, answers `check` and records `track` locally. Autumn stays the source of truth and keeps the cache up to date.
+
+## How it works
+
+1. Your app calls `check` and `track` as usual. The SDK sends them to the edge cache first.
+2. The edge cache answers checks from the balances it holds and deducts tracked usage on the spot. Responses are the same as the Autumn API's.
+3. The edge cache sends tracked usage on to Autumn in the background. Whenever something changes in Autumn, like a plan change, Autumn pushes the new state back.
+4. If the edge cache can't handle a call, it asks Autumn for you. If the edge cache is down, the SDK asks Autumn directly.
+
+## Setting up the edge cache
+
+<Steps>
+  <Step title="Pick a region and size">
+    In the dashboard, open **Settings → Edge cache**. Pick an AWS region and a machine size.
+  </Step>
+  <Step title="Choose your network">
+    Use an existing VPC (private to your network), or a new VPC (reachable over the internet with TLS).
+  </Step>
+  <Step title="Create the stack">
+    Click **Create stack in AWS**. This opens a prefilled CloudFormation page in your AWS account. Create the stack there.
+  </Step>
+  <Step title="Copy the endpoint">
+    Wait for the dashboard to show the edge cache as connected, then copy its endpoint URL.
+  </Step>
+</Steps>
+
+The edge cache creates two machines, two 20 GB disks and one SQS queue in your account. AWS bills you for these directly, and the dashboard shows an estimate for each size.
+
+## Sending calls to the edge cache
+
+Pass the edge cache's endpoint URL to the SDK and turn on `useEdge`. Your existing secret key works as is.
+
+<CodeGroup>
+```typescript TypeScript
+import { Autumn } from "@useautumn/sdk";
+
+const autumn = new Autumn({
+  secretKey: "am_sk_...",
+  edgeURL: "https://<your-edge-cache-url>",
+  useEdge: true,
+});
+
+// Both go to the edge cache, and fall back to Autumn if it's down.
+const { allowed } = await autumn.check({
+  customerId: "user_123",
+  featureId: "messages",
+});
+
+await autumn.track({
+  customerId: "user_123",
+  featureId: "messages",
+  value: 1,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn(
+    secret_key="am_sk_...",
+    edge_url="https://<your-edge-cache-url>",
+    use_edge=True,
+)
+
+response = autumn.check(customer_id="user_123", feature_id="messages")
+autumn.track(customer_id="user_123", feature_id="messages", value=1)
+```
+</CodeGroup>
+
+To try the edge cache on a single call, leave `useEdge` off and call it directly, for example `autumn.edge.check()`.
+
+## What the edge cache handles
+
+The edge cache answers `check` and records `track`. Tracked usage reaches Autumn in the background. A few calls still go to Autumn, and you get the same response either way:
+
+- Calls that create the customer or entity (`customerData` or `entityData`).
+- The first call for a customer the edge cache doesn't hold yet. It then fetches that customer, so their next calls are handled locally.
+
+`attach` and every other call go straight to Autumn, as they do today.
+
+## How fresh is the edge cache?
+
+Usage tracked through the edge cache is deducted there right away, so the next check is up-to-date. Changes made in Autumn, like a plan change or a balance edit in the dashboard, are pushed to the edge cache as soon as they happen.
+
+## When the edge cache or Autumn is down
+
+- **The edge cache is down or slow:** the SDK sends the call to Autumn if the edge cache doesn't reply within 1 second.
+- **The edge cache is overloaded:** it hands calls to Autumn instead of slowing down.
+- **Autumn is down:** the edge cache keeps answering checks from the last balances Autumn sent it. Anything that must reach Autumn follows the SDK's [fail-open](/documentation/fail-open) rules.
+
+## How long the edge cache keeps data
+
+- A customer whose data hasn't changed in Autumn for 7 days is removed from the edge cache.
+- If the edge cache's disk gets close to full, the customers whose data changed longest ago are removed first.
+- A removed customer's next call goes to Autumn as usual, and the edge cache fetches them again in the background.
+
+To remove the edge cache, delete it in the dashboard, then delete its CloudFormation stack in AWS.

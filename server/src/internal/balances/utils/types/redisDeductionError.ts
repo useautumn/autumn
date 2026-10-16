@@ -45,6 +45,10 @@ export class RedisDeductionError extends Error {
 		return this.code === RedisDeductionErrorCode.RedisUnavailable;
 	}
 
+	isSubjectViewChanged(): boolean {
+		return this.code === RedisDeductionErrorCode.SubjectViewChanged;
+	}
+
 	/** Check if this error should trigger a Postgres fallback */
 	shouldFallback(): boolean {
 		return FALLBACK_ERROR_CODES.includes(

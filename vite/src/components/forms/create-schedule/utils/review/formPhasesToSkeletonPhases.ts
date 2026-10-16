@@ -14,7 +14,7 @@ export const formPhasesToSkeletonPhases = ({
 	phases.map((phase) => {
 		const chosenPlans = phase.plans.filter((plan) => plan.productId);
 		if (chosenPlans.length === 0) return EMPTY_PHASE;
-		return groupRowsByScope({ rows: chosenPlans }).map(
-			({ entityId, rows }) => ({ entityId, rowCount: rows.length }),
-		);
+		return groupRowsByScope({
+			rows: chosenPlans.map((plan) => ({ entity_id: plan.entityId })),
+		}).map(({ entityId, rows }) => ({ entityId, rowCount: rows.length }));
 	});

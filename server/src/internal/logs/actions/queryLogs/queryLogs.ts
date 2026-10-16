@@ -1,5 +1,5 @@
-import { queryAxiom } from "@/external/axiom/queryAxiom.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { queryLogsAxiom } from "../queryLogsAxiom.js";
 import { buildRequestLogsApl } from "../searchRequestLogs/buildRequestLogsApl.js";
 
 export const queryLogs = async ({
@@ -24,7 +24,7 @@ export const queryLogs = async ({
 		appendDefaultOrder: false,
 	});
 
-	const result = await queryAxiom({
+	const result = await queryLogsAxiom({
 		apl,
 		options: {
 			startTime: range.startDate,

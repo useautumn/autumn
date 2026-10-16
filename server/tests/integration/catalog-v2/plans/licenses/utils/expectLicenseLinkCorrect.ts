@@ -4,8 +4,8 @@ import {
 	customerLicenses,
 	planLicenses,
 } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct.js";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullPlan } from "./seedLicensePlans.js";

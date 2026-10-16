@@ -13,7 +13,7 @@ import { smartUnion } from "../types/smart-union.js";
 import {
   CreatePlanPriceResponse,
   CreatePlanPriceResponse$inboundSchema,
-} from "./create-plan-item-tier-additional-currency-response.js";
+} from "./create-plan-item-additional-currency-response.js";
 import {
   CreatePlanBillingControlsResponse,
   CreatePlanBillingControlsResponse$inboundSchema,
@@ -31,18 +31,20 @@ import {
   CreatePlanItem$inboundSchema,
   CreatePlanProcessors,
   CreatePlanProcessors$inboundSchema,
+  CreatePlanUpsertLicenseAddItemAdditionalCurrency,
+  CreatePlanUpsertLicenseAddItemAdditionalCurrency$inboundSchema,
+  CreatePlanUpsertLicenseAddItemPriceInterval,
+  CreatePlanUpsertLicenseAddItemPriceInterval$inboundSchema,
   CreatePlanUpsertLicenseBasePrice,
   CreatePlanUpsertLicenseBasePrice$inboundSchema,
-  CreatePlanUpsertLicenseOnDecrease,
-  CreatePlanUpsertLicenseOnDecrease$inboundSchema,
-  CreatePlanUpsertLicenseOnIncrease,
-  CreatePlanUpsertLicenseOnIncrease$inboundSchema,
-  CreatePlanUpsertLicensePrice,
-  CreatePlanUpsertLicensePrice$inboundSchema,
+  CreatePlanUpsertLicensePriceTier,
+  CreatePlanUpsertLicensePriceTier$inboundSchema,
   CreatePlanUpsertLicenseReset,
   CreatePlanUpsertLicenseReset$inboundSchema,
   CreatePlanUpsertLicenseThresholdBilling,
   CreatePlanUpsertLicenseThresholdBilling$inboundSchema,
+  CreatePlanUpsertLicenseTierBehavior,
+  CreatePlanUpsertLicenseTierBehavior$inboundSchema,
   CreatePlanVariantDetailsBasePrice,
   CreatePlanVariantDetailsBasePrice$inboundSchema,
   CreatePlanVariantDetailsBillingControls,
@@ -51,9 +53,100 @@ import {
   CreatePlanVariantDetailsPlanItem$inboundSchema,
   CreatePlanVariantDetailsPlanItemFilter,
   CreatePlanVariantDetailsPlanItemFilter$inboundSchema,
-} from "./create-plan-upsert-license-on-decrease.js";
+} from "./create-plan-upsert-license-add-item-price-interval.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const CreatePlanUpsertLicenseAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type CreatePlanUpsertLicenseAddItemBillingMethod = OpenEnum<
+  typeof CreatePlanUpsertLicenseAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type CreatePlanUpsertLicensePrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanUpsertLicenseAddItemAdditionalCurrency>
+    | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<CreatePlanUpsertLicensePriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
+  tierBehavior?: CreatePlanUpsertLicenseTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: CreatePlanUpsertLicenseAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount: number;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits: number;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: CreatePlanUpsertLicenseAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+   */
+  maxPurchase?: number | null | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const CreatePlanUpsertLicenseOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type CreatePlanUpsertLicenseOnIncrease = OpenEnum<
+  typeof CreatePlanUpsertLicenseOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const CreatePlanUpsertLicenseOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type CreatePlanUpsertLicenseOnDecrease = OpenEnum<
+  typeof CreatePlanUpsertLicenseOnDecrease
+>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
@@ -121,6 +214,17 @@ export type CreatePlanUpsertLicenseDuration = OpenEnum<
 export type CreatePlanUpsertLicenseExpiry = {
   duration: CreatePlanUpsertLicenseDuration;
   length: number;
+};
+
+export type CreatePlanCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type CreatePlanDimensionsUpsertLicense4 = {
@@ -350,7 +454,8 @@ export type CreatePlanCreditSchemaUpsertLicense1 = {
 
 export type CreatePlanUpsertLicenseCreditSchemaUnion =
   | CreatePlanCreditSchemaUpsertLicense1
-  | CreatePlanCreditSchemaUpsertLicense2;
+  | CreatePlanCreditSchemaUpsertLicense2
+  | CreatePlanCreditSchemaUpsertLicense3;
 
 export type CreatePlanUpsertLicenseProviderMarkups = {
   markup: number;
@@ -391,12 +496,13 @@ export type CreatePlanUpsertLicenseMarkups = {
  */
 export type CreatePlanUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | CreatePlanCreditSchemaUpsertLicense1
       | CreatePlanCreditSchemaUpsertLicense2
+      | CreatePlanCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -728,10 +834,16 @@ export type CreatePlanLicensePriceTierResponse = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const CreatePlanLicenseTierBehaviorResponse = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type CreatePlanLicenseTierBehaviorResponse = OpenEnum<
   typeof CreatePlanLicenseTierBehaviorResponse
 >;
@@ -786,6 +898,9 @@ export type CreatePlanLicensePriceResponse = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<CreatePlanLicensePriceTierResponse> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: CreatePlanLicenseTierBehaviorResponse | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -908,6 +1023,17 @@ export type CreatePlanLicenseDurationResponse = OpenEnum<
 export type CreatePlanLicenseExpiryResponse = {
   duration: CreatePlanLicenseDurationResponse;
   length: number;
+};
+
+export type CreatePlanCreditSchemaLicenseResponse3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type CreatePlanDimensionsLicenseResponse4 = {
@@ -1137,7 +1263,8 @@ export type CreatePlanCreditSchemaLicenseResponse1 = {
 
 export type CreatePlanLicenseCreditSchemaResponseUnion =
   | CreatePlanCreditSchemaLicenseResponse1
-  | CreatePlanCreditSchemaLicenseResponse2;
+  | CreatePlanCreditSchemaLicenseResponse2
+  | CreatePlanCreditSchemaLicenseResponse3;
 
 export type CreatePlanLicenseProviderMarkupsResponse = {
   markup: number;
@@ -1178,12 +1305,13 @@ export type CreatePlanLicenseMarkupsResponse = {
  */
 export type CreatePlanLicenseFeatureOverrideResponse = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | CreatePlanCreditSchemaLicenseResponse1
       | CreatePlanCreditSchemaLicenseResponse2
+      | CreatePlanCreditSchemaLicenseResponse3
     >
     | undefined;
   /**
@@ -1459,6 +1587,67 @@ export type CreatePlanResponse = {
 };
 
 /** @internal */
+export const CreatePlanUpsertLicenseAddItemBillingMethod$inboundSchema:
+  z.ZodMiniType<CreatePlanUpsertLicenseAddItemBillingMethod, unknown> =
+    openEnums.inboundSchema(CreatePlanUpsertLicenseAddItemBillingMethod);
+
+/** @internal */
+export const CreatePlanUpsertLicensePrice$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicensePrice,
+  unknown
+> = z.pipe(
+  z.object({
+    amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(CreatePlanUpsertLicenseAddItemAdditionalCurrency$inboundSchema),
+    ),
+    tiers: types.optional(
+      z.array(CreatePlanUpsertLicensePriceTier$inboundSchema),
+    ),
+    tier_behavior: types.optional(
+      CreatePlanUpsertLicenseTierBehavior$inboundSchema,
+    ),
+    interval: CreatePlanUpsertLicenseAddItemPriceInterval$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    billing_units: z._default(types.number(), 1),
+    billing_method: CreatePlanUpsertLicenseAddItemBillingMethod$inboundSchema,
+    max_purchase: z.optional(z.nullable(types.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
+      "tier_behavior": "tierBehavior",
+      "interval_count": "intervalCount",
+      "billing_units": "billingUnits",
+      "billing_method": "billingMethod",
+      "max_purchase": "maxPurchase",
+    });
+  }),
+);
+
+export function createPlanUpsertLicensePriceFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanUpsertLicensePrice, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanUpsertLicensePrice$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanUpsertLicensePrice' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanUpsertLicenseOnIncrease$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseOnIncrease,
+  unknown
+> = openEnums.inboundSchema(CreatePlanUpsertLicenseOnIncrease);
+
+/** @internal */
+export const CreatePlanUpsertLicenseOnDecrease$inboundSchema: z.ZodMiniType<
+  CreatePlanUpsertLicenseOnDecrease,
+  unknown
+> = openEnums.inboundSchema(CreatePlanUpsertLicenseOnDecrease);
+
+/** @internal */
 export const CreatePlanUpsertLicenseProration$inboundSchema: z.ZodMiniType<
   CreatePlanUpsertLicenseProration,
   unknown
@@ -1543,6 +1732,33 @@ export function createPlanUpsertLicenseExpiryFromJSON(
     jsonString,
     (x) => CreatePlanUpsertLicenseExpiry$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'CreatePlanUpsertLicenseExpiry' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreatePlanCreditSchemaUpsertLicense3$inboundSchema: z.ZodMiniType<
+  CreatePlanCreditSchemaUpsertLicense3,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    excluded: types.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+    });
+  }),
+);
+
+export function createPlanCreditSchemaUpsertLicense3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanCreditSchemaUpsertLicense3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanCreditSchemaUpsertLicense3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanCreditSchemaUpsertLicense3' from JSON`,
   );
 }
 
@@ -2018,6 +2234,7 @@ export const CreatePlanUpsertLicenseCreditSchemaUnion$inboundSchema:
     [
       z.lazy(() => CreatePlanCreditSchemaUpsertLicense1$inboundSchema),
       z.lazy(() => CreatePlanCreditSchemaUpsertLicense2$inboundSchema),
+      z.lazy(() => CreatePlanCreditSchemaUpsertLicense3$inboundSchema),
     ],
   );
 
@@ -2127,6 +2344,7 @@ export const CreatePlanUpsertLicenseFeatureOverride$inboundSchema:
         z.lazy(() =>
           CreatePlanCreditSchemaUpsertLicense2$inboundSchema
         ),
+        z.lazy(() => CreatePlanCreditSchemaUpsertLicense3$inboundSchema),
       ]))),
       markups: types.optional(z.lazy(() =>
         CreatePlanUpsertLicenseMarkups$inboundSchema
@@ -2164,7 +2382,9 @@ export const CreatePlanUpsertLicensePlanItem$inboundSchema: z.ZodMiniType<
     unlimited: types.optional(types.boolean()),
     pooled: z._default(types.boolean(), false),
     reset: types.optional(CreatePlanUpsertLicenseReset$inboundSchema),
-    price: types.optional(CreatePlanUpsertLicensePrice$inboundSchema),
+    price: types.optional(
+      z.lazy(() => CreatePlanUpsertLicensePrice$inboundSchema),
+    ),
     proration: types.optional(
       z.lazy(() => CreatePlanUpsertLicenseProration$inboundSchema),
     ),
@@ -2822,6 +3042,31 @@ export function createPlanLicenseExpiryResponseFromJSON(
 }
 
 /** @internal */
+export const CreatePlanCreditSchemaLicenseResponse3$inboundSchema:
+  z.ZodMiniType<CreatePlanCreditSchemaLicenseResponse3, unknown> = z.pipe(
+    z.object({
+      metered_feature_id: types.string(),
+      excluded: types.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "metered_feature_id": "meteredFeatureId",
+      });
+    }),
+  );
+
+export function createPlanCreditSchemaLicenseResponse3FromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanCreditSchemaLicenseResponse3, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanCreditSchemaLicenseResponse3$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanCreditSchemaLicenseResponse3' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanDimensionsLicenseResponse4$inboundSchema: z.ZodMiniType<
   CreatePlanDimensionsLicenseResponse4,
   unknown
@@ -3301,6 +3546,7 @@ export const CreatePlanLicenseCreditSchemaResponseUnion$inboundSchema:
     smartUnion([
       z.lazy(() => CreatePlanCreditSchemaLicenseResponse1$inboundSchema),
       z.lazy(() => CreatePlanCreditSchemaLicenseResponse2$inboundSchema),
+      z.lazy(() => CreatePlanCreditSchemaLicenseResponse3$inboundSchema),
     ]);
 
 export function createPlanLicenseCreditSchemaResponseUnionFromJSON(
@@ -3414,6 +3660,7 @@ export const CreatePlanLicenseFeatureOverrideResponse$inboundSchema:
         z.lazy(() =>
           CreatePlanCreditSchemaLicenseResponse2$inboundSchema
         ),
+        z.lazy(() => CreatePlanCreditSchemaLicenseResponse3$inboundSchema),
       ]))),
       markups: types.optional(z.lazy(() =>
         CreatePlanLicenseMarkupsResponse$inboundSchema

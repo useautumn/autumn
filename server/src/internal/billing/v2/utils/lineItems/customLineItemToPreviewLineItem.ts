@@ -22,5 +22,6 @@ export const customLineItemToPreviewLineItem = (
 		feature_id: null,
 		custom: true,
 		quantity: 1,
+		remove_line: null,
 	};
 };

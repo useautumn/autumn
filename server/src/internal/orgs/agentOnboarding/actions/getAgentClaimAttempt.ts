@@ -29,7 +29,6 @@ export const getAgentClaimAttempt = async ({
 	const organization = await findPendingAgentOrg({
 		db,
 		claimTokenHash: attempt.claimTokenHash,
-		now,
 	});
 	if (!organization) return { kind: "invalid" as const };
 

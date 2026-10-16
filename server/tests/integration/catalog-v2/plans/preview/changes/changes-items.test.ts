@@ -276,7 +276,9 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			const actions = (row.plan_change?.item_changes ?? []).map((c) => c.action);
+			const actions = (row.plan_change?.item_changes ?? []).map(
+				(c) => c.action,
+			);
 			expect(actions.sort()).toEqual(["created", "deleted"]);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
@@ -653,10 +655,12 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			expect(row.plan_change?.customize?.add_items?.[0]?.rollover).toBeDefined();
-			expect(row.plan_change?.customize?.add_items?.[0]?.price?.tier_behavior).toBe(
-				TierBehavior.VolumeBased,
-			);
+			expect(
+				row.plan_change?.customize?.add_items?.[0]?.rollover,
+			).toBeDefined();
+			expect(
+				row.plan_change?.customize?.add_items?.[0]?.price?.tier_behavior,
+			).toBe(TierBehavior.VolumeBased);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });
 		}
@@ -899,9 +903,9 @@ test.concurrent(
 				],
 			});
 			const row = findPlanPreviewRow({ preview, planId });
-			const removeIntervals = (row.plan_change?.customize?.remove_items ?? []).map(
-				(f) => f.interval,
-			);
+			const removeIntervals = (
+				row.plan_change?.customize?.remove_items ?? []
+			).map((f) => f.interval);
 			expect(removeIntervals).not.toContain(BillingInterval.Year);
 		} finally {
 			await deleteDbPlans({ ctx, planIds: [planId] });

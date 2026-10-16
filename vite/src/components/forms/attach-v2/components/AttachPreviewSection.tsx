@@ -1,6 +1,9 @@
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { getAttachPreviewLineItems } from "../utils/buildAttachPreviewTotals";
+import {
+	getAttachPreviewLineItems,
+	isFutureStartDate,
+} from "../utils/buildAttachPreviewTotals";
 
 export function AttachPreviewSection() {
 	const {
@@ -8,6 +11,7 @@ export function AttachPreviewSection() {
 		formValues,
 		additionalPlans,
 		isAutoSelectingImmediateSchedule,
+		lineEdits,
 	} = useAttachFormContext();
 
 	// Multi-plan attaches always start immediately.
@@ -20,6 +24,11 @@ export function AttachPreviewSection() {
 			isLoading={previewQuery.isLoading || isAutoSelectingImmediateSchedule}
 			suppressErrorWhileLoading
 			startDate={startDate}
+			lineEdits={
+				lineEdits.enabled && !isFutureStartDate(startDate, Date.now())
+					? lineEdits
+					: undefined
+			}
 			lineItems={getAttachPreviewLineItems({
 				previewData: previewQuery.data,
 				startDate,

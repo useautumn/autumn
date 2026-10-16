@@ -63,7 +63,9 @@ Autumn:
 2. Finds the tier the total falls into
 3. Charges the flat amount for that tier
 
-Volume tiers are prepaid-only.
+Volume tiers work on prepaid and usage-based (pay-per-use or allocated) items. On usage-based items, volume bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat fee; at or below the included amount nothing is charged. On prepaid items, every unit (the included ones too) is charged at the rate of the tier the total lands in, plus its flat amount. Allocated items can't have a flat amount on the first tier. A plan with volume-priced allocated seats can't yet be attached to more than one entity on the same customer, because their seats would share one Stripe price.
+
+Volume tiers can't be combined with threshold billing.
 
 | Total volume | Matching tier | Charge |
 |-------------|---------------|--------|

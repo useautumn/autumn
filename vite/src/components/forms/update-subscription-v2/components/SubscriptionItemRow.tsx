@@ -1,4 +1,4 @@
-import { type ProductItem, UsageModel } from "@autumn/shared";
+import { type Feature, type ProductItem, UsageModel } from "@autumn/shared";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { PrepaidQuantityControl } from "@/components/forms/shared/plan-items/PrepaidQuantityControl";
 import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
@@ -16,6 +16,8 @@ interface SubscriptionItemRowProps {
 	isCreated?: boolean;
 	readOnly?: boolean;
 	currency?: string;
+	/** Resolves the label against this feature when it isn't in the org's catalog yet. */
+	feature?: Feature;
 }
 
 export function SubscriptionItemRow({
@@ -27,6 +29,7 @@ export function SubscriptionItemRow({
 	isCreated = false,
 	readOnly = false,
 	currency,
+	feature,
 }: SubscriptionItemRowProps) {
 	const isPrepaid = item.usage_model === UsageModel.Prepaid;
 	const showPrepaidControl = isPrepaid && !!form && !!featureId;
@@ -55,7 +58,7 @@ export function SubscriptionItemRow({
 				)}
 			>
 				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					<PlanItemLabel currency={currency} item={item} />
+					<PlanItemLabel currency={currency} feature={feature} item={item} />
 				</div>
 
 				<div className="flex items-center gap-2 shrink-0">

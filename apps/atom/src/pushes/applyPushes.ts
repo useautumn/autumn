@@ -20,16 +20,11 @@ export const CATALOG_PUSH: ReplicationHandler = {
 /** A customer's view and each of its entities' are distinct subjects: a newer copy of one must not replace another still waiting. */
 const subjectKeyOf = ({
 	customerId,
-	body,
+	entityId,
 }: {
 	customerId: string;
-	body: string;
-}): string => {
-	const parsed = JSON.parse(body) as {
-		state?: { identity?: { entityId?: string | null } };
-	};
-	return `${customerId}\u0000${parsed.state?.identity?.entityId ?? ""}`;
-};
+	entityId: string | null;
+}): string => `${customerId}\u0000${entityId ?? ""}`;
 
 /** The one catalog per folder: a newer copy replaces an older one still on its way. */
 const CATALOG_KEY = "catalog";
@@ -52,13 +47,13 @@ export const applySubjectPush = async ({
 	customerId: string;
 	body: string;
 } & PushReplication): Promise<boolean> => {
-	const stored = await slots
+	const { stored, entityId } = await slots
 		.processorFor({ customerId })
 		.setSubject({ customerId, body });
 	if (stored && !relayed)
 		replication.replicate({
 			kind: SUBJECT_PUSH.kind,
-			key: subjectKeyOf({ customerId, body }),
+			key: subjectKeyOf({ customerId, entityId }),
 			body,
 			atomId: slots.atomId,
 			headers: { [ATOM_CUSTOMER_ID_HEADER]: customerId },

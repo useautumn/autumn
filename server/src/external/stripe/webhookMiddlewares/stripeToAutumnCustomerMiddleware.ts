@@ -1,6 +1,7 @@
-import { RELEVANT_STATUSES } from "@autumn/shared";
+import { type Customer, RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
+import { stripeEventToStripeSubscriptionId } from "@/external/stripe/common/utils/stripeEventToStripeSubscriptionId.js";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { CusService } from "../../../internal/customers/CusService";
@@ -9,7 +10,11 @@ import type {
 	StripeWebhookHonoEnv,
 } from "./stripeWebhookContext";
 
-const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
+const getAutumnCustomer = async ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}): Promise<Customer | undefined> => {
 	const { stripeEvent } = ctx;
 
 	// 1. Get stripe customer ID from stripe event
@@ -36,29 +41,80 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	};
 
 	const stripeCustomerId = getStripeCustomerId();
-	if (!stripeCustomerId) return;
+	if (!stripeCustomerId) return undefined;
 
-	const cus = await CusService.getByStripeId({
-		ctx,
-		stripeId: stripeCustomerId as string,
+	// 2. Several Autumn customers can share one Stripe customer, so match on the event's subscription first
+	const stripeSubscriptionId = stripeEventToStripeSubscriptionId({
+		stripeEvent,
 	});
+	const customersOnSubscription = stripeSubscriptionId
+		? await CusService.listByStripeSubscriptionId({
+				ctx,
+				stripeSubscriptionId,
+			})
+		: [];
 
-	if (!cus) return;
+	// The payer is linked to the Stripe customer; among several linked ones, take the oldest plan on the subscription
+	const owningCustomer =
+		customersOnSubscription.find(
+			(customer) => customer.processor?.id === stripeCustomerId,
+		) ?? customersOnSubscription[0];
 
+	if (customersOnSubscription.length > 1) {
+		ctx.logger.info(
+			`[stripeToAutumnCustomer] ${customersOnSubscription.length} customers share subscription ${stripeSubscriptionId}, resolved to ${owningCustomer.id ?? owningCustomer.internal_id}`,
+		);
+	}
+
+	const customer =
+		owningCustomer ??
+		(await CusService.getByStripeId({
+			ctx,
+			stripeId: stripeCustomerId as string,
+		}));
+
+	return customer ?? undefined;
+};
+
+/**
+ * Points a webhook ctx at one customer: lands its balance-worker writes, loads it onto
+ * ctx.fullCustomer and routes to its Redis. Returns a new ctx; the given one is untouched.
+ */
+export const withStripeEventCustomer = async ({
+	ctx,
+	customer,
+}: {
+	ctx: StripeWebhookContext;
+	customer: Customer;
+}): Promise<StripeWebhookContext> => {
 	// The worker holds the live balances: land its writes first, so a cycle's arrears and resets read all of the usage.
-	if (cus.id && isBalanceWorkerRolloutEnabled({ ctx, customerId: cus.id }))
-		await flushBalanceWorkerCustomer({ ctx, customerId: cus.id });
+	if (
+		customer.id &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: customer.id })
+	)
+		await flushBalanceWorkerCustomer({ ctx, customerId: customer.id });
 
 	const fullCustomer = await CusService.getFull({
 		ctx,
-		idOrInternalId: cus.internal_id,
+		idOrInternalId: customer.internal_id,
 		withEntities: true,
 		withSubs: true,
 		inStatuses: RELEVANT_STATUSES,
 		allowNotFound: true,
 	});
 
-	ctx.fullCustomer = fullCustomer;
+	const customerId = fullCustomer?.id || fullCustomer?.internal_id || undefined;
+	if (!customerId) return { ...ctx, fullCustomer };
+
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({
+		ctx: {
+			...ctx,
+			fullCustomer,
+			customerId,
+		},
+		customerId,
+	});
+	return routedCtx;
 };
 
 /**
@@ -71,21 +127,12 @@ export const attachStripeEventCustomer = async ({
 }: {
 	ctx: StripeWebhookContext;
 }): Promise<StripeWebhookContext> => {
-	await getAutumnCustomerId({ ctx });
+	const customer = await getAutumnCustomer({ ctx });
+	if (!customer) return ctx;
 
-	const customerId =
-		ctx.fullCustomer?.id || ctx.fullCustomer?.internal_id || undefined;
-
-	if (!customerId) return ctx;
-
-	const { ctx: routedCtx } = getCtxWithCustomerRedis({
-		ctx: {
-			...ctx,
-			customerId,
-		},
-		customerId,
-	});
-	return routedCtx;
+	const routedCtx = await withStripeEventCustomer({ ctx, customer });
+	ctx.fullCustomer = routedCtx.fullCustomer;
+	return routedCtx.customerId ? routedCtx : ctx;
 };
 
 export const stripeToAutumnCustomerMiddleware = async (

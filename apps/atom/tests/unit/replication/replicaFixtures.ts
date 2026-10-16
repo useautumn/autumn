@@ -1,20 +1,32 @@
+import { Database } from "bun:sqlite";
 import { spyOn } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import { createDeployedAuth } from "../../../src/auth/createDeployedAuth.js";
 import { hashToken } from "../../../src/auth/hashToken.js";
 import { createAtomApp } from "../../../src/http/createAtomApp.js";
 import { createPeerApp } from "../../../src/http/createPeerApp.js";
+import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
 import {
 	CATALOG_PUSH,
 	DELETE_PUSH,
 	SUBJECT_PUSH,
 } from "../../../src/pushes/applyPushes.js";
+import { createReplicaRing } from "../../../src/replicas/createReplicaRing.js";
+import { createHandoffBarrier } from "../../../src/replicas/handover/createHandoffBarrier.js";
+import { leaveRing } from "../../../src/replicas/handover/leaveRing.js";
+import { createMembership } from "../../../src/replicas/membership/createMembership.js";
+import { startReadinessProber } from "../../../src/replicas/membership/startReadinessProber.js";
 import { createReplicaSync } from "../../../src/replication/createReplicaSync.js";
 import { createReplication } from "../../../src/replication/createReplication.js";
 import { createDeployedFolders } from "../../../src/replication/folders/createReplicaFolders.js";
 import { createHandlerRegistry } from "../../../src/replication/handlers/createHandlerRegistry.js";
+import {
+	createKeyRelay,
+	KEYS_RELAY,
+} from "../../../src/replication/keys/createKeyRelay.js";
 import { customerIdToSlot } from "../../../src/slots/customerIdToSlot.js";
 import {
 	createThreadStatsBuffer,
@@ -23,6 +35,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	loopOnTime,
 	noSubjectPulls,
@@ -32,16 +45,20 @@ import {
 export const ATOM_TOKEN = "atom_token_1";
 export const TOKEN_HASH = hashToken({ token: ATOM_TOKEN });
 export const PEER_SECRET = "p".repeat(64);
-export const PORT = 8001;
 export const PEER_PORT = 8002;
+/** Where a replica's public app answers, /health included; any other port on an address is its peer app. */
+export const PUBLIC_PORT = 8001;
 export const SLOT_COUNT = 2;
 export const AUTUMN_API_URL = "https://api.autumn.example";
 export const quiet = { info: () => {}, warn: () => {}, error: () => {} };
+/** Every fixture replica's boot unless a test gives it its own. */
+export const BOOTED_AT = "2026-10-12T00:00:00.000Z";
 
 const registry = createHandlerRegistry();
 registry.register(SUBJECT_PUSH);
 registry.register(DELETE_PUSH);
 registry.register(CATALOG_PUSH);
+registry.register(KEYS_RELAY);
 
 const cleanups: (() => void)[] = [];
 export const cleanUpReplicas = () => {
@@ -56,6 +73,12 @@ export const createReplica = ({
 	dataDir = mkdtempSync(join(tmpdir(), "atom-replica-")),
 	secret = PEER_SECRET,
 	now = () => 1_000_000,
+	ringPeers = [],
+	joined = ringPeers,
+	journalForwarder = forwardingNowhere,
+	stopping = () => false,
+	bootedAt = BOOTED_AT,
+	loop = loopOnTime,
 }: {
 	address: string;
 	peers: string[];
@@ -63,18 +86,40 @@ export const createReplica = ({
 	dataDir?: string;
 	secret?: string;
 	now?: () => number;
+	/** The peers this replica's ring counts as owners; none by default, so it answers every customer itself. */
+	ringPeers?: string[];
+	/** Which of them have joined (ready and handed their customers' entries); all of them by default. */
+	joined?: string[];
+	journalForwarder?: typeof forwardingNowhere;
+	/** True from the moment the thread starts stopping, as its server's stop sets it. */
+	stopping?: () => boolean;
+	/** The boot this replica answers /health from; a restart is a new one. */
+	bootedAt?: string;
+	/** The thread's event loop as admission reads it: how far behind it runs. */
+	loop?: { lagMs: () => number };
 }) => {
 	const threadStats = createThreadStatsBuffer({ threads: 1 });
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
-	const auth = createDeployedAuth({
-		dataDir,
-		tokenHash: TOKEN_HASH,
-		slotCount: SLOT_COUNT,
-		owners: allSlotsOwnedHere,
-		held: freshHeld(),
-		now,
-		subjectPulls: noSubjectPulls,
+	const membership = createMembership({ self: address });
+	// Settled members: counted, this replica granted by them, nothing left to hand over.
+	for (const peer of joined) {
+		membership.markJoined({ address: peer, boot: BOOTED_AT });
+		membership.grantedBy(peer);
+		membership.handoffCompleted({
+			address: peer,
+			boot: BOOTED_AT,
+			thread: 0,
+			threads: 1,
+		});
+	}
+	const ring = createReplicaRing({
+		ctx: {
+			resolver: { peers: async () => ringPeers },
+			own: () => [address],
+			membership,
+		},
 	});
+	const barrier = createHandoffBarrier({ ctx: { membership, counters } });
 	const replication = createReplication({
 		ctx: {
 			secret,
@@ -87,13 +132,26 @@ export const createReplica = ({
 			sleep: async () => {},
 		},
 	});
+	const auth = createDeployedAuth({
+		journalForwarder,
+		dataDir,
+		tokenHash: TOKEN_HASH,
+		slotCount: SLOT_COUNT,
+		owners: allSlotsOwnedHere,
+		held: freshHeld(),
+		now,
+		subjectPulls: noSubjectPulls,
+		barrier,
+		ring,
+		keyRelay: createKeyRelay({ ctx: { replication } }),
+	});
 	const readyFlag = new Int32Array([ready ? 1 : 0]);
 	const httpContext = {
 		auth,
 		logger: quiet,
 		autumnApiUrl: AUTUMN_API_URL,
 		health: {
-			bootedAt: "2026-10-12T00:00:00.000Z",
+			bootedAt,
 			restarts: new Int32Array(1),
 			ready: readyFlag,
 			threadsReady: new Int32Array([1]),
@@ -102,9 +160,10 @@ export const createReplica = ({
 			dataDir: dataDir,
 		},
 		counters,
-		loop: loopOnTime,
+		loop,
 		replication,
-		peer: { port: PORT },
+		stopping,
+		peer: { port: PEER_PORT, secret, ring, membership },
 		now,
 	};
 	const app = createAtomApp({ ctx: httpContext });
@@ -118,6 +177,18 @@ export const createReplica = ({
 		now,
 		isStopping: () => false,
 	};
+	const handoverContext = {
+		ring,
+		boot: bootedAt,
+		membership,
+		replication: { peers: async () => ringPeers },
+		folders: createDeployedFolders({ slots: auth.slots }),
+		thread: 0,
+		threads: 1,
+		publicPort: PUBLIC_PORT,
+		peer: { port: PEER_PORT, secret },
+		logger: quiet,
+	};
 	cleanups.push(() => {
 		void replication.stop();
 		auth.close();
@@ -129,6 +200,12 @@ export const createReplica = ({
 		peerApp,
 		slots: auth.slots,
 		replication,
+		ring,
+		membership,
+		/** The first step of a planned stop: owner of nothing, every ready peer told and handed its customers' entries. */
+		leave: () => leaveRing({ ctx: handoverContext }),
+		/** One pass over the listed peers: a ready one counts as an owner, is granted and handed its customers' entries. */
+		probeOnce: () => startReadinessProber({ ctx: handoverContext }).probeOnce(),
 		dataDir,
 		stats: () => readThreadStats({ buffer: threadStats })[0],
 		setReady: (value: boolean) => Atomics.store(readyFlag, 0, value ? 1 : 0),
@@ -156,11 +233,18 @@ export const connect = ({
 	replicas,
 	autumn,
 	replyFrom = async (_replica, reply) => reply,
+	beforeDispatch = async () => {},
 }: {
 	replicas: Reachable[];
 	autumn?: (request: Request) => Promise<Response>;
+	/** Runs before a request reaches its replica: a test can hold one on the way, as a slow link does. */
+	beforeDispatch?: (request: Request) => Promise<void>;
 	/** What the caller sees of a replica's reply: a test can lose it on the way back, as a dropped connection does. */
-	replyFrom?: (replica: Reachable, reply: Response) => Promise<Response>;
+	replyFrom?: (
+		replica: Reachable,
+		reply: Response,
+		request: Request,
+	) => Promise<Response>;
 }) => {
 	const byAddress = new Map(
 		replicas.map((replica) => [replica.address, replica]),
@@ -178,11 +262,12 @@ export const connect = ({
 				{ code: "ECONNREFUSED" },
 			);
 		const app = Number(url.port) === PEER_PORT ? replica.peerApp : replica.app;
+		await beforeDispatch(new Request(url, init));
 		const reply = await app.request(`${url.pathname}${url.search}`, {
 			...init,
 			signal: undefined,
 		});
-		return replyFrom(replica, reply);
+		return replyFrom(replica, reply, new Request(url, init));
 	};
 	spyOn(globalThis, "fetch").mockImplementation(((
 		input: URL | RequestInfo,
@@ -278,3 +363,68 @@ export const heldEverywhere = async (replica: Replica) =>
 	).flat();
 
 export const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
+
+/** The idempotency key rows in every journal file of the replica's folder, oldest first. */
+export const keyRowsOn = ({ dataDir }: { dataDir: string }) =>
+	readdirSync(dataDir)
+		.filter((file) => file.startsWith("journal-") && file.endsWith(".sqlite"))
+		.flatMap((file) => {
+			const database = new Database(join(dataDir, file), { readonly: true });
+			try {
+				return database
+					.query<{ customerId: string; appendedAt: number }, []>(
+						"SELECT customer_id AS customerId, appended_at AS appendedAt FROM journal_keys",
+					)
+					.all();
+			} finally {
+				database.close();
+			}
+		})
+		.sort((left, right) => left.appendedAt - right.appendedAt);
+
+/** Waits up to a second for a relay to land; the assertion after it says whether one did. */
+export const relayLanded = async (landed: () => boolean) => {
+	for (let tries = 0; tries < 500 && !landed(); tries++) await Bun.sleep(2);
+};
+
+/**
+ * Autumn's side of the journal: every track the replicas journaled, under the writer id of the journal it came from, and
+ * every hand-in (tracks and finalizes) in the order Autumn took them.
+ */
+export const recordJournals = () => {
+	const appended: {
+		writer: string;
+		/** Who claims the key at Autumn's worker: the same owner again resumes its claim, any other is a duplicate. */
+		owner: string;
+		key: string | undefined;
+		value: number;
+	}[] = [];
+	const handedIn: { type: "track" | "finalize"; writer: string }[] = [];
+	const commands: TrackCommand[] = [];
+	const forwarder = createJournalForwarder({
+		ctx: {
+			autumnClient: {
+				appendTracks: async ({ tracks }) => {
+					for (const track of tracks) {
+						if ("finalize" in track) {
+							handedIn.push({ type: "finalize", writer: track.writerId });
+							continue;
+						}
+						if (!("command" in track)) continue;
+						const command = parseTrackCommand({ input: track.command });
+						commands.push(command);
+						handedIn.push({ type: "track", writer: track.writerId });
+						appended.push({
+							writer: track.writerId,
+							owner: command.requestId,
+							key: command.idempotency?.key,
+							value: command.value,
+						});
+					}
+				},
+			},
+			logger: quiet,
+		},
+	});
+	return { forwarder, appended, handedIn, commands };
+};

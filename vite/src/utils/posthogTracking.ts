@@ -1,4 +1,4 @@
-import posthog from "posthog-js";
+import { getPostHog } from "@/lib/posthog";
 
 // Toggle this to enable/disable tracking in development
 const TRACK_IN_DEVELOPMENT = false;
@@ -14,7 +14,7 @@ function trackEvent(eventName: string, properties?: Record<string, unknown>) {
 			return;
 		}
 
-		posthog.capture(eventName, properties);
+		void getPostHog().then((posthog) => posthog.capture(eventName, properties));
 	} catch (error) {
 		console.error(`Error tracking event: ${eventName}`, error);
 	}
@@ -32,7 +32,7 @@ function identifyUserInPostHog(
 		return;
 	}
 
-	posthog.identify(distinctId, properties);
+	void getPostHog().then((posthog) => posthog.identify(distinctId, properties));
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode } from "@autumn/shared";
 import { buildRequestLogsApl } from "@/internal/logs/actions/searchRequestLogs/buildRequestLogsApl.js";
+import { parseLogsQueryOrThrow } from "@/internal/logs/handlers/logsRequestUtils.js";
 import {
 	parseRestrictedApl,
 	RestrictedAplStageNotAllowedError,
@@ -73,6 +74,36 @@ describe("restricted request-log APL", () => {
 		expect(restrictedAplToApl(ast)).toEqual([
 			"| project feature = tostring(request_body['feature_id']), response_body_balance_remaining = tostring(response_body['balance']['remaining'])",
 		]);
+	});
+
+	test("compiles timestamp comparisons to datetime literals", () => {
+		const ast = parseRestrictedApl({
+			query:
+				"where timestamp > '2026-10-14T10:00:00Z' and timestamp in ('2026-10-14') | summarize n = countif(timestamp <= '2026-10-14T12:00:00.000Z')",
+			allowedStages: ["where", "summarize"],
+		});
+
+		expect(restrictedAplToApl(ast)).toEqual([
+			"| where (timestamp > datetime('2026-10-14T10:00:00Z') and timestamp in (datetime('2026-10-14')))",
+			"| summarize n = countif(timestamp <= datetime('2026-10-14T12:00:00.000Z'))",
+		]);
+	});
+
+	test("rejects timestamp comparisons against non-ISO values", () => {
+		expect(() =>
+			parseRestrictedApl({ query: "where timestamp > 'yesterday'" }),
+		).toThrow("timestamp must be compared to an ISO datetime string");
+		expect(() =>
+			parseRestrictedApl({ query: "where timestamp > 1760000000" }),
+		).toThrow("timestamp must be compared to an ISO datetime string");
+		expect(() =>
+			parseLogsQueryOrThrow({
+				query: "where timestamp > '2026-13-45'",
+				allowedStages: ["where"],
+			}),
+		).toThrow(
+			expect.objectContaining({ code: ErrCode.InvalidInputs, statusCode: 400 }),
+		);
 	});
 
 	test("escapes strings when compiling back to APL", () => {

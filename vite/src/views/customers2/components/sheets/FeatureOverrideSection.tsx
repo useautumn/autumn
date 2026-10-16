@@ -1,83 +1,84 @@
-import type { CreditSchemaItem, FullCustomerEntitlement } from "@autumn/shared";
-import { hasCreditDimensionRules, numberWithCommas } from "@autumn/shared";
+import type { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
 import { CoinsIcon } from "@phosphor-icons/react";
+import { Link } from "react-router";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { featureDisplayName } from "@/views/products/features/credit-systems/utils/featureDisplayName";
+import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
+import { RateCardRow } from "@/views/products/features/credit-systems/components/rate-card/RateCardRow";
+import { RateCardTable } from "@/views/products/features/credit-systems/components/rate-card/RateCardTable";
+import { rateCardRows } from "@/views/products/features/credit-systems/utils/rateCardRows";
 import { OverrideRow } from "./OverrideRow";
 
 const countLabel = (count: number, noun: string) =>
 	`${count} ${noun}${count === 1 ? "" : "s"}`;
 
-const rateText = (item: CreditSchemaItem) => {
-	const perUnits =
-		(item.feature_amount ?? 1) !== 1
-			? ` per ${numberWithCommas(item.feature_amount ?? 1)}`
-			: "";
-
-	if (item.tier_behavior === "graduated") {
-		const costs = item.tiers.map((tier) => tier.credit_amount);
-		return `${Math.min(...costs)}–${Math.max(...costs)} credits (tiered)${perUnits}`;
-	}
-
-	return `${numberWithCommas(item.credit_amount)} credits${perUnits}`;
-};
-
-const dimensionedRateText = (item: CreditSchemaItem) => {
-	const parts: string[] = [];
-	const dimensions = Object.keys(item.dimensions ?? {}).length;
-	const multipliers = Object.keys(item.multipliers ?? {}).length;
-	if (dimensions) parts.push(countLabel(dimensions, "rate"));
-	if (multipliers) parts.push(countLabel(multipliers, "multiplier"));
-	return `varies by event · ${parts.join(", ")}`;
-};
-
 export function FeatureOverrideSection({
 	selectedCusEnt,
+	cusProduct,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
+	cusProduct?: FullCusProduct;
 }) {
+	const env = useEnv();
 	const { features } = useFeaturesQuery();
-	const override = selectedCusEnt.entitlement.feature_override;
-	const schema = override?.schema;
-	const markups = override?.markups;
+	const { feature: creditSystem, feature_override } =
+		selectedCusEnt.entitlement;
+	const markups = feature_override?.markups;
+	const product = cusProduct?.product;
 
-	if (!(schema?.length || markups)) return null;
+	if (feature_override?.schema?.length)
+		return (
+			<SheetSection withSeparator>
+				<RateCardTable
+					subtitle="What this balance pays for each feature"
+					action={
+						product && (
+							<Link
+								className="px-1.5 py-1 text-subtle text-xs transition-colors hover:text-muted-foreground"
+								to={getRedirectUrl(
+									`/products/${product.id}?version=${product.version}`,
+									env,
+								)}
+							>
+								Edit on plan
+							</Link>
+						)
+					}
+				>
+					{rateCardRows({
+						override: feature_override.schema,
+						catalog: creditSystem.config?.schema ?? [],
+					}).map((row) => (
+						<RateCardRow
+							key={row.featureId}
+							row={row}
+							features={features}
+							planName={product?.name ?? "this plan"}
+							creditSystemName={creditSystem.name}
+						/>
+					))}
+				</RateCardTable>
+			</SheetSection>
+		);
+	if (!markups) return null;
 
-	const providerMarkups = Object.entries(markups?.provider_markups ?? {});
-	const modelMarkupCount = Object.keys(markups?.model_markups ?? {}).length;
+	const providerMarkups = Object.entries(markups.provider_markups ?? {});
+	const modelMarkupCount = Object.keys(markups.model_markups ?? {}).length;
 
 	return (
 		<SheetSection withSeparator>
 			<div className="flex flex-col gap-2">
 				<div className="flex items-center gap-1.5 text-tertiary-foreground text-sm font-medium">
 					<CoinsIcon size={14} weight="duotone" />
-					{schema?.length ? "Custom rate card" : "Custom markup"}
+					Custom markup
 				</div>
 
 				<div className="flex flex-col gap-1.5">
-					{schema?.map((item) => (
-						<OverrideRow
-							key={`feature-${item.metered_feature_id}`}
-							label={featureDisplayName({
-								features,
-								featureId: item.metered_feature_id,
-								plural: true,
-								capitalize: true,
-							})}
-							value={
-								hasCreditDimensionRules(item)
-									? dimensionedRateText(item)
-									: rateText(item)
-							}
-						/>
-					))}
-					{markups && (
-						<OverrideRow
-							label="Default"
-							value={`${markups.default_markup ?? 0}% markup`}
-						/>
-					)}
+					<OverrideRow
+						label="Default"
+						value={`${markups.default_markup ?? 0}% markup`}
+					/>
 					{providerMarkups.map(([providerKey, entry]) => (
 						<OverrideRow
 							key={`provider-${providerKey}`}

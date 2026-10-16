@@ -154,9 +154,7 @@ export const expectAnchoredParentLink = async ({
 		customized: expected.customized ?? false,
 		messagesAllowance: expected.messagesAllowance,
 		entitlements: [
-			...(expected.hasDashboard
-				? [{ feature_id: TestFeature.Dashboard }]
-				: []),
+			...(expected.hasDashboard ? [{ feature_id: TestFeature.Dashboard }] : []),
 			...(expected.hasWords
 				? [{ feature_id: TestFeature.Words, allowance: 10 }]
 				: []),

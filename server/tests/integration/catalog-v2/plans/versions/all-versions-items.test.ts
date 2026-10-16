@@ -147,7 +147,8 @@ const seedV1AndMintV2 = async ({
 				plan_id: planId,
 				name: "V2",
 				items: [messagesItem(150)],
-				versioning: "new_version", active: true,
+				versioning: "new_version",
+				active: true,
 			},
 		],
 	});
@@ -322,7 +323,8 @@ test.concurrent(
 						plan_id: planId,
 						name: "V2",
 						items: [messagesItem(100), dashboardItem],
-						versioning: "new_version", active: true,
+						versioning: "new_version",
+						active: true,
 					},
 				],
 			});

@@ -40,10 +40,20 @@ const updatePoolBalanceToPlanOps = ({
 	pooledCustomerEntitlement,
 	balanceDelta,
 	grantedDelta,
+	unlimited,
 }: PooledBalancePlan["updatePoolBalances"][number]): BillingPlanOp[] => {
 	const { pooled_balance: pooledBalance } = pooledCustomerEntitlement;
 	if (!pooledBalance) return [];
 	return [
+		...(unlimited !== undefined
+			? [
+					toBillingPlanUpdateOp({
+						table: "customerEntitlements",
+						id: pooledCustomerEntitlement.id,
+						set: { unlimited },
+					}),
+				]
+			: []),
 		...(balanceDelta !== 0
 			? [
 					toBillingPlanIncrementOp({
@@ -81,6 +91,8 @@ const contributionWithTableDefaults = (
 	current_contribution: contribution.current_contribution ?? 0,
 	next_cycle_contribution: contribution.next_cycle_contribution ?? 0,
 	effective_at: contribution.effective_at ?? null,
+	competes: contribution.competes ?? false,
+	unlimited: contribution.unlimited ?? false,
 	created_at: contribution.created_at ?? contribution.updated_at ?? Date.now(),
 	updated_at: contribution.updated_at ?? contribution.created_at ?? Date.now(),
 });

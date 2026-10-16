@@ -39,7 +39,7 @@ const buildMockFetchImpl = (fixtures: {
 		if (all.length > 1 && page !== "2") {
 			return listEnvelope({
 				items: all.slice(0, 1),
-				nextPage: `${path}?limit=100&mock_page=2`,
+				nextPage: `https://api.revenuecat.com${path}?limit=100&mock_page=2`,
 				url: path,
 			});
 		}
@@ -49,6 +49,9 @@ const buildMockFetchImpl = (fixtures: {
 
 	return (async (input: RequestInfo | URL) => {
 		const url = new URL(input.toString());
+		if (url.host !== "api.revenuecat.com") {
+			throw new TypeError(`getaddrinfo ENOTFOUND ${url.host}`);
+		}
 		const path = url.pathname;
 		const page = url.searchParams.get("mock_page");
 

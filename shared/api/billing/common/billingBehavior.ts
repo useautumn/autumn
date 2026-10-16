@@ -5,7 +5,7 @@ export const BillingBehaviorSchema = z
 	.meta({
 		title: "BillingBehavior",
 		description:
-			"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.",
+			"How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.",
 	});
 
 export type BillingBehavior = z.infer<typeof BillingBehaviorSchema>;

@@ -34,3 +34,17 @@ const ACCESS_REFUSAL_CODES: ReadonlySet<number> = new Set([
 export function isKafkaAccessRefusal({ cause }: { cause: unknown }): boolean {
 	return hasKafkaErrorCode({ cause, codes: ACCESS_REFUSAL_CODES });
 }
+
+const GROUP_CHURN_CODES: ReadonlySet<number> = new Set([
+	LIBRDKAFKA_ERROR_CODES.ERR_ILLEGAL_GENERATION,
+	LIBRDKAFKA_ERROR_CODES.ERR_REBALANCE_IN_PROGRESS,
+	LIBRDKAFKA_ERROR_CODES.ERR_UNKNOWN_MEMBER_ID,
+	LIBRDKAFKA_ERROR_CODES.ERR_FENCED_MEMBER_EPOCH,
+	LIBRDKAFKA_ERROR_CODES.ERR_STALE_MEMBER_EPOCH,
+]);
+
+/** The group moved on without this member: a stale generation or member epoch, an unknown member, or a
+ *  rebalance under way. librdkafka rejoins by itself, so a crash carrying one is waited out, not exited on. */
+export function isKafkaGroupChurn({ cause }: { cause: unknown }): boolean {
+	return hasKafkaErrorCode({ cause, codes: GROUP_CHURN_CODES });
+}

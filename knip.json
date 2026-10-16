@@ -44,6 +44,7 @@
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
 			"ignore": [
 				"src/external/tinybird/connections/eventsS3.ts",
+				"src/external/tinybird/connections/eventsHistoryExportS3.ts",
 				"src/external/connect/attachSandboxStripeAccount.ts",
 				"src/cron/resetCron/runClearExpiredResetCron.ts",
 				"src/external/stripe/common/simulateTestWebhookFailure.ts"
@@ -55,7 +56,11 @@
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
+			"entry": [
+				"src/boot/bootPrefetch.ts",
+				"tests/**/*.{ts,tsx}",
+				"src/**/*.test.{ts,tsx}"
+			],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignoreDependencies": [
 				"tailwindcss",

@@ -6,6 +6,7 @@ import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingPa
 import { CancelActionSchema } from "../common/cancelAction";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem.js";
+import { InvoiceLineEditsParamsShape } from "../common/invoiceLineEdits";
 import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
@@ -34,6 +35,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			description:
 				"Custom line items that replace the auto-generated proration invoice, or bill a standalone invoice when nothing else changes. Only valid on an existing recurring subscription.",
 		}),
+		...InvoiceLineEditsParamsShape,
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
 				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
@@ -103,6 +105,8 @@ const UPDATE_FIELDS = [
 	"discounts",
 	"remove_discounts",
 	"custom_line_items",
+	"add_lines",
+	"remove_lines",
 	"invoice_mode",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
@@ -138,7 +142,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 	})
 		.refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 			message:
-				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, remove_discounts, custom_line_items, or invoice_mode)",
+				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, discounts, remove_discounts, custom_line_items, add_lines, remove_lines, or invoice_mode)",
 		})
 		.refine((data) => !addsAndRemovesSameReward(data), {
 			message: ADDS_AND_REMOVES_SAME_REWARD_MESSAGE,

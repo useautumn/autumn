@@ -9,8 +9,11 @@ import {
 	RewardType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { constructCoupon } from "@/utils/scriptUtils/createTestProducts.js";
 
 const seedBaseWithPricedVariant = async ({
 	autumn,
@@ -155,5 +158,46 @@ test.concurrent(
 		);
 
 		expect(created).toBeTruthy();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("rewards scope: apply-to-all ignores stale price_ids that share a feature Stripe product")}`,
+	async () => {
+		const first = products.base({
+			id: "first",
+			items: [items.consumableMessages()],
+		});
+		const second = products.base({
+			id: "second",
+			items: [items.consumableMessages()],
+		});
+		const secondCoupon = constructCoupon({
+			id: "scope-stale-second",
+			promoCode: `SCOPESTALE2${Date.now()}`,
+			discountType: RewardType.PercentageDiscount,
+		});
+		const firstCoupon = constructCoupon({
+			id: "scope-stale-first",
+			promoCode: `SCOPESTALE1${Date.now()}`,
+			discountType: RewardType.PercentageDiscount,
+		});
+
+		// Each coupon lists one plan's prices; both plans bill Messages under one Stripe product.
+		const { ctx } = await initScenario({
+			customerId: "reward-scope-stale-ids",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [first, second] }),
+				s.reward({ reward: secondCoupon, productId: second.id }),
+				s.reward({ reward: firstCoupon, productId: first.id }),
+			],
+			actions: [],
+		});
+
+		const stripeCoupon = await ctx.stripeCli.coupons.retrieve(firstCoupon.id, {
+			expand: ["applies_to"],
+		});
+		expect(stripeCoupon.applies_to?.products ?? []).toEqual([]);
 	},
 );

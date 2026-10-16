@@ -74,8 +74,7 @@ import { awaitBoundedWarmup } from "./external/redis/initUtils/boundedWarmup.js"
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { globalEventBatchingManager } from "./internal/balances/events/EventBatchingManager.js";
-import { globalSyncBatchingManagerV3 } from "./internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { flushBalanceBatchingManagers } from "./internal/balances/utils/flushBalanceBatchingManagers.js";
 import { getSqsJobs } from "./queue/getSqsJobs.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -382,15 +381,7 @@ async function gracefulShutdown() {
 		// App-level batch windows (events 350ms, balance sync 1s) hold work in
 		// timers that process.exit would silently kill: deliver them, then close
 		// the SQS batchers at the last possible moment.
-		const flushResults = await Promise.allSettled([
-			globalEventBatchingManager.flush(),
-			globalSyncBatchingManagerV3.flush(),
-		]);
-		for (const result of flushResults) {
-			if (result.status === "rejected") {
-				console.warn("[Shutdown] app-level batch flush failed:", result.reason);
-			}
-		}
+		await flushBalanceBatchingManagers();
 		await shutdownSqsSendBatchers();
 		await getSqsJobs().shutdown();
 		await Promise.all([

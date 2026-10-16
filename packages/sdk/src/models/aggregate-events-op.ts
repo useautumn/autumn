@@ -61,6 +61,18 @@ export type AggregateEventsCustomRange = {
 };
 
 /**
+ * What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.
+ */
+export const Measure = {
+  Sum: "sum",
+  Count: "count",
+} as const;
+/**
+ * What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.
+ */
+export type Measure = ClosedEnum<typeof Measure>;
+
+/**
  * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
  */
 export const AggregateOn = {
@@ -112,6 +124,10 @@ export type EventsAggregateParams = {
    * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
    */
   maxGroups?: number | undefined;
+  /**
+   * What `list` reports per bin: "sum" (default) adds up event values; "count" counts events, i.e. how many track requests came in regardless of value. `total` is unchanged.
+   */
+  measure?: Measure | undefined;
   /**
    * Set to "deducted" to additionally return a per-balance breakdown of what each event consumed, under `deductions`. Purely additive: `list` and `total` are unchanged. Requires customer_id.
    */
@@ -287,6 +303,11 @@ export function aggregateEventsCustomRangeToJSON(
 }
 
 /** @internal */
+export const Measure$outboundSchema: z.ZodMiniEnum<typeof Measure> = z.enum(
+  Measure,
+);
+
+/** @internal */
 export const AggregateOn$outboundSchema: z.ZodMiniEnum<typeof AggregateOn> = z
   .enum(AggregateOn);
 
@@ -302,6 +323,7 @@ export type EventsAggregateParams$Outbound = {
   timezone?: string | undefined;
   filter_by?: { [k: string]: string } | undefined;
   max_groups?: number | undefined;
+  measure?: string | undefined;
   aggregate_on?: string | undefined;
 };
 
@@ -323,6 +345,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     timezone: z.optional(z.string()),
     filterBy: z.optional(z.record(z.string(), z.string())),
     maxGroups: z.optional(z.int()),
+    measure: z.optional(Measure$outboundSchema),
     aggregateOn: z.optional(AggregateOn$outboundSchema),
   }),
   z.transform((v) => {

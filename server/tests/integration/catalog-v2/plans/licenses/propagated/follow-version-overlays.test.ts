@@ -190,9 +190,7 @@ test.concurrent(
 					autumn: autumnV2_3,
 					childId,
 					propagate: {
-						license_parents: [
-							{ plan_id: parentId, version: 2 },
-						],
+						license_parents: [{ plan_id: parentId, version: 2 }],
 					},
 				});
 

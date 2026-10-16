@@ -22,6 +22,7 @@ const { atomMetricsPeriodSeconds, queryAtomMetrics } = await import(
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+const RANGE_SECONDS = { "1h": 3600, "24h": 86_400, "7d": 604_800 };
 const createdDaysAgo = (days: number) => Date.now() - days * DAY_MS;
 
 afterAll(() => {
@@ -131,6 +132,28 @@ describe("an Atom's metrics", () => {
 		expect(metrics.latest).toBeNull();
 	});
 
+	test.each([
+		{ range: "1h", windowSeconds: 10 },
+		{ range: "24h", windowSeconds: 10 },
+		{ range: "7d", windowSeconds: 60 },
+	] as const)(
+		"bins $range of health lines into $windowSeconds s windows, within Axiom's 11,000 buckets",
+		async ({ range, windowSeconds }) => {
+			await queryAtomMetrics({
+				deploymentId: "dep_123",
+				range,
+				createdAt: createdDaysAgo(30),
+			});
+
+			const [, binSeconds] =
+				queries[0].pipeline.match(/by bin\(_time, (\d+)s\)/) ?? [];
+			expect(Number(binSeconds)).toBe(windowSeconds);
+			expect(RANGE_SECONDS[range] / windowSeconds + 1).toBeLessThanOrEqual(
+				11_000,
+			);
+		},
+	);
+
 	test("reads health lines from each log line's JSON, not the body alien now cuts to the message", async () => {
 		await queryAtomMetrics({
 			deploymentId: "dep_123",
@@ -167,5 +190,9 @@ describe("an Atom's metrics period", () => {
 		expect(periodFor({ range: "24h", ageMs: 5 * 60 * 1000 })).toBe(10);
 		expect(periodFor({ range: "7d", ageMs: 2 * HOUR_MS })).toBe(60);
 		expect(periodFor({ range: "7d", ageMs: DAY_MS })).toBe(15 * 60);
+	});
+
+	test("never splits a period finer than the range's raw windows", () => {
+		expect(periodFor({ range: "7d", ageMs: 10 * 60 * 1000 })).toBe(60);
 	});
 });

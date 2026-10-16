@@ -12,10 +12,10 @@ import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
+import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 import { cleanupPlanCustomerRefs } from "../utils/cleanupPlanCustomerRefs.js";
 import { deleteDbPlans } from "../utils/expectCatalogPlans.js";
 import { parsePlanPreview } from "./utils/expectPlanPreview.js";
-import { seedVersionableCustomer } from "../migrations/utils/seedVersionableCustomer.js";
 
 const messagesItem = ({ included }: { included: number }) => ({
 	feature_id: TestFeature.Messages,

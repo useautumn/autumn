@@ -73,6 +73,8 @@ export const MiscellaneousEdgeConfigForm = ({
 				redisFallbackToDb: parsed.redisFallbackToDb ?? prev.redisFallbackToDb,
 				axiomResponseBodyReduction:
 					parsed.axiomResponseBodyReduction ?? prev.axiomResponseBodyReduction,
+				expiredMetadataCleanup:
+					parsed.expiredMetadataCleanup ?? prev.expiredMetadataCleanup,
 			}));
 			setJsonError(null);
 		} catch {
@@ -232,6 +234,17 @@ export const MiscellaneousEdgeConfigForm = ({
 							onCheckedChange={(redisFallbackToDb) => {
 								setSyncSource("form");
 								setConfig((prev) => ({ ...prev, redisFallbackToDb }));
+							}}
+						/>
+
+						<MiscellaneousEdgeConfigSwitch
+							title="Expired checkout metadata cleanup"
+							hint="Every 10 minutes, deletes up to 1,000 checkout_session_completed metadata rows that expired 31+ days ago. Logs under jobName expired-metadata-cleanup."
+							ariaLabel="Enable expired checkout metadata cleanup"
+							checked={config.expiredMetadataCleanup}
+							onCheckedChange={(expiredMetadataCleanup) => {
+								setSyncSource("form");
+								setConfig((prev) => ({ ...prev, expiredMetadataCleanup }));
 							}}
 						/>
 

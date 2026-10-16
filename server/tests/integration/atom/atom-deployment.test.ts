@@ -32,6 +32,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -231,13 +232,18 @@ test.skipIf(hostedAtom)(
 
 		await deleteAtomDeployment({ autumn });
 		const afterDelete = await autumn.post("/byoc.get_atom", {});
-		const checkAfterDelete = await checkOnAtom(anyCheck);
 		expect(afterDelete).toMatchObject({ cache: null });
-		expect(checkAfterDelete.status).toBe(401);
+		// The delete lands on one Atom thread; the others drop the token at their next rescan (TENANTS_REVALIDATE_MS, 1 s).
+		await pollUntilAsserted({
+			fetch: () => checkOnAtom(anyCheck),
+			assert: (checkAfterDelete) => expect(checkAfterDelete.status).toBe(401),
+			timeoutMs: 5_000,
+			intervalMs: 250,
+		});
 	},
 );
 
-test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's")}`, async () => {
+test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's, and its org's id and slug")}`, async () => {
 	const { db } = initDrizzle();
 	const atom = await ensureAtomDeployment({ autumn });
 	const otherOrgId = `org_atom_keys_${crypto.randomUUID()}`;
@@ -293,6 +299,7 @@ test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret
 		expect(reply.status).toBe(200);
 		expect(await reply.json()).toEqual({
 			invalid_key_hashes: [live, otherOrg, neverIssued],
+			org: { id: defaultCtx.org.id, slug: defaultCtx.org.slug },
 		});
 		expect(unknownAtom.status).toBe(401);
 	} finally {

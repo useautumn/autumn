@@ -40,7 +40,7 @@ export const handleTrackTokens = createRoute({
 				ctx,
 				body: trackBody,
 				isAsync,
-				recordsCreditCost: true,
+				tokens: findTokenDeduction({ featureDeductions }),
 			});
 			return c.json(result, status);
 		}

@@ -1,0 +1,46 @@
+DESCRIPTION >
+    Export A of the split history export: every events column except properties and deductions,
+    whose JSON reads dominate sink time. Same params and WHERE as events_history_export.
+    Joined with events_history_export_props by (org_id, id) at merge time.
+
+TOKEN events_history_export_runner READ
+
+NODE export
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        internal_product_id,
+        customer_id,
+        {{ String(export_chunk_id, 'unset') }} AS export_chunk_id,
+        {{ String(export_attempt, '0') }} AS export_attempt
+    FROM events
+    WHERE timestamp >= toDateTime64({{ String(start_ts, '1970-01-01 00:00:00') }}, 6)
+      AND timestamp < toDateTime64({{ String(end_ts, '1970-01-01 00:00:00') }}, 6)
+      {% if defined(org_from) and String(org_from, '') != '' %} AND org_id >= {{ String(org_from) }} {% end %}
+      {% if defined(org_to) and String(org_to, '') != '' %} AND org_id < {{ String(org_to) }} {% end %}
+      {% if defined(env_from) and String(env_from, '') != '' %} AND env >= {{ String(env_from) }} {% end %}
+      {% if defined(env_to) and String(env_to, '') != '' %} AND env < {{ String(env_to) }} {% end %}
+      {% if defined(cust_from) and String(cust_from, '') != '' %} AND customer_id >= {{ String(cust_from) }} {% end %}
+      {% if defined(cust_to) and String(cust_to, '') != '' %} AND customer_id < {{ String(cust_to) }} {% end %}
+
+TYPE sink
+EXPORT_CONNECTION_NAME "s3_export_12oct26_alchemy"
+EXPORT_BUCKET_URI "s3://autumn-tinybird-events-export-12oct26-001092881874-us-east-2-an/tinybird/events/lite"
+EXPORT_FILE_TEMPLATE "chunk={export_chunk_id}/attempt={export_attempt}/part_{4}"
+EXPORT_SCHEDULE "@on-demand"
+EXPORT_FORMAT "parquet"
+EXPORT_COMPRESSION "zstd"
+EXPORT_STRATEGY "create_new"

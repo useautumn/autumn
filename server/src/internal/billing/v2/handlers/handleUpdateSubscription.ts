@@ -8,6 +8,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
@@ -40,15 +41,20 @@ export const handleUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+		const liveUpdate = await pendingReplacementToLiveUpdate({
+			ctx,
+			params: body,
+		});
 
-		if (isCollectionMethodSwitch(body)) {
+		if (!liveUpdate && isCollectionMethodSwitch(body)) {
 			return c.json(
 				await billingActions.switchCollectionMethod({ ctx, params: body }),
 				200,
 			);
 		}
 
-		const pendingUpdate = await updatePendingPlanIfAny({ ctx, params: body });
+		const pendingUpdate =
+			!liveUpdate && (await updatePendingPlanIfAny({ ctx, params: body }));
 
 		if (pendingUpdate) {
 			const { billingContext, billingResult } = pendingUpdate;
@@ -65,7 +71,8 @@ export const handleUpdateSubscription = createRoute({
 		const { billingContext, billingResult } =
 			await billingActions.updateSubscription({
 				ctx,
-				params: body,
+				params: liveUpdate?.params ?? body,
+				contextOverride: liveUpdate?.contextOverride,
 				preview: false,
 			});
 

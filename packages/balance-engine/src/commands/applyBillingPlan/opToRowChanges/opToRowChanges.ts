@@ -5,6 +5,7 @@ import type {
 } from "../types/billingPlanOp.js";
 import { deleteOpToRowChanges } from "./deleteOpToRowChanges.js";
 import { incrementOpToRowChanges } from "./incrementOpToRowChanges.js";
+import { insertGrantOpToRowChanges } from "./insertGrantOpToRowChanges.js";
 import { moveEntriesOpToRowChanges } from "./moveEntriesOpToRowChanges.js";
 import type { PlanRowChangeContext } from "./planRowChangeContext.js";
 import { contributionOpToRowChanges } from "./pooled/contributionOpToRowChanges.js";
@@ -19,7 +20,7 @@ const insertOpToRowChanges = ({
 	context: PlanRowChangeContext;
 }): RowChange[] => {
 	if (op.table === "customerEntitlements")
-		context.insertedRows.customerEntitlements.push(op.row);
+		return insertGrantOpToRowChanges({ op, context });
 	if (op.table === "pooledBalances")
 		context.insertedRows.pooledBalances.push(op.row);
 	return [op];

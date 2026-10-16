@@ -1,4 +1,6 @@
+import { atomDeploymentToConnection } from "@autumn/byoc/subjects";
 import {
+	type AppEnv,
 	type AtomRoute,
 	atomRouteColumns,
 	type ByocCacheDeployment,
@@ -44,3 +46,27 @@ export const changesAtomRoute = ({
 	from: AtomRoute;
 	to: AtomRoute;
 }) => ATOM_ROUTE_KEYS.some((key) => from[key] !== to[key]);
+
+/** Herald now pushes to an Atom it didn't before (it turned ready, or moved), so the Atom holds no catalog yet. */
+export const becomesAtomPushTarget = ({
+	from,
+	to,
+	orgId,
+	env,
+}: {
+	from: AtomRoute;
+	to: AtomRoute;
+	orgId: string;
+	env: AppEnv;
+}) => {
+	const target = (atomDeployment: AtomRoute) =>
+		atomDeploymentToConnection({
+			atomDeployment,
+			orgId,
+			env,
+			overQueue: false,
+		});
+	const next = target(to);
+	if (!next) return false;
+	return JSON.stringify(target(from)) !== JSON.stringify(next);
+};

@@ -154,10 +154,16 @@ export type PreviewMultiAttachPriceTier = {
     | undefined;
 };
 
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export const PreviewMultiAttachTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
+/**
+ * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+ */
 export type PreviewMultiAttachTierBehavior = ClosedEnum<
   typeof PreviewMultiAttachTierBehavior
 >;
@@ -212,6 +218,9 @@ export type PreviewMultiAttachPrice = {
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
   tiers?: Array<PreviewMultiAttachPriceTier> | undefined;
+  /**
+   * How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount.
+   */
   tierBehavior?: PreviewMultiAttachTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
@@ -334,6 +343,17 @@ export type PreviewMultiAttachDuration = ClosedEnum<
 export type PreviewMultiAttachExpiry = {
   duration: PreviewMultiAttachDuration;
   length: number;
+};
+
+export type PreviewMultiAttachCreditSchema3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type PreviewMultiAttachDimensionsMatch4 = string | number | boolean;
@@ -567,7 +587,8 @@ export type PreviewMultiAttachCreditSchema1 = {
 
 export type PreviewMultiAttachCreditSchemaUnion =
   | PreviewMultiAttachCreditSchema1
-  | PreviewMultiAttachCreditSchema2;
+  | PreviewMultiAttachCreditSchema2
+  | PreviewMultiAttachCreditSchema3;
 
 export type PreviewMultiAttachProviderMarkups = {
   markup: number;
@@ -608,10 +629,14 @@ export type PreviewMultiAttachMarkups = {
  */
 export type PreviewMultiAttachFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
-    | Array<PreviewMultiAttachCreditSchema1 | PreviewMultiAttachCreditSchema2>
+    | Array<
+      | PreviewMultiAttachCreditSchema1
+      | PreviewMultiAttachCreditSchema2
+      | PreviewMultiAttachCreditSchema3
+    >
     | undefined;
   /**
    * For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's.
@@ -779,6 +804,21 @@ export type PreviewMultiAttachFreeTrialParams = {
   onEnd?: PreviewMultiAttachOnEnd | undefined;
 };
 
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export const PreviewMultiAttachIssueMethod = {
+  Draft: "draft",
+  Finalize: "finalize",
+  Send: "send",
+} as const;
+/**
+ * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+ */
+export type PreviewMultiAttachIssueMethod = ClosedEnum<
+  typeof PreviewMultiAttachIssueMethod
+>;
+
 export const PreviewMultiAttachPaymentMethodType = {
   Card: "card",
   CustomerBalance: "customer_balance",
@@ -805,9 +845,13 @@ export type PreviewMultiAttachInvoiceMode = {
    */
   enablePlanImmediately?: boolean | undefined;
   /**
-   * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+   * Deprecated: use issue_method. true sends the invoice (issue_method: send), false keeps it as a draft (issue_method: draft). Defaults to true. Ignored when issue_method is set.
    */
   finalize?: boolean | undefined;
+  /**
+   * How far the invoice created now advances. draft leaves it editable for manual review. finalize opens it without Stripe emailing, reminding or charging (auto_advance off), for invoices collected outside Stripe. send opens it and lets Stripe email it. Defaults to send. Requires enabled: true. Renewal invoices follow the subscription.
+   */
+  issueMethod?: PreviewMultiAttachIssueMethod | undefined;
   /**
    * ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
    */
@@ -837,7 +881,7 @@ export type PreviewMultiAttachAttachDiscount = {
 };
 
 /**
- * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export const PreviewMultiAttachBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -845,7 +889,7 @@ export const PreviewMultiAttachBillingBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export type PreviewMultiAttachBillingBehavior = ClosedEnum<
   typeof PreviewMultiAttachBillingBehavior
@@ -1123,7 +1167,7 @@ export type PreviewMultiAttachParams = {
    */
   discounts?: Array<PreviewMultiAttachAttachDiscount> | undefined;
   /**
-   * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+   * How to handle billing. 'prorate_immediately' charges/credits prorated amounts now, 'none' does not charge/credit anything, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
    */
   billingBehavior?: PreviewMultiAttachBillingBehavior | undefined;
   /**
@@ -1967,6 +2011,38 @@ export function previewMultiAttachExpiryToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachCreditSchema3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const PreviewMultiAttachCreditSchema3$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCreditSchema3$Outbound,
+  PreviewMultiAttachCreditSchema3
+> = z.pipe(
+  z.object({
+    meteredFeatureId: z.string(),
+    excluded: z.literal(true),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      meteredFeatureId: "metered_feature_id",
+    });
+  }),
+);
+
+export function previewMultiAttachCreditSchema3ToJSON(
+  previewMultiAttachCreditSchema3: PreviewMultiAttachCreditSchema3,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachCreditSchema3$outboundSchema.parse(
+      previewMultiAttachCreditSchema3,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachDimensionsMatch4$Outbound =
   | string
   | number
@@ -2662,7 +2738,8 @@ export function previewMultiAttachCreditSchema1ToJSON(
 /** @internal */
 export type PreviewMultiAttachCreditSchemaUnion$Outbound =
   | PreviewMultiAttachCreditSchema1$Outbound
-  | PreviewMultiAttachCreditSchema2$Outbound;
+  | PreviewMultiAttachCreditSchema2$Outbound
+  | PreviewMultiAttachCreditSchema3$Outbound;
 
 /** @internal */
 export const PreviewMultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
@@ -2671,6 +2748,7 @@ export const PreviewMultiAttachCreditSchemaUnion$outboundSchema: z.ZodMiniType<
 > = smartUnion([
   z.lazy(() => PreviewMultiAttachCreditSchema1$outboundSchema),
   z.lazy(() => PreviewMultiAttachCreditSchema2$outboundSchema),
+  z.lazy(() => PreviewMultiAttachCreditSchema3$outboundSchema),
 ]);
 
 export function previewMultiAttachCreditSchemaUnionToJSON(
@@ -2793,6 +2871,7 @@ export type PreviewMultiAttachFeatureOverride$Outbound = {
     | Array<
       | PreviewMultiAttachCreditSchema1$Outbound
       | PreviewMultiAttachCreditSchema2$Outbound
+      | PreviewMultiAttachCreditSchema3$Outbound
     >
     | undefined;
   markups?: PreviewMultiAttachMarkups$Outbound | undefined;
@@ -2809,6 +2888,7 @@ export const PreviewMultiAttachFeatureOverride$outboundSchema: z.ZodMiniType<
       z.lazy(() =>
         PreviewMultiAttachCreditSchema2$outboundSchema
       ),
+      z.lazy(() => PreviewMultiAttachCreditSchema3$outboundSchema),
     ]))),
     markups: z.optional(z.lazy(() =>
       PreviewMultiAttachMarkups$outboundSchema
@@ -3060,6 +3140,11 @@ export function previewMultiAttachFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachIssueMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachIssueMethod
+> = z.enum(PreviewMultiAttachIssueMethod);
+
+/** @internal */
 export const PreviewMultiAttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
   typeof PreviewMultiAttachPaymentMethodType
 > = z.enum(PreviewMultiAttachPaymentMethodType);
@@ -3068,7 +3153,8 @@ export const PreviewMultiAttachPaymentMethodType$outboundSchema: z.ZodMiniEnum<
 export type PreviewMultiAttachInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
-  finalize: boolean;
+  finalize?: boolean | undefined;
+  issue_method?: string | undefined;
   invoice_template_id?: string | undefined;
   net_terms_days?: number | undefined;
   payment_method_types?: Array<string> | undefined;
@@ -3082,7 +3168,8 @@ export const PreviewMultiAttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.object({
     enabled: z.boolean(),
     enablePlanImmediately: z._default(z.boolean(), false),
-    finalize: z._default(z.boolean(), true),
+    finalize: z.optional(z.boolean()),
+    issueMethod: z.optional(PreviewMultiAttachIssueMethod$outboundSchema),
     invoiceTemplateId: z.optional(z.string()),
     netTermsDays: z.optional(z.int()),
     paymentMethodTypes: z.optional(
@@ -3092,6 +3179,7 @@ export const PreviewMultiAttachInvoiceMode$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
+      issueMethod: "issue_method",
       invoiceTemplateId: "invoice_template_id",
       netTermsDays: "net_terms_days",
       paymentMethodTypes: "payment_method_types",

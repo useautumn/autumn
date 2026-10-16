@@ -136,6 +136,55 @@ curl -X POST 'https://api.useautumn.com/v1/billing/update' \
 
 </CodeGroup>
 
+## Switching between invoicing and charging automatically
+
+Call `billing.update` with `invoice_mode` as the only change to switch how an existing subscription is collected. The switch applies from the next renewal: nothing is charged or invoiced now, and invoices that are already open keep their payment method.
+
+<CodeGroup>
+
+```typescript TypeScript
+// Send invoices from the next renewal, due in 30 days, payable by card or ACH
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "team",
+  invoiceMode: {
+    enabled: true,
+    netTermsDays: 30,
+    paymentMethodTypes: ["card", "us_bank_account"],
+  },
+});
+
+// Charge the card on file automatically again
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "team",
+  invoiceMode: { enabled: false },
+});
+```
+
+```bash cURL
+curl -X POST 'https://api.useautumn.com/v1/billing.update' \
+  -H 'Authorization: Bearer am_sk_...' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "team",
+    "invoice_mode": {
+      "enabled": true,
+      "net_terms_days": 30,
+      "payment_method_types": ["card", "us_bank_account"]
+    }
+  }'
+```
+
+</CodeGroup>
+
+- Switching to charging automatically requires a payment method on file; otherwise the request is rejected.
+- `payment_method_types` overrides your organization's default payment methods. Omit it to keep the defaults.
+- If the request changes anything else (plan, quantities, items), `invoice_mode` describes how that change is billed instead of switching the subscription.
+
+To change the payment methods on an invoice that is already draft or open, use [`invoices.update`](/api-reference/invoices/updateInvoice).
+
 ## How billing works
 
 By default, updating a subscription with billing changes will generate an invoice:

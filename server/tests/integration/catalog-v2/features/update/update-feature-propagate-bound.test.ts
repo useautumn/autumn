@@ -9,8 +9,8 @@
 import { test } from "bun:test";
 import {
 	AllowanceType,
-	type Entitlement,
 	EntInterval,
+	type Entitlement,
 	FeatureType,
 } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";

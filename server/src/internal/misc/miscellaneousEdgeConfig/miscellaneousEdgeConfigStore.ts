@@ -57,6 +57,10 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 export const isExpiredGrantCleanupEnabled = (): boolean =>
 	store.get().expiredGrantCleanup;
 
+/** Gate for the expired checkout-metadata sweep. */
+export const isExpiredMetadataCleanupEnabled = (): boolean =>
+	store.get().expiredMetadataCleanup;
+
 /** Global sync-coalescing gate (balance syncs via Redis dirty state). */
 export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
 

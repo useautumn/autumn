@@ -10,15 +10,15 @@ import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import {
+	messagesItem,
+	withCatalogPlans,
+} from "../../licenses/utils/seedLicensePlans.js";
 import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	expectPlanPreviewRowCorrect,
 	parsePlanPreview,
 } from "../../preview/utils/expectPlanPreview.js";
-import {
-	messagesItem,
-	withCatalogPlans,
-} from "../../licenses/utils/seedLicensePlans.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 
 test.concurrent(

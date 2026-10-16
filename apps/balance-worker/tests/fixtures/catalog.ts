@@ -100,6 +100,7 @@ export const createSyntheticWorkerDb = ({
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
 	listPooledBalancesWithoutOtherContributions: async () => [],
+	readLockRows: async () => [],
 	sumPooledContributionGrants: async () => ({}),
 });
 
@@ -112,6 +113,7 @@ export const createEmptyWorkerDb = (): WorkerDb => ({
 	getBillingCycleAnchors: async () => ({}),
 	claimCustomerByEmail: async () => null,
 	listPooledBalancesWithoutOtherContributions: async () => [],
+	readLockRows: async () => [],
 	sumPooledContributionGrants: async () => ({}),
 	getCatalogRows: async () => ({
 		entitlements: [],
@@ -131,7 +133,14 @@ export const createTestCatalogCache = ({
 	rows?: CatalogRow[];
 } = {}): CatalogCache => {
 	const cache = createCatalogCache({
-		ctx: { db, config: { mutableRowTtlMs: 60_000, maxSizeBytes: 1_000_000 } },
+		ctx: {
+			db,
+			config: {
+				mutableRowTtlMs: 60_000,
+				maxSizeBytes: 1_000_000,
+				idleExpiryMs: 3_600_000,
+			},
+		},
 	});
 	cache.put({ rows });
 	return cache;

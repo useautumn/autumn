@@ -20,6 +20,7 @@ import {
 } from "../../../src/threads/stats/threadStats.js";
 import {
 	allSlotsOwnedHere,
+	forwardingNowhere,
 	freshHeld,
 	noSubjectPulls,
 	storedSubjectWith,
@@ -48,6 +49,7 @@ const openFolder = () => {
 	const counters = openThreadCounters({ buffer: threadStats, index: 0 });
 	const held = freshHeld();
 	const auth = createDeployedAuth({
+		journalForwarder: forwardingNowhere,
 		dataDir,
 		tokenHash: "0".repeat(64),
 		slotCount: 2,
@@ -89,11 +91,14 @@ const openFolder = () => {
 			volumeOf,
 			threads: 1,
 		});
-	const push = ({ ids }: { ids: string[] }) => {
-		for (const id of ids)
-			auth.slots
-				.processorFor({ customerId: id })
-				.setSubject({ customerId: id, body: body(id) });
+	const push = async ({ ids }: { ids: string[] }) => {
+		await Promise.all(
+			ids.map((id) =>
+				auth.slots
+					.processorFor({ customerId: id })
+					.setSubject({ customerId: id, body: body(id) }),
+			),
+		);
 	};
 	const body = (id: string) =>
 		JSON.stringify({
@@ -154,9 +159,9 @@ describe("the disk evictor", () => {
 
 	test("under its share it only drops customers not pushed for 7 days, and reports the bytes its files take", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("old", 20) });
+		await folder.push({ ids: ids("old", 20) });
 		folder.advance(DISK_IDLE_EXPIRY_MS - HOUR);
-		folder.push({ ids: ids("fresh", 20) });
+		await folder.push({ ids: ids("fresh", 20) });
 		const evictor = folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER });
 
 		await evictor.tick();
@@ -175,9 +180,9 @@ describe("the disk evictor", () => {
 
 	test("over its share it drops the least recently pushed customers, whole, down to 95% of the share, then stops", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("a", 100) });
+		await folder.push({ ids: ids("a", 100) });
 		folder.advance(HOUR);
-		folder.push({ ids: ids("b", 100) });
+		await folder.push({ ids: ids("b", 100) });
 		folder.advance(HOUR);
 		const bytes = () => folder.stats().diskBytes;
 		await folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER }).tick();
@@ -201,7 +206,7 @@ describe("the disk evictor", () => {
 
 	test("each pass starts where the last one stopped, so a share reached in one file's batch does not drain that file alone", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("r", 400) });
+		await folder.push({ ids: ids("r", 400) });
 		folder.advance(HOUR);
 		await folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER }).tick();
 		const full = folder.stats().diskBytes;
@@ -221,7 +226,7 @@ describe("the disk evictor", () => {
 		await evictor.tick();
 		const afterFirst = [await countIn(0), await countIn(1)];
 		// A few more pushes put the volume over again by less than one batch: the next pass takes it from the other file.
-		folder.push({ ids: ids("s", 6) });
+		await folder.push({ ids: ids("s", 6) });
 		folder.advance(HOUR);
 		await evictor.tick();
 		const afterSecond = [await countIn(0), await countIn(1)];
@@ -235,7 +240,7 @@ describe("the disk evictor", () => {
 
 	test("a customer's held copy goes with its rows", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("c", 10) });
+		await folder.push({ ids: ids("c", 10) });
 		folder.advance(DAY * 8);
 		expect(folder.held.size).toBe(10);
 
@@ -247,7 +252,7 @@ describe("the disk evictor", () => {
 
 	test("over its share with nothing older than the relay window, it warns once and drops the oldest anyway rather than fill the volume", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("young", DISK_EVICT_BATCH * 3) });
+		await folder.push({ ids: ids("young", DISK_EVICT_BATCH * 3) });
 		folder.advance(DISK_MIN_AGE_MS / 2);
 		const evictor = folder.evictorOf({ shareBytes: ROW_BYTES * 10 });
 
@@ -268,7 +273,7 @@ describe("the disk evictor", () => {
 
 	test("the volume is read at every tick, so one grown online counts at once", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("g", 60) });
+		await folder.push({ ids: ids("g", 60) });
 		folder.advance(HOUR);
 		let share = ROW_BYTES * 5;
 		const evictor = folder.evictorOf({
@@ -279,7 +284,7 @@ describe("the disk evictor", () => {
 		await evictor.tick();
 		const droppedWhileSmall = folder.stats().diskEvicted;
 		share = Number.MAX_SAFE_INTEGER;
-		folder.push({ ids: ids("h", 60) });
+		await folder.push({ ids: ids("h", 60) });
 		folder.advance(HOUR);
 		await evictor.tick();
 
@@ -290,7 +295,7 @@ describe("the disk evictor", () => {
 
 	test("a volume it cannot read drops nothing that tick and warns: a 0-byte volume would read as full and drain every file", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("u", 60) });
+		await folder.push({ ids: ids("u", 60) });
 		folder.advance(DISK_IDLE_EXPIRY_MS + HOUR);
 		let readable = false;
 		const evictor = folder.evictorOf({
@@ -316,7 +321,7 @@ describe("the disk evictor", () => {
 
 	test("a tick that throws is logged and the next tick still runs, so a full volume never takes the thread down", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("e", 5) });
+		await folder.push({ ids: ids("e", 5) });
 		folder.advance(DAY * 8);
 		let ticks = 0;
 		const sleeps: number[] = [];
@@ -356,7 +361,7 @@ describe("the disk evictor", () => {
 
 	test("one tick looks at a bounded number of rows per file, so a tick's cost is bounded whatever the files hold", async () => {
 		const folder = openFolder();
-		folder.push({ ids: ids("d", DISK_EVICT_BATCH * 3) });
+		await folder.push({ ids: ids("d", DISK_EVICT_BATCH * 3) });
 		folder.advance(DAY * 8);
 
 		await folder.evictorOf({ shareBytes: Number.MAX_SAFE_INTEGER }).tick();

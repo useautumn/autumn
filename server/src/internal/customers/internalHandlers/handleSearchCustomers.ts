@@ -61,6 +61,7 @@ export const handleSearchCustomers = createRoute({
 				sortBasis: sort_basis,
 				limit,
 				sortOrder: sort_order,
+				preview: true,
 			});
 
 		const customers = fullCustomers.map((c) => ({

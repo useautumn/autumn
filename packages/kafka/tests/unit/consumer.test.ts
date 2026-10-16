@@ -526,6 +526,84 @@ async function reconcilesInitialOffsetAndRejoins(): Promise<void> {
 	await consumer.stop();
 }
 
+/** A commit refusal as it reaches the batch: the broker's answer under whatever the caller wrapped it in. */
+function wrappedCommitRefusal({
+	type,
+	message,
+}: {
+	type: keyof typeof GROUP_REFUSAL_CODES;
+	message: string;
+}): Error {
+	return new Error("Kafka commit failed", {
+		cause: groupRefusal({ type, message }),
+	});
+}
+
+async function supersededResumeCommitIsDropped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "ILLEGAL_GENERATION",
+				message: "Specified group generation id is not valid",
+			}),
+		);
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([]);
+		expect(progress.read({ topic, partition })).toBeNull();
+
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([{ topic, partition, offset: "1" }]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
+async function resumeCommitChurnReachesRunnerUnwrapped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "REBALANCE_IN_PROGRESS",
+				message: "The group is rebalancing, so a rejoin is needed",
+			}),
+		);
+		const delivery = fixture.deliverBatch({ records: [createRecord("3")] });
+		await expect(delivery).rejects.toMatchObject({
+			cause: { code: GROUP_REFUSAL_CODES.REBALANCE_IN_PROGRESS },
+		});
+		expect(fixture.seeks).toEqual([]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
 async function reconcilesAdvancedApplicationOffset(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -807,6 +885,14 @@ function topicConsumerTests(): void {
 	test(
 		"reconciles initial offsets only after successful commits and resets on group join",
 		reconcilesInitialOffsetAndRejoins,
+	);
+	test(
+		"a resume-offset commit refused for a superseded generation is dropped instead of crashing the consumer",
+		supersededResumeCommitIsDropped,
+	);
+	test(
+		"other group churn on a resume-offset commit fails the batch, so the runner rewinds instead of seeking past it",
+		resumeCommitChurnReachesRunnerUnwrapped,
 	);
 	test(
 		"seeks beyond already applied records without folding the rest of the batch",
@@ -1258,6 +1344,48 @@ test("a handler that holds a batch's durability settles it before the batch's of
 	await consumer.stop();
 });
 
+test("a handler may look at a batch once, before any of its records is applied", async () => {
+	const fixture = createConsumerFixture();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: {
+				readResumeOffset,
+				beginBatch: ({ partition: begun, messages }) => {
+					fixture.events.push(
+						`begin:${begun}:${messages.map(({ offset }) => offset).join(",")}`,
+					);
+				},
+				applyRecord: ({ message }) => {
+					fixture.events.push(`apply:${message.offset}`);
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+
+	await fixture.deliverBatch({
+		records: [createRecord("0"), createRecord("1")],
+	});
+
+	expect(fixture.events).toEqual([
+		"connect",
+		"subscribe",
+		"run",
+		`begin:${partition}:0,1`,
+		"apply:0",
+		"resolve:0",
+		"heartbeat",
+		"apply:1",
+		"resolve:1",
+		"heartbeat",
+		"commit",
+	]);
+	await consumer.stop();
+});
+
 test("the metering consumer settles a command batch through the command topic's own handler", async () => {
 	const fixture = createConsumerFixture();
 	const commandTopic = "commands";
@@ -1285,6 +1413,39 @@ test("the metering consumer settles a command batch through the command topic's 
 		records: [createRecord("0")],
 	});
 	expect(settled).toEqual([commandTopic]);
+	await consumer.stop();
+});
+
+test("the metering consumer begins a command batch through the command topic's own handler, before its records", async () => {
+	const fixture = createConsumerFixture();
+	const commandTopic = "commands";
+	const events: string[] = [];
+	const consumer = createMeteringConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord: () => undefined },
+			secondaryHandlers: {
+				[commandTopic]: {
+					readResumeOffset,
+					beginBatch: ({ topic: begunTopic, messages }) => {
+						events.push(`begin:${begunTopic}:${messages.length}`);
+					},
+					applyRecord: () => {
+						events.push("apply");
+						return applyRecord();
+					},
+				},
+			},
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	await fixture.deliverBatch({
+		topic: commandTopic,
+		records: [createRecord("0")],
+	});
+	expect(events).toEqual([`begin:${commandTopic}:1`, "apply"]);
 	await consumer.stop();
 });
 

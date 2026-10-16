@@ -7,13 +7,11 @@ import {
 	PRICING_TABLE_TOTAL_CLASS,
 	PricingTablePhase,
 } from "./ReviewPricingTable";
+import { pickWidth } from "./reviewColumns";
 
 const PRODUCT_WIDTHS = ["w-24", "w-20", "w-28"];
 const PRICE_LINE_WIDTHS = ["w-36", "w-44", "w-32"];
 const TOTAL_WIDTHS = ["w-24", "w-20", "w-28"];
-
-const pickWidth = ({ widths, index }: { widths: string[]; index: number }) =>
-	widths[index % widths.length];
 
 function SkeletonPricingRow({ index }: { index: number }) {
 	return (

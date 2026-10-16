@@ -11,7 +11,7 @@ import { AtomSteadyStateSkeleton } from "./components/atom/AtomSteadyState";
 import { isAtomSetUp } from "./components/atom/atomDisplay";
 
 const ATOM_SECTION = {
-	title: "Atom",
+	title: "Edge cache",
 	badge: "PREVIEW",
 	description: "Answer balance checks from your own cloud.",
 };

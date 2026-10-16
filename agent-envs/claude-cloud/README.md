@@ -57,6 +57,7 @@ claude.ai/code → cloud icon above the message box → Add cloud environment.
    app.infisical.com
    executor.sh
    *.stripe.com
+   packages.stripe.dev
    apt.postgresql.org
    ppa.launchpadcontent.net
    www.postgresql.org

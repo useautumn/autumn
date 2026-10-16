@@ -1,7 +1,11 @@
+import type { TrackResponseV3 } from "@autumn/shared";
+import type { FinalizeResponse } from "../../processor/types/finalize.js";
 import type {
 	CheckAnswer,
+	PushedSubject,
 	SlotProcessor,
 } from "../../processor/types/slotProcessor.js";
+import type { JournalKeyRow } from "../../state/journal/types/journal.js";
 import type {
 	AppliedSubject,
 	SubjectCursor,
@@ -9,7 +13,9 @@ import type {
 } from "../../state/repos/subjectStates.js";
 import {
 	checkRequestToWire,
+	finalizeRequestToWire,
 	replyToError,
+	trackRequestToWire,
 	wireToAppliedSubject,
 	wireToDigest,
 } from "./ownerCallContract.js";
@@ -56,6 +62,13 @@ export type OwnerLink = {
 		slot: number;
 		keys: { customerId: string; entityId: string }[];
 	}): Promise<AppliedSubject[]>;
+	/** A page of the idempotency keys a slot the other thread owns took within the key window. */
+	recentKeys(params: {
+		atomId: string | null;
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]>;
 	connect(params: { port: MessagePort }): void;
 	/** The owner stopped: every call waiting on it fails, and new ones fail at once until it is back. */
 	disconnect(): void;
@@ -83,7 +96,15 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 	async function call(
 		body: OwnerCallBody,
 	): Promise<
-		CheckAnswer | boolean | AppliedSubjectOnWire[] | SubjectDigestOnWire[]
+		| CheckAnswer
+		| TrackResponseV3
+		| FinalizeResponse
+		| PushedSubject
+		| boolean
+		| AppliedSubjectOnWire[]
+		| SubjectDigestOnWire[]
+		| JournalKeyRow[]
+		| { held: number }
 	> {
 		// Never shed a catalog install: a thread that missed one answers from the old catalog until the next push.
 		const shed =
@@ -112,13 +133,33 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 					atomId,
 					request: checkRequestToWire({ request }),
 				})) as CheckAnswer,
+			track: async ({ request }) =>
+				(await call({
+					type: "track",
+					atomId,
+					request: trackRequestToWire({ request }),
+				})) as TrackResponseV3,
+			finalize: async ({ request }) =>
+				(await call({
+					type: "finalize",
+					atomId,
+					request: finalizeRequestToWire({ request }),
+				})) as FinalizeResponse,
 			setSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "setSubject",
 					atomId,
 					customerId,
 					body,
-				})) as boolean,
+				})) as PushedSubject,
+			receiveHandoff: async ({ handoffs }) =>
+				(await call({ type: "receiveHandoff", atomId, handoffs })) as {
+					held: number;
+				},
+			receiveRelayedKeys: async ({ keys }) =>
+				(await call({ type: "receiveRelayedKeys", atomId, keys })) as {
+					held: number;
+				},
 			deleteSubject: async ({ customerId, body }) =>
 				(await call({
 					type: "deleteSubject",
@@ -178,6 +219,15 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		return wires.map(wireToAppliedSubject);
 	}
 
+	async function recentKeys(params: {
+		atomId: string | null;
+		slot: number;
+		after: JournalKeyRow | null;
+		limit: number;
+	}): Promise<JournalKeyRow[]> {
+		return (await call({ type: "recentKeys", ...params })) as JournalKeyRow[];
+	}
+
 	function connect({ port: next }: { port: MessagePort }): void {
 		port = next;
 		port.onmessage = receiveReply;
@@ -201,6 +251,7 @@ export const createOwnerLink = ({ thread }: { thread: number }): OwnerLink => {
 		listSince,
 		digestSince,
 		fetchSubjects,
+		recentKeys,
 		connect,
 		disconnect,
 	};

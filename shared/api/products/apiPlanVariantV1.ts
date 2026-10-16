@@ -1,14 +1,27 @@
+import { CustomizePlanLicenseResponseSchema } from "@models/licenseModels/licenseModels.js";
 import { z } from "zod/v4";
 import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "../billing/common/customizePlan/customizePlanV1.js";
 import { ApiPlanV1Schema } from "./apiPlanV1.js";
+import { PlanItemParamsV1ResponseSchema } from "./items/crud/createPlanItemParamsV1.js";
 
 export const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
-	}).strict(),
+	})
+		.extend({
+			add_items: z
+				.array(PlanItemParamsV1ResponseSchema)
+				.optional()
+				.meta(CustomizePlanV1BaseSchema.shape.add_items.meta() ?? {}),
+			upsert_licenses: z
+				.array(CustomizePlanLicenseResponseSchema)
+				.optional()
+				.meta(CustomizePlanV1BaseSchema.shape.upsert_licenses.meta() ?? {}),
+		})
+		.strict(),
 	{ includeItems: false, includeLicenses: true },
 );
 

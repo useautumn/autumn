@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { InvalidPushError } from "../../../src/lib/contracts/invalidPushError.js";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
@@ -40,9 +42,11 @@ const createProcessor = ({
 } = {}) => {
 	const sqliteStore = openSqliteStore({ databasePath, held: freshHeld() });
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
+	const journal = openJournal({ databasePath: ":memory:" });
 	closers.push(
 		() => sqliteStore.close(),
 		() => catalogStore.close(),
+		() => journal.close(),
 	);
 	const pulled: { customerId: string; entityId: string | null }[] = [];
 	const processor = createSlotProcessor({
@@ -50,7 +54,12 @@ const createProcessor = ({
 			sqliteStore,
 			catalogStore,
 			logger: getAtomLogger(),
-			subjectPulls: { request: (subject) => pulled.push(subject) },
+			subjectPulls: {
+				request: (subject) => pulled.push(subject),
+				settle: async () => {},
+			},
+			journal,
+			openLocks: createOpenLocks(),
 		},
 	});
 	const checkCustomer = () =>
@@ -120,7 +129,7 @@ describe("a customer Autumn deleted", () => {
 			customerAt({ balance: 10, readAt: 1500 }),
 		);
 
-		expect(stored).toBe(false);
+		expect(stored.stored).toBe(false);
 		expect(await forwardReasonOf(checkCustomer)).toBe("customer_deleted");
 	});
 
@@ -209,7 +218,7 @@ describe("an entity Autumn deleted, of a customer it still holds", () => {
 
 		const stored = await processor.setSubject(entityPush({ readAt: 1500 }));
 
-		expect(stored).toBe(false);
+		expect(stored.stored).toBe(false);
 		expect(await forwardReasonOf(checkEntity())).toBe("entity_deleted");
 	});
 });

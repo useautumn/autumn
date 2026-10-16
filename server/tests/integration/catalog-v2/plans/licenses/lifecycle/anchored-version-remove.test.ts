@@ -11,6 +11,7 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { expectDbPlansCorrect } from "../../utils/expectCatalogPlans.js";
 import { expectLicenseLinkMissing } from "../utils/expectLicenseLinkCorrect.js";
 import {
 	bumpChild,
@@ -19,7 +20,6 @@ import {
 	seedLinkedChildParent,
 	withCatalogPlans,
 } from "../utils/seedLicensePlans.js";
-import { expectDbPlansCorrect } from "../../utils/expectCatalogPlans.js";
 
 test.concurrent(
 	`${chalk.yellowBright("catalogV2 lifecycle: remove child version still linked by a parent is 400")}`,
@@ -115,10 +115,7 @@ test.concurrent(
 				});
 				await expectDbPlansCorrect({
 					ctx,
-					expected: [
-						{ id: parentId },
-						{ id: childId },
-					],
+					expected: [{ id: parentId }, { id: childId }],
 				});
 			},
 		});

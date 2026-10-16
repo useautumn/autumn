@@ -47,13 +47,46 @@ import {
   SetupPaymentUpsertLicenseReset,
   SetupPaymentUpsertLicenseReset$Outbound,
   SetupPaymentUpsertLicenseReset$outboundSchema,
-  SetupPaymentUpsertLicenseRollover,
-  SetupPaymentUpsertLicenseRollover$Outbound,
-  SetupPaymentUpsertLicenseRollover$outboundSchema,
   SetupPaymentUpsertLicenseThresholdBilling,
   SetupPaymentUpsertLicenseThresholdBilling$Outbound,
   SetupPaymentUpsertLicenseThresholdBilling$outboundSchema,
-} from "./setup-payment-upsert-license-rollover.js";
+} from "./setup-payment-upsert-license-proration.js";
+
+/**
+ * When rolled over units expire.
+ */
+export const SetupPaymentUpsertLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type SetupPaymentUpsertLicenseExpiryDurationType = ClosedEnum<
+  typeof SetupPaymentUpsertLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type SetupPaymentUpsertLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: SetupPaymentUpsertLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
 
 export const SetupPaymentUpsertLicenseDuration = {
   Day: "day",
@@ -71,6 +104,17 @@ export type SetupPaymentUpsertLicenseDuration = ClosedEnum<
 export type SetupPaymentUpsertLicenseExpiry = {
   duration: SetupPaymentUpsertLicenseDuration;
   length: number;
+};
+
+export type SetupPaymentCreditSchemaUpsertLicense3 = {
+  /**
+   * ID of the metered feature to remove from the credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate.
+   */
+  excluded: true;
 };
 
 export type SetupPaymentDimensionsUpsertLicenseMatch4 =
@@ -330,7 +374,8 @@ export type SetupPaymentCreditSchemaUpsertLicense1 = {
 
 export type SetupPaymentUpsertLicenseCreditSchemaUnion =
   | SetupPaymentCreditSchemaUpsertLicense1
-  | SetupPaymentCreditSchemaUpsertLicense2;
+  | SetupPaymentCreditSchemaUpsertLicense2
+  | SetupPaymentCreditSchemaUpsertLicense3;
 
 export type SetupPaymentUpsertLicenseProviderMarkups = {
   markup: number;
@@ -371,12 +416,13 @@ export type SetupPaymentUpsertLicenseMarkups = {
  */
 export type SetupPaymentUpsertLicenseFeatureOverride = {
   /**
-   * For credit system features: replaces the feature's credit_schema entirely for customers on this plan.
+   * For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate.
    */
   creditSchema?:
     | Array<
       | SetupPaymentCreditSchemaUpsertLicense1
       | SetupPaymentCreditSchemaUpsertLicense2
+      | SetupPaymentCreditSchemaUpsertLicense3
     >
     | undefined;
   /**
@@ -573,7 +619,7 @@ export type SetupPaymentCustomize = {
 };
 
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export const SetupPaymentProrationBehavior = {
   ProrateImmediately: "prorate_immediately",
@@ -581,7 +627,7 @@ export const SetupPaymentProrationBehavior = {
   BillDifference: "bill_difference",
 } as const;
 /**
- * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+ * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
  */
 export type SetupPaymentProrationBehavior = ClosedEnum<
   typeof SetupPaymentProrationBehavior
@@ -615,6 +661,250 @@ export type SetupPaymentCustomLineItem = {
    * Description for the line item.
    */
   description: string;
+};
+
+/**
+ * Only remove charges or only remove refunds (credits). Omit to remove both.
+ */
+export const SetupPaymentDirection = {
+  Charge: "charge",
+  Refund: "refund",
+} as const;
+/**
+ * Only remove charges or only remove refunds (credits). Omit to remove both.
+ */
+export type SetupPaymentDirection = ClosedEnum<typeof SetupPaymentDirection>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const SetupPaymentPriceRemoveLineInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type SetupPaymentPriceRemoveLineInterval = ClosedEnum<
+  typeof SetupPaymentPriceRemoveLineInterval
+>;
+
+export type SetupPaymentPriceRemoveLine = {
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: SetupPaymentPriceRemoveLineInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Remove the base price line. Pass true, or an object to narrow by interval.
+ */
+export type SetupPaymentPriceUnion = boolean | SetupPaymentPriceRemoveLine;
+
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export const SetupPaymentBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export type SetupPaymentBillingBehavior = ClosedEnum<
+  typeof SetupPaymentBillingBehavior
+>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const SetupPaymentFeatureQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type SetupPaymentFeatureQuantityInterval = ClosedEnum<
+  typeof SetupPaymentFeatureQuantityInterval
+>;
+
+export type SetupPaymentRemoveLineFeatureQuantity = {
+  /**
+   * The feature whose line to remove.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: SetupPaymentBillingBehavior;
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: SetupPaymentFeatureQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const SetupPaymentPriceLicenseQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type SetupPaymentPriceLicenseQuantityInterval = ClosedEnum<
+  typeof SetupPaymentPriceLicenseQuantityInterval
+>;
+
+export type SetupPaymentPriceLicenseQuantity = {
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: SetupPaymentPriceLicenseQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+/**
+ * Remove the base price line. Pass true, or an object to narrow by interval.
+ */
+export type SetupPaymentLicenseQuantityPriceUnion =
+  | boolean
+  | SetupPaymentPriceLicenseQuantity;
+
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export const SetupPaymentLicenseQuantityBillingBehavior = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+ */
+export type SetupPaymentLicenseQuantityBillingBehavior = ClosedEnum<
+  typeof SetupPaymentLicenseQuantityBillingBehavior
+>;
+
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export const SetupPaymentLicenseQuantityFeatureQuantityInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+ */
+export type SetupPaymentLicenseQuantityFeatureQuantityInterval = ClosedEnum<
+  typeof SetupPaymentLicenseQuantityFeatureQuantityInterval
+>;
+
+export type SetupPaymentLicenseQuantityFeatureQuantity = {
+  /**
+   * The feature whose line to remove.
+   */
+  featureId: string;
+  /**
+   * Which of the feature's prices to match: 'prepaid' or 'usage_based'.
+   */
+  billingBehavior: SetupPaymentLicenseQuantityBillingBehavior;
+  /**
+   * Only match the price billed on this interval. Needed when the same price exists on more than one interval.
+   */
+  interval?: SetupPaymentLicenseQuantityFeatureQuantityInterval | undefined;
+  /**
+   * Only match the price billed every this many intervals.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type SetupPaymentRemoveLineLicenseQuantity = {
+  /**
+   * The license plan linked to the parent plan.
+   */
+  licensePlanId: string;
+  /**
+   * Remove the base price line. Pass true, or an object to narrow by interval.
+   */
+  price?: boolean | SetupPaymentPriceLicenseQuantity | undefined;
+  featureQuantities?:
+    | Array<SetupPaymentLicenseQuantityFeatureQuantity>
+    | undefined;
+};
+
+/**
+ * Removes lines Autumn generated for this invoice. With no price, feature_quantities or license_quantities, every line of the plan is removed.
+ */
+export type SetupPaymentRemoveLine = {
+  /**
+   * The plan whose lines to remove: one coming in, going out, or already on the customer and billed by this request.
+   */
+  planId: string;
+  /**
+   * The entity the lines are billed to. Omit to inherit the request's entity_id, or pass null for customer-level.
+   */
+  entityId?: string | null | undefined;
+  /**
+   * Only remove charges or only remove refunds (credits). Omit to remove both.
+   */
+  direction?: SetupPaymentDirection | undefined;
+  /**
+   * Remove the base price line. Pass true, or an object to narrow by interval.
+   */
+  price?: boolean | SetupPaymentPriceRemoveLine | undefined;
+  featureQuantities?: Array<SetupPaymentRemoveLineFeatureQuantity> | undefined;
+  licenseQuantities?: Array<SetupPaymentRemoveLineLicenseQuantity> | undefined;
+};
+
+/**
+ * A line added to this invoice. The amount is billed as passed; the period is only printed on the line.
+ */
+export type SetupPaymentAddLine = {
+  /**
+   * Amount in dollars for this line item (e.g. 10.50). Can be negative for credits.
+   */
+  amount: number;
+  /**
+   * Description for the line item.
+   */
+  description: string;
+  /**
+   * Start of the period this charge covers, in milliseconds. Printed on the line only; a custom line never inherits the invoice's period.
+   */
+  periodStart?: number | undefined;
+  /**
+   * End of the period this charge covers, in milliseconds. Given together with period_start.
+   */
+  periodEnd?: number | undefined;
 };
 
 /**
@@ -777,7 +1067,7 @@ export type SetupPaymentParams = {
    */
   customize?: SetupPaymentCustomize | undefined;
   /**
-   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' charges/credits the full-period price difference now without changing the billing cycle.
+   * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges, 'bill_difference' bills the larger of the full-period price difference and the prorated amount (full difference on upgrades, prorated credit on downgrades) now without changing the billing cycle.
    */
   prorationBehavior?: SetupPaymentProrationBehavior | undefined;
   /**
@@ -812,6 +1102,14 @@ export type SetupPaymentParams = {
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<SetupPaymentCustomLineItem> | undefined;
+  /**
+   * Lines to remove from the invoice this request creates. Never changes the subscription or later invoices.
+   */
+  removeLines?: Array<SetupPaymentRemoveLine> | undefined;
+  /**
+   * Lines to add to the invoice this request creates. Never changes the subscription or later invoices.
+   */
+  addLines?: Array<SetupPaymentAddLine> | undefined;
   /**
    * The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
    */
@@ -885,6 +1183,51 @@ export type SetupPaymentResponse = {
 };
 
 /** @internal */
+export const SetupPaymentUpsertLicenseExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentUpsertLicenseExpiryDurationType> = z.enum(
+    SetupPaymentUpsertLicenseExpiryDurationType,
+  );
+
+/** @internal */
+export type SetupPaymentUpsertLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUpsertLicenseRollover$outboundSchema: z.ZodMiniType<
+  SetupPaymentUpsertLicenseRollover$Outbound,
+  SetupPaymentUpsertLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType:
+      SetupPaymentUpsertLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function setupPaymentUpsertLicenseRolloverToJSON(
+  setupPaymentUpsertLicenseRollover: SetupPaymentUpsertLicenseRollover,
+): string {
+  return JSON.stringify(
+    SetupPaymentUpsertLicenseRollover$outboundSchema.parse(
+      setupPaymentUpsertLicenseRollover,
+    ),
+  );
+}
+
+/** @internal */
 export const SetupPaymentUpsertLicenseDuration$outboundSchema: z.ZodMiniEnum<
   typeof SetupPaymentUpsertLicenseDuration
 > = z.enum(SetupPaymentUpsertLicenseDuration);
@@ -910,6 +1253,40 @@ export function setupPaymentUpsertLicenseExpiryToJSON(
   return JSON.stringify(
     SetupPaymentUpsertLicenseExpiry$outboundSchema.parse(
       setupPaymentUpsertLicenseExpiry,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentCreditSchemaUpsertLicense3$Outbound = {
+  metered_feature_id: string;
+  excluded: true;
+};
+
+/** @internal */
+export const SetupPaymentCreditSchemaUpsertLicense3$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentCreditSchemaUpsertLicense3$Outbound,
+    SetupPaymentCreditSchemaUpsertLicense3
+  > = z.pipe(
+    z.object({
+      meteredFeatureId: z.string(),
+      excluded: z.literal(true),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        meteredFeatureId: "metered_feature_id",
+      });
+    }),
+  );
+
+export function setupPaymentCreditSchemaUpsertLicense3ToJSON(
+  setupPaymentCreditSchemaUpsertLicense3:
+    SetupPaymentCreditSchemaUpsertLicense3,
+): string {
+  return JSON.stringify(
+    SetupPaymentCreditSchemaUpsertLicense3$outboundSchema.parse(
+      setupPaymentCreditSchemaUpsertLicense3,
     ),
   );
 }
@@ -1652,7 +2029,8 @@ export function setupPaymentCreditSchemaUpsertLicense1ToJSON(
 /** @internal */
 export type SetupPaymentUpsertLicenseCreditSchemaUnion$Outbound =
   | SetupPaymentCreditSchemaUpsertLicense1$Outbound
-  | SetupPaymentCreditSchemaUpsertLicense2$Outbound;
+  | SetupPaymentCreditSchemaUpsertLicense2$Outbound
+  | SetupPaymentCreditSchemaUpsertLicense3$Outbound;
 
 /** @internal */
 export const SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema:
@@ -1662,6 +2040,7 @@ export const SetupPaymentUpsertLicenseCreditSchemaUnion$outboundSchema:
   > = smartUnion([
     z.lazy(() => SetupPaymentCreditSchemaUpsertLicense1$outboundSchema),
     z.lazy(() => SetupPaymentCreditSchemaUpsertLicense2$outboundSchema),
+    z.lazy(() => SetupPaymentCreditSchemaUpsertLicense3$outboundSchema),
   ]);
 
 export function setupPaymentUpsertLicenseCreditSchemaUnionToJSON(
@@ -1790,6 +2169,7 @@ export type SetupPaymentUpsertLicenseFeatureOverride$Outbound = {
     | Array<
       | SetupPaymentCreditSchemaUpsertLicense1$Outbound
       | SetupPaymentCreditSchemaUpsertLicense2$Outbound
+      | SetupPaymentCreditSchemaUpsertLicense3$Outbound
     >
     | undefined;
   markups?: SetupPaymentUpsertLicenseMarkups$Outbound | undefined;
@@ -1807,6 +2187,7 @@ export const SetupPaymentUpsertLicenseFeatureOverride$outboundSchema:
         z.lazy(() =>
           SetupPaymentCreditSchemaUpsertLicense2$outboundSchema
         ),
+        z.lazy(() => SetupPaymentCreditSchemaUpsertLicense3$outboundSchema),
       ]))),
       markups: z.optional(z.lazy(() =>
         SetupPaymentUpsertLicenseMarkups$outboundSchema
@@ -1866,7 +2247,9 @@ export const SetupPaymentUpsertLicensePlanItem$outboundSchema: z.ZodMiniType<
     reset: z.optional(SetupPaymentUpsertLicenseReset$outboundSchema),
     price: z.optional(SetupPaymentUpsertLicensePrice$outboundSchema),
     proration: z.optional(SetupPaymentUpsertLicenseProration$outboundSchema),
-    rollover: z.optional(SetupPaymentUpsertLicenseRollover$outboundSchema),
+    rollover: z.optional(
+      z.lazy(() => SetupPaymentUpsertLicenseRollover$outboundSchema),
+    ),
     expiry: z.optional(
       z.lazy(() => SetupPaymentUpsertLicenseExpiry$outboundSchema),
     ),
@@ -2228,6 +2611,368 @@ export function setupPaymentCustomLineItemToJSON(
 }
 
 /** @internal */
+export const SetupPaymentDirection$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentDirection
+> = z.enum(SetupPaymentDirection);
+
+/** @internal */
+export const SetupPaymentPriceRemoveLineInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentPriceRemoveLineInterval
+> = z.enum(SetupPaymentPriceRemoveLineInterval);
+
+/** @internal */
+export type SetupPaymentPriceRemoveLine$Outbound = {
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentPriceRemoveLine$outboundSchema: z.ZodMiniType<
+  SetupPaymentPriceRemoveLine$Outbound,
+  SetupPaymentPriceRemoveLine
+> = z.pipe(
+  z.object({
+    interval: z.optional(SetupPaymentPriceRemoveLineInterval$outboundSchema),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function setupPaymentPriceRemoveLineToJSON(
+  setupPaymentPriceRemoveLine: SetupPaymentPriceRemoveLine,
+): string {
+  return JSON.stringify(
+    SetupPaymentPriceRemoveLine$outboundSchema.parse(
+      setupPaymentPriceRemoveLine,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentPriceUnion$Outbound =
+  | boolean
+  | SetupPaymentPriceRemoveLine$Outbound;
+
+/** @internal */
+export const SetupPaymentPriceUnion$outboundSchema: z.ZodMiniType<
+  SetupPaymentPriceUnion$Outbound,
+  SetupPaymentPriceUnion
+> = smartUnion([
+  z.boolean(),
+  z.lazy(() => SetupPaymentPriceRemoveLine$outboundSchema),
+]);
+
+export function setupPaymentPriceUnionToJSON(
+  setupPaymentPriceUnion: SetupPaymentPriceUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentPriceUnion$outboundSchema.parse(setupPaymentPriceUnion),
+  );
+}
+
+/** @internal */
+export const SetupPaymentBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentBillingBehavior
+> = z.enum(SetupPaymentBillingBehavior);
+
+/** @internal */
+export const SetupPaymentFeatureQuantityInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentFeatureQuantityInterval
+> = z.enum(SetupPaymentFeatureQuantityInterval);
+
+/** @internal */
+export type SetupPaymentRemoveLineFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentRemoveLineFeatureQuantity$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentRemoveLineFeatureQuantity$Outbound,
+    SetupPaymentRemoveLineFeatureQuantity
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      billingBehavior: SetupPaymentBillingBehavior$outboundSchema,
+      interval: z.optional(SetupPaymentFeatureQuantityInterval$outboundSchema),
+      intervalCount: z.optional(z.int()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        billingBehavior: "billing_behavior",
+        intervalCount: "interval_count",
+      });
+    }),
+  );
+
+export function setupPaymentRemoveLineFeatureQuantityToJSON(
+  setupPaymentRemoveLineFeatureQuantity: SetupPaymentRemoveLineFeatureQuantity,
+): string {
+  return JSON.stringify(
+    SetupPaymentRemoveLineFeatureQuantity$outboundSchema.parse(
+      setupPaymentRemoveLineFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentPriceLicenseQuantityInterval$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentPriceLicenseQuantityInterval> = z.enum(
+    SetupPaymentPriceLicenseQuantityInterval,
+  );
+
+/** @internal */
+export type SetupPaymentPriceLicenseQuantity$Outbound = {
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentPriceLicenseQuantity$outboundSchema: z.ZodMiniType<
+  SetupPaymentPriceLicenseQuantity$Outbound,
+  SetupPaymentPriceLicenseQuantity
+> = z.pipe(
+  z.object({
+    interval: z.optional(
+      SetupPaymentPriceLicenseQuantityInterval$outboundSchema,
+    ),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function setupPaymentPriceLicenseQuantityToJSON(
+  setupPaymentPriceLicenseQuantity: SetupPaymentPriceLicenseQuantity,
+): string {
+  return JSON.stringify(
+    SetupPaymentPriceLicenseQuantity$outboundSchema.parse(
+      setupPaymentPriceLicenseQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentLicenseQuantityPriceUnion$Outbound =
+  | boolean
+  | SetupPaymentPriceLicenseQuantity$Outbound;
+
+/** @internal */
+export const SetupPaymentLicenseQuantityPriceUnion$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentLicenseQuantityPriceUnion$Outbound,
+    SetupPaymentLicenseQuantityPriceUnion
+  > = smartUnion([
+    z.boolean(),
+    z.lazy(() => SetupPaymentPriceLicenseQuantity$outboundSchema),
+  ]);
+
+export function setupPaymentLicenseQuantityPriceUnionToJSON(
+  setupPaymentLicenseQuantityPriceUnion: SetupPaymentLicenseQuantityPriceUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentLicenseQuantityPriceUnion$outboundSchema.parse(
+      setupPaymentLicenseQuantityPriceUnion,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentLicenseQuantityBillingBehavior$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentLicenseQuantityBillingBehavior> = z.enum(
+    SetupPaymentLicenseQuantityBillingBehavior,
+  );
+
+/** @internal */
+export const SetupPaymentLicenseQuantityFeatureQuantityInterval$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentLicenseQuantityFeatureQuantityInterval> = z
+    .enum(SetupPaymentLicenseQuantityFeatureQuantityInterval);
+
+/** @internal */
+export type SetupPaymentLicenseQuantityFeatureQuantity$Outbound = {
+  feature_id: string;
+  billing_behavior: string;
+  interval?: string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentLicenseQuantityFeatureQuantity$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentLicenseQuantityFeatureQuantity$Outbound,
+    SetupPaymentLicenseQuantityFeatureQuantity
+  > = z.pipe(
+    z.object({
+      featureId: z.string(),
+      billingBehavior:
+        SetupPaymentLicenseQuantityBillingBehavior$outboundSchema,
+      interval: z.optional(
+        SetupPaymentLicenseQuantityFeatureQuantityInterval$outboundSchema,
+      ),
+      intervalCount: z.optional(z.int()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        featureId: "feature_id",
+        billingBehavior: "billing_behavior",
+        intervalCount: "interval_count",
+      });
+    }),
+  );
+
+export function setupPaymentLicenseQuantityFeatureQuantityToJSON(
+  setupPaymentLicenseQuantityFeatureQuantity:
+    SetupPaymentLicenseQuantityFeatureQuantity,
+): string {
+  return JSON.stringify(
+    SetupPaymentLicenseQuantityFeatureQuantity$outboundSchema.parse(
+      setupPaymentLicenseQuantityFeatureQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentRemoveLineLicenseQuantity$Outbound = {
+  license_plan_id: string;
+  price?: boolean | SetupPaymentPriceLicenseQuantity$Outbound | undefined;
+  feature_quantities?:
+    | Array<SetupPaymentLicenseQuantityFeatureQuantity$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentRemoveLineLicenseQuantity$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentRemoveLineLicenseQuantity$Outbound,
+    SetupPaymentRemoveLineLicenseQuantity
+  > = z.pipe(
+    z.object({
+      licensePlanId: z.string(),
+      price: z.optional(smartUnion([
+        z.boolean(),
+        z.lazy(() => SetupPaymentPriceLicenseQuantity$outboundSchema),
+      ])),
+      featureQuantities: z.optional(z.array(z.lazy(() =>
+        SetupPaymentLicenseQuantityFeatureQuantity$outboundSchema
+      ))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        licensePlanId: "license_plan_id",
+        featureQuantities: "feature_quantities",
+      });
+    }),
+  );
+
+export function setupPaymentRemoveLineLicenseQuantityToJSON(
+  setupPaymentRemoveLineLicenseQuantity: SetupPaymentRemoveLineLicenseQuantity,
+): string {
+  return JSON.stringify(
+    SetupPaymentRemoveLineLicenseQuantity$outboundSchema.parse(
+      setupPaymentRemoveLineLicenseQuantity,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentRemoveLine$Outbound = {
+  plan_id: string;
+  entity_id?: string | null | undefined;
+  direction?: string | undefined;
+  price?: boolean | SetupPaymentPriceRemoveLine$Outbound | undefined;
+  feature_quantities?:
+    | Array<SetupPaymentRemoveLineFeatureQuantity$Outbound>
+    | undefined;
+  license_quantities?:
+    | Array<SetupPaymentRemoveLineLicenseQuantity$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const SetupPaymentRemoveLine$outboundSchema: z.ZodMiniType<
+  SetupPaymentRemoveLine$Outbound,
+  SetupPaymentRemoveLine
+> = z.pipe(
+  z.object({
+    planId: z.string(),
+    entityId: z.optional(z.nullable(z.string())),
+    direction: z.optional(SetupPaymentDirection$outboundSchema),
+    price: z.optional(smartUnion([
+      z.boolean(),
+      z.lazy(() => SetupPaymentPriceRemoveLine$outboundSchema),
+    ])),
+    featureQuantities: z.optional(z.array(z.lazy(() =>
+      SetupPaymentRemoveLineFeatureQuantity$outboundSchema
+    ))),
+    licenseQuantities: z.optional(z.array(z.lazy(() =>
+      SetupPaymentRemoveLineLicenseQuantity$outboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      planId: "plan_id",
+      entityId: "entity_id",
+      featureQuantities: "feature_quantities",
+      licenseQuantities: "license_quantities",
+    });
+  }),
+);
+
+export function setupPaymentRemoveLineToJSON(
+  setupPaymentRemoveLine: SetupPaymentRemoveLine,
+): string {
+  return JSON.stringify(
+    SetupPaymentRemoveLine$outboundSchema.parse(setupPaymentRemoveLine),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddLine$Outbound = {
+  amount: number;
+  description: string;
+  period_start?: number | undefined;
+  period_end?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddLine$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddLine$Outbound,
+  SetupPaymentAddLine
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    description: z.string(),
+    periodStart: z.optional(z.int()),
+    periodEnd: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      periodStart: "period_start",
+      periodEnd: "period_end",
+    });
+  }),
+);
+
+export function setupPaymentAddLineToJSON(
+  setupPaymentAddLine: SetupPaymentAddLine,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddLine$outboundSchema.parse(setupPaymentAddLine),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCarryOverBalances$Outbound = {
   enabled: boolean;
   feature_ids?: Array<string> | undefined;
@@ -2524,6 +3269,8 @@ export type SetupPaymentParams$Outbound = {
   ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
+  remove_lines?: Array<SetupPaymentRemoveLine$Outbound> | undefined;
+  add_lines?: Array<SetupPaymentAddLine$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
   carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
@@ -2569,6 +3316,12 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
     ),
+    removeLines: z.optional(
+      z.array(z.lazy(() => SetupPaymentRemoveLine$outboundSchema)),
+    ),
+    addLines: z.optional(
+      z.array(z.lazy(() => SetupPaymentAddLine$outboundSchema)),
+    ),
     processorSubscriptionId: z.optional(z.string()),
     carryOverBalances: z.optional(
       z.lazy(() => SetupPaymentCarryOverBalances$outboundSchema),
@@ -2608,6 +3361,8 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
+      removeLines: "remove_lines",
+      addLines: "add_lines",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",

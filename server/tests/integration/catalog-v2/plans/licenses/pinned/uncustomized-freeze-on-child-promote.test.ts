@@ -16,6 +16,7 @@ import { expect, test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
+import { expectVersionIdentityCorrect } from "../../utils/expectVersionIdentity.js";
 import { expectLicenseLinkCorrect } from "../utils/expectLicenseLinkCorrect.js";
 import {
 	getFullPlan,
@@ -25,7 +26,6 @@ import {
 	seedTwoParents,
 	withCatalogPlans,
 } from "../utils/seedLicensePlans.js";
-import { expectVersionIdentityCorrect } from "../../utils/expectVersionIdentity.js";
 
 const mintChildDraftV2 = async ({
 	autumn,
@@ -77,9 +77,7 @@ test.concurrent(
 							active: true,
 							items: [messagesItem(200)],
 							propagate: {
-								license_parents: [
-									{ plan_id: followId, version: 1 },
-								],
+								license_parents: [{ plan_id: followId, version: 1 }],
 							},
 						},
 					],

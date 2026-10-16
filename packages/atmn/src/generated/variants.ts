@@ -117,6 +117,7 @@ export type Variant = {
 						flatAmount?: number;
 					}>;
 				}>;
+				/** How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount. */
 				tierBehavior?: "graduated" | "volume";
 				/** Billing interval. For consumable features, should match reset.interval. */
 				interval:
@@ -170,7 +171,7 @@ export type Variant = {
 			};
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
-				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
+				/** For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate. */
 				creditSchema?: Array<
 					| {
 							/** ID of the metered feature that draws from this credit system. */
@@ -266,6 +267,12 @@ export type Variant = {
 							>;
 							/** Credits consumed per billing-unit group. */
 							creditCost: number;
+					  }
+					| {
+							/** ID of the metered feature to remove from the credit system. */
+							meteredFeatureId: string;
+							/** Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate. */
+							excluded: true;
 					  }
 				>;
 				/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
@@ -348,6 +355,7 @@ export type Variant = {
 						flatAmount?: number;
 					}>;
 				}>;
+				/** How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount. */
 				tierBehavior?: "graduated" | "volume";
 				/** Billing interval. For consumable features, should match reset.interval. */
 				interval:
@@ -401,7 +409,7 @@ export type Variant = {
 			};
 			/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 			featureOverride?: {
-				/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
+				/** For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate. */
 				creditSchema?: Array<
 					| {
 							/** ID of the metered feature that draws from this credit system. */
@@ -497,6 +505,12 @@ export type Variant = {
 							>;
 							/** Credits consumed per billing-unit group. */
 							creditCost: number;
+					  }
+					| {
+							/** ID of the metered feature to remove from the credit system. */
+							meteredFeatureId: string;
+							/** Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate. */
+							excluded: true;
 					  }
 				>;
 				/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */
@@ -732,6 +746,7 @@ export type Variant = {
 								flatAmount?: number;
 							}>;
 						}>;
+						/** How tiers price usage. 'graduated' (default) charges each unit at the rate of the tier it falls in. 'volume' picks one tier from total usage. On usage-based items it bills only usage past the included amount, at the rate of the tier total usage reaches, plus its flat_amount. On prepaid items it charges every unit, the included ones too, at that tier's rate plus its flat_amount. */
 						tierBehavior?: "graduated" | "volume";
 						/** Billing interval. For consumable features, should match reset.interval. */
 						interval:
@@ -785,7 +800,7 @@ export type Variant = {
 					};
 					/** Overrides fields of this item's feature for customers on this plan (e.g. a credit system's credit_schema). */
 					featureOverride?: {
-						/** For credit system features: replaces the feature's credit_schema entirely for customers on this plan. */
+						/** For credit system features: merges into the feature's credit_schema by metered_feature_id for customers on this plan. A row with a rate overrides or adds that feature, a row with `excluded: true` removes it, and unlisted features keep the credit system's rate. */
 						creditSchema?: Array<
 							| {
 									/** ID of the metered feature that draws from this credit system. */
@@ -881,6 +896,12 @@ export type Variant = {
 									>;
 									/** Credits consumed per billing-unit group. */
 									creditCost: number;
+							  }
+							| {
+									/** ID of the metered feature to remove from the credit system. */
+									meteredFeatureId: string;
+									/** Removes this feature from the credit system for customers on this plan. Cannot be combined with a rate. */
+									excluded: true;
 							  }
 						>;
 						/** For AI credit system features: replaces the feature's markup chain entirely for customers on this plan. An unset level means no markup at that level rather than inheriting the feature's. */

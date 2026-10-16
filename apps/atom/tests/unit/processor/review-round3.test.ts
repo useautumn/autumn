@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
+import { openJournal } from "../../../src/state/journal/openJournal.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
+import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
 import {
 	checkRequestFor,
@@ -23,13 +25,16 @@ const createProcessor = () => {
 		held: freshHeld(),
 	});
 	const catalogStore = openCatalogStore({ databasePath: ":memory:" });
-	stores.push(sqliteStore, catalogStore);
+	const journal = openJournal({ databasePath: ":memory:" });
+	stores.push(sqliteStore, catalogStore, journal);
 	return createSlotProcessor({
 		ctx: {
 			sqliteStore,
 			catalogStore,
 			logger: getAtomLogger(),
 			subjectPulls: noFolderPulls,
+			journal,
+			openLocks: createOpenLocks(),
 		},
 	});
 };

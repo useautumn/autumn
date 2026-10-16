@@ -20,7 +20,8 @@ describe("cache deployment names", () => {
 	const originalPrefix = process.env.ATOM_DEPLOYMENT_PREFIX;
 
 	afterEach(() => {
-		process.env.ATOM_DEPLOYMENT_PREFIX = originalPrefix;
+		if (originalPrefix === undefined) delete process.env.ATOM_DEPLOYMENT_PREFIX;
+		else process.env.ATOM_DEPLOYMENT_PREFIX = originalPrefix;
 	});
 
 	test("a dev stack puts its own name in front, so two stacks can hold the same org", () => {

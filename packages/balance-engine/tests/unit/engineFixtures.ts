@@ -163,6 +163,7 @@ export const createPooledBalance = ({
 	stripe_subscription_id: null,
 	customer_license_link_id: customerLicenseLinkId,
 	rollover_signature: "",
+	feature_override_signature: "none",
 	customer_entitlement_id: customerEntitlementId,
 	last_applied_reset_at: null,
 	expires_at: null,

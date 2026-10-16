@@ -10,12 +10,12 @@ import { test } from "bun:test";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { uniqueTestId } from "../../../utils/uniqueTestId.js";
-import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import {
 	dashboardItem,
 	messagesItem,
 	withCatalogPlans,
 } from "../../licenses/utils/seedLicensePlans.js";
+import { seedVersionableCustomer } from "../../migrations/utils/seedVersionableCustomer.js";
 import { expectVersionIdentityCorrect } from "../../utils/expectVersionIdentity.js";
 import { seedBaseWithVariant } from "../utils/seedVariantPlans.js";
 

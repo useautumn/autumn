@@ -26,16 +26,17 @@ import {
 	allSlotsOwnedHere,
 	checkRequestFor,
 	checkResponseOf,
+	forwardingNowhere,
 	forwardReasonOf,
 	freshHeld,
 	storedEntitySubjectWith,
 	storedSubjectWith,
 	subjectPushOf,
 } from "../utils/atomFixtures.js";
+import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
 /** Every promise continuation already queued runs before a macrotask: a settled pull is fully stored after this. */
-const drainMicrotasks = () =>
-	new Promise<void>((resolve) => setImmediate(resolve));
+const drainMicrotasks = settleSqliteWrites;
 
 type CheckParams = Partial<CheckRequest["params"]>;
 
@@ -85,6 +86,7 @@ const openPullingFolder = () => {
 	const folder = mkdtempSync(join(tmpdir(), "atom-pull-races-"));
 	folders.push(folder);
 	const slots = openSlots({
+		journalForwarder: forwardingNowhere,
 		folder,
 		slotCount: 2,
 		owners: allSlotsOwnedHere,
@@ -101,8 +103,8 @@ const openPullingFolder = () => {
 		},
 		/** Herald's push, or a pulled body as Autumn returns it: the same text into the same apply. */
 		bodyOf: (subject: StoredSubject) => subjectPushOf({ subject }).body,
-		push: (subject: StoredSubject) =>
-			processor.setSubject(subjectPushOf({ subject })),
+		push: async (subject: StoredSubject) =>
+			(await processor.setSubject(subjectPushOf({ subject }))).stored,
 		check: (params: CheckParams = {}) =>
 			checkResponseOf({ processor, request: checkRequestFor({ params }) }),
 		forwardOf: (params: CheckParams = {}) =>
@@ -233,7 +235,9 @@ test("5.13 + 5.16 a miss is forwarded while its pull is in flight; a check the A
 	expect(await atom.forwardOf()).toBe("customer_not_stored");
 	expect(atom.calls).toHaveLength(1);
 
-	expect(await atom.forwardOf({ send_event: true })).toBe("send_event");
+	expect(await atom.forwardOf({ send_event: true, entity_id: "ent_42" })).toBe(
+		"send_event",
+	);
 	expect(atom.counted).toEqual({ subjectMisses: 2, subjectPulls: 1 });
 
 	await atom.calls[0]?.answer(

@@ -209,6 +209,12 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	if (isProvisioned(entry)) {
 		Object.assign(serverEnv, provisionedInfraEnv(worktreeNum));
 	}
+	if (isCloudAgent()) {
+		// Cloud VMs run no Kafka, so the server can only proxy balance-worker
+		// calls, and with AUTUMN_PUBLIC_API_URL on localhost it would proxy to
+		// itself and reject every call. Use the in-process balance path.
+		serverEnv.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+	}
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
 	}

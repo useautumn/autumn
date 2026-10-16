@@ -3,25 +3,25 @@ import type {
 	UpdateCatalogPlanParams,
 	UpdateCatalogResponse,
 } from "@autumn/shared";
+import { ResetInterval } from "@autumn/shared";
+import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
+import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
+import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import {
 	collectCustomerPlanIds,
 	collectPlanFilterPlanIds,
 	formatPlanFilter,
 	planFiltersAreSame,
 } from "@autumn/shared/api/products/utils/compare/planFiltersAreSame.js";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { PlanFilter } from "@autumn/shared/api/migrations/filters/planFilter.js";
-import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
-import { ResetInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import type { CatalogV2Client } from "../../../licenses/utils/seedLicensePlans.js";
 import { parsePlanPreview } from "../../../preview/utils/expectPlanPreview.js";
 import {
 	deleteMigrations,
 	expectUpdateMigrations,
 } from "../../utils/expectMigrationDrafts.js";
-import type { CatalogV2Client } from "../../../licenses/utils/seedLicensePlans.js";
 
 /** Catalog draft generators stamp the from-item grant on remove. Default 10 matches `messagesItem(10)`. */
 export const messagesItemDelta = ({
@@ -351,10 +351,12 @@ export const expectLicenseDraftCase = async ({
 	const typed = response as UpdateCatalogResponse;
 	expectUpdateMigrations({
 		response: typed,
-		plans: responsePlans ?? [expected[0]!.planIds.map((plan_id) => ({
-			plan_id,
-			versions: [1],
-		}))],
+		plans: responsePlans ?? [
+			expected[0]!.planIds.map((plan_id) => ({
+				plan_id,
+				versions: [1],
+			})),
+		],
 	});
 	const migrationId = typed.migrations![0]!.id;
 	expectLicenseMigrationDraftsCorrect({

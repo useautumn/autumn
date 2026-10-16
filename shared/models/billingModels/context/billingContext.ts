@@ -1,4 +1,6 @@
 import type { BillingDetailsBillingParams } from "@api/billing/common/billingDetailsBillingParams";
+import type { InvoiceLineEdits } from "@api/billing/common/invoiceLineEdits";
+import { InvoiceIssueMethodSchema } from "@api/others/apiInvoice/invoiceIssueMethod";
 import type {
 	BillingBehavior,
 	CancelAction,
@@ -27,6 +29,8 @@ import type { CustomerLicenseBillingContext } from "./customerLicenseBillingCont
 
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
+	/** Absent on contexts stored before issue_method existed; finalizeInvoice then decides draft or send. */
+	issueMethod: InvoiceIssueMethodSchema.optional(),
 	enableProductImmediately: z.boolean().default(true),
 	footer: z.string().optional(),
 	memo: z.string().optional(),
@@ -88,6 +92,8 @@ export interface BillingContext {
 	requestedProrationBehavior?: BillingBehavior;
 	/** Where proration can't change what's billed, set by set_plans' setup. */
 	prorationOverride?: ProrationBehaviorOverride;
+	/** remove_lines / add_lines: patch the invoice this request creates. */
+	invoiceLineEdits?: InvoiceLineEdits;
 
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;

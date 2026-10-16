@@ -105,6 +105,7 @@ export const setupInvoiceCreatedContext = async ({
 			ctx,
 			customerProducts: currentCustomerProducts,
 			stripeSubscriptionId,
+			internalCustomerId: fullCustomer.internal_id,
 		});
 
 	const scheduledCustomerProducts = fullCustomer.customer_products.filter(

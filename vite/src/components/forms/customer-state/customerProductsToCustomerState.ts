@@ -136,12 +136,15 @@ export const customerProductsToCustomerState = ({
 	canUnschedule,
 	entities,
 	products,
+	heldCustomerProductIdsAt = new Map(),
 }: {
 	customerProducts: FullCusProduct[];
 	phaseStarts: PhaseStart[];
 	canUnschedule: boolean;
 	entities: Entity[];
 	products: ProductV2[];
+	/** Phases saved without a row starting at them hold exactly the rows the schedule lists. */
+	heldCustomerProductIdsAt?: Map<number, string[]>;
 }): Pick<CustomerStateForm, "phases" | "unscheduledPlans"> => {
 	const isOpenEnded = (customerProduct: FullCusProduct) =>
 		canUnschedule &&
@@ -158,9 +161,14 @@ export const customerProductsToCustomerState = ({
 			toCustomerStatePhase({
 				startsAt,
 				plans: toPlans(
-					findCopiesOnPhase({ customerProducts, startsAt }).filter(
-						(customerProduct) => !isOpenEnded(customerProduct),
-					),
+					(startsAt !== "now" && heldCustomerProductIdsAt.has(startsAt)
+						? customerProducts.filter((customerProduct) =>
+								heldCustomerProductIdsAt
+									.get(startsAt)
+									?.includes(customerProduct.id),
+							)
+						: findCopiesOnPhase({ customerProducts, startsAt })
+					).filter((customerProduct) => !isOpenEnded(customerProduct)),
 				),
 			}),
 		),

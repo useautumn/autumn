@@ -100,6 +100,19 @@ export const FlagType2 = {
  */
 export type FlagType2 = OpenEnum<typeof FlagType2>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const CheckCombine2 = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type CheckCombine2 = OpenEnum<typeof CheckCombine2>;
+
 export type CheckDimensions12 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -454,6 +467,10 @@ export type CheckFeature2 = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: CheckCombine2 | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -1183,6 +1200,19 @@ export const FlagType1 = {
  */
 export type FlagType1 = OpenEnum<typeof FlagType1>;
 
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export const CheckCombine1 = {
+  Sum: "sum",
+  Max: "max",
+  Min: "min",
+} as const;
+/**
+ * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+ */
+export type CheckCombine1 = OpenEnum<typeof CheckCombine1>;
+
 export type CheckDimensions6 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -1533,6 +1563,10 @@ export type CheckFeature1 = {
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
   consumable: boolean;
+  /**
+   * How grants of this feature from several plans combine: 'sum' adds them up, 'max' / 'min' keep the highest / lowest grant among plan items with no price. Omitted when 'sum'.
+   */
+  combine?: CheckCombine1 | undefined;
   /**
    * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
    */
@@ -2332,6 +2366,12 @@ export const FlagType2$inboundSchema: z.ZodMiniType<FlagType2, unknown> =
   openEnums.inboundSchema(FlagType2);
 
 /** @internal */
+export const CheckCombine2$inboundSchema: z.ZodMiniType<
+  CheckCombine2,
+  unknown
+> = openEnums.inboundSchema(CheckCombine2);
+
+/** @internal */
 export const CheckDimensions12$inboundSchema: z.ZodMiniType<
   CheckDimensions12,
   unknown
@@ -3055,6 +3095,7 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: FlagType2$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(CheckCombine2$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => CheckCreditSchema4$inboundSchema),
@@ -3823,6 +3864,12 @@ export const FlagType1$inboundSchema: z.ZodMiniType<FlagType1, unknown> =
   openEnums.inboundSchema(FlagType1);
 
 /** @internal */
+export const CheckCombine1$inboundSchema: z.ZodMiniType<
+  CheckCombine1,
+  unknown
+> = openEnums.inboundSchema(CheckCombine1);
+
+/** @internal */
 export const CheckDimensions6$inboundSchema: z.ZodMiniType<
   CheckDimensions6,
   unknown
@@ -4546,6 +4593,7 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
     name: types.string(),
     type: FlagType1$inboundSchema,
     consumable: types.boolean(),
+    combine: types.optional(CheckCombine1$inboundSchema),
     event_names: types.optional(z.array(types.string())),
     credit_schema: types.optional(z.array(smartUnion([
       z.lazy(() => CheckCreditSchema1$inboundSchema),

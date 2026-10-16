@@ -54,6 +54,8 @@ export interface TableProps<T> {
 	onRowClick?: (row: T) => void;
 	/** For double-click actions (e.g. opening external links) */
 	onRowDoubleClick?: (row: T) => void;
+	/** Fires on hover or focus, before a click, so callers can prefetch the row's page */
+	onRowIntent?: (row: T) => void;
 	rowClassName?: string;
 	/** Per-row className (e.g. to style nested/variant rows differently) */
 	getRowClassName?: (row: T) => string | undefined;

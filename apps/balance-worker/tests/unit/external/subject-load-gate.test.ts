@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createSubjectLoadGate } from "../../../src/external/postgres/createSubjectLoadGate.js";
+import {
+	createSubjectLoadGate,
+	SubjectLoadShedError,
+} from "../../../src/external/postgres/createSubjectLoadGate.js";
 
 function createHeldLoad<Value>({ value }: { value: Value }) {
 	let release = () => {};
@@ -23,7 +26,7 @@ function createHeldLoad<Value>({ value }: { value: Value }) {
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 describe("subject load gate", () => {
-	test("runs at most its limit at once and starts the rest in arrival order", async () => {
+	test("runs at most its limit at once and starts the newest queued load first", async () => {
 		const gate = createSubjectLoadGate({ config: { limit: 2 } });
 		const loads = [1, 2, 3, 4].map((value) => createHeldLoad({ value }));
 		const results = loads.map(({ load }) => gate.run(load));
@@ -42,8 +45,8 @@ describe("subject load gate", () => {
 		expect(loads.map(({ started }) => started())).toEqual([
 			true,
 			true,
-			true,
 			false,
+			true,
 		]);
 
 		for (const held of loads) held.release();
@@ -88,5 +91,30 @@ describe("subject load gate", () => {
 		await Promise.all(results);
 
 		expect(waits).toEqual([0, 250]);
+	});
+
+	test("drops a queued load at its caller's deadline without running it", async () => {
+		let deadline: number | undefined;
+		const gate = createSubjectLoadGate({
+			config: { limit: 1 },
+			ctx: { readDeadline: () => deadline },
+		});
+		const running = createHeldLoad({ value: "running" });
+		const expiring = createHeldLoad({ value: "expiring" });
+		const patient = createHeldLoad({ value: "patient" });
+		const first = gate.run(running.load);
+		deadline = performance.now() + 20;
+		const shed = gate.run(expiring.load);
+		deadline = undefined;
+		const kept = gate.run(patient.load);
+		await settle();
+
+		await expect(shed).rejects.toBeInstanceOf(SubjectLoadShedError);
+		expect(gate.snapshot()).toEqual({ running: 1, queued: 1 });
+		running.release();
+		patient.release();
+		expect(await Promise.all([first, kept])).toEqual(["running", "patient"]);
+		expect(expiring.started()).toBe(false);
+		expect(gate.snapshot()).toEqual({ running: 0, queued: 0 });
 	});
 });

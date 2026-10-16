@@ -1,7 +1,11 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import type {
+	MeteringIdentity,
+	SubjectState,
+	WorkerLock,
+} from "@autumn/balance-engine";
 import {
 	type CommandRecord,
 	KafkaTransactionStateUnknownError,
@@ -48,6 +52,7 @@ export const createCommandPipeline = ({
 	failAppendAt,
 	unknownAppendAt,
 	heldAppend,
+	heldApply,
 	states = [],
 }: {
 	/** Subjects resident beside the default customers. */
@@ -58,6 +63,8 @@ export const createCommandPipeline = ({
 	unknownAppendAt?: number;
 	/** The nth commit (0-based) stays in flight until `until` resolves. */
 	heldAppend?: { at: number; until: Promise<void> };
+	/** Every store apply waits for this, so what is decided stays pending until it resolves. */
+	heldApply?: Promise<void>;
 } = {}) => {
 	const directory = mkdtempSync(join(tmpdir(), "autumn-command-pipeline-"));
 	const store = openStateStore({
@@ -93,13 +100,30 @@ export const createCommandPipeline = ({
 		bookmark = to;
 	}
 
+	/** The lock rows Postgres would hold: what the store has applied, by lock id. */
+	const storedLocks = new Map<string, WorkerLock>();
+	/** Every batched read of lock rows the worker made, by the lock ids it asked for. */
+	const lockReads: string[][] = [];
+	function storeLockRows({ mutation }: { mutation: MeteringRecord }): void {
+		for (const change of mutation.changes) {
+			if (change.table !== "locks") continue;
+			if (change.op === "insert")
+				storedLocks.set(change.row.lock_id, change.row);
+			else
+				for (const [lockId, row] of storedLocks)
+					if (row.id === change.id) storedLocks.delete(lockId);
+		}
+	}
+
 	const stateStore: SqliteStateStore = {
 		...store,
 		applyDurableMutations: ({ records }) => {
 			const results = store.applyDurableMutations({ records });
-			for (const { mutation } of records)
+			for (const { mutation } of records) {
+				storeLockRows({ mutation });
 				if (mutation.source)
 					advanceBookmark({ to: BigInt(mutation.source.commandOffset) + 1n });
+			}
 			return results;
 		},
 		readCommandNextOffset: () => bookmark,
@@ -111,7 +135,15 @@ export const createCommandPipeline = ({
 	function openPartition() {
 		const processor = createPartitionProcessor({
 			ctx: {
-				stateStore,
+				stateStore: heldApply
+					? {
+							...stateStore,
+							applyDurableMutations: async (params) => {
+								await heldApply;
+								return stateStore.applyDurableMutations(params);
+							},
+						}
+					: stateStore,
 				appender: {
 					appendCommitted: async ({ outcomes }) => {
 						const attempt = appends++;
@@ -128,7 +160,13 @@ export const createCommandPipeline = ({
 					},
 					settleCommandOffset: () => undefined,
 				},
-				db: createSyntheticWorkerDb(),
+				db: {
+					...createSyntheticWorkerDb(),
+					readLockRows: async ({ keys }) => {
+						lockReads.push(keys.map(({ lockId }) => lockId));
+						return keys.flatMap(({ lockId }) => storedLocks.get(lockId) ?? []);
+					},
+				},
 				catalogCache: createTestCatalogCache(),
 				receiptPolicy: { retentionMs: 86_400_000, now: () => testOccurredAt },
 				recentCommands: createRecentCommands({
@@ -197,16 +235,14 @@ export const createCommandPipeline = ({
 		/** Runs before each record is handed over, as another request arriving on the partition would. */
 		beforeEach?: (params: { index: number }) => void;
 	}): Promise<void> {
-		for (const [index, record] of commands.entries()) {
+		const messages = commands.map((record, index) => ({
+			offset: String(firstOffset + index),
+			...serializeCommandRecord({ record }),
+		}));
+		await current.handler.beginBatch?.({ topic, partition, messages });
+		for (const [index, message] of messages.entries()) {
 			beforeEach?.({ index });
-			await current.handler.applyRecord({
-				topic,
-				partition,
-				message: {
-					offset: String(firstOffset + index),
-					...serializeCommandRecord({ record }),
-				},
-			});
+			await current.handler.applyRecord({ topic, partition, message });
 			if (parked.length > 0) return;
 			// The consumer's heartbeat between records is where the writer's commit loop gets its turn.
 			await new Promise<void>((resolve) => setImmediate(resolve));
@@ -236,6 +272,8 @@ export const createCommandPipeline = ({
 		readState: ({ customerId }: { customerId: string }) =>
 			store.readState({ identity: identityOf({ customerId }) }),
 		readBookmark: () => bookmark,
+		lockReads,
+		storedLockIds: () => [...storedLocks.keys()],
 		readDecides: () => decides,
 		/** Command offsets in the order Kafka took their records. */
 		committedSources: () =>

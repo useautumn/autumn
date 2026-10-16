@@ -180,6 +180,22 @@ test(`${chalk.yellowBright("pooled usage alert: free-to-Pro aggregate fires at e
 		plan_id: proEntityPlan.id,
 		plan_schedule: "immediate",
 	});
+
+	// The free entity's grant merges into Pro's subscription pool and its lazy-pool usage is forgiven.
+	const merged = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expectBalanceCorrect({
+		customer: merged,
+		featureId: TestFeature.Messages,
+		granted:
+			pooledBalanceTestValues.freeContribution +
+			pooledBalanceTestValues.proContribution,
+		remaining: 150,
+		usage: 0,
+		breakdownCount: 1,
+	});
+
 	await setCustomerUsageAlerts({
 		autumn: autumnV2_1,
 		customerId,
@@ -196,7 +212,7 @@ test(`${chalk.yellowBright("pooled usage alert: free-to-Pro aggregate fires at e
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
-		value: 35,
+		value: 75,
 	});
 	const event = await waitForWebhook<UsageAlertPayload>({
 		token: webhook.playToken,
@@ -223,6 +239,6 @@ test(`${chalk.yellowBright("pooled usage alert: free-to-Pro aggregate fires at e
 			pooledBalanceTestValues.proContribution,
 		remaining: 75,
 		usage: 75,
-		breakdownCount: 2,
+		breakdownCount: 1,
 	});
 });

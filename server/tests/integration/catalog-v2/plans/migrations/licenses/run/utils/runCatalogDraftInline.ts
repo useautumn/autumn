@@ -1,8 +1,8 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
-import { preProcessMigration } from "@/internal/migrations/v2/run/preProcess/preProcessMigration.js";
-import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/migrateCustomer.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/migrateCustomer.js";
+import { preProcessMigration } from "@/internal/migrations/v2/run/preProcess/preProcessMigration.js";
 
 /** Prepare + apply a persisted catalog draft in-process (no Trigger). */
 export const runCatalogDraftInline = async ({

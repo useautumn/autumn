@@ -20,6 +20,7 @@ import {
 	type PostgresClientConfig,
 	type PostgresLogger,
 	readEntitySubjectSnapshots,
+	readLockRows,
 	readPartitionProgress,
 	readSubjectSnapshot,
 	sumPooledContributionGrants,
@@ -171,6 +172,12 @@ export const createWorkerDb = ({
 					},
 					ids,
 				}),
+		}),
+	readLockRows: ({ keys }) =>
+		timeQuery({
+			ctx,
+			kind: "lock_rows",
+			run: () => readLockRows({ ctx: { db: ctx.postgres.db }, keys }),
 		}),
 	getBillingCycleAnchors: ({ identity, customerProductIds }) =>
 		timeQuery({

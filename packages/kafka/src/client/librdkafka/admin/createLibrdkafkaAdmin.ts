@@ -34,6 +34,28 @@ function partitionOffsetsOf(
 	return offsets;
 }
 
+type NativeListOffsetsAnswer = {
+	partition: number;
+	offset: number;
+	error?: unknown;
+};
+
+/** librdkafka's own admin client, for the ListOffsets answers the KafkaJS shim flattens. */
+export type NativeAdmin = {
+	listOffsets(
+		partitions: {
+			topic: string;
+			partition: number;
+			offset: { timestamp: number };
+		}[],
+		options: { timeout: number; isolationLevel: number },
+		done: (error: unknown, offsets?: NativeListOffsetsAnswer[]) => void,
+	): void;
+	disconnect(): void;
+};
+
+const LIST_OFFSETS_TIMEOUT_MS = 5_000;
+
 /** Confluent's KafkaJS admin in kafkajs's shapes, plus `setOffsets`, which it lacks. */
 export function createLibrdkafkaAdmin({
 	ctx,
@@ -42,9 +64,12 @@ export function createLibrdkafkaAdmin({
 		kafka: KafkaJS.Kafka;
 		nativeClientConfig: Record<string, unknown>;
 		createNative: NativeConsumerFactory;
+		/** Without it, offsets by timestamp go through the shim, which answers a moving leader with the log end. */
+		createNativeAdmin?: (config: Record<string, unknown>) => NativeAdmin;
 		log: KafkaLog;
 	};
 }): Admin {
+	let nativeAdmin: NativeAdmin | null = null;
 	const retryBackoffMs = Number(
 		ctx.nativeClientConfig["retry.backoff.ms"] ?? 100,
 	);
@@ -60,8 +85,14 @@ export function createLibrdkafkaAdmin({
 		return admin.connect();
 	}
 
-	function disconnect(): Promise<void> {
-		return admin.disconnect();
+	async function disconnect(): Promise<void> {
+		const native = nativeAdmin;
+		nativeAdmin = null;
+		try {
+			await admin.disconnect();
+		} finally {
+			native?.disconnect();
+		}
 	}
 
 	/** Resolves once every new topic has a leader per partition, as kafkajs's default `waitForLeaders` did. */
@@ -162,14 +193,77 @@ export function createLibrdkafkaAdmin({
 		}
 	}
 
+	/** The shim answers a partition whose leader just moved with the log end, which reads as "nothing that recent"
+	 *  and skips a takeover's dedupe window. librdkafka's own answer carries the error, and the caller asks again. */
 	async function fetchTopicOffsetsByTimestamp(
 		topic: string,
 		timestamp: number,
 	) {
-		const offsets = await admin.fetchTopicOffsetsByTimestamp(topic, timestamp, {
-			isolationLevel: READ_COMMITTED,
-		});
-		return partitionOffsetsOf(offsets);
+		if (!ctx.createNativeAdmin) {
+			const offsets = await admin.fetchTopicOffsetsByTimestamp(
+				topic,
+				timestamp,
+				{ isolationLevel: READ_COMMITTED },
+			);
+			return partitionOffsetsOf(offsets);
+		}
+		const { topics } = await fetchTopicMetadata({ topics: [topic] });
+		const partitions: number[] = [];
+		for (const { partitionId } of topics[0]?.partitions ?? [])
+			partitions.push(partitionId);
+		const answers = await listOffsetsAt({ topic, partitions, timestamp });
+		const unanswered: number[] = [];
+		for (const answer of answers)
+			if (answer.error) unanswered.push(answer.partition);
+		if (unanswered.length > 0)
+			throw new KafkaPartitionOffsetsUnansweredError({
+				topic,
+				partitions: unanswered,
+			});
+		const latest = new Map<number, string>();
+		if (answers.some(isPastLogEnd))
+			for (const { partition, offset } of await fetchTopicOffsets(topic))
+				latest.set(partition, offset);
+		const described: PartitionOffset[] = [];
+		for (const { partition, offset } of answers)
+			described.push({
+				partition,
+				offset: offset >= 0 ? String(offset) : (latest.get(partition) ?? "-1"),
+			});
+		return described;
+	}
+
+	function listOffsetsAt({
+		topic,
+		partitions,
+		timestamp,
+	}: {
+		topic: string;
+		partitions: number[];
+		timestamp: number;
+	}): Promise<NativeListOffsetsAnswer[]> {
+		nativeAdmin ??=
+			ctx.createNativeAdmin?.({ ...ctx.nativeClientConfig }) ?? null;
+		const native = nativeAdmin;
+		if (!native) throw new Error("No native admin for offsets by timestamp");
+		const answered = Promise.withResolvers<NativeListOffsetsAnswer[]>();
+		function settle(error: unknown, offsets?: NativeListOffsetsAnswer[]): void {
+			if (error) answered.reject(error);
+			else answered.resolve(offsets ?? []);
+		}
+		const requests: {
+			topic: string;
+			partition: number;
+			offset: { timestamp: number };
+		}[] = [];
+		for (const partition of partitions)
+			requests.push({ topic, partition, offset: { timestamp } });
+		native.listOffsets(
+			requests,
+			{ timeout: LIST_OFFSETS_TIMEOUT_MS, isolationLevel: READ_COMMITTED },
+			settle,
+		);
+		return answered.promise;
 	}
 
 	async function fetchOffsets({
@@ -238,4 +332,9 @@ export function createLibrdkafkaAdmin({
 		fetchOffsets,
 		setOffsets,
 	};
+}
+
+/** No record at or after the timestamp: the window starts at the log end. */
+function isPastLogEnd(answer: NativeListOffsetsAnswer): boolean {
+	return answer.offset < 0;
 }

@@ -9,8 +9,16 @@ import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceS
 import { applyLicensePooledBalances } from "./applyLicensePooledBalances/applyLicensePooledBalances";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
 import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
+import {
+	competingFeatureIdsOf,
+	staleCompetingCustomerProducts,
+} from "./competing/staleCompetingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
+import {
+	isPaidSubscriptionPoolHost,
+	misplacedFreeCustomerProducts,
+} from "./utils/subscriptionPoolHost";
 
 export const computePooledBalanceTransitionPlan = ({
 	ctx,
@@ -41,6 +49,7 @@ export const computePooledBalanceTransitionPlan = ({
 	}
 	const computeContext = setupPooledBalanceComputeContext({
 		pooledCustomerEntitlements: fullCustomer.pooled_customer_entitlements ?? [],
+		customerProducts: fullCustomer.customer_products,
 	});
 
 	const outgoingCustomerProductIds = new Set<string>();
@@ -60,7 +69,16 @@ export const computePooledBalanceTransitionPlan = ({
 		.map((customerProduct) => customerProduct.id)
 		.sort()[0];
 
-	for (const customerProduct of incomingCustomerProducts) {
+	// Paid plans go first so a free plan arriving alongside them finds their pool.
+	const paidFirstIncomingCustomerProducts = [
+		...incomingCustomerProducts.filter((customerProduct) =>
+			isPaidSubscriptionPoolHost({ customerProduct }),
+		),
+		...incomingCustomerProducts.filter(
+			(customerProduct) => !isPaidSubscriptionPoolHost({ customerProduct }),
+		),
+	];
+	for (const customerProduct of paidFirstIncomingCustomerProducts) {
 		applyIncomingPooledBalanceSources({
 			ctx,
 			computeContext,
@@ -69,6 +87,58 @@ export const computePooledBalanceTransitionPlan = ({
 				stripeSubscriptionId ??
 				customerProduct.subscription_ids?.[0] ??
 				pendingSubscriptionId,
+			customerCreatedAt: fullCustomer.created_at,
+			now,
+		});
+	}
+
+	// A paid plan arriving pulls the free plans the customer already holds into its pool.
+	const mergedFreeCustomerProducts = paidFirstIncomingCustomerProducts.some(
+		(customerProduct) => isPaidSubscriptionPoolHost({ customerProduct }),
+	)
+		? misplacedFreeCustomerProducts({
+				computeContext,
+				fullCustomer,
+				excludedCustomerProductIds: new Set([
+					...incomingCustomerProductIds,
+					...outgoingCustomerProductIds,
+				]),
+			})
+		: [];
+	for (const customerProduct of mergedFreeCustomerProducts) {
+		applyOutgoingPooledBalanceSources({ computeContext, customerProduct });
+		applyIncomingPooledBalanceSources({
+			ctx,
+			computeContext,
+			customerProduct,
+			customerCreatedAt: fullCustomer.created_at,
+			now,
+		});
+	}
+
+	for (const customerProduct of staleCompetingCustomerProducts({
+		fullCustomer,
+		featureIds: competingFeatureIdsOf({
+			incomingCustomerProducts,
+			outgoingCustomerProducts,
+		}),
+		excludedCustomerProductIds: new Set([
+			...incomingCustomerProductIds,
+			...outgoingCustomerProductIds,
+		]),
+	})) {
+		// An additive share from before the switch leaves first, then rejoins as a competing one.
+		applyOutgoingPooledBalanceSources({
+			computeContext,
+			customerProduct,
+			convertingToCompeting: true,
+		});
+		applyIncomingPooledBalanceSources({
+			ctx,
+			computeContext,
+			customerProduct,
+			stripeSubscriptionId:
+				customerProduct.subscription_ids?.[0] ?? customerProduct.id,
 			customerCreatedAt: fullCustomer.created_at,
 			now,
 		});

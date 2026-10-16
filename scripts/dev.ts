@@ -398,7 +398,7 @@ async function startDev() {
 					colors.push("cyan");
 					// --forward-connect-to forwards events from connected accounts;
 					// the /webhooks/connect/* endpoint expects Connect-mode events.
-					const stripeCmd = `${stripeBin} listen --forward-connect-to ${forwardUrl} --skip-verify`;
+					const stripeCmd = `${stripeBin} listen --all-snapshot --forward-connect-to ${forwardUrl} --skip-verify`;
 					cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
 					console.error(`stripe listen → ${forwardUrl}`);
 				};

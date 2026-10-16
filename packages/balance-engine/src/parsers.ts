@@ -3,6 +3,10 @@ import {
 	applyBillingPlanRequestSchema,
 } from "./commands/applyBillingPlan/types/applyBillingPlanRequest.js";
 import {
+	type AtomFinalizeCommand,
+	atomFinalizeCommandSchema,
+} from "./commands/atomFinalize/types/atomFinalizeCommand.js";
+import {
 	type CheckCommand,
 	checkCommandSchema,
 } from "./commands/check/types/checkCommand.js";
@@ -139,6 +143,12 @@ export const parseRecalculateBalanceCommand = ({
 }: {
 	input: unknown;
 }): RecalculateBalanceCommand => recalculateBalanceCommandSchema.parse(input);
+
+export const parseAtomFinalizeCommand = ({
+	input,
+}: {
+	input: unknown;
+}): AtomFinalizeCommand => atomFinalizeCommandSchema.parse(input);
 
 export const parseFinalizeCommand = ({
 	input,

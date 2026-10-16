@@ -28,6 +28,12 @@ const RB2B_HOSTS = [
   "https://9xgnrndqve.execute-api.us-west-2.amazonaws.com",
 ];
 
+// posthog-js sends events to the API host and lazy-loads extensions from the assets host.
+const POSTHOG_HOSTS = [
+  "https://us.i.posthog.com",
+  "https://us-assets.i.posthog.com",
+];
+
 const rehypePrettyCodeOptions = {
   theme: "github-dark-dimmed",
   keepBackground: false,
@@ -128,6 +134,7 @@ const nextConfig = {
                 "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
                 "https://vercel.live",
                 ...RB2B_HOSTS,
+                ...POSTHOG_HOSTS,
               ].join(" "),
               "style-src 'self' 'unsafe-inline'",
               [
@@ -142,6 +149,7 @@ const nextConfig = {
                 "connect-src 'self' https://*.vercel.app",
                 "https://vitals.vercel-insights.com",
                 ...RB2B_HOSTS,
+                ...POSTHOG_HOSTS,
               ].join(" "),
               ["frame-src 'self'", ...RB2B_HOSTS].join(" "),
               "frame-ancestors 'none'",

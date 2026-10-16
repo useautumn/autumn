@@ -23,7 +23,7 @@
  */
 
 import { test } from "bun:test";
-import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig.js";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -31,12 +31,13 @@ import { expectCustomerProductOptions } from "@tests/integration/utils/expectCus
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
 
-const AUTO_TOPUP_WAIT_MS = 20000;
+// The refill is a queued job making several Stripe calls; under twd's Stripe
+// permit budget it can land well past a fixed 20s sleep.
+const AUTO_TOPUP_SETTLE_MS = 90_000;
 
 const REFILL_TIERS = [
 	{ to: 75, amount: 0.22 },
@@ -110,11 +111,10 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 21,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
-
-		const after = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer: after,
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			settleTimeoutMs: AUTO_TOPUP_SETTLE_MS,
 			featureId: TestFeature.Messages,
 			remaining: new Decimal(25).sub(21).add(10).toNumber(),
 		});
@@ -169,11 +169,10 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 260,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
-
-		const after = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer: after,
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			settleTimeoutMs: AUTO_TOPUP_SETTLE_MS,
 			featureId: TestFeature.Messages,
 			remaining: new Decimal(300).sub(260).add(125).toNumber(),
 		});
@@ -235,11 +234,10 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 260,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
-
-		const after = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer: after,
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			settleTimeoutMs: AUTO_TOPUP_SETTLE_MS,
 			featureId: TestFeature.Messages,
 			remaining: new Decimal(300).sub(260).add(250).toNumber(),
 		});
@@ -298,11 +296,10 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 			value: 460,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
-
-		const after = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer: after,
+		await expectBalanceCorrect({
+			customerId,
+			autumn: autumnV2_3,
+			settleTimeoutMs: AUTO_TOPUP_SETTLE_MS,
 			featureId: TestFeature.Messages,
 			remaining: new Decimal(500).sub(460).add(125).toNumber(),
 		});
