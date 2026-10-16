@@ -1,4 +1,5 @@
 import type {
+	ApprovalRule,
 	ApprovalRuleIssue,
 	CreateApprovalRuleParams,
 } from "@autumn/shared";
