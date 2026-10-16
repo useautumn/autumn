@@ -45,7 +45,7 @@ export function buildCreateScheduleRequestBody({
 	endDate,
 	allowFirstPhaseBackdate,
 	enablePlanImmediately,
-	carryOverUsages = false,
+	carryOverUsages,
 	carryOverUsageFeatureIds = [],
 	stripeSubscriptionId,
 	freeTrial,
@@ -69,7 +69,7 @@ export function buildCreateScheduleRequestBody({
 	endDate?: number | null;
 	allowFirstPhaseBackdate?: boolean;
 	enablePlanImmediately?: boolean;
-	/** Pass true only while the carry-over row is visible. */
+	/** Undefined while the carry-over row is hidden; false sends an explicit reset. */
 	carryOverUsages?: boolean;
 	carryOverUsageFeatureIds?: string[];
 	stripeSubscriptionId?: string | null;
@@ -188,11 +188,12 @@ export function buildCreateScheduleRequestBody({
 
 	if (enablePlanImmediately && startsLater) body.enable_plan_immediately = true;
 	if (stripeSubscriptionId) body.stripe_subscription_id = stripeSubscriptionId;
-	const carryOverUsagesParam = carryOverParam({
-		enabled: carryOverUsages,
-		featureIds: carryOverUsageFeatureIds,
-	});
-	if (carryOverUsagesParam) body.carry_over_usages = carryOverUsagesParam;
+	if (carryOverUsages !== undefined) {
+		body.carry_over_usages = carryOverParam({
+			enabled: carryOverUsages,
+			featureIds: carryOverUsageFeatureIds,
+		}) ?? { enabled: false };
+	}
 	if (endDate && hasPaidRecurringSchedulePlan({ phases, products })) {
 		body.ends_at = endDate;
 	}
@@ -366,10 +367,10 @@ export function useBuildCreateScheduleRequestBody({
 	getEndDate?: () => CustomerStateForm["endDate"];
 	getEnablePlanImmediately?: () => boolean;
 	getAllowFirstPhaseBackdate?: () => boolean;
-	getCarryOverUsages?: () => Pick<
-		CustomerStateForm,
-		"carryOverUsages" | "carryOverUsageFeatureIds"
-	>;
+	getCarryOverUsages?: () => {
+		carryOverUsages?: boolean;
+		carryOverUsageFeatureIds: string[];
+	};
 	getFreeTrial?: () => FreeTrialFormValues;
 	getOmitFirstPhaseProration?: () => boolean;
 	getDiscounts?: () => DiscountsFormFields & { removableRewardIds?: string[] };

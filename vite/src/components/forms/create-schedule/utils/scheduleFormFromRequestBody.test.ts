@@ -172,17 +172,43 @@ describe("scheduleFormFromRequestBody", () => {
 		expect(form?.carryOverUsageFeatureIds).toBeUndefined();
 	});
 
-	test("leaves carry-over off when the request disables or omits it", () => {
-		const phases = [{ plans: [{ plan_id: "pro" }], starts_at: "now" }];
-		for (const carry_over_usages of [{ enabled: false }, undefined]) {
-			const form = scheduleFormFromRequestBody({
-				customer_id: "cus_1",
-				carry_over_usages,
-				phases,
+	test("turns carry-over off when the request disables it", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			carry_over_usages: { enabled: false },
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+		});
+		expect(form?.carryOverUsages).toBe(false);
+		expect(form?.carryOverUsageFeatureIds).toBeUndefined();
+	});
+
+	test("leaves the carry-over default when the request omits it", () => {
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: "now" }],
+		});
+		expect(form?.carryOverUsages).toBeUndefined();
+		expect(form?.carryOverUsageFeatureIds).toBeUndefined();
+	});
+
+	test("sends an explicit reset when carry-over is switched off", () => {
+		const now = Date.UTC(2027, 0, 1);
+		const form = scheduleFormFromRequestBody({
+			customer_id: "cus_1",
+			phases: [{ plans: [{ plan_id: "pro" }], starts_at: now }],
+		});
+		const build = (carryOverUsages?: boolean) =>
+			buildCreateScheduleRequestBody({
+				customerId: "cus_1",
+				phases: form?.phases ?? [],
+				products: [{ id: "pro", items: [] } as unknown as ProductV2],
+				features: [],
+				nowMs: now,
+				carryOverUsages,
 			});
-			expect(form?.carryOverUsages).toBeUndefined();
-			expect(form?.carryOverUsageFeatureIds).toBeUndefined();
-		}
+		expect(build(false)?.carry_over_usages).toEqual({ enabled: false });
+		expect(build(true)?.carry_over_usages).toEqual({ enabled: true });
+		expect(build(undefined)).not.toHaveProperty("carry_over_usages");
 	});
 
 	test("round trips carry_over_usages through the request builder", () => {

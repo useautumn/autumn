@@ -374,7 +374,7 @@ export function CreateScheduleFormProvider({
 		const { carryOverUsages, carryOverUsageFeatureIds } =
 			form.store.state.values;
 		return {
-			carryOverUsages: carriesUsageNow && carryOverUsages,
+			carryOverUsages: carriesUsageNow ? carryOverUsages : undefined,
 			carryOverUsageFeatureIds,
 		};
 	}, [form.store, carriesUsageNow]);
@@ -414,7 +414,7 @@ export function CreateScheduleFormProvider({
 		endDate: formValues.endDate,
 		allowFirstPhaseBackdate,
 		enablePlanImmediately: formValues.enablePlanImmediately,
-		carryOverUsages: carriesUsageNow && formValues.carryOverUsages,
+		carryOverUsages: carriesUsageNow ? formValues.carryOverUsages : undefined,
 		carryOverUsageFeatureIds: formValues.carryOverUsageFeatureIds,
 		stripeSubscriptionId,
 		freeTrial: trialFormValues,
