@@ -9,13 +9,18 @@ export const updateBalanceParamsToFacts = ({
 	fullCustomer: FullCustomer;
 	params: Pick<
 		UpdateBalanceParamsV0,
-		"feature_id" | "included_grant" | "add_to_balance" | "remaining" | "usage"
+		| "feature_id"
+		| "included_grant"
+		| "add_to_balance"
+		| "remaining"
+		| "current_balance"
+		| "usage"
 	>;
 }): BalanceUpdateFacts => ({
 	customer: fullCustomer,
 	feature_id: params.feature_id,
 	included_grant: params.included_grant ?? null,
 	add_to_balance: params.add_to_balance ?? null,
-	remaining: params.remaining ?? null,
+	remaining: params.remaining ?? params.current_balance ?? null,
 	usage: params.usage ?? null,
 });

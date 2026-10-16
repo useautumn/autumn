@@ -73,6 +73,15 @@ describe("non-billing facts", () => {
 		});
 	});
 
+	test("set balance: the legacy current_balance alias reads as remaining", () => {
+		expect(
+			updateBalanceParamsToFacts({
+				fullCustomer: customer,
+				params: { feature_id: "ai_credits", current_balance: 500 },
+			}).remaining,
+		).toBe(500);
+	});
+
 	test("invoices: a new invoice's total is its preview's; an existing one carries its refund", () => {
 		expect(
 			createInvoicePreviewToFacts({
