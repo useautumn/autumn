@@ -217,6 +217,18 @@ describe("validateApprovalRule: rejected", () => {
 });
 
 describe("validateApprovalRule: messages", () => {
+	test("member actions aren't rule-controlled yet", () => {
+		for (const action of ["members.invite", "members.change_role"]) {
+			expect(
+				issuesOf(invalid({ actions: [action], when: null })),
+			).toContainEqual({
+				path: "actions",
+				message:
+					"Member actions aren't rule-controlled yet; they use organisation:write.",
+			});
+		}
+	});
+
 	test("cross-area actions name both areas", () => {
 		expect(
 			issuesOf(invalid({ actions: ["billing.attach", "balances.create"] })),
