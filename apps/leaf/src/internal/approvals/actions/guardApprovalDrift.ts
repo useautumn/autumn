@@ -1,9 +1,11 @@
 import type { ChatApproval, ChatApprovalWrite } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { logger } from "../../../lib/logger.js";
+import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import { firstRuleDenial } from "../utils/approvalRuleVerdict.js";
 import { withWritePreviews } from "../utils/fetchApprovalPreview.js";
 import { previewMoneyFactsDrifted } from "../utils/previewMoneyFacts.js";
 import { writeToPreviewTool } from "../utils/toolRegistry.js";
@@ -17,10 +19,12 @@ const detectPreviewDrift = async ({
 	env,
 	writes,
 	token,
+	actingUserId,
 }: {
 	env: ChatApproval["env"];
 	writes: ReadonlyArray<ChatApprovalWrite>;
 	token: string;
+	actingUserId?: string;
 }) => {
 	const checkable = writes.filter(
 		(write) => write.preview && writeToPreviewTool(write.tool_name),
@@ -28,6 +32,9 @@ const detectPreviewDrift = async ({
 	if (!checkable.length) return { drifted: false } as const;
 	const fresh = await withWritePreviews({
 		env,
+		// As the clicker, so each preview carries the approval rules' verdict for them.
+		executeTool: (input) =>
+			executeAutumnMcpTool({ ...input, approvalsActingUser: actingUserId }),
 		getToken: async () => token,
 		logger,
 		writes: checkable.map((write) => ({
@@ -45,20 +52,25 @@ const detectPreviewDrift = async ({
 			return verdict.drifted ? verdict.reason : undefined;
 		})
 		.find(Boolean);
-	if (!reason) return { drifted: false } as const;
+	const refresh = async () => {
+		await Promise.all(
+			checkable.map((write, index) =>
+				setWritePreviewEverywhere({
+					preview: fresh[index]?.preview,
+					write,
+				}),
+			),
+		);
+	};
+	const denial = firstRuleDenial({
+		previews: fresh.map((write) => write.preview),
+	});
+	if (!reason && !denial) return { drifted: false } as const;
 	return {
 		drifted: true,
-		reason,
-		refresh: async () => {
-			await Promise.all(
-				checkable.map((write, index) =>
-					setWritePreviewEverywhere({
-						preview: fresh[index]?.preview,
-						write,
-					}),
-				),
-			);
-		},
+		reason: reason ?? "approval rules deny the approver",
+		message: denial ?? DRIFT_MESSAGE,
+		refresh,
 	} as const;
 };
 
@@ -86,14 +98,17 @@ const setWritePreviewEverywhere = async ({
 	}
 };
 
-/** Pre-resume money guard: a drifted card is released back to pending with
- * fresh previews instead of resuming — nothing executes. */
+/** Pre-resume guard: a card whose money facts drifted, or that the approval
+ * rules deny the clicker, goes back to pending with fresh previews — nothing executes. */
 export const guardApprovalDrift = async ({
 	approval,
 	providerUserId,
+	actingUserId,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
+	/** The clicker's Autumn user, when known; their approval rules are checked on the fresh previews. */
+	actingUserId?: string;
 }): Promise<{ drifted: true; message: string } | undefined> => {
 	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
@@ -114,6 +129,7 @@ export const guardApprovalDrift = async ({
 		env: approval.env,
 		writes,
 		token: accessToken,
+		actingUserId,
 	});
 	if (!drift.drifted) return undefined;
 
@@ -130,5 +146,5 @@ export const guardApprovalDrift = async ({
 		approval_id: approval.id,
 		data: { reason: drift.reason },
 	});
-	return { drifted: true, message: DRIFT_MESSAGE };
+	return { drifted: true, message: drift.message };
 };
