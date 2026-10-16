@@ -10,6 +10,12 @@ import type { AnyRowIncrement } from "../models/mutation/rowIncrement.js";
 import type { WorkerCustomer } from "../models/subject/rows/workerCustomer.js";
 import type { OpenLock } from "../models/subject/rows/workerLock.js";
 import type { SubjectState } from "../models/subject/subjectState.js";
+import {
+	findOpenLockById,
+	findOpenLockByLockId,
+	withOpenLock,
+	withoutOpenLock,
+} from "../utils/subjectStateUtils/openLockIndex.js";
 import { incrementRow } from "./incrementRow.js";
 
 type StateRow = SubjectState[
@@ -107,15 +113,14 @@ const applyToOpenLocks = ({
 }): OpenLock[] => {
 	if (change.op === "insert") {
 		const { id, lock_id } = change.row;
-		const isAlreadyOpen = openLocks.some(
-			(openLock) => openLock.id === id || openLock.lock_id === lock_id,
-		);
+		const isAlreadyOpen =
+			findOpenLockById({ openLocks, id }) !== null ||
+			findOpenLockByLockId({ openLocks, lockId: lock_id }) !== null;
 		if (isAlreadyOpen) throw new StaleMutationError({ subject: id });
-		return [...openLocks, { id, lock_id }];
+		return withOpenLock({ openLocks, openLock: { id, lock_id } });
 	}
-	const remaining = openLocks.filter((openLock) => openLock.id !== change.id);
-	if (remaining.length === openLocks.length)
-		throw new StaleMutationError({ subject: change.id });
+	const remaining = withoutOpenLock({ openLocks, id: change.id });
+	if (!remaining) throw new StaleMutationError({ subject: change.id });
 	return remaining;
 };
 
