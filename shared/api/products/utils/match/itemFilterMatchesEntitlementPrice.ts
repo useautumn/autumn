@@ -4,7 +4,7 @@ import { priceToBillingMethod } from "../../../../utils/productUtils/priceUtils/
 import {
 	nullableFieldMatches,
 	stringMatcherMatches,
-} from "../../../migrations/filters/match/index.js";
+} from "../../../common/filters/match/index.js";
 import type { PlanItemFilter } from "../../../migrations/filters/planItemFilter.js";
 
 /**

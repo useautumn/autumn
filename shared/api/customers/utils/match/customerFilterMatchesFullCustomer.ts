@@ -1,10 +1,10 @@
 import type { FullCustomer } from "../../../../models/cusModels/fullCusModel.js";
 import { customerProductHasRelevantStatus } from "../../../../utils/index.js";
-import type { CustomerFilter } from "../../../migrations/filters/customerFilter.js";
 import {
 	arrayFilterMatches,
 	stringMatcherMatches,
-} from "../../../migrations/filters/match/index.js";
+} from "../../../common/filters/match/index.js";
+import type { CustomerFilter } from "../../../migrations/filters/customerFilter.js";
 import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/planFilterMatchesCustomerProduct.js";
 
 /**

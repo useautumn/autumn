@@ -4,8 +4,8 @@ import {
 	isOneOffProduct,
 } from "../../../../utils/productUtils/classifyProduct/classifyProductUtils.js";
 import { pricesAndEntitlementsToBasePriceAndEntitlementPrices } from "../../../../utils/productUtils/entitlementPriceUtils/convertEntitlementPrice/pricesAndEntitlementsToBasePriceAndEntitlementPrices.js";
-import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
-import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
+import { stringMatcherMatches } from "../../../common/filters/match/index.js";
+import { numberMatcherMatches } from "../../../common/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 import { basePriceFilterMatches } from "./basePriceFilterMatches.js";
 import { itemFilterMatchesEntitlementPrices } from "./itemFilterMatchesEntitlementPrices.js";

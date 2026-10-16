@@ -1,5 +1,5 @@
 import type { Price } from "../../../../models/productModels/priceModels/priceModels.js";
-import { nullableFieldMatches } from "../../../migrations/filters/match/index.js";
+import { nullableFieldMatches } from "../../../common/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
 /**

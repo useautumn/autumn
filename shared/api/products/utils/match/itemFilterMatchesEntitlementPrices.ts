@@ -1,5 +1,5 @@
 import type { EntitlementPrice } from "../../../../utils/productUtils/entitlementPriceUtils/entitlementPriceTypes.js";
-import { arrayFilterMatches } from "../../../migrations/filters/match/index.js";
+import { arrayFilterMatches } from "../../../common/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 import { itemFilterMatchesEntitlementPrice } from "./itemFilterMatchesEntitlementPrice.js";
 
