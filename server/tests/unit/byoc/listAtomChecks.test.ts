@@ -61,6 +61,7 @@ const atomRow = ({
 	encrypted_token: "encrypted",
 	token_hash: null,
 	region: "us-east-1",
+	volume_size_gib: 20,
 	network: null,
 	stack_name: null,
 	name: null,
