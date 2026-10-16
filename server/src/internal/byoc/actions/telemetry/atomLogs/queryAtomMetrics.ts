@@ -9,7 +9,7 @@ import {
 	axiomNumberFrom,
 	axiomStringFrom,
 } from "@/external/axiom/utils/resultUtils.js";
-import { queryAtomLogs } from "./queryAtomLogs.js";
+import { ATOM_HEALTH_LINES, queryAtomLogs } from "./queryAtomLogs.js";
 
 const RANGE_SECONDS: Record<AtomMetricsRange, number> = {
 	"1h": 60 * 60,
@@ -60,7 +60,7 @@ export const atomMetricsPeriodSeconds = ({
 
 /** Every replica's health line summed into the window it landed in; disk is the fullest replica's, null where none knew its volume. */
 const windowsPipeline = ({ windowSeconds }: { windowSeconds: number }) => `
-	| where line contains '"atom_health"'
+	${ATOM_HEALTH_LINES}
 	| extend data = parse_json(line).data
 	| where todouble(data.interval.seconds) > 0
 	| extend lineSeconds = todouble(data.interval.seconds),

@@ -895,6 +895,19 @@ describe("the request line", () => {
 		expect(after.forwarded - before.forwarded).toBe(1);
 	});
 
+	test("health probes alone count no request", async () => {
+		const { app } = createDeployedApp();
+		const threadStats = async () =>
+			(await (await app.request("/health")).json()).threads[0];
+		const before = await threadStats();
+
+		for (let probe = 0; probe < 5; probe++) await app.request("/health");
+		const after = await threadStats();
+
+		expect(after.requests - before.requests).toBe(0);
+		expect(after.checks - before.checks).toBe(0);
+	});
+
 	test("the health probe reports boot, restarts, the container and every thread's counters; a check counts", async () => {
 		const { app } = createDeployedApp();
 		const before = (await (await app.request("/health")).json()).threads[0]

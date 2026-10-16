@@ -1,5 +1,5 @@
 {
-  "id": "f048b095-c3c8-4398-b8bc-f850348e8287",
+  "id": "2cc0b24a-2031-4f7a-921e-b215043a65df",
   "prevId": "556de3ab-d6c6-4b5a-b5cc-0ec6bdb0c5c7",
   "version": "7",
   "dialect": "postgresql",
@@ -536,13 +536,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "volume_size_gib": {
-          "name": "volume_size_gib",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 20
-        },
         "network": {
           "name": "network",
           "type": "jsonb",
@@ -563,6 +556,12 @@
         },
         "first_check_at": {
           "name": "first_check_at",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_check_seen_at": {
+          "name": "first_check_seen_at",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
