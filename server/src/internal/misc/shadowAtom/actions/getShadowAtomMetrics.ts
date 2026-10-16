@@ -13,7 +13,7 @@ export const getShadowAtomMetrics = async ({
 }): Promise<GetAtomMetricsResponse> => {
 	const { current } = await findShadowAtomRecords();
 	if (!current?.deployment_id)
-		return { period_seconds: 0, points: [], latest: null };
+		return { period_seconds: 0, points: [], latest: null, volumes: [] };
 	return queryAtomMetrics({
 		deploymentId: current.deployment_id,
 		range: params.range,

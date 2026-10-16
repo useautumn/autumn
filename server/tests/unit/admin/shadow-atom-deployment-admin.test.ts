@@ -101,6 +101,7 @@ const metrics = spyOn(atomMetricsModule, "queryAtomMetrics").mockResolvedValue({
 	period_seconds: 10,
 	points: [],
 	latest: null,
+	volumes: [],
 });
 
 beforeEach(() => {

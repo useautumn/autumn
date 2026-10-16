@@ -19,7 +19,7 @@ export const getAtomMetrics = async ({
 		atomId: params.atom_id,
 	});
 	if (!cacheDeployment?.deployment_id)
-		return { period_seconds: 0, points: [], latest: null };
+		return { period_seconds: 0, points: [], latest: null, volumes: [] };
 	return queryAtomMetrics({
 		deploymentId: cacheDeployment.deployment_id,
 		range: params.range,
