@@ -1,9 +1,11 @@
 import { Button } from "@autumn/ui";
 import { KeyIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useApiKeysLastUsedQuery } from "@/hooks/queries/useApiKeysLastUsedQuery";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createAPIKeyTableColumns } from "./components/APIKeyTableColumns";
@@ -13,6 +15,7 @@ export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
 	const lastUsed = useApiKeysLastUsedQuery();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
+	const canCreateKey = useCanDo(APPROVAL_OPENERS.createApiKey);
 
 	const columns = useMemo(
 		() => createAPIKeyTableColumns({ lastUsed }),
@@ -61,10 +64,12 @@ export const ApiKeysPage = () => {
 
 	return (
 		<div className="h-fit max-h-full">
-			<CreateApiKeySheet
-				open={createDialogOpen}
-				onOpenChange={setCreateDialogOpen}
-			/>
+			{canCreateKey && (
+				<CreateApiKeySheet
+					open={createDialogOpen}
+					onOpenChange={setCreateDialogOpen}
+				/>
+			)}
 			{hasRows ? (
 				<>
 					<Table.Toolbar>
@@ -74,13 +79,15 @@ export const ApiKeysPage = () => {
 								Secret API Keys
 							</Table.Heading>
 							<Table.Actions>
-								<Button
-									variant="primary"
-									size="default"
-									onClick={() => setCreateDialogOpen(true)}
-								>
-									Create Secret Key
-								</Button>
+								{canCreateKey && (
+									<Button
+										variant="primary"
+										size="default"
+										onClick={() => setCreateDialogOpen(true)}
+									>
+										Create Secret Key
+									</Button>
+								)}
 							</Table.Actions>
 						</div>
 					</Table.Toolbar>
@@ -106,13 +113,15 @@ export const ApiKeysPage = () => {
 				<EmptyState
 					type="api-keys"
 					actionButton={
-						<Button
-							variant="primary"
-							size="default"
-							onClick={() => setCreateDialogOpen(true)}
-						>
-							Create Secret Key
-						</Button>
+						canCreateKey && (
+							<Button
+								variant="primary"
+								size="default"
+								onClick={() => setCreateDialogOpen(true)}
+							>
+								Create Secret Key
+							</Button>
+						)
 					}
 				/>
 			)}

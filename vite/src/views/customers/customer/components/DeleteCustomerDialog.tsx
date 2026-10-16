@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
@@ -60,7 +61,11 @@ export const DeleteCustomerDialog = ({
 				navigateTo(`/customers`, navigate, env);
 			}
 		} catch (error) {
-			toast.error("Failed to delete customer");
+			toastWriteError({
+				error,
+				fallback: "Failed to delete customer",
+				inlineDenials: false,
+			});
 		} finally {
 			setLoadingStates({
 				deleteStripe: false,

@@ -50,3 +50,7 @@ export const formatAskRoles = ({
 	const names = denial.allowed_roles.map(roleName);
 	return `Ask someone with the ${joinWithOr({ items: names })} role`;
 };
+
+/** A toast for a denial the screen can't show inline: "Invoice voids: Only Finance can void invoices." */
+export const formatDenialToast = ({ denial }: { denial: PermissionDenial }) =>
+	`${denial.decided_by.rule_name}: ${denial.message}`;

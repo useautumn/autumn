@@ -3,7 +3,10 @@ import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { useFetchPreviewUpdateCatalog } from "@/hooks/queries/catalog/usePreviewUpdateCatalog";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -15,7 +18,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CatalogV2Service } from "@/services/CatalogV2Service";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { navigateTo } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { buildCatalogUpdatePlans } from "../catalog/buildUpdateCatalogPlanParams";
@@ -63,12 +66,15 @@ export const SaveChangesBar = ({
 		useProductQuery();
 
 	const isCusPlanEditor = useIsCusPlanEditor();
+	const canUpdatePlan = useCanDo(APPROVAL_OPENERS.updatePlan);
+	const saveBlocked = !isCusPlanEditor && !canUpdatePlan;
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
 	}
 
 	const handleSaveClicked = async () => {
+		if (saveBlocked) return;
 		if (planHasChanges) {
 			for (const item of product.items) {
 				if (!checkItemCurrenciesValid(item)) return;
@@ -122,7 +128,11 @@ export const SaveChangesBar = ({
 					return;
 				}
 			} catch (error) {
-				toast.error(getBackendErr(error, "Failed to preview plan changes"));
+				toastWriteError({
+					error,
+					fallback: "Failed to preview plan changes",
+					inlineDenials: false,
+				});
 				return;
 			} finally {
 				setSaving(false);
@@ -149,7 +159,11 @@ export const SaveChangesBar = ({
 			toast.success("Changes saved successfully");
 			if (renamed) navigateTo(`/products/${product.id}`, navigate);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to save plan"));
+			toastWriteError({
+				error,
+				fallback: "Failed to save plan",
+				inlineDenials: false,
+			});
 		}
 
 		setSaving(false);
@@ -182,6 +196,7 @@ export const SaveChangesBar = ({
 				metaShortcut="s"
 				onClick={handleSaveClicked}
 				isLoading={saving}
+				disabled={saveBlocked}
 			>
 				{saveButtonText}
 			</ShortcutButton>
