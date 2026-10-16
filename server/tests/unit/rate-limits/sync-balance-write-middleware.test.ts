@@ -131,14 +131,24 @@ describe("synchronous balance write limiters", () => {
 		expect(limiterCalls).toEqual([RateLimitType.TrackOrg, RateLimitType.Track]);
 	});
 
-	test("a queued track without a customer still runs TrackOrg then Track", async () => {
-		const response = await request({
-			path: "/v1/balances.track",
-			body: { feature_id: "messages", async: true },
-		});
+	test("any org-capped bucket without a customer runs only its org cap", async () => {
+		for (const { path, orgLimit } of [
+			{ path: "/v1/balances.track", orgLimit: RateLimitType.TrackOrg },
+			{ path: "/v1/check", orgLimit: RateLimitType.CheckCustomerGetOrg },
+			{
+				path: "/v1/entities.get",
+				orgLimit: RateLimitType.CustomerEntitiesGetOrg,
+			},
+		]) {
+			limiterCalls.length = 0;
+			const response = await request({
+				path,
+				body: { feature_id: "messages", async: true },
+			});
 
-		expect(response.status).toBe(200);
-		expect(limiterCalls).toEqual([RateLimitType.TrackOrg, RateLimitType.Track]);
+			expect(response.status).toBe(200);
+			expect(limiterCalls).toEqual([orgLimit]);
+		}
 	});
 });
 

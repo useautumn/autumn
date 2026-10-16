@@ -187,7 +187,6 @@ describe("synchronous balance write limits", () => {
 			scope: RateLimitScope.Customer,
 			store: "redis",
 			orgLimit: RateLimitType.SyncBalanceWriteOrg,
-			orgCapOnlyWithoutCustomer: true,
 		});
 		expect(RATE_LIMIT_CONFIGS[RateLimitType.SyncBalanceWriteOrg]).toEqual({
 			limit: 120_000,
