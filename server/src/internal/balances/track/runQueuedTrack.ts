@@ -11,10 +11,7 @@ import { withIdempotencyKey } from "@/internal/misc/idempotency/withIdempotencyK
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import type { TokenDeduction } from "../utils/types/featureDeduction.js";
 import { runBalanceWorkerTrack } from "./balanceWorker/runBalanceWorkerTrack.js";
-import {
-	assertSpooledTrackReplayable,
-	logSpooledTrackDrained,
-} from "./balanceWorker/spool/spooledTrackReplay.js";
+import { replaySpooledTrack } from "./balanceWorker/spool/spooledTrackReplay.js";
 import { getValidatedTrackFeatureDeductions } from "./utils/getValidatedTrackFeatureDeductions.js";
 import { toTokenFeatureDeduction } from "./utils/tokenFeatureDeduction.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
@@ -39,6 +36,12 @@ export const runQueuedTrack = async ({
 	/** Set when a worker-path track was spooled because its command-log append failed or stalled. */
 	spooledAt?: number;
 }) => {
+	// Settled on the worker, or applied on Redis below once the worker has fenced the original out.
+	if (spooledAt !== undefined) {
+		const replay = await replaySpooledTrack({ ctx, body, tokens, spooledAt });
+		if (replay === "settled") return;
+	}
+
 	const featureDeductions = getValidatedTrackFeatureDeductions({
 		ctx,
 		body,
@@ -47,15 +50,10 @@ export const runQueuedTrack = async ({
 			? toTokenFeatureDeduction({ feature: deduction.feature, tokens })
 			: deduction,
 	);
-	const onWorker = isBalanceWorkerRolloutEnabled({
-		ctx,
-		customerId: body.customer_id,
-	});
-	// A late-landing original append is only deduplicated while the worker still remembers its command id.
-	if (spooledAt !== undefined && onWorker)
-		assertSpooledTrackReplayable({ ctx, body, spooledAt });
-
-	let alreadyApplied = false;
+	// A fenced spool stays on Redis even if routing flipped back: the worker now refuses its command ids.
+	const onWorker =
+		spooledAt === undefined &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id });
 	try {
 		await withIdempotencyKey({
 			ctx,
@@ -82,7 +80,6 @@ export const runQueuedTrack = async ({
 			throw error;
 		}
 
-		alreadyApplied = true;
 		ctx.logger.info("[track] queued replay already applied", {
 			type: "track_queue_replay_duplicate",
 			customer_id: body.customer_id,
@@ -91,6 +88,4 @@ export const runQueuedTrack = async ({
 			event_name: body.event_name,
 		});
 	}
-	if (spooledAt !== undefined)
-		logSpooledTrackDrained({ ctx, body, spooledAt, onWorker, alreadyApplied });
 };

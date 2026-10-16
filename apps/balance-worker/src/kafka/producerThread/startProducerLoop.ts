@@ -1,5 +1,5 @@
 /**
- * The producer thread's loop: the kafkajs producers live here, on their own thread. Send frames come off the
+ * The producer thread's loop: the producers live here, on their own thread. Send frames come off the
  * send ring (or by `postMessage` when they did not fit), each becomes one `producer.send`, and its outcome
  * goes back as an ack frame. Nothing here knows a record's meaning: it moves bytes and reports what the
  * broker said.

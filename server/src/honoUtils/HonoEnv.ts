@@ -38,6 +38,8 @@ export type RequestContext = {
 
 	// Info
 	id: string;
+	/** The request's Idempotency-Key header; a track without a body key derives its command ids from it. */
+	idempotencyKey?: string;
 	isPublic: boolean;
 	useReplicaDb?: boolean;
 	authType: AuthType;

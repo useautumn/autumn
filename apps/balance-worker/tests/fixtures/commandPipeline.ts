@@ -12,7 +12,6 @@ import {
 	type MeteringRecord,
 	serializeCommandRecord,
 } from "@autumn/kafka";
-import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
 import { createCommandRecordHandler } from "../../src/kafka/commandConsumer/createCommandRecordHandler.js";
 import type { PartitionRuntimePort } from "../../src/partitions/types/partitions.js";
 import { createPartitionProcessor } from "../../src/processor/createPartitionProcessor.js";
@@ -54,8 +53,11 @@ export const createCommandPipeline = ({
 	unknownAppendAt,
 	heldAppend,
 	heldApply,
+	featureRowsGone = [],
 	states = [],
 }: {
+	/** Feature ids whose rows are gone: a lock read back on one carries no internal id, as the features join finds none. */
+	featureRowsGone?: string[];
 	/** Subjects resident beside the default customers. */
 	states?: SubjectState[];
 	/** The nth commit (0-based) the broker refuses outright. */
@@ -163,9 +165,17 @@ export const createCommandPipeline = ({
 				},
 				db: {
 					...createSyntheticWorkerDb(),
+					// A row read back carries its feature's internal id, joined on as Postgres joins it.
 					readLockRows: async ({ keys }) => {
 						lockReads.push(keys.map(({ lockId }) => lockId));
-						return keys.flatMap(({ lockId }) => storedLocks.get(lockId) ?? []);
+						return keys.flatMap(({ lockId }) => {
+							const row = storedLocks.get(lockId);
+							if (!row) return [];
+							const gone = featureRowsGone.includes(row.feature_id);
+							return [
+								{ ...row, internal_feature_id: gone ? null : "feat_messages" },
+							];
+						});
 					},
 				},
 				catalogCache: createTestCatalogCache(),
@@ -201,6 +211,7 @@ export const createCommandPipeline = ({
 				logger: {
 					info: (...args: unknown[]) => logs.push(`info:${args[0]}`),
 					warn: (...args: unknown[]) => logs.push(`warn:${args[0]}`),
+					error: (...args: unknown[]) => logs.push(`error:${args[0]}`),
 				},
 				markUnavailable: (failure) => {
 					parked.push(failure);
@@ -286,20 +297,13 @@ export const createCommandPipeline = ({
 	};
 };
 
-/** What kafkajs throws when a leader election outlasts the producer's retries; the append may have landed. */
+/** What librdkafka throws when a leader election outlasts message.timeout.ms; the append may have landed. */
 function retriesRanOut(): KafkaTransactionStateUnknownError {
-	const election = new KafkaJSProtocolError(
-		Object.assign(new Error("There is no leader for this topic-partition"), {
-			type: "LEADER_NOT_AVAILABLE",
-			code: 5,
-			retriable: true,
-		}),
-	);
 	return new KafkaTransactionStateUnknownError({
 		failureStage: "commit",
-		cause: new KafkaJSNumberOfRetriesExceeded(election, {
-			retryCount: 10,
-			retryTime: 2_500,
+		cause: Object.assign(new Error("Local: Message timed out"), {
+			code: -192,
+			retriable: true,
 		}),
 	});
 }

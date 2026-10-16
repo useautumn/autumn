@@ -22,6 +22,9 @@ const commandIdOf = ({
 	const scope = isFanOut ? [body.feature_id] : [];
 	if (body.idempotency_key)
 		return JSON.stringify(["track", body.idempotency_key, ...scope]);
+	// A header key outlives the request id: a retry after a 503 RESULT_UNKNOWN carries it and must dedupe.
+	if (ctx.idempotencyKey)
+		return JSON.stringify(["track-header", ctx.idempotencyKey, ...scope]);
 	return [ctx.id, ...scope].join(":");
 };
 

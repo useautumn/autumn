@@ -1,5 +1,5 @@
 /** Send frames off the ring (or the message port), each one `producer.send` in its producer's own order. */
-import type { ProducerRecord } from "kafkajs";
+import type { ProducerRecord } from "@autumn/kafka";
 import {
 	readSendFrame,
 	SEND_FRAME,
@@ -19,8 +19,6 @@ function recordOf({ meta, records }: Omit<SendFrame, "reqId">): ProducerRecord {
 		topic: meta.topic,
 		messages,
 		...(meta.acks !== undefined && { acks: meta.acks }),
-		...(meta.compression !== undefined && { compression: meta.compression }),
-		...(meta.timeout !== undefined && { timeout: meta.timeout }),
 	};
 }
 

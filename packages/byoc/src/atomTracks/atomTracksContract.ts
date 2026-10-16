@@ -10,21 +10,32 @@ const trackCommandOnWire = z.custom<TrackCommand>(
 	(value) => typeof value === "object" && value !== null,
 );
 
-/** A lock the Atom settles, named as the API names it: Autumn settles its own row, never the Atom's copy. */
-const atomFinalizeSchema = z.object({
+/** A finalize the Atom journaled as the caller sent it, undecided: Autumn's own row for the lock names its entity and feature and decides it. */
+const atomUndecidedFinalizeSchema = z.object({
 	requestId: z.string().min(1),
 	occurredAt: z.number().int().nonnegative(),
 	customer_id: z.string().min(1),
 	lock_id: z.string().min(1),
-	/** The lock's entity and feature, as its track named them: the view it settles in and what a confirm above it is attributed to. */
-	entity_id: z.string().min(1).nullable(),
-	feature_id: z.string().min(1),
 	/** 0 releases the lock, null confirms it at what it took. */
 	finalValue: z.number().nullable(),
 	properties: z.record(z.string(), z.unknown()).nullish(),
 });
 
+export type AtomUndecidedFinalize = z.infer<typeof atomUndecidedFinalizeSchema>;
+
+/** A lock the Atom settled on its own copy, named as the API names it: Autumn settles its own row, never the Atom's. */
+const atomFinalizeSchema = atomUndecidedFinalizeSchema.extend({
+	/** The lock's entity and feature, as its track named them: the view it settles in and what a confirm above it is attributed to. */
+	entity_id: z.string().min(1).nullable(),
+	feature_id: z.string().min(1),
+});
+
 export type AtomFinalize = z.infer<typeof atomFinalizeSchema>;
+
+const handedInSchema = z.object({
+	writerId: z.string().min(1),
+	seq: z.number().int().positive(),
+});
 
 /**
  * Journaled tracks and finalizes: `writerId` names the journal file, and `seq` is its per-customer number, so Autumn can say "seen up to
@@ -33,16 +44,9 @@ export type AtomFinalize = z.infer<typeof atomFinalizeSchema>;
 export const AtomTracksAppendRequestSchema = z.object({
 	tracks: z.array(
 		z.union([
-			z.object({
-				writerId: z.string().min(1),
-				seq: z.number().int().positive(),
-				command: trackCommandOnWire,
-			}),
-			z.object({
-				writerId: z.string().min(1),
-				seq: z.number().int().positive(),
-				finalize: atomFinalizeSchema,
-			}),
+			handedInSchema.extend({ command: trackCommandOnWire }),
+			handedInSchema.extend({ finalize: atomFinalizeSchema }),
+			handedInSchema.extend({ undecidedFinalize: atomUndecidedFinalizeSchema }),
 		]),
 	),
 });

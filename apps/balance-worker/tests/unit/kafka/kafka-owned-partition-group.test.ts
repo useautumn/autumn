@@ -89,14 +89,13 @@ test("failed retirement stops the group without starting a replacement", async (
 });
 
 import { describe, expect, test } from "bun:test";
-import { KafkaTransactionStateUnknownError } from "@autumn/kafka";
-import type {
-	ConsumerCrashEvent,
-	ConsumerGroupJoinEvent,
-	ConsumerRebalancingEvent,
-	ConsumerRunConfig,
-} from "kafkajs";
-import { KafkaJSNumberOfRetriesExceeded, KafkaJSProtocolError } from "kafkajs";
+import {
+	type ConsumerCrashEvent,
+	type ConsumerGroupJoinEvent,
+	type ConsumerRebalancingEvent,
+	type ConsumerRunConfig,
+	KafkaTransactionStateUnknownError,
+} from "@autumn/kafka";
 import {
 	type OwnedPartitionHealth,
 	ownedPartitionHealthOf,
@@ -226,12 +225,7 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 			emit(
 				"consumer.group_join",
 				event<ConsumerGroupJoinEvent["payload"]>("consumer.group_join", {
-					duration: 1,
 					groupId: "balance-workers",
-					isLeader: true,
-					leaderId: "worker-1",
-					groupProtocol: "RoundRobinAssigner",
-					memberId: "worker-1",
 					memberAssignment: { [topic]: partitions },
 				}),
 			);
@@ -241,7 +235,6 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 				"consumer.rebalancing",
 				event<ConsumerRebalancingEvent["payload"]>("consumer.rebalancing", {
 					groupId: "balance-workers",
-					memberId: "worker-1",
 				}),
 			);
 		},
@@ -659,7 +652,7 @@ describe("Kafka owned partition group", () => {
 
 			expect(unavailable).toEqual([crash]);
 			expect(errors).toEqual([crash]);
-			// kafkajs restarts this consumer: the rejoin brings the partitions back, so the worker stays up.
+			// The consumer restarts itself: the rejoin brings the partitions back, so the worker stays up.
 			await Bun.sleep(20);
 			expect(consumer.lifecycle).not.toContain("consumer-stop");
 			consumer.emitGroupJoin([0]);
@@ -670,7 +663,7 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
-	test("a crash kafkajs will not restart from ends the worker, naming why: nothing would ever rejoin", async () => {
+	test("a crash the consumer will not restart from ends the worker, naming why: nothing would ever rejoin", async () => {
 		const fixture = createStoreFixture();
 		try {
 			const consumer = createFakeGroupConsumer();
@@ -724,13 +717,9 @@ describe("Kafka owned partition group", () => {
 			const stopped: number[] = [];
 			const events: string[] = [];
 			const warnings: string[] = [];
-			const refusal = new KafkaJSProtocolError(
-				Object.assign(
-					new Error(
-						"Not authorized to access group: Group authorization failed",
-					),
-					{ type: "GROUP_AUTHORIZATION_FAILED", code: 30, retriable: false },
-				),
+			const refusal = Object.assign(
+				new Error("Not authorized to access group: Group authorization failed"),
+				{ code: 30, retriable: false },
 			);
 			const group = createKafkaOwnedPartitionGroup({
 				consumer,
@@ -802,6 +791,74 @@ describe("Kafka owned partition group", () => {
 		}
 	});
 
+	test("a consumer that lost its group generation is rejoined with backoff, not exited: a broker roll does not take workers down", async () => {
+		const fixture = createStoreFixture();
+		try {
+			const consumer = createFakeGroupConsumer();
+			const started: number[] = [];
+			const stopped: number[] = [];
+			const events: string[] = [];
+			const warnings: string[] = [];
+			// librdkafka's answer to a commit from a member epoch the group already moved past.
+			const staleEpoch = Object.assign(
+				new Error("Broker: The member epoch is stale"),
+				{ code: 113, isRetriable: false },
+			);
+			const crash = new Error("Kafka consumer crashed", { cause: staleEpoch });
+			const group = createKafkaOwnedPartitionGroup({
+				consumer,
+				partitionOffsets: createPartitionOffsets(),
+				topic,
+				stateStore: fixture.store,
+				idempotencyKeys: createFakeIdempotencyKeys().keys,
+				partitionsConsumedConcurrently: 2,
+				healthRefreshIntervalMs: 5_000,
+				consumerRejoin: { initialBackoffMs: 1, maxBackoffMs: 4 },
+				logger: {
+					info: (...args: unknown[]) => warnings.push(`info:${args[1]}`),
+					warn: (...args: unknown[]) => warnings.push(`warn:${args[1]}`),
+				} as never,
+				createRuntime: createRuntimeFactory({
+					started,
+					stopped,
+					unavailable: [],
+				}),
+				onError: () => undefined,
+				onUnhealthyPartition: () => undefined,
+				onServiceStopped: () => {
+					events.push("service-stopped");
+				},
+			});
+			await group.start();
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 1);
+
+			consumer.emitCrash(crash, { restart: false });
+			await waitFor(
+				() =>
+					consumer.lifecycle.filter((step) => step === "consumer-run")
+						.length === 2,
+			);
+			expect(stopped).toEqual([0]);
+			expect(events).toEqual([]);
+			expect(group.consumer()).toEqual({
+				status: "rejoining",
+				rejoinAttempts: 1,
+			});
+			expect(warnings[0]).toMatch(
+				/^warn:Balance worker consumer lost its group generation; rejoining in 1ms \(attempt 1\)/,
+			);
+
+			consumer.emitGroupJoin([0]);
+			await waitFor(() => started.length === 2);
+			expect(group.consumer()).toEqual({ status: "joined", rejoinAttempts: 0 });
+			expect(events).toEqual([]);
+			await group.stop();
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("a rejoin that fails for any reason but the broker's refusal ends the worker: nothing else clears on its own", async () => {
 		const fixture = createStoreFixture();
 		try {
@@ -810,13 +867,9 @@ describe("Kafka owned partition group", () => {
 			const stopped: number[] = [];
 			const events: string[] = [];
 			const reasons: unknown[] = [];
-			const refusal = new KafkaJSProtocolError(
-				Object.assign(
-					new Error(
-						"Not authorized to access group: Group authorization failed",
-					),
-					{ type: "GROUP_AUTHORIZATION_FAILED", code: 30, retriable: false },
-				),
+			const refusal = Object.assign(
+				new Error("Not authorized to access group: Group authorization failed"),
+				{ code: 30, retriable: false },
 			);
 			const subscriptionFailure = new Error(
 				"Subscription to the balance topic was rejected",
@@ -1043,22 +1096,13 @@ describe("Kafka owned partition group", () => {
 	});
 
 	test("parks and retries a producer the broker refused to initialise, keeping the task and the other partitions up", async () => {
-		const policyRefusal = new KafkaJSProtocolError(
-			Object.assign(
-				new Error("Request parameters do not satisfy the configured policy"),
-				{ type: "POLICY_VIOLATION", code: 44, retriable: false },
-			),
-		);
-		const coordinatorLoading = new KafkaJSNumberOfRetriesExceeded(
-			new KafkaJSProtocolError(
-				Object.assign(
-					new Error(
-						"The coordinator is loading and hence can't process requests for this group",
-					),
-					{ type: "COORDINATOR_LOAD_IN_PROGRESS", code: 14, retriable: true },
-				),
-			),
-			{ retryCount: 5, retryTime: 1_000 },
+		const policyRefusal = Object.assign(new Error("Broker: Policy violation"), {
+			code: 44,
+			isRetriable: false,
+		});
+		const coordinatorLoading = Object.assign(
+			new Error("Broker: Coordinator load in progress"),
+			{ code: 14, isRetriable: true },
 		);
 		for (const refusal of [policyRefusal, coordinatorLoading]) {
 			const fixture = createStoreFixture();
@@ -1378,16 +1422,11 @@ describe("Kafka owned partition group", () => {
 					group.findRuntime({ partition: 1, routeEpoch: "0" }) !== undefined,
 			);
 
-			const election = new KafkaJSProtocolError(
-				Object.assign(
-					new Error("There is no leader for this topic-partition"),
-					{
-						type: "LEADER_NOT_AVAILABLE",
-						code: 5,
-						retriable: true,
-					},
-				),
-			);
+			// librdkafka reports an election that outlasted message.timeout.ms as a timed-out send.
+			const election = Object.assign(new Error("Local: Message timed out"), {
+				code: -192,
+				retriable: true,
+			});
 			failedAttempt.set(1, startAttempts.get(1) ?? 0);
 			unavailableListeners.get(1)?.({
 				cause: new OwnedPartitionRecoveryRequiredError({
@@ -1396,10 +1435,7 @@ describe("Kafka owned partition group", () => {
 					cause: new PartitionWriterRecoveryRequiredError({
 						cause: new KafkaTransactionStateUnknownError({
 							failureStage: "commit",
-							cause: new KafkaJSNumberOfRetriesExceeded(election, {
-								retryCount: 10,
-								retryTime: 2_500,
-							}),
+							cause: election,
 						}),
 					}),
 				}),

@@ -23,7 +23,7 @@ import {
 } from "./components/atom/atomDisplay";
 
 const ATOM_SECTION = {
-	title: "Edge cache",
+	title: "Atom",
 	badge: "PREVIEW",
 	description: "Answer balance checks from your own cloud.",
 };

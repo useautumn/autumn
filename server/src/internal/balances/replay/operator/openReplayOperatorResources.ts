@@ -31,7 +31,6 @@ const REPLAY_KAFKA_LIMITS = {
  *  loggers at import time, and a dry run must construct none of them. */
 async function loadReplayOperatorModules() {
 	const [
-		kafkajs,
 		kafka,
 		workerClient,
 		database,
@@ -40,7 +39,6 @@ async function loadReplayOperatorModules() {
 		hydration,
 		archive,
 	] = await Promise.all([
-		import("kafkajs"),
 		import("@autumn/kafka"),
 		import("@autumn/balance-worker-client"),
 		import("@/db/initDrizzle.js"),
@@ -50,7 +48,7 @@ async function loadReplayOperatorModules() {
 		import("./runReplayArchive.js"),
 	]);
 	return {
-		Kafka: kafkajs.Kafka,
+		createKafka: kafka.createKafka,
 		createKafkaClient: kafka.createKafkaClient,
 		createKafkaTransport: kafka.createKafkaTransport,
 		createOwnershipConsumer: kafka.createOwnershipConsumer,
@@ -88,7 +86,7 @@ function createReplayOwnershipConsumer({
 		limits: REPLAY_KAFKA_LIMITS,
 	});
 	return modules.createOwnershipConsumer({
-		ctx: { kafka: new modules.Kafka(kafkaConfig) },
+		ctx: { kafka: modules.createKafka(kafkaConfig) },
 		config: {
 			topic: target.topic,
 			groupIdPrefix: REPLAY_OWNERSHIP_GROUP_PREFIX,

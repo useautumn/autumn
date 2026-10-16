@@ -14,7 +14,14 @@ import {
 	MAX_UNSENT_PER_THREAD,
 	openJournal,
 } from "../../../src/state/journal/openJournal.js";
-import type { Journal } from "../../../src/state/journal/types/journal.js";
+import type {
+	Journal,
+	JournaledCommand,
+} from "../../../src/state/journal/types/journal.js";
+
+/** Every entry here is a track, which has a command id; an undecided finalize has only its request's. */
+const commandIdOf = (command: JournaledCommand): string =>
+	"commandId" in command ? command.commandId : command.requestId;
 
 const folders: string[] = [];
 const journals: Journal[] = [];
@@ -83,7 +90,7 @@ describe("journal", () => {
 			entries.map(({ customerId, seq, command }) => [
 				customerId,
 				seq,
-				command.commandId,
+				commandIdOf(command),
 			]),
 		).toEqual([
 			["cus_1", 1, "a"],
@@ -272,7 +279,7 @@ describe("journal", () => {
 
 		expect(commits).toBe(2);
 		expect(
-			journal.unsent({ limit: 10 }).map(({ command }) => command.commandId),
+			journal.unsent({ limit: 10 }).map(({ command }) => commandIdOf(command)),
 		).toEqual(["b"]);
 		expect(journal.owed({ customerId: "cus_1" })).toEqual([first]);
 	});

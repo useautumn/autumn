@@ -17,11 +17,12 @@ import {
 } from "@autumn/balance-engine";
 import {
 	createIdempotentProducerConfig,
+	createKafka,
 	createKafkaClient,
+	type Kafka,
 	type KafkaConsumerGroupTimings,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
@@ -61,11 +62,11 @@ const logger = {
 } as never;
 
 const createTestKafka = () =>
-	new Kafka(
+	createKafka(
 		createKafkaClient({
 			clientId: unique("herald-membership"),
 			brokers,
-			transport: { logLevel: logLevel.NOTHING },
+			transport: {},
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
@@ -127,7 +128,6 @@ const createTopic = async ({
 	const admin = kafka.admin();
 	await admin.connect();
 	await admin.createTopics({
-		waitForLeaders: true,
 		topics: [{ topic, numPartitions: partitions, replicationFactor: 1 }],
 	});
 	await admin.disconnect();

@@ -1,10 +1,12 @@
 /**
- * The producer thread: builds the same kafkajs client the decide thread would (brokers, MSK IAM signing,
- * limits) and runs the partition producers, so encoding, compression and the broker sockets never take
- * time on the decide thread.
+ * The producer thread: builds the same client the decide thread would (brokers, credentials, limits)
+ * and runs the partition producers, so each record's N-API `produce` call never takes time on the decide thread.
  */
-import { createKafkaClient, createKafkaTransport } from "@autumn/kafka";
-import { Kafka } from "kafkajs";
+import {
+	createKafka,
+	createKafkaClient,
+	createKafkaTransport,
+} from "@autumn/kafka";
 import { createCjsChildrenDedupe } from "../../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { type ProducerLoop, startProducerLoop } from "./startProducerLoop.js";
 import type {
@@ -29,10 +31,6 @@ function post(message: ProducerToDecideMessage): void {
 	self.postMessage(message);
 }
 
-function reportToken(info: unknown): void {
-	post({ kind: "token", info });
-}
-
 /** Null when the client could not be built; the decide thread has been told why. */
 function startThread(init: ProducerThreadInit): ProducerLoop | null {
 	let started: ProducerLoop;
@@ -40,15 +38,13 @@ function startThread(init: ProducerThreadInit): ProducerLoop | null {
 		config: { enabled: init.dedupeCjsChildren ?? false },
 	}).start();
 	try {
-		const kafka = new Kafka(
+		const kafka = createKafka(
 			createKafkaClient({
 				clientId: init.clientId,
 				brokers: init.brokers,
 				transport: createKafkaTransport({
 					authMode: init.authMode,
-					region: init.region,
 					sasl: init.sasl,
-					onToken: reportToken,
 				}),
 				limits: init.limits,
 			}),

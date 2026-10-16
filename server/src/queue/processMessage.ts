@@ -24,7 +24,10 @@ import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBa
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedFinalizeLock } from "@/internal/balances/finalizeLock/runQueuedFinalizeLock.js";
 import { runBalanceReplenishment } from "@/internal/balances/runBalanceReplenishment.js";
-import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
+import {
+	SpooledTrackFateUnknownError,
+	SpooledTrackTooOldError,
+} from "@/internal/balances/track/balanceWorker/spool/spooledTrackErrors.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
@@ -110,7 +113,8 @@ export const shouldRetrySqsJobError = ({
 				balanceWorkerFailOpenReasonOf(error) !== null ||
 				isBalanceWorkerStaleSubjectError(error) ||
 				error instanceof BalanceWorkerClientError ||
-				error instanceof SpooledTrackTooOldError
+				error instanceof SpooledTrackTooOldError ||
+				error instanceof SpooledTrackFateUnknownError
 			);
 		case JobName.SyncCustomerDirty:
 		case JobName.UpdateBalance:

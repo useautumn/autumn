@@ -1,5 +1,8 @@
-import type { Admin, ConsumerConfig } from "kafkajs";
 import type { KafkaConsumerGroupTimings } from "../../../../client/types/kafkaLimits.js";
+import type {
+	Admin,
+	ConsumerConfig,
+} from "../../../../client/types/kafkaWire.js";
 import type {
 	KafkaConsumerClient,
 	TopicConsumer,

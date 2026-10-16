@@ -1,5 +1,5 @@
 import { createBalanceWorkerEnv } from "@autumn/env/balanceWorker";
-import { Kafka } from "kafkajs";
+import { createKafka, createKafkaClient } from "@autumn/kafka";
 import { validateBalanceWorkerTopics } from "../src/init/workerConfig.js";
 
 /** One partition keeps invalidations in order; an hour outlives any cache TTL, so nothing older matters. */
@@ -18,10 +18,20 @@ async function setup(): Promise<void> {
 		throw new Error(
 			"Local topic setup requires loopback brokers and the local deployment",
 		);
-	const admin = new Kafka({
-		clientId: "balance-worker-local-setup",
-		brokers: env.KAFKA_BROKERS,
-	}).admin();
+	const admin = createKafka(
+		createKafkaClient({
+			clientId: "balance-worker-local-setup",
+			brokers: env.KAFKA_BROKERS,
+			transport: {},
+			limits: {
+				connectionTimeoutMs: 5_000,
+				requestTimeoutMs: 30_000,
+				retryCount: 2,
+				initialRetryTimeMs: 100,
+				maxRetryTimeMs: 1_000,
+			},
+		}),
+	).admin();
 	await admin.connect();
 	try {
 		const topics = [
@@ -56,7 +66,7 @@ async function setup(): Promise<void> {
 			if (!existingTopics.has(topic.topic)) missingTopics.push(topic);
 		}
 		if (missingTopics.length > 0)
-			await admin.createTopics({ waitForLeaders: true, topics: missingTopics });
+			await admin.createTopics({ topics: missingTopics });
 		await validateBalanceWorkerTopics({ admin, env });
 		console.info(
 			`Balance worker topics ready on ${env.KAFKA_BROKERS.join(", ")}: ${env.BALANCE_WORKER_METERING_TOPIC}, ${env.BALANCE_WORKER_OWNERSHIP_TOPIC}, ${env.BALANCE_WORKER_COMMAND_TOPIC} (${env.BALANCE_WORKER_PARTITION_COUNT} partitions), ${env.BALANCE_WORKER_CATALOG_INVALIDATION_TOPIC}`,

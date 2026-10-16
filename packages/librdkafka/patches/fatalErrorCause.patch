@@ -1,0 +1,98 @@
+diff --git a/src/errors.cc b/src/errors.cc
+--- a/src/errors.cc
++++ b/src/errors.cc
+@@ -100,6 +100,9 @@
+ }
+ 
+ Napi::Error Baton::ToError(const Napi::Env& env) {
++  if (m_isFatal) {
++    return ToTxnError(env);
++  }
+   if (m_errstr.empty()) {
+     return RdKafkaError(env, m_err);
+   } else {
+diff --git a/src/errors.h b/src/errors.h
+--- a/src/errors.h
++++ b/src/errors.h
+@@ -47,9 +47,9 @@
+   void* m_data;
+   std::string m_errstr;
+   RdKafka::ErrorCode m_err;
+-  bool m_isFatal;
+-  bool m_isRetriable;
+-  bool m_isTxnRequiresAbort;
++  bool m_isFatal = false;
++  bool m_isRetriable = false;
++  bool m_isTxnRequiresAbort = false;
+ };
+ 
+ Napi::Error RdKafkaError(const Napi::Env &env, const RdKafka::ErrorCode &);
+diff --git a/src/kafka-consumer.cc b/src/kafka-consumer.cc
+--- a/src/kafka-consumer.cc
++++ b/src/kafka-consumer.cc
+@@ -512,6 +512,23 @@
+       m_deferred_consume_error.exchange(RdKafka::ERR_NO_ERROR));
+ }
+ 
++Baton KafkaConsumer::WithFatalCause(Baton error) {
++  if (error.err() != RdKafka::ERR__FATAL) return error;
++  // librdkafka queues ERR__FATAL alone and keeps the cause (an authorization refusal, a fenced instance)
++  // on the handle; an application deciding whether to come back needs the cause.
++  std::string errstr;
++  RdKafka::ErrorCode fatal = RdKafka::ERR_NO_ERROR;
++  {
++    scoped_shared_read_lock lock(m_connection_lock);
++    if (IsConnected()) fatal = m_client->fatal_error(errstr);
++  }
++  if (fatal == RdKafka::ERR_NO_ERROR)
++    return Baton(RdKafka::ERR__FATAL, RdKafka::err2str(RdKafka::ERR__FATAL),
++                 true, false, false);
++  // The binding's JS error keeps only the text after the first ": ", so the message is the code's own.
++  return Baton(fatal, RdKafka::err2str(fatal), true, false, false);
++}
++
+ Baton KafkaConsumer::Consume(int timeout_ms) {
+   if (IsConnected()) {
+     scoped_shared_read_lock lock(m_connection_lock);
+diff --git a/src/kafka-consumer.h b/src/kafka-consumer.h
+--- a/src/kafka-consumer.h
++++ b/src/kafka-consumer.h
+@@ -90,6 +90,8 @@
+   // An error a batch consume read after it already held records; the next consume returns it.
+   void DeferConsumeError(RdKafka::ErrorCode code);
+   RdKafka::ErrorCode TakeDeferredConsumeError();
++  // A consume error as the application should see it: ERR__FATAL becomes the error that made the client fatal.
++  Baton WithFatalCause(Baton error);
+ 
+   void ActivateDispatchers() override;
+   void DeactivateDispatchers() override;
+diff --git a/src/workers.cc b/src/workers.cc
+--- a/src/workers.cc
++++ b/src/workers.cc
+@@ -873,7 +873,7 @@
+   // librdkafka hands a consumer error (a fatal one included) out exactly once.
+   RdKafka::ErrorCode deferred = m_consumer->TakeDeferredConsumeError();
+   if (deferred != RdKafka::ERR_NO_ERROR) {
+-    SetErrorBaton(Baton(deferred));
++    SetErrorBaton(m_consumer->WithFatalCause(Baton(deferred)));
+     return;
+   }
+ 
+@@ -919,7 +919,7 @@
+           // Set the error for any other errors and break
+           delete message;
+           if (m_messages.size() == eof_event_count) {
+-            SetErrorBaton(Baton(errorCode));
++            SetErrorBaton(m_consumer->WithFatalCause(Baton(errorCode)));
+           } else {
+             m_consumer->DeferConsumeError(errorCode);
+           }
+@@ -928,7 +928,7 @@
+       }
+     } else {
+       if (m_messages.size() == eof_event_count) {
+-        SetErrorBaton(b);
++        SetErrorBaton(m_consumer->WithFatalCause(b));
+       } else {
+         m_consumer->DeferConsumeError(b.err());
+       }

@@ -24,7 +24,12 @@ const batchEntryToCommands = ({
 	entry: BatchTrackEntry;
 	ttlMs: number;
 }): TrackCommand[] => {
-	const itemCtx = { ...ctx, id: `${ctx.id}-${index}` };
+	// The header key names the whole batch, so it cannot name one item's commands.
+	const itemCtx = {
+		...ctx,
+		id: `${ctx.id}-${index}`,
+		idempotencyKey: undefined,
+	};
 	const key = getTrackBodyIdempotencyKey({ body: item });
 	return trackParamsToTrackCommands({
 		ctx: itemCtx,
