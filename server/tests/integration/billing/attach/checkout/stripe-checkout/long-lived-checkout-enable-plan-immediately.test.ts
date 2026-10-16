@@ -10,6 +10,8 @@
  * - Unpaid plans are expired by the cron once the link's 90 days pass.
  * - A paid session whose webhook is still in flight is neither renewed nor expired.
  * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
+ * - Editing the unpaid plan previews its full new price, bills nothing, and keeps the link,
+ *   which then sells the edit and grants it on payment.
  */
 
 import { expect, test } from "bun:test";
@@ -21,6 +23,7 @@ import {
 	customers,
 	type DeferredAutumnBillingPlanData,
 	metadata,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import {
 	expectProductActive,
@@ -28,6 +31,7 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -334,5 +338,75 @@ test.concurrent(
 			await startLongLivedCheckout(checkoutId),
 		);
 		expect(renewedSessionId).not.toBe(sessionId);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: editing the unpaid plan keeps the link and bills nothing")}`,
+	async () => {
+		const customerId = "ll-eppi-edit";
+		const { autumnV2_2, ctx, pro, internalCustomerId, checkoutId } =
+			await setupLongLivedScenario({ customerId });
+
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 10 }) },
+		};
+
+		// 1. Nothing was paid, so a price cut previews the full new price with no credit.
+		const preview =
+			await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		expect(preview.total).toBe(10);
+
+		// 2. The edit returns the same link and creates no Stripe subscription or invoice.
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		expect(getLongLivedCheckoutId(updateResult.payment_url)).toBe(checkoutId);
+
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		const stripeCustomerId = dbCustomer!.processor!.id;
+		const [subscriptions, invoices] = await Promise.all([
+			ctx.stripeCli.subscriptions.list({
+				customer: stripeCustomerId,
+				status: "all",
+			}),
+			ctx.stripeCli.invoices.list({ customer: stripeCustomerId }),
+		]);
+		expect(subscriptions.data).toHaveLength(0);
+		expect(invoices.data).toHaveLength(0);
+
+		// 3. The plan stays granted, and the link sells the edited price.
+		expect(
+			await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }),
+		).toBeDefined();
+		const stripeUrl = await startLongLivedCheckout(checkoutId);
+		const session = await ctx.stripeCli.checkout.sessions.retrieve(
+			getStripeSessionId(stripeUrl),
+		);
+		expect(session.amount_total).toBe(1000);
+
+		// 4. Paying the link links the subscription onto the edited plan.
+		await completeStripeCheckoutForm({ url: stripeUrl });
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			objectId: session.id,
+			until: async () => {
+				const row = await getActiveProRow({
+					ctx,
+					internalCustomerId,
+					productId: pro.id,
+				});
+				return (row?.subscription_ids ?? []).length === 1;
+			},
+		});
 	},
 );

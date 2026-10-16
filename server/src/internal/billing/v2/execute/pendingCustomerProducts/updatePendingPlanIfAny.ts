@@ -1,6 +1,7 @@
 import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
+import { findUnpaidLongLivedCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findUnpaidLongLivedCustomerProduct";
 import {
 	type PendingUpdateResult,
 	updatePendingCustomerProduct,
@@ -13,14 +14,17 @@ export const updatePendingPlanIfAny = async ({
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 }): Promise<PendingUpdateResult | undefined> => {
-	const customerProduct = await findPendingCustomerProduct({
+	const target = {
 		ctx,
 		customerId: params.customer_id,
 		productId: params.plan_id,
 		entityId: params.entity_id,
 		customerProductId: params.customer_product_id,
 		subscriptionId: params.subscription_id,
-	});
+	};
+	const customerProduct =
+		(await findPendingCustomerProduct(target)) ??
+		(await findUnpaidLongLivedCustomerProduct(target));
 
 	if (!customerProduct) return;
 

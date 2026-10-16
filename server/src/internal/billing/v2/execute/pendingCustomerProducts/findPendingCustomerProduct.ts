@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 
 /** Explicit targets win over the plan, in the same order billing.update resolves them. */
-const matchesTarget = ({
+export const matchesTarget = ({
 	customerProduct,
 	productId,
 	customerProductId,

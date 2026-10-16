@@ -2,12 +2,13 @@ import type {
 	DeferredAutumnBillingPlanData,
 	FullCusProduct,
 } from "@autumn/shared";
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { CusProductStatus, ErrCode, RecaseError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { cancelCreatedStripeSubscription } from "@/internal/billing/v2/actions/expirePendingPlan/execute/cancelCreatedStripeSubscription";
+import { expireCustomerProducts } from "@/internal/billing/v2/execute/pendingCustomerProducts/expirePendingCustomerProducts";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
@@ -75,6 +76,11 @@ export const discardPendingCustomerProduct = async ({
 		}
 
 		await MetadataService.delete({ db: ctx.db, id: metadataId });
+	}
+
+	if (customerProduct.status !== CusProductStatus.Pending) {
+		await expireCustomerProducts({ ctx, customerProducts: [customerProduct] });
+		return;
 	}
 
 	await CusProductService.expireIfPending({
