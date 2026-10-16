@@ -275,3 +275,45 @@ test("a cold fleet that grew hands newcomers a partition each instead of leaving
 	expect(events("c")).toEqual([4, 5]);
 	expect(events("d")).toEqual([6, 7]);
 });
+
+test("the load-aware leader deals nothing to a member missing a topic another member reads", async () => {
+	const all = ["commands", "events", "migrations"];
+	const added: string[][] = [];
+	const cluster = {
+		...createCluster(),
+		findTopicPartitionMetadata: createCluster().findTopicPartitionMetadata,
+		addMultipleTargetTopics: async (topics: string[]) => {
+			added.push(topics);
+		},
+	} as unknown as Cluster;
+	const assigner = createLoadAwareAssigner({
+		loads: { snapshot: () => new Map() },
+	})({ cluster, groupId: "test", logger: quietLogger });
+	const metadataFor = (subscribed: string[]) =>
+		createLoadAwareAssigner({ loads: { snapshot: () => new Map() } })({
+			cluster,
+			groupId: "test",
+			logger: quietLogger,
+		}).protocol({ topics: subscribed }).metadata;
+	const encoded = await assigner.assign({
+		members: [
+			{ memberId: "a", memberMetadata: metadataFor(["events", "commands"]) },
+			{ memberId: "b", memberMetadata: metadataFor(all) },
+		],
+		topics: ["events", "commands"],
+	});
+	const byMember = new Map(
+		encoded.map(({ memberId, memberAssignment }) => [
+			memberId,
+			AssignerProtocol.MemberAssignment.decode(memberAssignment)?.assignment ??
+				{},
+		]),
+	);
+	expect(added).toEqual([["migrations"]]);
+	expect(byMember.get("a") ?? {}).toEqual({});
+	const b = byMember.get("b");
+	for (const topic of all)
+		expect(b?.[topic]).toEqual(
+			Array.from({ length: partitionCount }, (_, partition) => partition),
+		);
+});

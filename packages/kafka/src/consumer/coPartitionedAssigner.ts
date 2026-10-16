@@ -1,4 +1,5 @@
 import { AssignerProtocol, type PartitionAssigner } from "kafkajs";
+import { membersSubscribedToEveryTopic } from "./membersSubscribedToEveryTopic.js";
 
 const ASSIGNER_NAME = "CoPartitionedAssigner";
 const ASSIGNER_VERSION = 0;
@@ -10,13 +11,14 @@ const ASSIGNER_VERSION = 0;
 export function coPartitionedAssigner({
 	cluster,
 }: Parameters<PartitionAssigner>[0]): ReturnType<PartitionAssigner> {
-	async function assign({
-		members,
-		topics,
-	}: {
-		members: { memberId: string }[];
+	async function assign(group: {
+		members: { memberId: string; memberMetadata: Buffer }[];
 		topics: string[];
 	}) {
+		const { members, topics } = await membersSubscribedToEveryTopic({
+			cluster,
+			...group,
+		});
 		const memberIds = members.map(memberIdOf).sort();
 		const assignment = new Map<string, Record<string, number[]>>();
 		for (const topic of topics) {
@@ -24,7 +26,9 @@ export function coPartitionedAssigner({
 				const memberId = memberIds[partitionId % memberIds.length];
 				if (memberId === undefined) continue;
 				const byTopic = assignment.get(memberId) ?? {};
-				(byTopic[topic] ??= []).push(partitionId);
+				const partitions = byTopic[topic] ?? [];
+				partitions.push(partitionId);
+				byTopic[topic] = partitions;
 				assignment.set(memberId, byTopic);
 			}
 		}

@@ -1,4 +1,5 @@
 import { AssignerProtocol, type PartitionAssigner } from "kafkajs";
+import { membersSubscribedToEveryTopic } from "./membersSubscribedToEveryTopic.js";
 
 const ASSIGNER_NAME = "LoadAwareCoPartitionedAssigner";
 const ASSIGNER_VERSION = 1;
@@ -57,13 +58,11 @@ export function createLoadAwareAssigner({
 		cluster,
 		logger,
 	}: Parameters<PartitionAssigner>[0]): ReturnType<PartitionAssigner> {
-		async function assign({
-			members,
-			topics,
-		}: {
-			members: GroupMember[];
-			topics: string[];
-		}) {
+		async function assign(group: { members: GroupMember[]; topics: string[] }) {
+			const { members, topics } = await membersSubscribedToEveryTopic({
+				cluster,
+				...group,
+			});
 			const partitionsByTopic = partitionsByTopicOf({ cluster, topics });
 			const partitions = unionOf({ partitionsByTopic });
 			const memberIds = members.map(memberIdOf).sort();
