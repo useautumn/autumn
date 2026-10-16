@@ -19,7 +19,7 @@ const { AtomVerifySection } = await import(
 	"../../../src/views/settings/sections/components/atom/AtomVerifySection"
 );
 
-const { Done, Pending } = ByocCacheStageStatus;
+const { Done, Waiting } = ByocCacheStageStatus;
 
 const atom = ({ connected }: { connected: boolean }): ApiByocCache => ({
 	id: "atom_1",
@@ -42,7 +42,7 @@ const atom = ({ connected }: { connected: boolean }): ApiByocCache => ({
 		machine: Done,
 		load_balancer: Done,
 		atom: Done,
-		connected: connected ? Done : Pending,
+		connected: connected ? Done : Waiting,
 	},
 	error: null,
 });
