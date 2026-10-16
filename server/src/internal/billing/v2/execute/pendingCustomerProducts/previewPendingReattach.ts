@@ -1,8 +1,9 @@
-import type {
-	AttachParamsV1,
-	DeferredAutumnBillingPlanData,
-	FullCusProduct,
-	UpdateSubscriptionV1Params,
+import {
+	type AttachParamsV1,
+	CusProductStatus,
+	type DeferredAutumnBillingPlanData,
+	type FullCusProduct,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -10,6 +11,36 @@ import { handleUnknownFeatureQuantityErrors } from "@/internal/billing/v2/action
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
+import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+
+/** A granted plan is only discarded at execution: the preview must not see it attached, and both carry its usage. */
+const grantedPlanOverrides = async ({
+	ctx,
+	params,
+	customerProduct,
+}: {
+	ctx: AutumnContext;
+	params: AttachParamsV1;
+	customerProduct: FullCusProduct;
+}) => {
+	const fullCustomer = await setupFullCustomerContext({ ctx, params });
+	const carryUsagesFromCustomerProduct =
+		fullCustomer.customer_products.find(
+			({ id }) => id === customerProduct.id,
+		) ?? customerProduct;
+	return {
+		preview: {
+			fullCustomer: {
+				...fullCustomer,
+				customer_products: fullCustomer.customer_products.filter(
+					({ id }) => id !== customerProduct.id,
+				),
+			},
+			carryUsagesFromCustomerProduct,
+		},
+		execute: { carryUsagesFromCustomerProduct },
+	};
+};
 
 /** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
 export const previewPendingReattach = async ({
@@ -43,10 +74,15 @@ export const previewPendingReattach = async ({
 			}
 		: reattachParams;
 
+	const isGranted = customerProduct.status !== CusProductStatus.Pending;
+	const overrides = isGranted
+		? await grantedPlanOverrides({ ctx, params: attachParams, customerProduct })
+		: undefined;
 	const replacementPreview = await billingActions.attach({
 		ctx,
 		params: attachParams,
 		preview: true,
+		contextOverride: overrides?.preview,
 	});
 
 	const replacementProduct =
@@ -58,13 +94,23 @@ export const previewPendingReattach = async ({
 			params,
 		});
 
-	const rebills = pendingPlanRebills({
-		ctx,
-		customerProduct,
-		replacementProduct,
-		replacementQuantities:
-			replacementPreview.billingContext?.featureQuantities ?? [],
-	});
+	// A granted plan's payment is tied to its rows by the Stripe session, so any edit re-grants it.
+	const rebills =
+		isGranted ||
+		pendingPlanRebills({
+			ctx,
+			customerProduct,
+			replacementProduct,
+			replacementQuantities:
+				replacementPreview.billingContext?.featureQuantities ?? [],
+			replacementTrialContext: replacementPreview.billingContext?.trialContext,
+		});
 
-	return { attachParams, longLivedCheckout, replacementPreview, rebills };
+	return {
+		attachParams,
+		attachContextOverride: overrides?.execute,
+		longLivedCheckout,
+		replacementPreview,
+		rebills,
+	};
 };

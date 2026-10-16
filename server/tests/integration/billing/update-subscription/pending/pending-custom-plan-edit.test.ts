@@ -6,10 +6,15 @@
  * Green (after): the edit lands on top of the pending plan's own price and items,
  * as billing.update does for an active plan, so an allowance-only edit keeps the
  * original payment.
+ *
+ * Red (before): paying after an allowance-only edit failed the checkout webhook with a
+ * duplicate customer product, so the customer paid and never got the plan.
+ * Green (after): paying grants the edited plan.
  */
 
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerV3,
 	type AttachParamsV1Input,
 	CusProductStatus,
 	customers,
@@ -17,9 +22,11 @@ import {
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
+import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { waitForStripeWebhook } from "@tests/utils/stripeUtils/waitForStripeWebhook";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
@@ -39,14 +46,15 @@ const setupCustomPendingPlan = async ({ name }: { name: string }) => {
 		actions: [],
 	});
 
-	await scenario.autumnV2_2.billing.attach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: pro.id,
-		customize: {
-			price: itemsV2.monthlyPrice({ amount: 1200 }),
-			items: [itemsV2.monthlyMessages({ included: 100 })],
-		},
-	});
+	const attachResult =
+		await scenario.autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 1200 }),
+				items: [itemsV2.monthlyMessages({ included: 100 })],
+			},
+		});
 
 	const listPendingRows = async () => {
 		const dbCustomer = await scenario.ctx.db.query.customers.findFirst({
@@ -59,7 +67,13 @@ const setupCustomPendingPlan = async ({ name }: { name: string }) => {
 		});
 	};
 
-	return { ...scenario, customerId, pro, listPendingRows };
+	return {
+		...scenario,
+		customerId,
+		pro,
+		paymentUrl: attachResult.payment_url as string,
+		listPendingRows,
+	};
 };
 
 test.concurrent(
@@ -181,5 +195,60 @@ test.concurrent(
 		);
 		expect(messages.expiry_duration).toBe(EntitlementDuration.Month);
 		expect(messages.expiry_length).toBe(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan edit: paying after an allowance-only edit grants the edited plan")}`,
+	async () => {
+		const {
+			autumnV1,
+			autumnV2_2,
+			ctx,
+			customerId,
+			pro,
+			paymentUrl,
+			listPendingRows,
+		} = await setupCustomPendingPlan({ name: "pending-custom-items-paid" });
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { items: [itemsV2.monthlyMessages({ included: 200 })] },
+		});
+
+		await completeStripeCheckoutForm({ url: paymentUrl });
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			objectId: paymentUrl.match(/cs_(test|live)_[A-Za-z0-9]+/)![0],
+			until: async () => (await listPendingRows()).length === 0,
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(customer.products.find((p) => p.id === pro.id)?.status).toBe(
+			"active",
+		);
+		expect(customer.features?.[TestFeature.Messages]?.included_usage).toBe(200);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan edit: a price edit replaces the Stripe checkout with a new one")}`,
+	async () => {
+		const { autumnV2_2, customerId, pro, paymentUrl, listPendingRows } =
+			await setupCustomPendingPlan({ name: "pending-custom-price-link" });
+
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+			});
+
+		expect(updateResult.payment_url).toContain("checkout.stripe.com");
+		expect(updateResult.payment_url).not.toBe(paymentUrl);
+		expect(await listPendingRows()).toHaveLength(1);
 	},
 );

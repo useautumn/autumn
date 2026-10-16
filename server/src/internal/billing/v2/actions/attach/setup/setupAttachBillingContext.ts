@@ -348,6 +348,8 @@ export const setupAttachBillingContext = async ({
 		currentCustomerProduct,
 		scheduledCustomerProduct,
 		carryOverSourceCustomerProduct,
+		carryUsagesFromCustomerProduct:
+			contextOverride.carryUsagesFromCustomerProduct,
 		licenseTransitionSourceCustomerProduct,
 		canceledStripeSubscriptionId,
 

@@ -40,11 +40,13 @@ export const buildPendingReattachParams = ({
 		}),
 		version: params.version,
 		enable_plan_immediately: billingContext.enablePlanImmediately,
-		invoice_mode: invoiceMode && {
-			enabled: true,
-			enable_plan_immediately: invoiceMode.enableProductImmediately,
-			issue_method: invoiceModeToIssueMethod({ invoiceMode }),
-			net_terms_days: invoiceMode.daysUntilDue,
-		},
+		invoice_mode:
+			params.invoice_mode ??
+			(invoiceMode && {
+				enabled: true,
+				enable_plan_immediately: invoiceMode.enableProductImmediately,
+				issue_method: invoiceModeToIssueMethod({ invoiceMode }),
+				net_terms_days: invoiceMode.daysUntilDue,
+			}),
 	} as AttachParamsV1;
 };

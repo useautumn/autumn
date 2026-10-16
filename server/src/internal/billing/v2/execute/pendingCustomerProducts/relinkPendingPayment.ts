@@ -1,8 +1,10 @@
 import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { repointDeferredPlanToReplacement } from "@/internal/billing/v2/execute/pendingCustomerProducts/repointDeferredPlanToReplacement";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
+/** Moves the pending payment onto the row that replaced its plan, so paying grants the replacement. */
 export const relinkPendingPayment = async ({
 	ctx,
 	customerProduct,
@@ -36,5 +38,12 @@ export const relinkPendingPayment = async ({
 			metadata_id: metadataId,
 			created_at: customerProduct.created_at,
 		},
+	});
+
+	await repointDeferredPlanToReplacement({
+		ctx,
+		metadataId,
+		replacedCustomerProduct: customerProduct,
+		replacement,
 	});
 };

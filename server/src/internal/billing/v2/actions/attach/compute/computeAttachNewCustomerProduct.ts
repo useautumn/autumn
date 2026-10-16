@@ -18,6 +18,17 @@ type NewCustomerProductParams = Partial<
 	Pick<AttachParamsV1, "carry_over_usages" | "ends_at" | "no_billing_changes">
 >;
 
+// multiAttach / scheduled-activation contexts don't set the carry-over source;
+// fall back to the same-group product so their carry-over is preserved.
+const attachCarryOverSource = ({
+	attachBillingContext,
+}: {
+	attachBillingContext: AttachBillingContext;
+}) =>
+	attachBillingContext.carryOverSourceCustomerProduct ??
+	attachBillingContext.currentCustomerProduct ??
+	attachBillingContext.carryUsagesFromCustomerProduct;
+
 export const resolveAttachExistingUsagesConfig = ({
 	ctx,
 	attachBillingContext,
@@ -27,10 +38,8 @@ export const resolveAttachExistingUsagesConfig = ({
 	attachBillingContext: AttachBillingContext;
 	params: NewCustomerProductParams;
 }): ExistingUsagesConfig | undefined => {
-	const { currentCustomerProduct, carryOverSourceCustomerProduct, planTiming } =
-		attachBillingContext;
-	const carryOverSource =
-		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+	const { planTiming } = attachBillingContext;
+	const carryOverSource = attachCarryOverSource({ attachBillingContext });
 
 	if (planTiming === "end_of_cycle" || !carryOverSource) return undefined;
 
@@ -80,7 +89,6 @@ const computeAttachNewCustomerProductResult = ({
 		attachProduct,
 		fullCustomer,
 		currentCustomerProduct,
-		carryOverSourceCustomerProduct,
 		planTiming,
 		endOfCycleMs,
 		stripeSubscription,
@@ -101,10 +109,7 @@ const computeAttachNewCustomerProductResult = ({
 		invoiceMode,
 	} = attachBillingContext;
 
-	// multiAttach / scheduled-activation contexts don't set the carry-over source;
-	// fall back to the same-group product so their carry-over is preserved.
-	const carryOverSource =
-		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+	const carryOverSource = attachCarryOverSource({ attachBillingContext });
 
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = billingStartsAt ?? (isScheduled ? endOfCycleMs : undefined);
