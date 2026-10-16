@@ -44,7 +44,6 @@ export const ProductListRowToolbar = ({
 	sandboxes: SandboxSummary[];
 }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const { canCopy, canDelete } = usePlanRowPermissions({ product });
 	const [copyOpen, setCopyOpen] = useState(false);
 	const [copyToEnv, setCopyToEnv] = useState<AppEnv>(AppEnv.Sandbox);
 	const [createVariantOpen, setCreateVariantOpen] = useState(false);
@@ -63,6 +62,16 @@ export const ProductListRowToolbar = ({
 
 	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
 	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
+	const {
+		showCopyMenu,
+		canCopyToEnv,
+		showSandboxSeparator,
+		canCreateVariant,
+		canDelete,
+	} = usePlanRowPermissions({
+		product,
+		hasOtherSandboxes: otherSandboxes.length > 0,
+	});
 
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
 		setDropdownOpen(false);
@@ -79,7 +88,6 @@ export const ProductListRowToolbar = ({
 			toast.error(getBackendErr(error, "Failed to copy plan"));
 		}
 	};
-
 
 	const productCounts = counts[product.id];
 	const allCount = productCounts?.all || 0;
@@ -168,38 +176,42 @@ export const ProductListRowToolbar = ({
 					</DropdownMenuTrigger>
 				</div>
 				<DropdownMenuContent align="end">
-					{canCopy && (
+					{showCopyMenu && (
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger className="flex gap-2">
 								<CopyIcon />
 								Copy to
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
-								<DropdownMenuItem
-									className="flex gap-2"
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setDropdownOpen(false);
-										setCopyToEnv(AppEnv.Sandbox);
-										setCopyOpen(true);
-									}}
-								>
-									Sandbox
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									className="flex gap-2"
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setDropdownOpen(false);
-										setCopyToEnv(AppEnv.Live);
-										setCopyOpen(true);
-									}}
-								>
-									Production
-								</DropdownMenuItem>
-								{otherSandboxes.length > 0 && <DropdownMenuSeparator />}
+								{canCopyToEnv && (
+									<>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Sandbox);
+												setCopyOpen(true);
+											}}
+										>
+											Sandbox
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Live);
+												setCopyOpen(true);
+											}}
+										>
+											Production
+										</DropdownMenuItem>
+									</>
+								)}
+								{showSandboxSeparator && <DropdownMenuSeparator />}
 								{otherSandboxes.map((s) => (
 									<DropdownMenuItem
 										key={s.id}
@@ -216,7 +228,7 @@ export const ProductListRowToolbar = ({
 							</DropdownMenuSubContent>
 						</DropdownMenuSub>
 					)}
-					{canCopy && !product.archived && (
+					{canCreateVariant && (
 						<DropdownMenuItem
 							className="flex gap-2"
 							onClick={(e) => {
