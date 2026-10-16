@@ -1,17 +1,20 @@
-import type {
-	ApprovalAction,
-	ApprovalRule,
-	CreateApprovalRuleParams,
-	RuleSubject,
-	WhenKey,
-} from "@autumn/shared";
 import {
 	type EditorRowIssue,
 	PINNED_FIELDS,
-	rowsToWhen,
-	whenToRows,
+	ruleFilterToRows,
+	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index";
-import { isDeferredAction, ruleWhenArea } from "./ruleActions";
+import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
+import type {
+	ApprovalAction,
+	ApprovalFilterKey,
+	ApprovalRule,
+	ApprovalRuleEffect,
+	ApprovalRuleFilter,
+	RuleSubject,
+} from "../approvalsStub";
+import { ACTIONS } from "../approvalsStub";
+import { ruleFilterKey } from "./ruleActions";
 import { decodeRow, encodeRow, type RuleRow } from "./ruleRowCodec";
 
 /** Rows and groups carry an id so React keeps each one's inputs as others are removed. */
@@ -23,8 +26,10 @@ export const withId = <Item extends object>(item: Item) => ({
 	id: crypto.randomUUID(),
 });
 
+/** Rows carry no effect; the quantifiers are chosen from `effect` on save. */
 export type RuleEditorValues = {
 	name: string;
+	effect: ApprovalRuleEffect;
 	subjects: RuleSubject[];
 	actions: ApprovalAction[];
 	/** Balances' Feature, set once above the groups. */
@@ -35,22 +40,23 @@ export type RuleEditorValues = {
 };
 
 export type EditorValuesResult =
-	| { ok: true; params: CreateApprovalRuleParams }
+	| { ok: true; params: ApprovalRuleCreateParams }
 	| { ok: false; issues: EditorRowIssue[] };
 
-const emptyPinned = (area: WhenKey | null): RuleRow | null => {
-	const field = area && PINNED_FIELDS[area];
+const emptyPinned = (shape: ApprovalFilterKey | null): RuleRow | null => {
+	const field = shape && PINNED_FIELDS[shape];
 	return field ? { field, operator: "is", values: [] } : null;
 };
 
 /** Fresh When values for these actions: no groups, and an empty Feature row for Balances. */
 export const whenValuesFor = ({ actions }: { actions: ApprovalAction[] }) => ({
-	pinned: emptyPinned(ruleWhenArea({ actions })),
+	pinned: emptyPinned(ruleFilterKey({ actions })),
 	groups: [],
 });
 
 export const emptyEditorValues = (): RuleEditorValues => ({
 	name: "",
+	effect: "block",
 	subjects: [],
 	actions: [],
 	pinned: null,
@@ -59,27 +65,35 @@ export const emptyEditorValues = (): RuleEditorValues => ({
 	enabled: true,
 });
 
-/** `editable: false` when the stored `when` can't be shown as rows; the sheet opens read-only. */
+/** `editable: false` when the stored filter can't be shown as rows; the sheet opens read-only. */
 export const ruleToEditorValues = ({ rule }: { rule: ApprovalRule }) => {
 	const values: RuleEditorValues = {
 		...emptyEditorValues(),
 		name: rule.name,
+		effect: rule.effect,
 		subjects: rule.subjects,
 		actions: rule.actions,
 		note: rule.note ?? "",
 		enabled: rule.enabled,
 	};
-	if (rule.actions.some(isDeferredAction)) return { editable: false, values };
-	const area = ruleWhenArea({ actions: rule.actions });
-	if (!area) return { editable: rule.when === null, values };
+	// Ids S3 no longer lists (deferred member actions, old names) can't be edited.
+	if (rule.actions.some((action) => !(action in ACTIONS))) {
+		return { editable: false, values };
+	}
+	const shape = ruleFilterKey({ actions: rule.actions });
+	if (!shape) return { editable: rule.filter === null, values };
 
-	const rows = whenToRows({ area, when: rule.when });
+	const rows = ruleFilterToRows({
+		shape,
+		effect: rule.effect,
+		filter: rule.filter,
+	});
 	if (!rows.editable) return { editable: false, values };
 	return {
 		editable: true,
 		values: {
 			...values,
-			pinned: rows.pinned ? encodeRow(rows.pinned) : emptyPinned(area),
+			pinned: rows.pinned ? encodeRow(rows.pinned) : emptyPinned(shape),
 			groups: rows.groups.map((group) =>
 				withId({ rules: group.map((row) => withId(encodeRow(row))) }),
 			),
@@ -92,23 +106,25 @@ export const editorValuesToParams = ({
 }: {
 	values: RuleEditorValues;
 }): EditorValuesResult => {
-	const area = ruleWhenArea({ actions: values.actions });
-	const when = area
-		? rowsToWhen({
-				area,
+	const shape = ruleFilterKey({ actions: values.actions });
+	const stored = shape
+		? ruleRowsToFilter({
+				shape,
+				effect: values.effect,
 				pinned: values.pinned && decodeRow(values.pinned),
 				groups: values.groups.map((group) => group.rules.map(decodeRow)),
 			})
-		: { ok: true as const, when: null };
-	if (!when.ok) return when;
+		: { ok: true as const, filter: null };
+	if (!stored.ok) return stored;
 
 	return {
 		ok: true,
 		params: {
 			name: values.name.trim(),
+			effect: values.effect,
 			subjects: values.subjects,
 			actions: values.actions,
-			when: when.when,
+			filter: stored.filter as ApprovalRuleFilter | null,
 			note: values.note.trim() || null,
 			enabled: values.enabled,
 		},

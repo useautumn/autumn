@@ -1,16 +1,14 @@
-import type {
-	ApprovalAction,
-	ApprovalRule,
-	ApprovalRuleIssue,
-} from "@autumn/shared";
 import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import {
+	type ApprovalRuleIssue,
 	invalidRuleIssues,
 	useSaveApprovalRule,
 } from "@/hooks/queries/useApprovalRulesMutations";
-import { ruleWhenArea } from "./ruleActions";
+import type { ApprovalAction, ApprovalRule } from "../approvalsStub";
+import type { ReadOnlyReason } from "./ReadOnlyNotice";
+import { ruleFilterKey } from "./ruleActions";
 import {
 	editorValuesToParams,
 	emptyEditorValues,
@@ -26,13 +24,26 @@ const matchesPath = ({
 	path: string;
 }) => issue.path === path || issue.path.startsWith(`${path}.`);
 
-const PINNED_PATH = "when.feature_id";
+const PINNED_PATH = "filter.feature_id";
+
+const readOnlyReason = ({
+	canEdit,
+	editable,
+}: {
+	canEdit: boolean;
+	editable: boolean;
+}): ReadOnlyReason | null => {
+	if (!canEdit) return "not_editor";
+	return editable ? null : "shape";
+};
 
 export const useApprovalRuleForm = ({
 	rule,
+	canEdit,
 	onSaved,
 }: {
 	rule: ApprovalRule | null;
+	canEdit: boolean;
 	onSaved: () => void;
 }) => {
 	const save = useSaveApprovalRule();
@@ -67,12 +78,12 @@ export const useApprovalRuleForm = ({
 
 	return {
 		form,
-		readOnly: !opened.editable,
+		readOnly: readOnlyReason({ canEdit, editable: opened.editable }),
 		isSaving: save.isPending,
 		serverIssue,
-		whenError: issues.server.find(
+		filterError: issues.server.find(
 			(issue) =>
-				matchesPath({ issue, path: "when" }) && issue.path !== PINNED_PATH,
+				matchesPath({ issue, path: "filter" }) && issue.path !== PINNED_PATH,
 		)?.message,
 		rowIssues: serverPinned
 			? [
@@ -81,7 +92,7 @@ export const useApprovalRuleForm = ({
 				]
 			: issues.rows,
 		clearRowIssues: () => setIssues((prev) => ({ ...prev, rows: [] })),
-		/** A different set of `when` fields starts the conditions over; old ones wouldn't fit. */
+		/** A different filter shape starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,
 			actions,
@@ -89,7 +100,7 @@ export const useApprovalRuleForm = ({
 			current: ApprovalAction[];
 			actions: ApprovalAction[];
 		}) => {
-			if (ruleWhenArea({ actions }) !== ruleWhenArea({ actions: current })) {
+			if (ruleFilterKey({ actions }) !== ruleFilterKey({ actions: current })) {
 				const { pinned, groups } = whenValuesFor({ actions });
 				form.setFieldValue("pinned", pinned);
 				form.setFieldValue("groups", groups);

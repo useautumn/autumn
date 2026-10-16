@@ -1,8 +1,8 @@
-/** Contract: Balances pin a required Feature row above the groups, never inside one, saved at the top of `when`. */
+/** Contract: Balances pin a required Feature row above the groups, never inside one, saved at the top of `filter`. */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalAction } from "@autumn/shared";
 import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
+import type { ApprovalAction } from "@/views/settings/sections/approvals/approvalsStub";
 import {
 	editorValuesToParams,
 	emptyEditorValues,
@@ -53,8 +53,10 @@ describe("editor required Feature", () => {
 
 	test.each(["balance_create", "balance_update"] as const)(
 		"%s never offers Feature inside a group",
-		(area) => {
-			const fields = ruleFieldRegistry({ area }).fields.map(({ path }) => path);
+		(shape) => {
+			const fields = ruleFieldRegistry({ shape }).fields.map(
+				({ path }) => path,
+			);
 			expect(fields).not.toContain("feature");
 			expect(fields).toContain("included_grant");
 		},
@@ -85,9 +87,9 @@ describe("editor required Feature", () => {
 		},
 	);
 
-	test("a chosen feature is saved at the top of `when`, beside the groups", () => {
+	test("a chosen feature is saved at the top of `filter`, beside the groups", () => {
 		const result = save({ feature: ["messages"], groups: [[grant(["100"])]] });
-		expect(result.ok && result.params.when).toEqual({
+		expect(result.ok && result.params.filter).toEqual({
 			feature_id: "messages",
 			included_grant: { $lte: 100 },
 		});

@@ -1,19 +1,24 @@
-import { WHEN_FIELD_LABELS, type WhenKey } from "@autumn/shared";
 import {
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorOperator,
 	type EditorRow,
 	PINNED_FIELDS,
+	VALUELESS_OPERATORS,
 } from "@autumn/shared/api/approvals/editor/index";
 import { createFieldRegistry } from "@/components/filters/fieldRegistry";
 import type { FilterOperatorOption } from "@/components/filters/types";
+import {
+	APPROVAL_FILTER_FIELD_LABELS,
+	type ApprovalFilterKey,
+} from "../approvalsStub";
 import { decodeRow, encodeRow, valueInputOf } from "./ruleRowCodec";
 
-// Dot paths into S3's WHEN_FIELD_LABELS where they aren't the field's own name.
+// Dot paths into S3's APPROVAL_FILTER_FIELD_LABELS where they aren't the field's own name.
 const LABEL_PATHS: Partial<Record<EditorField, string>> = {
 	customer: "customer.customer_id",
 	customer_plan: "customer.plan",
+	customer_has_paid: "customer.has_paid",
 	next_cycle_total: "next_cycle.total",
 	incoming_plan: "incoming.plan_id",
 	outgoing_plan: "outgoing.plan_id",
@@ -33,7 +38,7 @@ const LABEL_PATHS: Partial<Record<EditorField, string>> = {
 	feature: "feature_id",
 	reset_interval: "reset.interval",
 	reward: "reward_id",
-	plan: "plan_id",
+	plan: "plan.plan_id",
 };
 
 const OPERATOR_LABELS: Record<EditorOperator, string> = {
@@ -44,6 +49,9 @@ const OPERATOR_LABELS: Record<EditorOperator, string> = {
 	has: "has",
 	doesnt_have: "doesn't have",
 	has_none: "has none",
+	has_any: "has one",
+	is_customer: "is the customer",
+	is_entity: "is an entity",
 	eq: "equals",
 	ne: "doesn't equal",
 	lt: "less than",
@@ -53,13 +61,13 @@ const OPERATOR_LABELS: Record<EditorOperator, string> = {
 };
 
 export const fieldLabel = ({
-	area,
+	shape,
 	field,
 }: {
-	area: WhenKey;
+	shape: ApprovalFilterKey;
 	field: EditorField;
 }) => {
-	const labels: Record<string, string> = WHEN_FIELD_LABELS[area];
+	const labels: Record<string, string> = APPROVAL_FILTER_FIELD_LABELS[shape];
 	// S3 has no "Current plan"; it shares `customer.plan` with "Customer has plan".
 	if (field === "current_plan") return "Current plan";
 	return labels[LABEL_PATHS[field] ?? field] ?? field;
@@ -71,22 +79,24 @@ export const operatorOptions = (
 	operators.map((operator) => ({
 		value: operator,
 		label: OPERATOR_LABELS[operator],
-		hidesValue: operator === "has_none",
+		hidesValue: VALUELESS_OPERATORS.includes(operator),
 	}));
 
-/** The area's When fields for U1's builder, in board order; the pinned Feature isn't one. */
-export const ruleFieldRegistry = ({ area }: { area: WhenKey }) => {
-	const fields = Object.entries(EDITOR_FIELDS[area]) as [
+/** The shape's When fields for U1's builder, in board order; the pinned Feature isn't one. */
+export const ruleFieldRegistry = ({ shape }: { shape: ApprovalFilterKey }) => {
+	const fields = Object.entries(EDITOR_FIELDS[shape]) as [
 		EditorField,
 		readonly EditorOperator[],
 	][];
-	const groupFields = fields.filter(([field]) => field !== PINNED_FIELDS[area]);
+	const groupFields = fields.filter(
+		([field]) => field !== PINNED_FIELDS[shape],
+	);
 
 	return createFieldRegistry<EditorRow, EditorField, EditorOperator>({
 		defaultPath: groupFields[0][0],
 		fields: groupFields.map(([field, operators]) => ({
 			path: field,
-			label: fieldLabel({ area, field }),
+			label: fieldLabel({ shape, field }),
 			valueInput: valueInputOf(field),
 			operators: operatorOptions(operators),
 			toFilter: decodeRow,

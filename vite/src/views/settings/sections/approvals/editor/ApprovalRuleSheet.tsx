@@ -1,9 +1,4 @@
 import {
-	APPROVAL_AREAS,
-	type ApprovalAction,
-	type ApprovalRule,
-} from "@autumn/shared";
-import {
 	Button,
 	Input,
 	Sheet,
@@ -12,22 +7,23 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Switch,
+	Tabs,
+	TabsList,
+	TabsTrigger,
 } from "@autumn/ui";
+import type { ApprovalRule, ApprovalRuleEffect } from "../approvalsStub";
 import { ChipMultiSelect } from "./ChipMultiSelect";
 import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
 import { RuleWhenSection } from "./RuleWhenSection";
-import { ruleArea, ruleWhenArea } from "./ruleActions";
+import { areaLabel, ruleArea, ruleFilterKey } from "./ruleActions";
 import { useApprovalRuleForm } from "./useApprovalRuleForm";
 import {
 	subjectKey,
 	toggleSubject,
 	useRuleSubjectGroups,
 } from "./useRuleSubjectGroups";
-
-const SCOPE_CAPTION =
-	"Once a role has a rule for an action, every request for that action must match one of its rules.";
 
 const required =
 	({ message }: { message: string }) =>
@@ -36,12 +32,25 @@ const required =
 			? undefined
 			: message;
 
+const sheetTitle = ({
+	rule,
+	canEdit,
+}: {
+	rule: ApprovalRule | null;
+	canEdit: boolean;
+}) => {
+	if (!rule) return "New rule";
+	return canEdit ? "Edit rule" : "View rule";
+};
+
 export const ApprovalRuleSheet = ({
 	rule,
+	canEdit,
 	open,
 	onOpenChange,
 }: {
 	rule: ApprovalRule | null;
+	canEdit: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
@@ -50,21 +59,16 @@ export const ApprovalRuleSheet = ({
 		readOnly,
 		isSaving,
 		serverIssue,
-		whenError,
+		filterError,
 		rowIssues,
 		clearRowIssues,
 		changeActions,
 	} = useApprovalRuleForm({
 		rule,
+		canEdit,
 		onSaved: () => onOpenChange(false),
 	});
 	const subjectGroups = useRuleSubjectGroups();
-	// With no When section to show it on, a `when` issue reads under Can.
-	const whenIssueWithoutSection = ({
-		actions,
-	}: {
-		actions: ApprovalAction[];
-	}) => (ruleWhenArea({ actions }) ? undefined : serverIssue("when"));
 
 	return (
 		<Sheet
@@ -74,15 +78,15 @@ export const ApprovalRuleSheet = ({
 		>
 			<SheetContent side="right" className="!w-full !max-w-[34rem]">
 				<SheetHeader>
-					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
+					<SheetTitle>{sheetTitle({ rule, canEdit })}</SheetTitle>
 					<SheetDescription>Billing → Approvals</SheetDescription>
 				</SheetHeader>
 
 				<fieldset
-					disabled={readOnly}
+					disabled={readOnly !== null}
 					className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4"
 				>
-					{readOnly && <ReadOnlyNotice />}
+					{readOnly && <ReadOnlyNotice reason={readOnly} />}
 					<form.Field
 						name="name"
 						validators={{ onSubmit: required({ message: "Name the rule." }) }}
@@ -129,6 +133,24 @@ export const ApprovalRuleSheet = ({
 						)}
 					</form.Field>
 
+					<form.Field name="effect">
+						{(field) => (
+							<RuleField label="Can or can't" error={serverIssue("effect")}>
+								<Tabs
+									value={field.state.value}
+									onValueChange={(value: ApprovalRuleEffect) =>
+										field.handleChange(value)
+									}
+								>
+									<TabsList className="w-fit">
+										<TabsTrigger value="allow">Can</TabsTrigger>
+										<TabsTrigger value="block">Can't</TabsTrigger>
+									</TabsList>
+								</Tabs>
+							</RuleField>
+						)}
+					</form.Field>
+
 					<form.Field
 						name="actions"
 						validators={{
@@ -137,14 +159,16 @@ export const ApprovalRuleSheet = ({
 					>
 						{(field) => {
 							const area = ruleArea({ actions: field.state.value });
+							// With no When section to show it on, a filter issue reads under Actions.
+							const shape = ruleFilterKey({ actions: field.state.value });
 							return (
 								<RuleField
-									label="Can"
-									hint={area ? APPROVAL_AREAS[area] : undefined}
+									label="Actions"
+									hint={area ? areaLabel(area) : undefined}
 									error={
 										field.state.meta.errors[0] ??
 										serverIssue("actions") ??
-										whenIssueWithoutSection({ actions: field.state.value })
+										(shape ? undefined : filterError)
 									}
 								>
 									<RuleActionsPicker
@@ -153,9 +177,6 @@ export const ApprovalRuleSheet = ({
 											changeActions({ current: field.state.value, actions })
 										}
 									/>
-									{ruleWhenArea({ actions: field.state.value }) && (
-										<p className="text-subtle text-xs">{SCOPE_CAPTION}</p>
-									)}
 								</RuleField>
 							);
 						}}
@@ -163,19 +184,19 @@ export const ApprovalRuleSheet = ({
 
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
-							const area = ruleWhenArea({ actions });
-							if (!area || readOnly) return null;
+							const shape = ruleFilterKey({ actions });
+							if (!shape || readOnly === "shape") return null;
 							return (
 								<form.Field name="pinned">
 									{(pinned) => (
 										<form.Field name="groups">
 											{(groups) => (
 												<RuleWhenSection
-													area={area}
+													shape={shape}
 													pinned={pinned.state.value}
 													groups={groups.state.value}
 													issues={rowIssues}
-													error={whenError}
+													error={filterError}
 													onPinnedChange={(row) => {
 														clearRowIssues();
 														pinned.handleChange(row);

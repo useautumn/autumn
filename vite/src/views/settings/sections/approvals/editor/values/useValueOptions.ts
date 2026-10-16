@@ -2,7 +2,7 @@ import { ResetInterval } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { TIMINGS } from "../../buildRuleSentence";
+import { ENUM_LABELS } from "../../buildRuleSentence";
 import type { ChipOption } from "../ChipMultiSelect";
 
 const ENUM_VALUES = {
@@ -11,10 +11,11 @@ const ENUM_VALUES = {
 	proration_behavior: ["prorate_immediately", "none", "bill_difference"],
 	cancel_action: ["cancel_end_of_cycle", "cancel_immediately"],
 	reset_interval: Object.values(ResetInterval) as string[],
+	billing_cycle_anchor: ["now", "unchanged", "custom"],
 };
 
 const LABELS: Record<string, string> = {
-	...TIMINGS,
+	...ENUM_LABELS,
 	semi_annual: "Semi-annual",
 	one_off: "One-off",
 };
