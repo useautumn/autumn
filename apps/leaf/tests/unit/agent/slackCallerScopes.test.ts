@@ -45,11 +45,18 @@ await mockModuleWithRestore({
 	specifier: "../../../src/lib/db.js",
 	factory: () => ({
 		db: {
+			// getScopesForUserInOrg reads the member and any custom role in one joined select.
+			select: () => {
+				const chain = {
+					from: () => chain,
+					leftJoin: () => chain,
+					where: () => chain,
+					limit: async () =>
+						lookedUp ? [{ role: lookedUp.role, customAccess: null }] : [],
+				};
+				return chain;
+			},
 			query: {
-				member: {
-					findFirst: async () =>
-						lookedUp ? { role: lookedUp.role } : undefined,
-				},
 				user: {
 					findMany: async () => (lookedUp ? [{ id: lookedUp.userId }] : []),
 				},

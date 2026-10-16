@@ -79,6 +79,26 @@
 			"types": "./api/roles/roleAccess.ts",
 			"import": "./api/roles/roleAccess.ts",
 			"default": "./api/roles/roleAccess.ts"
+		},
+		"./api/roles/apiRole": {
+			"types": "./api/roles/apiRole.ts",
+			"import": "./api/roles/apiRole.ts",
+			"default": "./api/roles/apiRole.ts"
+		},
+		"./utils/roleUtils/builtInRoles": {
+			"types": "./utils/roleUtils/builtInRoles.ts",
+			"import": "./utils/roleUtils/builtInRoles.ts",
+			"default": "./utils/roleUtils/builtInRoles.ts"
+		},
+		"./utils/roleUtils/roleAccessToScopes": {
+			"types": "./utils/roleUtils/roleAccessToScopes.ts",
+			"import": "./utils/roleUtils/roleAccessToScopes.ts",
+			"default": "./utils/roleUtils/roleAccessToScopes.ts"
+		},
+		"./utils/roleUtils/scopesToRoleAccess": {
+			"types": "./utils/roleUtils/scopesToRoleAccess.ts",
+			"import": "./utils/roleUtils/scopesToRoleAccess.ts",
+			"default": "./utils/roleUtils/scopesToRoleAccess.ts"
 		}
 	},
 	"author": "Recase Inc.",

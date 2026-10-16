@@ -25,6 +25,7 @@ import { slackConnectRouter } from "../internal/misc/slackConnect/slackConnectRo
 import { invoiceTemplateRouter } from "../internal/orgs/invoiceTemplates/invoiceTemplateRouter";
 import { internalOrgRouter } from "../internal/orgs/orgRouter";
 import { internalProductRouter } from "../internal/products/internalProductRouter";
+import { rolesRpcRouter } from "../internal/roles/rolesRpcRouter";
 import { workbenchRouter } from "../internal/workbench/workbenchRouter";
 
 export const internalRouter = new Hono<HonoEnv>();
@@ -56,6 +57,7 @@ internalRouter.route("/slack_connect", slackConnectRouter);
 internalRouter.route("/saved_views", savedViewsRouter);
 internalRouter.route("/query", internalAnalyticsRouter);
 internalRouter.route("", migrationRpcRouter);
+internalRouter.route("", rolesRpcRouter);
 internalRouter.route("/workbench", workbenchRouter);
 
 // Autumn SDK handler (requires session auth)

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { ATMN_APP_KEY_SCOPES, ErrCode } from "@autumn/shared";
+import { fakeMemberRoleDb } from "@tests/utils/fakeMemberRoleDb.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 import {
@@ -83,9 +84,7 @@ describe("withAtmnAppKeyScopes", () => {
 	const cliScopes = ["organisation:read", "customers:write"];
 
 	const dbWithRole = (role: string) =>
-		({
-			query: { member: { findFirst: async () => ({ role }) } },
-		}) as unknown as DrizzleCli;
+		fakeMemberRoleDb({ getMember: () => ({ role }) }) as unknown as DrizzleCli;
 
 	const mockClient = ({ name }: { name: string }) =>
 		spyOn(oauthClientRepo, "getByClientId").mockResolvedValue({

@@ -56,6 +56,8 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// biome-ignore lint/suspicious/noExplicitAny: getSession doesn't infer customSession scopes
 	const sessionScopes: string[] = (session as any).scopes ?? [];
+	// biome-ignore lint/suspicious/noExplicitAny: getSession doesn't infer customSession role
+	const sessionRole: string | null = (session as any).role ?? null;
 
 	// Step 4: Resolve target org + env (a sandbox sub-org when x-sandbox-org-id set)
 	const appEnvHeader = c.req.header("app_env") as AppEnv | undefined;
@@ -112,6 +114,7 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.org = resolved.org;
 	ctx.features = resolved.features;
 	ctx.userId = userId;
+	ctx.role = sessionRole ?? undefined;
 	ctx.impersonatedBy = session.session.impersonatedBy ?? undefined;
 	ctx.authType = AuthType.Dashboard;
 	ctx.user = user;
