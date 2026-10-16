@@ -13,6 +13,7 @@ import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { accountRouter } from "../internal/account/accountRouter";
 import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalAnalyticsRouter } from "../internal/analytics/internalAnalyticsRouter";
+import { approvalRulesRpcRouter } from "../internal/approvals/approvalRulesRpcRouter";
 import { chatRouter } from "../internal/chat/chatRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
 import { internalDevRouter } from "../internal/dev/devRouter";
@@ -58,6 +59,7 @@ internalRouter.route("/saved_views", savedViewsRouter);
 internalRouter.route("/query", internalAnalyticsRouter);
 internalRouter.route("", migrationRpcRouter);
 internalRouter.route("", rolesRpcRouter);
+internalRouter.route("", approvalRulesRpcRouter);
 internalRouter.route("/workbench", workbenchRouter);
 
 // Autumn SDK handler (requires session auth)
