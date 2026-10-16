@@ -1,4 +1,5 @@
 import {
+	type ApiAtomAccess,
 	type ApiByocCache,
 	type AtomCheck,
 	BYOC_CACHE_DISK_GB,
@@ -150,6 +151,15 @@ export const isAtomBeingRemoved = (cache: ApiByocCache | null) =>
 /** What the org calls the Atom: its name, else its region, else its stack. */
 export const atomDisplayName = (cache: ApiByocCache) =>
 	cache.name ?? cache.region ?? cache.stack_name;
+
+/** Why New Atom is off, as its tooltip says it; null when it is on. */
+export const atomCreateRefusal = (access: ApiAtomAccess): string | null => {
+	if (access.reason === "not_on_plan")
+		return "Atom isn't included in your plan.";
+	if (access.reason === "limit_reached")
+		return `This environment runs at most ${access.limit} Atoms.`;
+	return null;
+};
 
 /** One chip for where an Atom stands, as the list and the switcher show it. */
 export const atomStatusChip = (cache: ApiByocCache): AtomChipDisplay => {

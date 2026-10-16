@@ -1,4 +1,4 @@
-import type { ApiByocCache } from "@autumn/shared";
+import type { ApiAtomAccess, ApiByocCache } from "@autumn/shared";
 import { Skeleton } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { TABLE_TRAY_SURFACE_CLASS } from "@/components/general/table";
@@ -57,11 +57,11 @@ const AtomRow = ({
 /** The env's Atoms, oldest first; each opens on its own page. */
 export const AtomList = ({
 	atoms,
-	maxAtoms,
+	access,
 	onOpen,
 }: {
 	atoms: ApiByocCache[];
-	maxAtoms: number;
+	access: ApiAtomAccess;
 	onOpen: (atomId: string) => void;
 }) => (
 	<div className={ATOM_PAGE_CARD_CLASS}>
@@ -88,8 +88,8 @@ export const AtomList = ({
 				ATOM_PAGE_CARD_TRAY_ROW_CLASS,
 			)}
 		>
-			{atoms.length} of {maxAtoms} Atom{maxAtoms === 1 ? "" : "s"} in this
-			environment
+			{access.used} of {access.limit} Atom{access.limit === 1 ? "" : "s"} in
+			this environment
 		</div>
 	</div>
 );

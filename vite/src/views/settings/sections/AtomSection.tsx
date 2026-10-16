@@ -16,7 +16,11 @@ import {
 } from "./components/atom/AtomSetupFlow";
 import { AtomSteadyStateSkeleton } from "./components/atom/AtomSteadyState";
 import { AtomBreadcrumb, type AtomView } from "./components/atom/AtomSwitcher";
-import { isAtomBeingRemoved, isAtomSetUp } from "./components/atom/atomDisplay";
+import {
+	atomCreateRefusal,
+	isAtomBeingRemoved,
+	isAtomSetUp,
+} from "./components/atom/atomDisplay";
 
 const ATOM_SECTION = {
 	title: "Edge cache",
@@ -147,13 +151,14 @@ export const AtomSection = () => {
 		removing,
 		nextStackName,
 		nextStackNameSuffix,
-		maxAtoms,
+		access,
 		isLoading,
 		error,
 		refetch,
 	} = useAtomsQuery();
 	const view = atomViewOf({ selected, isLoading, atomCount: atoms.length });
-	const canCreate = atoms.length < maxAtoms;
+	const canCreate = access?.can_create ?? false;
+	const refusal = access && atomCreateRefusal(access);
 	// The list is not polled once every Atom settles, so it is re-read on the way back to it.
 	const showAll = () => {
 		refetch();
@@ -166,10 +171,7 @@ export const AtomSection = () => {
 	const create = () => setSelected(NEW_ATOM);
 
 	const newAtomButton = (
-		<ConditionalTooltip
-			enabled={!canCreate}
-			content={`This environment runs at most ${maxAtoms} Atom${maxAtoms === 1 ? "" : "s"}.`}
-		>
+		<ConditionalTooltip enabled={refusal !== null} content={refusal}>
 			<span>
 				<Button
 					variant="primary"
@@ -208,7 +210,9 @@ export const AtomSection = () => {
 					/>
 				</AtomScope>
 			);
-		return <AtomList atoms={atoms} maxAtoms={maxAtoms} onOpen={setSelected} />;
+		return (
+			access && <AtomList atoms={atoms} access={access} onOpen={setSelected} />
+		);
 	};
 
 	return (

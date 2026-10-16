@@ -33,7 +33,7 @@ export const useAtomsQuery = () => {
 		removing: data?.removing ?? [],
 		nextStackName: data?.next_stack_name ?? "",
 		nextStackNameSuffix: data?.next_stack_name_suffix ?? "",
-		maxAtoms: data?.max_atoms ?? 1,
+		access: data?.access ?? null,
 		isLoading,
 		error,
 		refetch,
