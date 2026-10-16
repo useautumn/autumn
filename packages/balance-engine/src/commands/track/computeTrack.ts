@@ -8,6 +8,7 @@ import {
 } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
+import { findOpenLockByLockId } from "../../utils/subjectStateUtils/openLockIndex.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import { trackCommandToDeductionRequest } from "./trackCommandToDeductionRequest.js";
 import { trackOutcomeToMutation } from "./trackOutcomeToMutation.js";
@@ -39,9 +40,10 @@ export const computeTrackDecision = ({
 
 	// Checked before the deduction: a duplicate lock deducts nothing and writes nothing.
 	const lockId = track.lock?.lockId;
-	const holdsLock = fullSubject.open_locks.some(
-		(openLock) => openLock.lock_id === lockId,
-	);
+	const holdsLock =
+		lockId !== undefined &&
+		findOpenLockByLockId({ openLocks: fullSubject.open_locks, lockId }) !==
+			null;
 	if (lockId && holdsLock) throw new LockAlreadyExistsError({ lockId });
 
 	const outcome = deduct({
