@@ -26,7 +26,7 @@ const STATISTIC_OPTIONS = ATOM_METRICS_STATISTICS.map((statistic) => ({
 	label: STATISTIC_LABELS[statistic].name,
 }));
 
-/** How full Atom's disk is, how hard its machine works and how much traffic it answers, over a chosen range and statistic. */
+/** How hard Atom's machine works, how much traffic it answers and how full its disk is, over a chosen range and statistic. */
 export const AtomMonitoring = ({
 	cache,
 	isPending = false,
@@ -79,6 +79,12 @@ export const AtomMonitoring = ({
 				</div>
 			}
 		>
+			<AtomUtilizationChart
+				machine={cache && cacheToMachine(cache)}
+				chartData={chartData}
+				isLoading={isLoading}
+			/>
+			<AtomRequestsChart chartData={chartData} isLoading={isLoading} />
 			<AtomStorageChart
 				cache={cache}
 				chartData={chartData}
@@ -86,12 +92,6 @@ export const AtomMonitoring = ({
 				range={metrics.range}
 				isLoading={isLoading}
 			/>
-			<AtomUtilizationChart
-				machine={cache && cacheToMachine(cache)}
-				chartData={chartData}
-				isLoading={isLoading}
-			/>
-			<AtomRequestsChart chartData={chartData} isLoading={isLoading} />
 		</SettingsGroup>
 	);
 };
