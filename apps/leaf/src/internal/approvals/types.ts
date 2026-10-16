@@ -16,8 +16,8 @@ export type ApprovalWriteOutcome = {
 };
 
 export type ApprovalRunResult =
-	// The money facts changed since the card was shown; nothing executed and
-	// the refreshed card must be re-approved.
+	// The money facts changed, or the approval rules deny the clicker; nothing
+	// executed and the refreshed card must be re-approved.
 	| {
 			drifted: true;
 			message: string;
@@ -38,13 +38,21 @@ export type ApprovalRunResult =
 	  };
 
 export type ApprovalAuthorization =
-	| { allowed: true }
+	| {
+			allowed: true;
+			/** The clicker's Autumn user, when Leaf resolved one. */
+			actingUserId?: string;
+			/** Their role lacks the scope, so only approval rules can let them approve. */
+			rulesMustAllow?: boolean;
+	  }
 	| { allowed: false; text: string };
 
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
 		providerUserId: string;
+		actingUserId?: string;
+		rulesMustAllow?: boolean;
 	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;

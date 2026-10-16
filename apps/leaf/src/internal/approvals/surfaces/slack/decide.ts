@@ -15,6 +15,7 @@ import type { WithheldWrite } from "../../../agentRuntime/eve/parkedInput.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { continueAfterApproval } from "../../actions/continueAfterApproval.js";
+import { orgEnforcesApprovals } from "../../actions/orgEnforcesApprovals.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { withheldWritesOf } from "../../domain/approvalRecord.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -155,6 +156,15 @@ const authorizeSlackApprovalClicker = async ({
 	}
 
 	const { allowed, missing } = checkScopes(required, callerAuth.scopes);
+	// A rule is enough on its own once the org enforces approvals: the fresh
+	// previews must then show a rule allowing every step, or nothing runs.
+	if (!allowed && (await orgEnforcesApprovals({ orgId: approval.org_id }))) {
+		return {
+			allowed: true,
+			actingUserId: callerAuth.userId,
+			rulesMustAllow: true,
+		};
+	}
 	if (!allowed) {
 		return {
 			allowed: false,
@@ -162,7 +172,8 @@ const authorizeSlackApprovalClicker = async ({
 		};
 	}
 
-	return { allowed: true };
+	// The clicker is who the approval rules are checked against, on the fresh previews and the writes.
+	return { allowed: true, actingUserId: callerAuth.userId };
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -370,6 +381,12 @@ export const handleApprovalActionWithDeps = async ({
 		const result = await deps.resolveApproval({
 			approval: claimed,
 			providerUserId,
+			actingUserId: authorization?.allowed
+				? authorization.actingUserId
+				: undefined,
+			rulesMustAllow: authorization?.allowed
+				? authorization.rulesMustAllow
+				: undefined,
 		});
 		if ("drifted" in result) {
 			// Nothing executed; the row is back in pending with fresh previews —

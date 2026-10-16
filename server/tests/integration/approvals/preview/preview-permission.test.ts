@@ -222,3 +222,52 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("preview permission 5: a multi-attach preview carries permission for billing.attach")}`,
+	async () => {
+		const customerId = "approvals-preview-permission-multi-attach";
+		const messages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ items: [messages] });
+		const addon = products.recurringAddOn({ id: "addon", items: [messages] });
+
+		const { ctx, members } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addon] }),
+				s.member({ role: "owner" }),
+				s.member({ role: "sales" }),
+			],
+			actions: [],
+		});
+		const [owner, sales] = members;
+		const { client, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: sales,
+			rules: [
+				rules.rule({
+					name: "No-charge attaches",
+					subjects: [{ type: "user", user_id: sales.userId }],
+					when: { paid: false },
+				}),
+			],
+		});
+
+		try {
+			const preview = await client.billing.previewMultiAttach({
+				customer_id: customerId,
+				plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
+			});
+
+			expect(preview.permission).toMatchObject({
+				verdict: "deny",
+				violations: [expect.objectContaining({ field: "paid", actual: true })],
+				decided_by: { level: "user", rule_name: "No-charge attaches" },
+			});
+		} finally {
+			await cleanup();
+		}
+	},
+);

@@ -5,6 +5,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { billingContextToUpdateAction } from "@/internal/approvals/facts/billing/billingContextToUpdateAction";
+import { billingPreviewPermissionFields } from "@/internal/approvals/preview/billingPreviewPermissionFields";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import type { MultiUpdateStripeBillingPlan } from "../evaluate/evaluateMultiUpdateStripe";
@@ -43,9 +45,25 @@ export const buildMultiUpdatePreviewResponse = async ({
 			nextCycleStripeSubscriptionId: subscriptionPlan.subscriptionId,
 		});
 
+		const permissionFields = await billingPreviewPermissionFields({
+			ctx,
+			billingContext: subscriptionPlan.billingContext,
+			billingPlan: {
+				autumn: subscriptionPlan.autumnBillingPlan,
+				stripe: subscriptionPlan.stripeBillingPlan,
+				preview,
+			},
+			preview: basePreview,
+			action: billingContextToUpdateAction({
+				billingContext: subscriptionPlan.billingContext,
+			}),
+			nextCycleStripeSubscriptionId: subscriptionPlan.subscriptionId,
+		});
+
 		subscriptions.push({
 			...basePreview,
 			plan_ids: subscriptionPlan.planIds,
+			...permissionFields,
 		});
 	}
 
