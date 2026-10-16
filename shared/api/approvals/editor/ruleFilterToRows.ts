@@ -6,6 +6,7 @@ import {
 	type EditorField,
 	type EditorGroup,
 	type EditorRow,
+	PINNED_FIELDS,
 } from "./editorFields";
 import { FIELD_CODECS } from "./fieldCodecs";
 import {
@@ -17,7 +18,7 @@ import {
 import { ruleRowsToFilter, shapeSchema } from "./ruleRowsToFilter";
 
 export type RuleFilterToRowsResult =
-	| { editable: true; groups: EditorGroup[] }
+	| { editable: true; pinned: EditorRow | null; groups: EditorGroup[] }
 	| { editable: false };
 
 type ReadInput = {
@@ -41,13 +42,15 @@ const readRows = ({
 
 /** Rows in board order, so the editor shows them the way it lists fields. */
 const groupRows = ({ shape, effect, group }: ReadInput) =>
-	(Object.keys(EDITOR_FIELDS[shape]) as EditorField[]).flatMap((field) =>
-		andViewsOf(group).flatMap((view) =>
-			readRows({ field, effect, filter: view }),
-		),
-	);
+	(Object.keys(EDITOR_FIELDS[shape]) as EditorField[])
+		.filter((field) => field !== PINNED_FIELDS[shape])
+		.flatMap((field) =>
+			andViewsOf(group).flatMap((view) =>
+				readRows({ field, effect, filter: view }),
+			),
+		);
 
-/** A top-level `$or` is the OR groups, unless a field reads it as its own row. */
+/** A top-level `$or` is the OR groups, unless it's one row's cap (Refund ≤ $50). */
 const splitGroups = ({ shape, effect, group }: ReadInput) => {
 	if (isEmptyObject(group)) return [];
 	const isGroupList =
@@ -55,6 +58,20 @@ const splitGroups = ({ shape, effect, group }: ReadInput) => {
 		Array.isArray(group.$or) &&
 		groupRows({ shape, effect, group }).length === 0;
 	return isGroupList ? (group.$or as Filter[]) : [group];
+};
+
+/** The pinned row, and the rest of the filter for the groups. */
+const splitPinned = ({ shape, effect, group }: ReadInput) => {
+	const field = PINNED_FIELDS[shape];
+	const [pinned] = field ? readRows({ field, effect, filter: group }) : [];
+	if (!pinned) return { pinned: null, rest: group };
+	const pinnedKeys = Object.keys(
+		FIELD_CODECS[pinned.field].toFilter({ row: pinned, effect }) ?? {},
+	);
+	const rest = Object.fromEntries(
+		Object.entries(group).filter(([key]) => !pinnedKeys.includes(key)),
+	);
+	return { pinned, rest };
 };
 
 /**
@@ -72,18 +89,19 @@ export const ruleFilterToRows = ({
 	filter: unknown;
 }): RuleFilterToRowsResult => {
 	if (filter === null || filter === undefined || isEmptyObject(filter)) {
-		return { editable: true, groups: [] };
+		return { editable: true, pinned: null, groups: [] };
 	}
 	const schema = shapeSchema({ shape });
 	if (!isPlainObject(filter) || !schema.safeParse(filter).success) {
 		return { editable: false };
 	}
 
-	const groups = splitGroups({ shape, effect, group: filter }).map((group) =>
+	const { pinned, rest } = splitPinned({ shape, effect, group: filter });
+	const groups = splitGroups({ shape, effect, group: rest }).map((group) =>
 		groupRows({ shape, effect, group }),
 	);
-	const rebuilt = ruleRowsToFilter({ shape, effect, groups });
+	const rebuilt = ruleRowsToFilter({ shape, effect, pinned, groups });
 	return rebuilt.ok && isSameFilter(rebuilt.filter, filter)
-		? { editable: true, groups }
+		? { editable: true, pinned, groups }
 		: { editable: false };
 };

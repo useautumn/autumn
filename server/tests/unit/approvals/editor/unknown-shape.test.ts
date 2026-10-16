@@ -57,6 +57,16 @@ const filters: { name: string; shape: ApprovalFilterKey; filter: unknown }[] = [
 		filter: { feature_id: "credits" },
 	},
 	{ name: "an empty $or", shape: "billing_change", filter: { $or: [] } },
+	{
+		name: "a refund $or that isn't a cap",
+		shape: "billing_cancel",
+		filter: { $or: [{ refund: null }, { refund: { amount: { $gt: 5 } } }] },
+	},
+	{
+		name: "Balances' Feature inside a group",
+		shape: "balance_create",
+		filter: { $or: [{ feature_id: "a" }, { feature_id: "b" }] },
+	},
 ];
 
 describe("stored filters the editor can't show", () => {
@@ -74,7 +84,7 @@ describe("stored filters the editor can't show", () => {
 		(filter) => {
 			expect(
 				ruleFilterToRows({ shape: "billing_change", effect: "block", filter }),
-			).toEqual({ editable: true, groups: [] });
+			).toEqual({ editable: true, pinned: null, groups: [] });
 		},
 	);
 });

@@ -21,6 +21,7 @@ import {
 	type EditorField,
 	type EditorGroup,
 	type EditorRow,
+	PINNED_FIELDS,
 	ruleFilterToRows,
 	ruleRowsToFilter,
 	VALUELESS_OPERATORS,
@@ -36,9 +37,17 @@ const SAMPLES: Record<EditorField, unknown[]> = {
 	paid: [true],
 	checkout: [true],
 	total: [20],
+	next_cycle_total: [99],
+	incoming_plan: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
+	outgoing_plan: [{ plan_id: "starter" }, { plan_id: "team" }],
+	current_plan: [{ plan_id: "pro", version: 2 }, { plan_id: "team" }],
 	incoming_paid: [true],
 	incoming_recurring: [false],
 	incoming_addon: [true],
+	free_trial: [{ length: 2, unit: "month" }],
+	trial_card_required: [true],
+	trial_on_end: ["bill", "revert"],
+	feature_quantity: [{ feature_id: "seats", quantity: 10 }],
 	customized: [true],
 	discount: ["launch20", "partner"],
 	discount_percent_off: [20],
@@ -49,6 +58,7 @@ const SAMPLES: Record<EditorField, unknown[]> = {
 	starts_at: [7],
 	invoice_mode: [false],
 	cancel_action: ["cancel_immediately", "cancel_end_of_cycle"],
+	refund: [50],
 	feature: ["ai_credits", "messages"],
 	included_grant: [100],
 	unlimited: [true],
@@ -71,6 +81,20 @@ const sampleRow = (field: string, operator: string): EditorRow => {
 	} as EditorRow;
 };
 
+/**
+ * Current plan rows that store what a Customer has plan row stores read back
+ * as that row: "is not" under both effects, and "is" / "is any of" under block.
+ */
+const readsBackAs = (effect: RuleEffect, row: EditorRow): EditorRow => {
+	if (row.field !== "current_plan") return row;
+	if (row.operator === "is_not")
+		return { ...row, field: "customer_plan", operator: "doesnt_have" };
+	const isPositive = row.operator === "is" || row.operator === "is_any_of";
+	return effect === "block" && isPositive
+		? { ...row, field: "customer_plan", operator: "has" }
+		: row;
+};
+
 const SHAPES = Object.keys(EDITOR_FIELDS) as ApprovalFilterKey[];
 const EFFECTS: RuleEffect[] = ["allow", "block"];
 const fieldsOf = (shape: ApprovalFilterKey) =>
@@ -83,9 +107,24 @@ const inBoardOrder = (shape: ApprovalFilterKey, rows: EditorRow[]) => {
 	);
 };
 
+/** One group in board order, with the shape's pinned field (Balances' Feature) moved above it. */
+const editorInput = (shape: ApprovalFilterKey, rows: EditorRow[]) => {
+	const pinnedField = PINNED_FIELDS[shape];
+	const groupRows = inBoardOrder(
+		shape,
+		rows.filter((row) => row.field !== pinnedField),
+	);
+	const pinned = pinnedField
+		? (rows.find((row) => row.field === pinnedField) ??
+			sampleRow(pinnedField, "is"))
+		: null;
+	return { pinned, groups: groupRows.length > 0 ? [groupRows] : [] };
+};
+
 const stored = (input: {
 	shape: ApprovalFilterKey;
 	effect: RuleEffect;
+	pinned?: EditorRow | null;
 	groups: EditorGroup[];
 }) => {
 	const result = ruleRowsToFilter(input);
@@ -107,12 +146,6 @@ const expectValid = (
 	expect(result.ok ? [] : result.issues).toEqual([]);
 };
 
-/** Balances rules must choose a Feature, so their rows always carry one. */
-const withFeature = (shape: ApprovalFilterKey, rows: EditorRow[]) =>
-	shape.startsWith("balance_") && !rows.some((row) => row.field === "feature")
-		? [sampleRow("feature", "is"), ...rows]
-		: rows;
-
 const expectRoundTrip = ({
 	shape,
 	effect,
@@ -122,11 +155,11 @@ const expectRoundTrip = ({
 	effect: RuleEffect;
 	rows: EditorRow[];
 }) => {
-	const groups = [inBoardOrder(shape, withFeature(shape, rows))];
-	const filter = stored({ shape, effect, groups });
+	const filter = stored({ shape, effect, ...editorInput(shape, rows) });
+	const readsBack = rows.map((row) => readsBackAs(effect, row));
 	expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 		editable: true,
-		groups,
+		...editorInput(shape, readsBack),
 	});
 	expectValid(shape, effect, filter);
 };
@@ -257,6 +290,7 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 		expect<unknown>(stored({ shape, effect, groups: [rows] })).toEqual(filter);
 		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 			editable: true,
+			pinned: null,
 			groups: [readsBack],
 		});
 		expectValid(shape, effect, filter as ApprovalRuleFilter);
@@ -264,7 +298,32 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 });
 
 describe("rows that can't be stored report an issue", () => {
-	test.each<{ name: string; shape: ApprovalFilterKey; rows: EditorRow[] }>([
+	test.each<{
+		name: string;
+		shape: ApprovalFilterKey;
+		pinned?: EditorRow;
+		rows: EditorRow[];
+		group?: number | "pinned";
+	}>([
+		{
+			name: "Balances' Feature inside a group",
+			shape: "balance_create",
+			rows: [sampleRow("feature", "is")],
+		},
+		{
+			name: "a pinned row on a shape without one",
+			shape: "invoice",
+			pinned: sampleRow("total", "eq"),
+			rows: [],
+			group: "pinned",
+		},
+		{
+			name: "an unfinished pinned Feature",
+			shape: "balance_create",
+			pinned: { field: "feature", operator: "is", value: null },
+			rows: [],
+			group: "pinned",
+		},
 		{
 			name: "a field from another shape",
 			shape: "invoice",
@@ -286,17 +345,144 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "billing_cycle_anchor", operator: "is", value: "tomorrow" },
 			{ field: "customer", operator: "is", value: "" },
 			{ field: "discount", operator: "is_any_of", value: [""] },
+			{ field: "incoming_plan", operator: "is_any_of", value: [] },
+			{ field: "outgoing_plan", operator: "is", value: null },
+			{ field: "free_trial", operator: "lt", value: null },
+			{ field: "feature_quantity", operator: "lte", value: null },
+			{
+				field: "feature_quantity",
+				operator: "lte",
+				value: { feature_id: "seats" },
+			},
+			{ field: "feature_quantity", operator: "lte", value: { quantity: 3 } },
 		].map((row) => ({
 			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
 			shape: "billing_change" as const,
 			rows: [row as EditorRow],
 		})),
-	])("$name", ({ shape, rows }) => {
+	])("$name", ({ shape, pinned, rows, group = 0 }) => {
 		expect(
-			ruleRowsToFilter({ shape, effect: "block", groups: [rows] }),
+			ruleRowsToFilter({ shape, effect: "block", pinned, groups: [rows] }),
 		).toEqual({
 			ok: false,
-			issues: [{ group: 0, row: 0, message: expect.any(String) }],
+			issues: [{ group, row: 0, message: expect.any(String) }],
 		});
+	});
+});
+
+describe("incoming plan rows that set the same condition are ANDed", () => {
+	const shape = "billing_change";
+	const quantity = (feature_id: string, limit: number): EditorRow => ({
+		field: "feature_quantity",
+		operator: "lte",
+		value: { feature_id, quantity: limit },
+	});
+	const every = (plan: unknown) => ({ incoming: { $every: plan } });
+	const quantityCap = (feature_id: string, limit: number) =>
+		every({
+			feature_quantities: { $none: { feature_id, quantity: { $gt: limit } } },
+		});
+	const versioned = [{ plan_id: "pro", version: 2 }, { plan_id: "team" }];
+
+	test.each<{
+		name: string;
+		effect: RuleEffect;
+		rows: EditorRow[];
+		filter: unknown;
+		readsBack?: EditorRow[];
+	}>([
+		{
+			name: "Incoming plan · any of with a version, beside a Free trial cap",
+			effect: "allow",
+			rows: [
+				sampleRow("incoming_plan", "is_any_of"),
+				sampleRow("free_trial", "lt"),
+			],
+			filter: every({
+				$or: versioned,
+				free_trial: { duration: { $lt: { length: 2, unit: "month" } } },
+			}),
+		},
+		{
+			name: "Incoming plan · is beside is any of, both with a version",
+			effect: "block",
+			rows: [
+				sampleRow("incoming_plan", "is"),
+				sampleRow("incoming_plan", "is_any_of"),
+			],
+			filter: {
+				incoming: { $some: { plan_id: "pro", version: 2, $or: versioned } },
+			},
+		},
+		{
+			name: "two Quantity rows",
+			effect: "allow",
+			rows: [quantity("seats", 10), quantity("workers", 5)],
+			filter: {
+				...quantityCap("seats", 10),
+				$and: [quantityCap("workers", 5)],
+			},
+		},
+		{
+			name: "three Quantity rows, entered out of board order with another field",
+			effect: "allow",
+			rows: [
+				quantity("seats", 10),
+				sampleRow("incoming_paid", "is"),
+				quantity("a", 1),
+				quantity("b", 2),
+			],
+			filter: {
+				...every({
+					paid: true,
+					feature_quantities: {
+						$none: { feature_id: "seats", quantity: { $gt: 10 } },
+					},
+				}),
+				$and: [quantityCap("a", 1), quantityCap("b", 2)],
+			},
+			readsBack: [
+				sampleRow("incoming_paid", "is"),
+				quantity("seats", 10),
+				quantity("a", 1),
+				quantity("b", 2),
+			],
+		},
+		...(["allow", "block"] as const).map((effect) => ({
+			name: "Incoming plan · is not and is none of stay separate checks",
+			effect,
+			rows: [
+				{
+					field: "incoming_plan",
+					operator: "is_not",
+					value: { plan_id: "pro" },
+				},
+				{
+					field: "incoming_plan",
+					operator: "is_none_of",
+					value: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+				},
+			] as EditorRow[],
+			filter: {
+				incoming: { $none: { plan_id: "pro" } },
+				$and: [
+					{
+						incoming: {
+							$none: {
+								$or: [{ plan_id: "team", version: 2 }, { plan_id: "max" }],
+							},
+						},
+					},
+				],
+			},
+		})),
+	])("$effect · $name", ({ effect, rows, filter, readsBack = rows }) => {
+		expect<unknown>(stored({ shape, effect, groups: [rows] })).toEqual(filter);
+		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
+			editable: true,
+			pinned: null,
+			groups: [readsBack],
+		});
+		expectValid(shape, effect, filter as ApprovalRuleFilter);
 	});
 });
