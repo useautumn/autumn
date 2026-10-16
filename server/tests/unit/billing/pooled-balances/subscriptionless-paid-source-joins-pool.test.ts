@@ -52,18 +52,23 @@ const trialRow = ({
 const transition = ({
 	fullCustomer,
 	incoming,
+	outgoing = [],
 }: {
 	fullCustomer: FullCustomer;
 	incoming: FullCusProduct[];
+	outgoing?: FullCusProduct[];
 }) => {
+	// An in-place update is computed against the customer as it stands: the old row stays until the plan lands.
+	const heldIds = new Set(fullCustomer.customer_products.map(({ id }) => id));
 	fullCustomer.customer_products = [
 		...fullCustomer.customer_products,
-		...incoming,
+		...incoming.filter(({ id }) => !heldIds.has(id)),
 	];
 	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer,
 		incomingCustomerProducts: incoming,
+		outgoingCustomerProducts: outgoing,
 		now: NOW,
 	});
 	applyPooledBalancePlanToFullCustomer({ fullCustomer, pooledBalancePlan });
@@ -198,6 +203,44 @@ describe("paid plan with no Stripe subscription joins an existing pool", () => {
 		});
 
 		expect(poolIdOf({ fullCustomer, rowId: "cp_trial_b" })).toBe(firstPoolId);
+	});
+
+	test("trial converting to paid leaves the shared pool for one its subscription can stamp", () => {
+		const firstTrial = trialRow({
+			rowId: "cp_trial_a",
+			entity: entityA,
+			trialEndsAt: FIRST_TRIAL_ENDS_AT,
+		});
+		const secondTrial = trialRow({
+			rowId: "cp_trial_b",
+			entity: entityB,
+			trialEndsAt: SECOND_TRIAL_ENDS_AT,
+		});
+		const fullCustomer = customerWithPools([firstTrial]);
+		transition({ fullCustomer, incoming: [secondTrial] });
+		const sharedPoolId = poolIdOf({ fullCustomer, rowId: "cp_trial_a" });
+		expect(poolIdOf({ fullCustomer, rowId: "cp_trial_b" })).toBe(sharedPoolId);
+
+		// Trial-end billing patches the row in place before Stripe creates its subscription.
+		const convertedTrial: FullCusProduct = {
+			...secondTrial,
+			trial_ends_at: NOW - ms.minutes(1),
+		};
+		const plan = transition({
+			fullCustomer,
+			incoming: [convertedTrial],
+			outgoing: [secondTrial],
+		});
+
+		const convertedPoolId = poolIdOf({ fullCustomer, rowId: "cp_trial_b" });
+		expect(convertedPoolId).not.toBe(sharedPoolId);
+		const insertedPool = plan?.insertPoolBalances.find(
+			({ pooled_balance }) => pooled_balance?.id === convertedPoolId,
+		);
+		expect(insertedPool?.pooled_balance?.reset_mode).toBe(
+			PooledBalanceResetMode.Subscription,
+		);
+		expect(poolIdOf({ fullCustomer, rowId: "cp_trial_a" })).toBe(sharedPoolId);
 	});
 
 	test("no-card trial alone still opens its own subscription-mode pool", () => {

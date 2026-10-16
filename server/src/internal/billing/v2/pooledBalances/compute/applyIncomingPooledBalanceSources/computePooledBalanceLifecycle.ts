@@ -17,7 +17,7 @@ import type {
 import { resolvePooledBalanceResetCycleAnchor } from "../utils/resolvePooledBalanceResetCycleAnchor";
 import {
 	findSubscriptionPoolHost,
-	runsWithoutStripeSubscription,
+	isOngoingTrialWithoutSubscription,
 } from "../utils/subscriptionPoolHost";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
 
@@ -169,16 +169,18 @@ const canJoinSubscriptionPool = ({
 	customerProduct,
 	resetMode,
 	competes,
+	now,
 }: {
 	customerProduct: FullCusProduct;
 	resetMode: PooledBalanceResetMode;
 	competes: boolean;
+	now: number;
 }) => {
 	if (customerProduct.customer_license_link_id || competes) return false;
 	if (resetMode === PooledBalanceResetMode.Lazy) return true;
 	return (
 		resetMode === PooledBalanceResetMode.Subscription &&
-		runsWithoutStripeSubscription({ customerProduct })
+		isOngoingTrialWithoutSubscription({ customerProduct, now })
 	);
 };
 
@@ -215,6 +217,7 @@ export const computePooledBalanceLifecycle = ({
 		customerProduct,
 		resetMode,
 		competes,
+		now,
 	})
 		? findSubscriptionPoolHost({ computeContext, customerEntitlement })
 		: undefined;

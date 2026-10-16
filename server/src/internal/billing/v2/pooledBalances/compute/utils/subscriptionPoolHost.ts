@@ -8,6 +8,7 @@ import {
 	isCustomerProductFree,
 	isCustomerProductPaidRecurring,
 	isCustomerProductRevertingTrial,
+	isCustomerProductTrialing,
 	isPooledBalanceSourceCustomerEntitlement,
 	isUnlimitedEntitlement,
 	PooledBalanceResetMode,
@@ -29,15 +30,19 @@ export const isPaidSubscriptionPoolHost = ({
 	!customerProduct.customer_license_link_id &&
 	isCustomerProductPaidRecurring(customerProduct);
 
-/** A paid plan on a trial Autumn runs itself: no Stripe subscription gives its credits a cycle of their own. */
-export const runsWithoutStripeSubscription = ({
+/** A paid plan mid-trial that Autumn runs itself. Once the trial ends it bills onto a
+ * Stripe subscription, which needs a pool of its own to stamp. */
+export const isOngoingTrialWithoutSubscription = ({
 	customerProduct,
+	now,
 }: {
 	customerProduct: FullCusProduct;
+	now: number;
 }) =>
 	!customerProduct.subscription_ids?.length &&
 	(isCustomerProductAutumnManagedTrial(customerProduct) ||
-		isCustomerProductRevertingTrial(customerProduct));
+		isCustomerProductRevertingTrial(customerProduct)) &&
+	Boolean(isCustomerProductTrialing(customerProduct, { nowMs: now }));
 
 export const addPaidCustomerProductToPool = ({
 	paidCustomerProductIdsByPoolId,
