@@ -2,6 +2,7 @@ import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type {
 	InternalLogRequestContext,
 	LogAppContext,
+	LogAtomContext,
 	LogRedisData,
 	LogRequestContext,
 	LogRevenueCatEventContext,
@@ -45,6 +46,14 @@ export const addAppContextToLogs = ({
 }): Logger => {
 	return logger.child({ context: { context: appContext } });
 };
+
+export const addAtomToLogs = ({
+	logger,
+	atomContext,
+}: {
+	logger: Logger;
+	atomContext: LogAtomContext;
+}): Logger => logger.child({ context: { atom: atomContext } });
 
 export const addStripeEventToLogs = ({
 	logger,

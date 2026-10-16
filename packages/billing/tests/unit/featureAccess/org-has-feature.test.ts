@@ -17,7 +17,7 @@ const ctxWith = ({
 	check?: Check;
 	edgeCheck?: Check;
 	infos?: unknown[];
-}): FeatureAccessContext => ({
+}): Pick<FeatureAccessContext, "autumn" | "logger"> => ({
 	autumn: { check, edge: { check: edgeCheck } },
 	logger: { info: (_message, data) => infos.push(data), warn: () => {} },
 });

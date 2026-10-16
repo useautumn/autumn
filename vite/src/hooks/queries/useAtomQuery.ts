@@ -5,7 +5,7 @@ import {
 	type GetByocCacheResponse,
 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useAtomApi } from "@/contexts/AtomApiContext";
+import { atomIdBody, useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 2000;
@@ -18,7 +18,8 @@ const SETTLING_STATUSES: ByocCacheStatus[] = [
 	ByocCacheStatus.Removing,
 ];
 
-const pollIntervalFor = (cache: ApiByocCache | null | undefined) => {
+/** How often to re-read an Atom that is still moving; false once it is connected, failed, or gone. */
+export const atomPollInterval = (cache: ApiByocCache | null | undefined) => {
 	if (!cache) return false;
 	if (cache.status === ByocCacheStatus.TeardownRequired)
 		return TEARDOWN_POLL_INTERVAL_MS;
@@ -29,17 +30,17 @@ const pollIntervalFor = (cache: ApiByocCache | null | undefined) => {
 	return isSettling ? POLL_INTERVAL_MS : false;
 };
 
-/** The env's Atom and earlier ones still coming down, polled until each is connected, failed, or gone. */
+/** The scoped Atom and earlier ones still coming down, polled until each is connected, failed, or gone. */
 export const useAtomQuery = ({ enabled = true } = {}) => {
 	const axiosInstance = useAxiosInstance();
-	const { basePath, queryKey } = useAtomApi();
+	const { basePath, queryKey, atomId } = useAtomApi();
 
 	const { data, dataUpdatedAt, isLoading, error, refetch } = useQuery({
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<GetByocCacheResponse>(
 				`${basePath}/byoc.get_atom`,
-				{},
+				atomIdBody({ atomId }),
 			);
 			return data;
 		},
@@ -48,7 +49,7 @@ export const useAtomQuery = ({ enabled = true } = {}) => {
 		refetchInterval: (query) => {
 			const { cache, removing = [] } = query.state.data ?? {};
 			const intervals = [cache, ...removing]
-				.map(pollIntervalFor)
+				.map(atomPollInterval)
 				.filter((interval) => interval !== false);
 			return intervals.length ? Math.min(...intervals) : false;
 		},

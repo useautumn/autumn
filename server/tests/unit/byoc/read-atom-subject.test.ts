@@ -65,7 +65,13 @@ const orgAtom = {
 	env: AppEnv.Sandbox,
 	encryptedToken: "encrypted_org_atom",
 };
-const logger = { warn() {}, info() {}, error() {}, debug() {} };
+const logger = {
+	warn() {},
+	info() {},
+	error() {},
+	debug() {},
+	child: () => logger,
+};
 
 /** A worker that answers `reply` (or throws it), recording each read it was asked for. */
 const workerAnswering = (reply: Partial<ReadSubjectStateReply> | Error) => {

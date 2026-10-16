@@ -2,7 +2,7 @@
  * The atom_deployments repo against real Postgres and the real org cache.
  *
  * Contract:
- *  1. one Atom per org and env: a second claim loses and the first is read back;
+ *  1. an env holds many Atoms: each is found by its id, all are listed oldest first, and a find naming none refuses to pick;
  *  2. a write only lands on the row as it was read: a stale copy cannot undo a move or forget a replacement;
  *  3. the cached org follows an Atom's route (status, endpoint, token) and ignores its deploy progress;
  *  4. a token hash names its Atom's org and env.
@@ -44,6 +44,7 @@ const atomRow = ({
 	id: generateId("atom"),
 	org_id: orgId,
 	env: AppEnv.Sandbox,
+	name: null,
 	deployment_group_id: deploymentGroupId,
 	deployment_id: null,
 	status,
@@ -82,19 +83,35 @@ afterAll(async () => {
 	await ctx.db.delete(organizations).where(eq(organizations.id, orgId));
 });
 
-test(`${chalk.yellowBright("atom-rows1: a second claim for the env loses, and the first is read back")}`, async () => {
+test(`${chalk.yellowBright("atom-rows1: an env holds two Atoms; each is found by id, and a find naming none refuses to pick")}`, async () => {
 	const first = atomRow({ deploymentGroupId: `dg_${orgId}_a` });
-	const second = atomRow({ deploymentGroupId: `dg_${orgId}_b` });
+	const second = {
+		...atomRow({ deploymentGroupId: `dg_${orgId}_b` }),
+		created_at: first.created_at + 1,
+	};
 
 	expect(
 		await cacheDeploymentRepo.insert({ ctx, cacheDeployment: first }),
 	).toBe(true);
+	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(first);
 	expect(
 		await cacheDeploymentRepo.insert({ ctx, cacheDeployment: second }),
-	).toBe(false);
-	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(first);
+	).toBe(true);
+
+	expect(await cacheDeploymentRepo.findActive({ ctx })).toEqual([
+		first,
+		second,
+	]);
+	expect(await cacheDeploymentRepo.find({ ctx, atomId: second.id })).toEqual(
+		second,
+	);
+	await expect(cacheDeploymentRepo.find({ ctx })).rejects.toThrow(
+		"more than one Atom",
+	);
 
 	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: first });
+	expect(await cacheDeploymentRepo.find({ ctx })).toEqual(second);
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: second });
 	expect(await cacheDeploymentRepo.find({ ctx })).toBeNull();
 });
 

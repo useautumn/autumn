@@ -9,6 +9,7 @@ import {
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 } from "@autumn/shared";
+import { featureAccess } from "@/external/autumn/featureAccess.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { encryptData } from "@/utils/encryptUtils.js";
@@ -20,7 +21,9 @@ import {
 	generateAtomToken,
 } from "../../utils/atomTokenUtils.js";
 import {
+	atomCreateRefused,
 	atomNames,
+	atomNotFound,
 	atomStackName,
 	CACHE_LOCK_TTL_MS,
 	cacheDeploymentToCreateResponse,
@@ -33,6 +36,7 @@ import { toCacheStages } from "../../utils/cacheStageUtils.js";
 import { nextFreeAtomId } from "../../utils/nextFreeAtomId.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
+import { withAtomLock } from "./withAtomLock.js";
 
 /** What a setup asks the org's cloud for. */
 type CacheSetupSettings = {
@@ -75,16 +79,18 @@ const setupSettings = ({
 	};
 };
 
-/** Holds the env's slot for this deployment group, or returns whoever claimed it first. */
+/** Holds a new Atom's id and group for it, or returns whoever claimed them first. */
 const claimCacheDeployment = async ({
 	ctx,
 	atomId,
+	name,
 	deploymentGroupId,
 	token,
 	settings: { machine, region, network, stackName },
 }: {
 	ctx: AutumnContext;
 	atomId: string;
+	name: string | null;
 	deploymentGroupId: string;
 	token: string;
 	settings: CacheSetupSettings;
@@ -94,6 +100,7 @@ const claimCacheDeployment = async ({
 		id: atomId,
 		org_id: ctx.org.id,
 		env: ctx.env,
+		name,
 		deployment_group_id: deploymentGroupId,
 		deployment_id: null,
 		status,
@@ -112,7 +119,9 @@ const claimCacheDeployment = async ({
 	};
 	if (await cacheDeploymentRepo.insert({ ctx, cacheDeployment }))
 		return cacheDeployment;
-	return (await cacheDeploymentRepo.find({ ctx })) ?? cacheDeployment;
+	return (
+		(await cacheDeploymentRepo.findById({ ctx, id: atomId })) ?? cacheDeployment
+	);
 };
 
 /** A fresh link moves the record to the group it landed in (the org's external id changed) and the settings it asks for; token kept. */
@@ -151,24 +160,31 @@ const followSetup = async ({
 	return moved;
 };
 
-/** Starts the env's cache setup, or hands back a fresh setup link while it still waits on the org. */
+/** Starts a new Atom's setup, or with `atom_id` hands back a fresh setup link while that Atom still waits on the org. */
 export const createCache = ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: CreateByocCacheParams;
-}): Promise<CreateByocCacheResponse> =>
-	// Each setup revokes the env's earlier links, so a concurrent one would kill this caller's link.
-	withLock({
+}): Promise<CreateByocCacheResponse> => {
+	if (params.atom_id)
+		return withAtomLock({
+			ctx,
+			atomId: params.atom_id,
+			fn: (existing) => renewCacheSetup({ ctx, params, existing }),
+		});
+	// Each new Atom takes the next id free of the env's others and counts against its limit, so two creates at once would race on both.
+	return withLock({
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
 		errorMessage:
 			"Atom setup is already in progress, try again in a few seconds",
-		fn: () => startCacheSetup({ ctx, params }),
+		fn: () => startNewCache({ ctx, params }),
 	});
+};
 
-const startCacheSetup = async ({
+const startNewCache = async ({
 	ctx,
 	params,
 }: {
@@ -176,29 +192,72 @@ const startCacheSetup = async ({
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> => {
 	const { org, env } = ctx;
-	const existing = await cacheDeploymentRepo.find({ ctx });
-	const isAwaitingSetup = existing?.status === ByocCacheStatus.AwaitingSetup;
-	if (existing && !isAwaitingSetup)
-		return cacheDeploymentToCreateResponse({
-			cacheDeployment: existing,
-			org,
-			setupUrl: null,
-		});
-	// Atoms still being removed, and groups that outlived theirs, keep their stacks; a new one is named apart.
-	const atomId =
-		existing?.id ??
-		(await nextFreeAtomId({
-			owner: cacheOwner({ org, env }),
-			existingAtomIds: (
-				await cacheDeploymentRepo.findRemoving({ ctx })
-			).map(({ id }) => id),
-			deployer: getAtomDeployer(),
-		}));
+	const [active, removing] = await Promise.all([
+		cacheDeploymentRepo.findActive({ ctx }),
+		cacheDeploymentRepo.findRemoving({ ctx }),
+	]);
+	const limits = await featureAccess({ ctx }).getAtomLimits({
+		orgId: org.id,
+		activeAtoms: active.length,
+	});
+	if (!limits.canCreate) throw atomCreateRefused({ limits });
+	// Every Atom the env has keeps its stack, as do groups that outlived theirs; a new one is named apart from all of them.
+	const atomId = await nextFreeAtomId({
+		owner: cacheOwner({ org, env }),
+		existingAtomIds: [...active, ...removing].map(({ id }) => id),
+		deployer: getAtomDeployer(),
+	});
+	return setUpCache({
+		ctx,
+		params,
+		existing: null,
+		atomId,
+		token: generateAtomToken(),
+	});
+};
 
-	// A setup that is still waiting keeps its token, so a fresh link starts the same Atom.
-	const token = existing
-		? cacheDeploymentToAtomToken({ cacheDeployment: existing })
-		: generateAtomToken();
+/** A setup that is still waiting keeps its token, so a fresh link starts the same Atom. */
+const renewCacheSetup = ({
+	ctx,
+	params,
+	existing,
+}: {
+	ctx: AutumnContext;
+	params: CreateByocCacheParams;
+	existing: ByocCacheDeployment | null;
+}): Promise<CreateByocCacheResponse> => {
+	if (!existing) throw atomNotFound({ atomId: params.atom_id ?? "" });
+	if (existing.status !== ByocCacheStatus.AwaitingSetup)
+		return Promise.resolve(
+			cacheDeploymentToCreateResponse({
+				cacheDeployment: existing,
+				org: ctx.org,
+				setupUrl: null,
+			}),
+		);
+	return setUpCache({
+		ctx,
+		params,
+		existing,
+		atomId: existing.id,
+		token: cacheDeploymentToAtomToken({ cacheDeployment: existing }),
+	});
+};
+
+const setUpCache = async ({
+	ctx,
+	params,
+	existing,
+	atomId,
+	token,
+}: {
+	ctx: AutumnContext;
+	params: CreateByocCacheParams;
+	existing: ByocCacheDeployment | null;
+	atomId: string;
+	token: string;
+}): Promise<CreateByocCacheResponse> => {
+	const { org, env } = ctx;
 	const settings = setupSettings({ ctx, params, existing, atomId });
 	const setup = await getAtomDeployer().start({
 		names: atomNames({
@@ -221,6 +280,7 @@ const startCacheSetup = async ({
 		: await claimCacheDeployment({
 				ctx,
 				atomId,
+				name: params.name ?? null,
 				deploymentGroupId: setup.deploymentGroupId,
 				token,
 				settings,
