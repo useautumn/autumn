@@ -6,9 +6,9 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { ctxToApprovalPrincipal } from "@/internal/approvals/evaluate/ctxToApprovalPrincipal";
 import { evaluateBillingApproval } from "@/internal/approvals/evaluate/evaluateBillingApproval";
 import { listRulesForAction } from "@/internal/approvals/evaluate/listRulesForAction";
+import { resolveApprovalPrincipal } from "@/internal/approvals/evaluate/resolveApprovalPrincipal";
 import { billingFactsToJson } from "@/internal/approvals/facts/billing/billingFactsToJson";
 import { rejectRuleAdmittedRequest } from "./access/rejectRuleAdmittedRequest";
 import { logApprovalDecision } from "./logApprovalDecision";
@@ -35,7 +35,7 @@ const decideBillingApproval = async ({
 	enforced,
 }: CheckBillingApprovalParams & { enforced: boolean }) => {
 	const rulesMayApply =
-		ctxToApprovalPrincipal({ ctx }) !== null &&
+		(await resolveApprovalPrincipal({ ctx })) !== null &&
 		(await listRulesForAction({ ctx, action })).length > 0;
 	const approval = await evaluateBillingApproval({
 		ctx,
