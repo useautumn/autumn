@@ -126,3 +126,53 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("reward update swap: rewards.update restores the coupon when Stripe rejects a promo code")}`,
+	async () => {
+		const promoCode = `SWAPRPC${Date.now()}`;
+		const strayCode = `SWAPSTRAY${Date.now()}`;
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const reward = constructCoupon({
+			id: "swap-rpc-coupon",
+			promoCode,
+			discountType: RewardType.PercentageDiscount,
+			discountValue: 20,
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId: "reward-swap-rpc",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [pro] }),
+				s.reward({ reward, productId: pro.id }),
+			],
+			actions: [],
+		});
+
+		const strayCoupon = await ctx.stripeCli.coupons.create({
+			percent_off: 5,
+			duration: "once",
+		});
+		await ctx.stripeCli.promotionCodes.create({
+			promotion: { type: "coupon", coupon: strayCoupon.id },
+			code: strayCode,
+		});
+
+		await expect(
+			autumnV2_2.post("/rewards.update", {
+				reward_id: reward.id,
+				coupon: { promo_codes: [{ code: promoCode }, { code: strayCode }] },
+			}),
+		).rejects.toThrow();
+
+		await expectCouponIntact({
+			stripeCli: ctx.stripeCli,
+			couponId: reward.id,
+			promoCode,
+		});
+	},
+);

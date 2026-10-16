@@ -235,7 +235,11 @@ const recreateStripeCoupon = async ({
 	try {
 		await createStripeCoupon({ reward: updated, org, env, prices, logger });
 	} catch (error) {
-		await restoreStripeCoupon({ ctx, reward: previous });
+		await restoreStripeCoupon({
+			ctx,
+			reward: previous,
+			replacementId: updated.id,
+		});
 		throw error;
 	}
 };
