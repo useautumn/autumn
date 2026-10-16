@@ -8,6 +8,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	PooledBalanceResetMode,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { entities } from "@tests/utils/fixtures/db/entities";
 import { entitlements } from "@tests/utils/fixtures/db/entitlements";
@@ -278,6 +279,61 @@ describe("unlimited grant joins the customer's limited pool", () => {
 		);
 		const pool = onlyLivePool(fullCustomer);
 		expect(pool?.pooled_balance?.id).toBe(subscriptionPoolId);
+		expect(pool?.unlimited).toBe(true);
+		expect(pool?.pooled_balance?.granted).toBe(100);
+		expect(pool?.balance).toBe(100);
+	});
+});
+
+describe("limited pool with rollover", () => {
+	test("an unlimited grant joins a limited pool whose credits roll over", () => {
+		const rolloverEntitlement: EntitlementWithFeature = {
+			...paidPlan.pooledEntitlement,
+			rollover: {
+				max: null,
+				max_percentage: 50,
+				duration: RolloverExpiryDurationType.Month,
+				length: 1,
+			},
+		};
+		const rolloverPlan = products.createFull({
+			id: "pro",
+			prices: paidPlan.product.prices,
+			entitlements: paidPlan.product.entitlements.map((entitlement) =>
+				entitlement.id === paidPlan.pooledEntitlement.id
+					? rolloverEntitlement
+					: entitlement,
+			),
+		});
+		const fullCustomer = customerWithPools([
+			unlimitedRow({ product: lifetimeUnlimited }),
+		]);
+		const unlimitedPool = poolById({
+			fullCustomer,
+			poolId: poolIdOf({ fullCustomer, rowId: "cp_unlimited" }),
+		});
+		if (!unlimitedPool) throw new Error("unlimited pool missing");
+		unlimitedPool.balance = -590_275;
+
+		transition({
+			fullCustomer,
+			incoming: [
+				{
+					...entityRow({
+						product: rolloverPlan,
+						entity: entityA,
+						rowId: "cp_paid",
+					}),
+					subscription_ids: ["sub_live"],
+				},
+			],
+		});
+
+		const pool = onlyLivePool(fullCustomer);
+		expect(pool?.pooled_balance?.id).toBe(
+			poolIdOf({ fullCustomer, rowId: "cp_paid" }),
+		);
+		expect(pool?.pooled_balance?.rollover_signature).not.toBe("none");
 		expect(pool?.unlimited).toBe(true);
 		expect(pool?.pooled_balance?.granted).toBe(100);
 		expect(pool?.balance).toBe(100);

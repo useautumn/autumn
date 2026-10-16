@@ -74,10 +74,11 @@ const poolHasLimitedSource = ({
 }) => (computeContext.limitedSourceIdsByPoolId.get(poolId)?.size ?? 0) > 0;
 
 /**
- * The limited pool an unlimited additive grant joins. Interval, interval count
- * and anchor are ignored: the grant has nothing to reset, so it takes the
- * pool's cycle. A paid grant stays on its own subscription; a free one joins
- * any limited pool. A pool a paid plan feeds wins, then the oldest.
+ * The limited pool an unlimited additive grant joins. Interval, interval count,
+ * anchor and rollover are ignored: the grant has nothing to reset or roll over,
+ * so it takes the pool's cycle and rollover. A paid grant stays on its own
+ * subscription; a free one joins any limited pool. A pool a paid plan feeds
+ * wins, then the oldest.
  */
 export const findUnlimitedShareHost = ({
 	computeContext,
@@ -109,7 +110,6 @@ export const findUnlimitedShareHost = ({
 			pooled_balance.expires_at == null &&
 			!(pooled_balance.unlimited ?? false) &&
 			pooled_balance.internal_feature_id === sourceIdentity.internalFeatureId &&
-			pooled_balance.rollover_signature === sourceIdentity.rolloverSignature &&
 			pooled_balance.feature_override_signature ===
 				sourceIdentity.featureOverrideSignature &&
 			(paidSubscriptionId === undefined ||
