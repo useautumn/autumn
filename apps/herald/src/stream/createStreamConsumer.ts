@@ -6,6 +6,7 @@ import {
 	createProgressTracker,
 	type Kafka,
 	type KafkaConsumerGroupTimings,
+	KafkaConsumerLeaseLostError,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
 	type MeteringStaleRecord,
@@ -25,6 +26,7 @@ import {
 	type RunningStreamConsumer,
 	type StreamConsumer,
 } from "./types/streamConsumer.js";
+import { createUncommittedLandings } from "./uncommittedLandings/createUncommittedLandings.js";
 
 // Small on purpose: herald is a follower, and one slow partition must not hold the others.
 const PARTITIONS_CONSUMED_CONCURRENTLY = 8;
@@ -33,11 +35,14 @@ const RECORDS_PER_SLICE = 500;
 const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	fetchMaxWaitTimeMs: 250,
 	heartbeatIntervalMs: 3000,
-	rebalanceTimeoutMs: 60000,
+	// librdkafka's max.poll.interval.ms, at its default: every partition's slices from one poll land inside it, or all rewind.
+	rebalanceTimeoutMs: 300_000,
 	sessionTimeoutMs: 30000,
 };
 /** How often an idle job's lag clock is reset by its leaders answering fetches. */
 const FETCH_LIVENESS_INTERVAL_MS = 1_000;
+/** A slice this slow is logged: a poll's slices on every partition share one poll window. */
+const SLOW_SLICE_MS = 10_000;
 
 /** Runs one job over the balance log with a consumer group of its own. Everything Kafka lives here, none of it in a job. */
 export function createStreamConsumer({
@@ -77,6 +82,10 @@ export function createStreamConsumer({
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
 	const progress = createProgressTracker();
+	const uncommittedLandings = createUncommittedLandings({
+		ctx: { progress },
+		topic: config.topic,
+	});
 	const now = ctx.now ?? Date.now;
 	let membership: JobMembership = "idle";
 	let assignedPartitions: number[] = [];
@@ -126,16 +135,58 @@ export function createStreamConsumer({
 
 	// Stopped mid-slice: thrown so nothing of the slice is resolved; the runner is already stopping, so it ends there.
 	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
-		const settled = await landRecords({
-			ctx: {
-				logger: ctx.logger,
-				signal: stopping.signal,
-				heartbeat: slice.heartbeat,
-			},
-			job: streamConsumer,
-			records: slice.applications,
+		const startedAtMs = now();
+		try {
+			const settled = await landRecords({
+				ctx: {
+					logger: ctx.logger,
+					signal: stopping.signal,
+					heartbeat: slice.heartbeat,
+				},
+				job: streamConsumer,
+				records: slice.applications,
+			});
+			if (!settled) throw new HeraldStoppedMidSliceError();
+		} finally {
+			noteSlice({ slice, startedAtMs });
+		}
+	}
+
+	/** Every slice, landed or cut short, is held until committed and timed: a slow one is how a poll overruns its window. */
+	function noteSlice({
+		slice,
+		startedAtMs,
+	}: {
+		slice: MeteringRecordSlice;
+		startedAtMs: number;
+	}): void {
+		const first = slice.applications[0];
+		const last = slice.applications.at(-1);
+		if (!first || !last) return;
+		const endedAtMs = now();
+		uncommittedLandings.recordSlice({
+			partition: slice.partition,
+			firstOffset: first.position.offset,
+			nextOffset: last.position.offset + 1n,
+			startedAtMs,
+			endedAtMs,
 		});
-		if (!settled) throw new HeraldStoppedMidSliceError();
+		const durationMs = endedAtMs - startedAtMs;
+		if (durationMs < SLOW_SLICE_MS) return;
+		ctx.logger.warn(
+			{
+				type: "herald_slice_slow",
+				data: {
+					job,
+					topic: slice.topic,
+					partition: slice.partition,
+					firstOffset: first.position.offset.toString(),
+					records: slice.applications.length,
+					durationMs,
+				},
+			},
+			"Herald took long to land a slice",
+		);
 	}
 
 	function readResumeOffset(): null {
@@ -171,8 +222,40 @@ export function createStreamConsumer({
 	});
 
 	function onCrash(event: ConsumerCrashEvent): void {
-		if (event.payload.restart) return;
-		ctx.onCrashed({ job, cause: event.payload.error });
+		const { error, restart } = event.payload;
+		if (restart) {
+			reportRewind({ cause: error });
+			return;
+		}
+		ctx.onCrashed({ job, cause: error });
+	}
+
+	/** A restart seeks every partition back to its last commit, so what the job was handed past it comes again. */
+	function reportRewind({ cause }: { cause: Error }): void {
+		const rewound = uncommittedLandings.takeRewound({
+			partitions: assignedPartitions,
+		});
+		let records = 0;
+		let longestRanMs = 0;
+		for (const partition of rewound) {
+			records += partition.records;
+			longestRanMs = Math.max(longestRanMs, partition.ranMs);
+		}
+		ctx.logger.warn(
+			{
+				error: cause,
+				type: "herald_job_rewound",
+				data: {
+					job,
+					groupId,
+					leaseLost: cause instanceof KafkaConsumerLeaseLostError,
+					records,
+					longestRanMs,
+					rewound,
+				},
+			},
+			"Herald job rewound to its last commit",
+		);
 	}
 	function onGroupJoin(event: ConsumerGroupJoinEvent): void {
 		assignedPartitions = event.payload.memberAssignment[config.topic] ?? [];

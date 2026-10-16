@@ -15,6 +15,7 @@ const ISSUE_LABELS: Record<SubscriptionMismatch["type"], string> = {
 	stripe_sub_not_in_autumn: "Unlinked",
 	plan_on_ending_subscription: "Plan on ending sub",
 	stale_subscription_link: "Stale link",
+	missing_stripe_subscription: "No subscription",
 	expected_state_error: "Unknown state",
 	shared_stripe_customer: "Shared customer",
 };

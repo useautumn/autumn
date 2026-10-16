@@ -5,7 +5,7 @@ import {
 	buildSubscriptionPickerRows,
 	subscriptionPickerRowToTarget,
 } from "@/views/customers2/components/sheets/set-plans-subscription/utils/buildSubscriptionPickerRows";
-import { findUnlinkedFreePlanNames } from "@/views/customers2/components/sheets/set-plans-subscription/utils/findUnlinkedFreePlanNames";
+import { findUnlinkedPlanNames } from "@/views/customers2/components/sheets/set-plans-subscription/utils/findUnlinkedPlanNames";
 import {
 	makeCustomerProduct,
 	makeProposal,
@@ -213,14 +213,25 @@ describe("buildSubscriptionPickerRows", () => {
 	});
 });
 
-describe("findUnlinkedFreePlanNames", () => {
+describe("findUnlinkedPlanNames", () => {
 	test("names free plans billed on no subscription", () => {
-		expect(findUnlinkedFreePlanNames({ customerProducts })).toEqual(["Free"]);
+		expect(findUnlinkedPlanNames({ customerProducts })).toEqual(["Free"]);
+	});
+
+	test("names paid plans billed on no subscription too", () => {
+		expect(
+			findUnlinkedPlanNames({
+				customerProducts: [
+					...customerProducts,
+					makeCustomerProduct({ id: "unbilled", productName: "Unbilled Pro" }),
+				],
+			}),
+		).toEqual(["Free", "Unbilled Pro"]);
 	});
 
 	test("ignores expired free plans", () => {
 		expect(
-			findUnlinkedFreePlanNames({
+			findUnlinkedPlanNames({
 				customerProducts: [
 					makeCustomerProduct({
 						id: "old_free",

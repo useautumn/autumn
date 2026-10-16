@@ -10,6 +10,7 @@ import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/
 import { computeExpectedSubscriptionState } from "./compute/computeExpectedSubscriptionState";
 import { evaluateCancelState } from "./evaluate/evaluateCancelState";
 import { evaluateItems } from "./evaluate/evaluateItems";
+import { evaluatePlansWithoutSubscription } from "./evaluate/evaluatePlansWithoutSubscription";
 import { evaluateSchedulePhases } from "./evaluate/evaluateSchedulePhases";
 import { evaluateSharedStripeCustomer } from "./evaluate/evaluateSharedStripeCustomer";
 import { evaluateUnlinkedSubscription } from "./evaluate/evaluateUnlinkedSubscription";
@@ -82,9 +83,14 @@ export const verify = async ({
 	const stripeCli =
 		stripeCliOverride ?? createStripeCli({ org: ctx.org, env: ctx.env });
 
-	const customerMismatches = stampMessages(
-		await evaluateSharedStripeCustomer({ ctx, fullCustomer }),
-	);
+	// A subscription whitelist scopes verify to those subscriptions, so plans
+	// with no subscription at all are only reported on a full verify.
+	const customerMismatches = stampMessages([
+		...(await evaluateSharedStripeCustomer({ ctx, fullCustomer })),
+		...(subscriptionIdsFilter
+			? []
+			: evaluatePlansWithoutSubscription({ fullCustomer })),
+	]);
 
 	const subscriptions: VerifyResponse["subscriptions"] = [];
 
