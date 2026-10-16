@@ -145,12 +145,7 @@ export const handleUpdateCoupon = createRoute({
 					legacyVersion: legacyStripe,
 				});
 			} catch (error) {
-				await restoreStripeCoupon({
-					ctx,
-					reward,
-					replacementId: updatedReward.id,
-					legacyStripe,
-				});
+				await restoreStripeCoupon({ ctx, reward, legacyStripe });
 				throw error;
 			}
 		}

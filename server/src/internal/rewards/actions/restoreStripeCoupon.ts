@@ -5,7 +5,6 @@ import {
 	type Reward,
 	RewardCategory,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -42,21 +41,12 @@ const getCouponPrices = async ({
 export const restoreStripeCoupon = async ({
 	ctx,
 	reward,
-	replacementId,
 	legacyStripe,
 }: {
 	ctx: AutumnContext;
 	reward: Reward;
-	replacementId: string;
 	legacyStripe?: boolean;
 }) => {
-	const stripeCli = createStripeCli({
-		org: ctx.org,
-		env: ctx.env,
-		legacyVersion: legacyStripe,
-	});
-	await stripeCli.coupons.del(replacementId).catch(() => {});
-
 	const prices = await getCouponPrices({ ctx, reward });
 	const hadStripeCoupon =
 		getRewardCat(reward) === RewardCategory.Discount || prices.length > 0;
