@@ -5,6 +5,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { getCreditSystemsFromFeature } from "../../creditSystemUtils.js";
 import { FeatureService } from "../../FeatureService.js";
@@ -21,6 +22,11 @@ export const handleDeleteFeatureV2 = createRoute({
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: feature_id });
 		}
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "features.delete", featureId: feature_id }],
+		});
 
 		const creditSystems = getCreditSystemsFromFeature({
 			featureId: feature_id,
