@@ -27,10 +27,16 @@ export const resolveAttachExistingUsagesConfig = ({
 	attachBillingContext: AttachBillingContext;
 	params: NewCustomerProductParams;
 }): ExistingUsagesConfig | undefined => {
-	const { currentCustomerProduct, carryOverSourceCustomerProduct, planTiming } =
-		attachBillingContext;
+	const {
+		currentCustomerProduct,
+		carryOverSourceCustomerProduct,
+		carryUsagesFromCustomerProduct,
+		planTiming,
+	} = attachBillingContext;
 	const carryOverSource =
-		carryOverSourceCustomerProduct ?? currentCustomerProduct;
+		carryOverSourceCustomerProduct ??
+		currentCustomerProduct ??
+		carryUsagesFromCustomerProduct;
 
 	if (planTiming === "end_of_cycle" || !carryOverSource) return undefined;
 

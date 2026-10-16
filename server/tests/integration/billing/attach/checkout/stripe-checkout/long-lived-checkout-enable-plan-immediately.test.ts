@@ -12,7 +12,8 @@
  * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
  * - Editing the unpaid plan previews its full new price, bills nothing, and keeps the link,
  *   which then sells the edit and grants it on payment; usage on the plan carries over.
- * - A paid one-off purchase from the link is not treated as unpaid by an edit.
+ * - A paid one-off purchase from the link is not treated as unpaid by an edit, and an unpaid
+ *   one-off edit replaces its credits rather than adding to them.
  */
 
 import { expect, test } from "bun:test";
@@ -508,5 +509,54 @@ test.concurrent(
 			(await getActiveProRow({ ctx, internalCustomerId, productId: oneOff.id }))
 				?.id,
 		).toBe(paidRow!.id);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: editing an unpaid one-off quantity replaces its credits")}`,
+	async () => {
+		const customerId = "ll-eppi-one-off-edit";
+		const oneOff = products.oneOff({
+			id: `one-off-${customerId}`,
+			items: [
+				items.oneOffMessages({
+					includedUsage: 0,
+					billingUnits: 100,
+					price: 10,
+				}),
+			],
+		});
+		const { autumnV1, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: true }), s.products({ list: [oneOff] })],
+			actions: [],
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: oneOff.id,
+			long_lived_checkout: true,
+			enable_plan_immediately: true,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+		await expectCustomerFeatureCorrect({
+			customerId,
+			autumn: autumnV1,
+			featureId: TestFeature.Messages,
+			balance: 100,
+		});
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: oneOff.id,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+		});
+
+		await expectCustomerFeatureCorrect({
+			customerId,
+			autumn: autumnV1,
+			featureId: TestFeature.Messages,
+			balance: 200,
+		});
 	},
 );

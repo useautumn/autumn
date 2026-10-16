@@ -24,7 +24,7 @@ const grantedPlanOverrides = async ({
 	customerProduct: FullCusProduct;
 }) => {
 	const fullCustomer = await setupFullCustomerContext({ ctx, params });
-	const carryOverSourceCustomerProduct =
+	const carryUsagesFromCustomerProduct =
 		fullCustomer.customer_products.find(
 			({ id }) => id === customerProduct.id,
 		) ?? customerProduct;
@@ -36,9 +36,9 @@ const grantedPlanOverrides = async ({
 					({ id }) => id !== customerProduct.id,
 				),
 			},
-			carryOverSourceCustomerProduct,
+			carryUsagesFromCustomerProduct,
 		},
-		execute: { carryOverSourceCustomerProduct },
+		execute: { carryUsagesFromCustomerProduct },
 	};
 };
 
