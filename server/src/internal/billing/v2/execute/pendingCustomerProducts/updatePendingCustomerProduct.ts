@@ -37,7 +37,7 @@ export const updatePendingCustomerProduct = async ({
 		return {};
 	}
 
-	const { attachParams, longLivedCheckout, rebills } =
+	const { attachParams, contextOverride, longLivedCheckout, rebills } =
 		await previewPendingReattach({
 			ctx,
 			params,
@@ -66,6 +66,7 @@ export const updatePendingCustomerProduct = async ({
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
 		params: attachParams,
+		contextOverride,
 		longLivedCheckout: longLivedCheckout && {
 			id: longLivedCheckout.id,
 			expiresAt: longLivedCheckout.expires_at,

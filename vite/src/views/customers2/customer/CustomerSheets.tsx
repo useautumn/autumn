@@ -28,6 +28,7 @@ import { CreateInvoiceSheet } from "../components/sheets/CreateInvoiceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { CreditNoteInvoiceSheet } from "../components/sheets/CreditNoteInvoiceSheet";
 import { CustomerConfigSheet } from "../components/sheets/CustomerConfigSheet";
+import { EnablePendingPlanSheet } from "../components/sheets/EnablePendingPlanSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { LicenseDetailSheet } from "../components/sheets/LicenseDetailSheet";
 import { LicensePoolDetailSheet } from "../components/sheets/LicensePoolDetailSheet";
@@ -78,6 +79,8 @@ export function CustomerSheets() {
 				return <AttachProductSheet />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
+			case "subscription-enable-now":
+				return <EnablePendingPlanSheet />;
 			case "license-detail":
 				return <LicenseDetailSheet />;
 			case "license-pool-detail":

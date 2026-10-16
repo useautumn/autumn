@@ -10,6 +10,8 @@ import {
 import { billingActions } from "@/internal/billing/v2/actions";
 import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
+import { enablesPendingPlan } from "@/internal/billing/v2/execute/pendingCustomerProducts/enablesPendingPlan";
+import { findPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingPlanIfAny";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
@@ -26,13 +28,26 @@ export const handlePreviewUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
+		const shouldEnablePendingPlan =
+			enablesPendingPlan({ params: body }) &&
+			Boolean(
+				await findPendingCustomerProduct({
+					ctx,
+					customerId: body.customer_id,
+					productId: body.plan_id,
+					entityId: body.entity_id,
+					customerProductId: body.customer_product_id,
+					subscriptionId: body.subscription_id,
+				}),
+			);
 		const liveUpdate = await pendingReplacementToLiveUpdate({
 			ctx,
 			params: body,
 		});
 
 		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
-		const isSwitch = !liveUpdate && isCollectionMethodSwitch(body);
+		const isSwitch =
+			!liveUpdate && !shouldEnablePendingPlan && isCollectionMethodSwitch(body);
 		if (isSwitch) {
 			const switchContext = await setupSwitchCollectionMethodContext({
 				ctx,

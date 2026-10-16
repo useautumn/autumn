@@ -1,4 +1,5 @@
 import {
+	type CancelAction,
 	CusProductStatus,
 	cp,
 	type FullCusProduct,
@@ -106,6 +107,9 @@ export function SubscriptionCancelSheet() {
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
 	const { customer } = useCusQuery();
+	const requestedCancelAction = sheetData?.cancelAction as
+		| CancelAction
+		| undefined;
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
@@ -131,9 +135,9 @@ export function SubscriptionCancelSheet() {
 	// Free and one-off plans must use "cancel_immediately"; paid recurring plans
 	// default to "cancel_end_of_cycle", with or without a Stripe subscription.
 	const { valid: isFreeOrOneOff } = cp(cusProduct).free().or.oneOff();
-	const defaultCancelAction = isFreeOrOneOff
-		? "cancel_immediately"
-		: "cancel_end_of_cycle";
+	const defaultCancelAction =
+		requestedCancelAction ??
+		(isFreeOrOneOff ? "cancel_immediately" : "cancel_end_of_cycle");
 
 	if (!cusProduct) {
 		return (

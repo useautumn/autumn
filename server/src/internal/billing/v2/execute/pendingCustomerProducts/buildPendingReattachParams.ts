@@ -20,6 +20,10 @@ export const buildPendingReattachParams = ({
 	customerProduct: FullCusProduct;
 }): AttachParamsV1 => {
 	const { invoiceMode } = billingContext;
+	const enablesNow = params.invoice_mode?.enable_plan_immediately === true;
+	const issueMethod = invoiceMode && invoiceModeToIssueMethod({ invoiceMode });
+	const shouldFinalizeInvoiceForImmediateEnable =
+		enablesNow && issueMethod === "draft";
 
 	const featureQuantities =
 		params.feature_quantities ??
@@ -39,12 +43,19 @@ export const buildPendingReattachParams = ({
 			customerProduct,
 		}),
 		version: params.version,
-		enable_plan_immediately: billingContext.enablePlanImmediately,
-		invoice_mode: invoiceMode && {
+		...(enablesNow && {
+			billing_cycle_anchor: params.billing_cycle_anchor,
+			proration_behavior: params.proration_behavior,
+		}),
+		enable_plan_immediately: enablesNow || billingContext.enablePlanImmediately,
+		invoice_mode: (invoiceMode || enablesNow) && {
 			enabled: true,
-			enable_plan_immediately: invoiceMode.enableProductImmediately,
-			issue_method: invoiceModeToIssueMethod({ invoiceMode }),
-			net_terms_days: invoiceMode.daysUntilDue,
+			enable_plan_immediately:
+				enablesNow || invoiceMode?.enableProductImmediately,
+			issue_method: shouldFinalizeInvoiceForImmediateEnable
+				? "finalize"
+				: issueMethod,
+			net_terms_days: invoiceMode?.daysUntilDue,
 		},
 	} as AttachParamsV1;
 };
