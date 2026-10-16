@@ -19,7 +19,8 @@
 	"scripts": {
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
-		"ts": "tsc --noEmit"
+		"ts": "tsc --noEmit",
+		"bench:render": "NODE_ENV=production bun tests/bench/renderBench.ts"
 	},
 	"dependencies": {
 		"@autumn/ksuid": "workspace:*",
