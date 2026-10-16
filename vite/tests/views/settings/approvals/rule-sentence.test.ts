@@ -11,6 +11,7 @@ import type {
 	RuleSubject,
 } from "@autumn/shared";
 import {
+	actionText,
 	buildRuleSentence,
 	type RuleLabels,
 	type SentencePart,
@@ -26,6 +27,7 @@ const sentenceText = (parts: SentencePart[]) =>
 		.join(" ");
 
 const NAMES: Record<string, string> = {
+	launch20: "LAUNCH20",
 	usr_john: "John Doe",
 	enterprise: "Enterprise",
 	pro: "Pro",
@@ -44,6 +46,7 @@ const labels: RuleLabels = {
 	plan: (id) => NAMES[id] ?? id,
 	feature: (id) => ({ name: NAMES[id] ?? id, unit: UNITS[id] ?? "" }),
 	money: (amount) => `$${amount}`,
+	reward: (id) => NAMES[id] ?? id,
 };
 
 const sales: RuleSubject = { type: "role", role: "sales" };
@@ -365,5 +368,58 @@ describe("rule sentence: when clauses from the boards", () => {
 		],
 	])("%s", (_name, input, expected) => {
 		expect(textOf(input)).toBe(expected);
+	});
+});
+
+describe("rule sentence: invoice, reward, customer and catalog fields", () => {
+	test.each<[ApprovalAction, Record<string, unknown>, string]>([
+		["invoices.create", { total: { $lte: 100 } }, "Invoice total ≤ $100"],
+		[
+			"invoices.void",
+			{ customer: { customer_id: "acme" } },
+			"Customer is acme",
+		],
+		[
+			"customers.update",
+			{ customer: { customer_id: { $in: ["acme", "globex"] } } },
+			"Customer is any of acme, globex",
+		],
+		[
+			"customers.delete",
+			{ customer: { plan: { $some: { plan_id: "pro" } } } },
+			"Customer has plan Pro",
+		],
+		[
+			"invoices.pay",
+			{ customer: { plan: { $none: { plan_id: { $in: ["pro", "team"] } } } } },
+			"Customer doesn't have plan Pro, Team",
+		],
+		[
+			"rewards.apply",
+			{ customer: { plan: { $none: {} } } },
+			"Customer has no plans",
+		],
+		["rewards.apply", { reward_id: "launch20" }, "Reward is LAUNCH20"],
+		[
+			"rewards.apply",
+			{ reward_id: { $nin: ["launch20"] } },
+			"Reward is none of LAUNCH20",
+		],
+		["catalog.edit_plans", { plan_id: "enterprise" }, "Plan is Enterprise"],
+		[
+			"catalog.edit_features",
+			{ feature_id: "ai_credits" },
+			"Feature is AI credits",
+		],
+		["billing.attach", { total: { $gt: 500 } }, "Due now > $500"],
+		[
+			"billing.attach",
+			{ discounts: { $every: { reward_id: "launch20" } } },
+			"Discount is LAUNCH20",
+		],
+	])("%s %j", (action, when, condition) => {
+		expect(textOf({ subjects: [everyone], actions: [action], when })).toBe(
+			`Everyone can ${actionText(action)} when ${condition}`,
+		);
 	});
 });

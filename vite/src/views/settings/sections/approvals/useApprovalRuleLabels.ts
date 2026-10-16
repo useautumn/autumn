@@ -6,6 +6,7 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
 import type { RuleLabels } from "./buildRuleSentence";
@@ -16,6 +17,7 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 	const { memberships } = useMemberships();
+	const { rewards } = useRewardsQuery();
 
 	return {
 		member: (userId) => {
@@ -38,5 +40,7 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 				amount,
 				currency: org?.default_currency,
 			}),
+		reward: (rewardId) =>
+			rewards.find((reward) => reward.id === rewardId)?.name || rewardId,
 	};
 };
