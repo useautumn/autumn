@@ -72,6 +72,13 @@ export const THREAD_STAT_FIELDS = [
 	"stageRelaySendUs",
 	"stageRelayReceiveUs",
 	"stageSettlePullUs",
+	"stageLockLookupUs",
+	"stageFinalizeDecisionUs",
+	"stageForwardHandInUs",
+	/** The forwarder's tracks.append requests since boot, their tracks, and the p99 of their round trips since the last read. */
+	"journalForwardRequests",
+	"journalForwardTracks",
+	"journalForwardRttP99Us",
 	"stageOtherBusyUs",
 	"stageIdleUs",
 ] as const;

@@ -30,6 +30,12 @@ export const STAGES = [
 	"relayReceive",
 	/** A settle pull sent; the subject it brings back is applied under pushApply. */
 	"settlePull",
+	/** A lock's row looked up for a retry or a finalize: the open-locks map, the owed scan and the replay that rebuilds it. */
+	"lockLookup",
+	/** The engine's decision on a finalize: computeFinalizeDecision. */
+	"finalizeDecision",
+	/** The forwarder's own work per batch: what is unsent, the hand-ins built and encoded for Autumn. */
+	"forwardHandIn",
 ] as const;
 
 export type Stage = (typeof STAGES)[number];

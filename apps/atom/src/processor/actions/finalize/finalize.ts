@@ -5,6 +5,7 @@ import {
 } from "@autumn/balance-engine";
 import { findFeatureById, InsufficientBalanceError } from "@autumn/shared";
 import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type {
 	AnswerableFinalize,
@@ -72,7 +73,9 @@ export const finalize = async ({
 }): Promise<FinalizeResponse> => {
 	const answerable = finalizeRequestToAnswerable({ request });
 	const { customerId, lockId } = answerable;
-	const lock = heldLockRowOf({ ctx, customerId, lockId });
+	const lock = timeStage("lockLookup", () =>
+		heldLockRowOf({ ctx, customerId, lockId }),
+	);
 	if (!lock) throw new CannotAnswerError({ reason: "lock_not_held" });
 	// Autumn's timer settles a lock at its expiry, so a finalize after it is the API's to answer.
 	if (request.occurredAt > lock.expires_at)
@@ -86,10 +89,12 @@ export const finalize = async ({
 		subject,
 	});
 	// A lock no longer open throws LockNotFoundError: settled here already, or expired at Autumn.
-	const { result } = computeFinalizeDecision({
-		fullSubject: subject.fullSubject,
-		command,
-	}).mutation;
+	const { result } = timeStage(
+		"finalizeDecision",
+		() =>
+			computeFinalizeDecision({ fullSubject: subject.fullSubject, command })
+				.mutation,
+	);
 	if (result.type !== "finalize")
 		throw new Error(
 			`Finalize ${command.commandId} decided a non-finalize result`,

@@ -1,4 +1,5 @@
 import { heapSize } from "bun:jsc";
+import { readJournalForwarderThreadStats } from "../../journalForwarder/createJournalForwarder.js";
 import { readViewFoldThreadStats } from "../../processor/actions/readCurrentSubject/readCurrentSubject.js";
 import type { HeldSubjects } from "../../state/heldSubjects/types/heldSubjects.js";
 import { readJournalThreadStats } from "../../state/journal/openJournal.js";
@@ -44,6 +45,7 @@ export const startThreadStatsTick = ({
 		for (const [field, value] of Object.entries({
 			...readViewFoldThreadStats(),
 			...readSqliteWriterThreadStats(),
+			...readJournalForwarderThreadStats(),
 			...stages,
 		}))
 			counters.set(field as ThreadStatField, value);

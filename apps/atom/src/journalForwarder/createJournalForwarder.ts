@@ -2,6 +2,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AutumnClientError } from "../autumnClient/autumnClientError.js";
 import type { AutumnClient } from "../autumnClient/types/autumnClient.js";
 import type { Journal, JournalEntry } from "../state/journal/types/journal.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import type { ThreadCounters } from "../threads/stats/threadStats.js";
 import { journalEntryToHandIn } from "./journalEntryToHandIn.js";
 import type {
@@ -46,6 +47,44 @@ type Draining = {
 
 /** A track to hand in, beside the journal it is owed from. */
 type Unsent = { forwarded: ForwardedJournal; entry: JournalEntry };
+
+/** The forwarder's requests on this thread since boot, their tracks, and the round trips since the stats tick last read them. */
+const RTT_BUCKETS = 64;
+const RTT_BUCKETS_PER_DOUBLING = 2;
+let forwardRequests = 0;
+let forwardTracks = 0;
+const rttBuckets = new Array<number>(RTT_BUCKETS).fill(0);
+const recordRoundTrip = ({
+	rttUs,
+	tracks,
+}: {
+	rttUs: number;
+	tracks: number;
+}) => {
+	forwardRequests++;
+	forwardTracks += tracks;
+	const bucket = Math.floor(Math.log2(1 + rttUs) * RTT_BUCKETS_PER_DOUBLING);
+	rttBuckets[Math.min(RTT_BUCKETS - 1, bucket)]++;
+};
+
+/** The requests and tracks since boot, and the p99 round trip (post to reply) since the last read, in µs. */
+export const readJournalForwarderThreadStats = () => {
+	const trips = rttBuckets.reduce((sum, count) => sum + count, 0);
+	let p99Bucket = 0;
+	for (let seen = 0; p99Bucket < RTT_BUCKETS; p99Bucket++) {
+		seen += rttBuckets[p99Bucket] ?? 0;
+		if (seen >= trips * 0.99) break;
+	}
+	rttBuckets.fill(0);
+	return {
+		journalForwardRequests: forwardRequests,
+		journalForwardTracks: forwardTracks,
+		journalForwardRttP99Us:
+			trips === 0
+				? 0
+				: Math.round(2 ** ((p99Bucket + 1) / RTT_BUCKETS_PER_DOUBLING) - 1),
+	};
+};
 
 /** What Autumn took of a batch, and the tracks it refused alone. */
 type Sent = { taken: Unsent[]; refused: Unsent[] };
@@ -93,11 +132,18 @@ export const createJournalForwarder = ({
 	async function post(batch: Unsent[]): Promise<void> {
 		const [first] = batch;
 		if (!first) return;
-		await ctx.autumnClient.appendTracks({
-			tokenHash: first.forwarded.tokenHash(),
-			tracks: batch.map(({ entry }) =>
-				journalEntryToHandIn({ writerId: entry.writerId, entry }),
-			),
+		const postedAt = performance.now();
+		await timeStage("forwardHandIn", () =>
+			ctx.autumnClient.appendTracks({
+				tokenHash: first.forwarded.tokenHash(),
+				tracks: batch.map(({ entry }) =>
+					journalEntryToHandIn({ writerId: entry.writerId, entry }),
+				),
+			}),
+		);
+		recordRoundTrip({
+			rttUs: (performance.now() - postedAt) * 1000,
+			tracks: batch.length,
 		});
 	}
 
@@ -239,7 +285,7 @@ export const createJournalForwarder = ({
 			if (waiting < MAX_TRACKS_PER_REQUEST) await Bun.sleep(LINGER_MS);
 			if (isStopped()) return;
 			const journals = journalsOf();
-			const batch = unsentOf(journals);
+			const batch = timeStage("forwardHandIn", () => unsentOf(journals));
 			if (batch.length === 0) return;
 			let sent: Sent;
 			try {
