@@ -52,7 +52,6 @@ describe("permission denial toast", () => {
 					status: 403,
 					data: {
 						code: "permission_denied",
-						env: "live",
 						message: "Only Finance can void invoices.",
 						details: {
 							violations: [],
