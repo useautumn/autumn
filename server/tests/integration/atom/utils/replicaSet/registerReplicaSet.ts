@@ -43,6 +43,7 @@ export const registerReplicaSet = async ({
 		id: generateId("atom"),
 		org_id: defaultCtx.org.id,
 		env: defaultCtx.env,
+		name: null,
 		deployment_group_id: generateId("replica_set"),
 		deployment_id: generateId("replica_set_deployment"),
 		status,

@@ -84,6 +84,19 @@ export class LockAlreadyExistsError extends Error {
 	}
 }
 
+/** The lock's row names a feature with no row of its own, so nothing can settle under it: refused, and the lock's expiry settles it. */
+export class LockFeatureNotLoadedError extends Error {
+	readonly lockId: string;
+	readonly featureId: string;
+
+	constructor({ lockId, featureId }: { lockId: string; featureId: string }) {
+		super(`Lock ${lockId} names feature ${featureId}, which has no row`);
+		this.name = "LockFeatureNotLoadedError";
+		this.lockId = lockId;
+		this.featureId = featureId;
+	}
+}
+
 /** No open lock under this id for the customer: never taken, already settled, or expired. */
 export class LockNotFoundError extends Error {
 	readonly lockId: string;

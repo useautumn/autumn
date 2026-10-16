@@ -1,17 +1,26 @@
 import { atomDeployments, type ByocCacheDeployment } from "@autumn/shared";
 import { and, notInArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { atomIdRequired } from "../utils/byocCacheUtils.js";
+import { findCacheDeploymentById } from "./findCacheDeploymentById.js";
 import { isEnvRow, REMOVING_STATUSES } from "./utils/cacheDeploymentWhere.js";
 
-/** The env's one active Atom as stored now; `ctx.org` is a cached copy, so it never says. */
+/** The env's Atom by id, whatever its status; with no id, its only active one. `ctx.org` is a cached copy, so it never says. */
 export const findCacheDeployment = async ({
 	ctx,
+	atomId,
 }: {
 	ctx: AutumnContext;
-}): Promise<ByocCacheDeployment | null> =>
-	(await ctx.db.query.atomDeployments.findFirst({
+	atomId?: string;
+}): Promise<ByocCacheDeployment | null> => {
+	if (atomId) return findCacheDeploymentById({ ctx, id: atomId });
+	const active = await ctx.db.query.atomDeployments.findMany({
 		where: and(
 			isEnvRow({ ctx }),
 			notInArray(atomDeployments.status, REMOVING_STATUSES),
 		),
-	})) ?? null;
+		limit: 2,
+	});
+	if (active.length > 1) throw atomIdRequired();
+	return active[0] ?? null;
+};

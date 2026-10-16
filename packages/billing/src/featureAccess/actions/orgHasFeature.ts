@@ -8,7 +8,7 @@ export const orgHasFeature = async ({
 	featureId,
 	useEdge = false,
 }: {
-	ctx: FeatureAccessContext;
+	ctx: Pick<FeatureAccessContext, "autumn" | "logger">;
 	orgId: string;
 	featureId: BillingFeatureId;
 	/** Ask Autumn's own Atom first; the SDK falls back to the Autumn API when it's down. */

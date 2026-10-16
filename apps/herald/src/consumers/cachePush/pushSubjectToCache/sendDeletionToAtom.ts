@@ -27,6 +27,7 @@ export const sendDeletionToAtom = async ({
 				type: "herald_atom_push_failed",
 				data: {
 					target: atomConnection.target,
+					atomId: atomConnection.id,
 					logOffset: body.log_offset,
 					endpointUrl: atomConnection.endpointUrl,
 				},

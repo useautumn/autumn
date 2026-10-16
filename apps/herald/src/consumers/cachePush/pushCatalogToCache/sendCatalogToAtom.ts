@@ -29,6 +29,7 @@ export const sendCatalogToAtom = async ({
 				type: "herald_atom_catalog_push_failed",
 				data: {
 					target: atomConnection.target,
+					atomId: atomConnection.id,
 					orgId,
 					endpointUrl: atomConnection.endpointUrl,
 					rowCount: rows.length,

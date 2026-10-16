@@ -13,6 +13,7 @@ export const shadowAtomRecordToApiCache = ({
 }): ApiByocCache => ({
 	id: shadowAtomRecordId({ record }),
 	env: AppEnv.Live,
+	name: null,
 	stack_name: shadowAtomRecordNames({ record }).label,
 	status: record.status,
 	deployment_id: record.deployment_id,

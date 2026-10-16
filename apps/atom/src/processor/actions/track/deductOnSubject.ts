@@ -4,6 +4,7 @@ import {
 	computeCheck,
 	computeTrackDecision,
 	findLockInsertInMutation,
+	findOpenLockByLockId,
 	type TrackCommand,
 	trackResultToCheckResult,
 	UnsupportedCommandError,
@@ -70,9 +71,12 @@ export const deductOnSubject = ({
 	// D2: a lock_id this slot took is the same lock on its terms (nothing moves or is journaled), a conflict on any other.
 	const lockId = track.lock?.lockId;
 	// Only while the lock is still open in the view: one this slot already settled is taken anew.
-	const isOpen = subject.fullSubject.open_locks.some(
-		(openLock) => openLock.lock_id === lockId,
-	);
+	const isOpen =
+		lockId !== undefined &&
+		findOpenLockByLockId({
+			openLocks: subject.fullSubject.open_locks,
+			lockId,
+		}) !== null;
 	const held =
 		lockId && isOpen
 			? ctx.openLocks.trackOf({

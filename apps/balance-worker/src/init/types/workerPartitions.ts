@@ -35,7 +35,7 @@ export type WorkerPartitionsContext = {
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
 	/** Required with a command topic; a separate admin is a holdover from the old client's shared-metadata bug. */
 	commandTopicOffsets?: KafkaOwnedPartitionGroupAdminPort;
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
 	served?: PartitionsDependencies["served"];

@@ -1,4 +1,5 @@
 import {
+	type ApiAtomLimits,
 	type ApiByocCache,
 	type AtomCheck,
 	BYOC_CACHE_DISK_GB,
@@ -146,6 +147,29 @@ export const hasAtomStack = (cache: ApiByocCache | null) =>
 export const isAtomBeingRemoved = (cache: ApiByocCache | null) =>
 	cache?.status === ByocCacheStatus.Removing ||
 	cache?.status === ByocCacheStatus.TeardownRequired;
+
+/** What the org calls the Atom: its name, else its region, else its stack. */
+export const atomDisplayName = (cache: ApiByocCache) =>
+	cache.name ?? cache.region ?? cache.stack_name;
+
+/** Why New Atom is off, as its tooltip says it; null when it is on. */
+export const atomCreateRefusal = (limits: ApiAtomLimits): string | null => {
+	if (limits.reason === "not_on_plan")
+		return "Atom isn't included in your plan.";
+	if (limits.reason === "limit_reached")
+		return `This environment runs at most ${limits.limit} Atoms.`;
+	return null;
+};
+
+/** One chip for where an Atom stands, as the list and the switcher show it. */
+export const atomStatusChip = (cache: ApiByocCache): AtomChipDisplay => {
+	if (cache.status === ByocCacheStatus.Failed)
+		return ATOM_STAGE_STATUS_CHIPS.failed;
+	if (cache.status === ByocCacheStatus.AwaitingSetup)
+		return ATOM_WAITING_FOR_AWS_CHIP;
+	if (cache.status === ByocCacheStatus.Provisioning) return ATOM_DEPLOYING_CHIP;
+	return isAtomConnected(cache) ? ATOM_CONNECTED_CHIP : ATOM_CONNECTING_CHIP;
+};
 
 /** The first step not done yet; null once Atom is connected. */
 export const atomCurrentStage = (cache: ApiByocCache): ByocCacheStage | null =>

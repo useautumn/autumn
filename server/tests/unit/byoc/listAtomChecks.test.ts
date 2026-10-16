@@ -63,6 +63,7 @@ const atomRow = ({
 	region: "us-east-1",
 	network: null,
 	stack_name: null,
+	name: null,
 	stages: toCacheStages({ doneStages: [], status: ByocCacheStatus.Ready }),
 	error: null,
 	first_check_at: null,

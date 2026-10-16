@@ -9,8 +9,8 @@ import { edgeHTTPClientOf } from "./edgeHTTPClient.js";
 import { edgeBasesOf, rebaseURL } from "./edgeURLs.js";
 import type { EdgeSDKOptions } from "./types/edgeSDKOptions.js";
 
-/** What the edge serves, by operationID. Track never goes there; finalize joins once the Atom dedupes it by key. */
-const EDGE_OPERATION_IDS = new Set(["check"]);
+/** What the edge serves, by operationID. Track never goes there; a finalize is settled once, by its lock, wherever it lands. */
+const EDGE_OPERATION_IDS = new Set(["check", "finalizeLock"]);
 
 /**
  * With `useEdge` and an `edgeURL`, sends each call the edge serves to the edge first (`autumn.edge` is the same client

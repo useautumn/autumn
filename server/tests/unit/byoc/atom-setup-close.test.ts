@@ -19,6 +19,7 @@ const record = (status: ByocCacheStatus): ByocCacheDeployment => ({
 	id: "atom_1",
 	org_id: "org_1",
 	env: AppEnv.Sandbox,
+	name: null,
 	deployment_group_id: "dg_1",
 	deployment_id: "dep_1",
 	status,

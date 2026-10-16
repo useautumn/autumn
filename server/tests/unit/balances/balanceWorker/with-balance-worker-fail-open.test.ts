@@ -6,7 +6,11 @@ import {
 	describeBalanceWorkerFailure,
 	rethrowBalanceWorkerError,
 } from "@/internal/balances/balanceWorker/balanceWorkerErrors.js";
-import { withBalanceWorkerFailOpen } from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
+import {
+	type BalanceWorkerFailOpenReason,
+	isUnsubmittedFailOpen,
+	withBalanceWorkerFailOpen,
+} from "@/internal/balances/balanceWorker/failOpen/withBalanceWorkerFailOpen.js";
 
 const failingWith = (cause: BalanceWorkerClientError) => async () =>
 	rethrowBalanceWorkerError({ cause });
@@ -223,5 +227,22 @@ describe("withBalanceWorkerFailOpen", () => {
 		).rejects.toMatchObject({
 			statusCode: 404,
 		});
+	});
+});
+
+describe("isUnsubmittedFailOpen", () => {
+	test("only a command the worker never confirmed may have applied", () => {
+		const reasons: BalanceWorkerFailOpenReason[] = [
+			"org_rate_limit",
+			"balance_worker_unavailable",
+			"balance_worker_overloaded",
+			"balance_worker_result_unknown",
+		];
+		expect(reasons.map((reason) => isUnsubmittedFailOpen({ reason }))).toEqual([
+			true,
+			true,
+			true,
+			false,
+		]);
 	});
 });

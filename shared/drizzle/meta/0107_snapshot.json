@@ -1,5 +1,5 @@
 {
-  "id": "d651923e-bee1-4693-a323-9ef9513eb314",
+  "id": "556de3ab-d6c6-4b5a-b5cc-0ec6bdb0c5c7",
   "prevId": "83330cae-7619-4aa0-a4ce-3b424cabd086",
   "version": "7",
   "dialect": "postgresql",
@@ -560,12 +560,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "first_check_seen_at": {
-          "name": "first_check_seen_at",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
         "error": {
           "name": "error",
           "type": "text",
@@ -577,11 +571,17 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "atom_deployments_active_org_id_env_key": {
-          "name": "atom_deployments_active_org_id_env_key",
+        "atom_deployments_org_id_env_idx": {
+          "name": "atom_deployments_org_id_env_idx",
           "columns": [
             {
               "expression": "org_id",
@@ -596,8 +596,7 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
-          "where": "\"atom_deployments\".\"status\" NOT IN ('removing', 'teardown_required')",
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

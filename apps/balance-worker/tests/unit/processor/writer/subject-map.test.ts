@@ -159,6 +159,69 @@ describe("createSubjectMap", () => {
 		}
 	});
 
+	test("a lock opened or settled is weighed by itself, never by serialising every open lock again", () => {
+		const map = createSubjectMap();
+		const openLocks = Array.from({ length: 1_000 }, (_, index) => ({
+			id: `lck_${index}`,
+			lock_id: `lock_${index}`,
+		}));
+		const state = { ...createState({ balance: 100 }), openLocks };
+		map.setState({ subjectKey: customerKey, customerKey, state });
+		const opened = {
+			...state,
+			openLocks: [...openLocks, { id: "lck_new", lock_id: "lock_new" }],
+		};
+		const settled = {
+			...opened,
+			openLocks: opened.openLocks.filter((lock) => lock.id !== "lck_500"),
+		};
+
+		const stringify = spyOn(JSON, "stringify");
+		try {
+			for (const next of [opened, settled])
+				map.setState({ subjectKey: customerKey, customerKey, state: next });
+			expect(
+				stringify.mock.calls.filter(([value]) => Array.isArray(value)),
+			).toHaveLength(0);
+		} finally {
+			stringify.mockRestore();
+		}
+		expect(map.sizeBytes()).toBe(JSON.stringify(settled).length);
+	});
+
+	test("rows added to or removed from either end or the middle keep the weight the serialised size", () => {
+		const map = createSubjectMap();
+		const lock = (index: number) => ({
+			id: `lck_${index}`,
+			lock_id: `lock_${index}`,
+		});
+		const initial = createState({ balance: 100 });
+		map.setState({ subjectKey: customerKey, customerKey, state: initial });
+		const steps: ((
+			locks: ReturnType<typeof lock>[],
+		) => ReturnType<typeof lock>[])[] = [
+			() => [lock(0)],
+			(locks) => [...locks, lock(1), lock(2), lock(3)],
+			(locks) => [lock(9), ...locks],
+			(locks) => locks.filter((row) => row.id !== "lck_1"),
+			(locks) => locks.slice(0, -1),
+			(locks) => [
+				locks[0] as ReturnType<typeof lock>,
+				lock(7),
+				lock(8),
+				...locks.slice(2),
+			],
+			(locks) => locks.slice(1),
+			() => [],
+		];
+		let state = initial;
+		for (const step of steps) {
+			state = { ...state, openLocks: step(state.openLocks) };
+			map.setState({ subjectKey: customerKey, customerKey, state });
+			expect(map.sizeBytes()).toBe(JSON.stringify(state).length);
+		}
+	});
+
 	test("growth found by re-weighing still evicts the least recently read subject", () => {
 		const a = createState({ identity: { ...testIdentity, customerId: "a" } });
 		const b = createState({ identity: { ...testIdentity, customerId: "b" } });
