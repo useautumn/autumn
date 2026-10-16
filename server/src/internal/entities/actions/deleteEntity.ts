@@ -11,6 +11,7 @@ import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/fl
 import { queueBalanceWorkerEvicts } from "@/internal/balances/balanceWorker/queueBalanceWorkerEvicts";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance";
 import { CusService } from "@/internal/customers/CusService";
+import { flushCachedSubjectBalances } from "@/internal/customers/cache/fullSubject/actions/invalidate/flushCachedSubjectBalances.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils";
 import {
@@ -35,9 +36,15 @@ export const deleteEntity = async ({
 
 	const { db, org, env, features, logger } = ctx;
 
-	// The entities map is rewritten whole from this read, so the worker's writes must be in Postgres first.
+	// The entities map is rewritten whole from this read, so pending writes must be in Postgres first.
 	if (isBalanceWorkerRolloutEnabled({ ctx, customerId }))
 		await flushBalanceWorkerCustomer({ ctx, customerId });
+	else
+		await flushCachedSubjectBalances({
+			ctx,
+			customerId,
+			source: "deleteEntity",
+		});
 	const fullCus = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,

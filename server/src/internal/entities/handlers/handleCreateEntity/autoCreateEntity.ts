@@ -9,6 +9,7 @@ import {
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
+import { flushCachedSubjectBalances } from "@/internal/customers/cache/fullSubject/actions/invalidate/flushCachedSubjectBalances.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 
@@ -70,6 +71,13 @@ export const autoCreateEntity = async ({
 			return fullCus.entity;
 		}
 	}
+
+	// The writes below end in an invalidation; deductions still waiting on the batched sync land first.
+	await flushCachedSubjectBalances({
+		ctx,
+		customerId,
+		source: "autoCreateEntity",
+	});
 
 	for (const cusProduct of fullCus.customer_products) {
 		await createEntityForCusProduct({
