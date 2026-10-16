@@ -3,39 +3,41 @@ import { featuredCustomerStories } from "@/app/constant";
 import { BracketCorners } from "./bracket-corners";
 import { PixelDissolve } from "./pixel-dissolve";
 import { StoryPanel } from "./story-panel";
-import { StorySpine } from "./story-spine";
-import { SPINE_WIDTH, TRACK_GAP, useAccordion } from "./use-accordion";
+import { StorySpine, StorySpineIcon } from "./story-spine";
+import {
+	EXPAND_MS,
+	SPINE_WIDTH,
+	TRACK_GAP,
+	useAccordion,
+} from "./use-accordion";
 
 const CARD_HEIGHT = 420;
-const DARK_SURFACE = "#0A0A0A";
+const SECTION_SURFACE = "#0F0F0F";
 
-// Colour the pixels dissolve away from. DARK_SURFACE reads as the slide fading
-// up from black; the prev slide's surface gives a colour-to-colour crossfade.
-const DISSOLVE_FROM = "dark" as "dark" | "crossfade";
+function blendWithBlack(hex: string, blackOpacity: number) {
+	const match = /^#([0-9a-f]{6})$/i.exec(hex);
+	if (!match) return hex;
+
+	const keep = 1 - blackOpacity;
+	const value = Number.parseInt(match[1], 16);
+	const channel = (shift: number) =>
+		Math.round(((value >> shift) & 0xff) * keep)
+			.toString(16)
+			.padStart(2, "0");
+
+	return `#${channel(16)}${channel(8)}${channel(0)}`;
+}
 
 export function DesktopAccordion() {
 	const {
 		trackRef,
-		prevActiveIndex,
 		setActiveIndex,
 		revealKey,
 		dissolveDir,
+		isTransitioning,
 		contentWidth,
 		cardLayout,
 	} = useAccordion(featuredCustomerStories.length);
-
-	const fromColor =
-		DISSOLVE_FROM === "dark"
-			? DARK_SURFACE
-			: featuredCustomerStories[prevActiveIndex].surface;
-
-	// Track laid out left→right by flex order: left spine, content, right spine.
-	// trackX gives each surface its slot offset so the directional gradient is
-	// one continuous sweep across all three rather than restarting per card.
-	const trackWidth = contentWidth + 2 * (SPINE_WIDTH + TRACK_GAP);
-	const contentTrackX = SPINE_WIDTH + TRACK_GAP;
-	const rightSpineTrackX = contentTrackX + contentWidth + TRACK_GAP;
-	const spineTrackX = (order: number) => (order < 0 ? 0 : rightSpineTrackX);
 
 	return (
 		<div className="mt-8 mb-12 xl:mb-16 px-4 xl:px-22.75 hidden lg:block">
@@ -50,50 +52,44 @@ export function DesktopAccordion() {
 				}
 			>
 				{featuredCustomerStories.map((story, index) => {
-					const { state, order } = cardLayout(index);
+					const { state } = cardLayout(index);
 					const isActive = state === "active";
+					const isDeparting = state === "departing";
+					const compactSurface = blendWithBlack(story.surface, 0.3);
 					return (
 						<div
 							key={story.slug}
 							data-state={state}
-							style={{ order }}
 							className="cs-card relative h-full overflow-hidden"
 						>
 							<div
-								className="cs-content absolute inset-y-0 left-0 p-6 md:p-10 xl:p-12 flex flex-col bg-[#0A0A0A]"
+								className="cs-content absolute inset-y-0 left-0 z-10 p-6 md:p-10 xl:p-12 flex flex-col bg-[#0A0A0A]"
 								style={{ pointerEvents: isActive ? "auto" : "none" }}
 							>
 								<StoryPanel story={story} />
-								{isActive && (
+								{isDeparting && isTransitioning && (
 									<PixelDissolve
 										width={contentWidth}
 										height={CARD_HEIGHT}
 										revealKey={revealKey}
-										fromColor={fromColor}
+										fromColor={SECTION_SURFACE}
+										retainedColor={compactSurface}
+										retainedWidth={SPINE_WIDTH}
+										mode="cover"
 										direction={dissolveDir}
 										seed={revealKey}
-										trackX={contentTrackX}
-										trackWidth={trackWidth}
 									/>
 								)}
 							</div>
-							<div className="cs-spine absolute inset-0">
+							<div className="cs-spine absolute inset-0 z-0">
 								<StorySpine
 									story={story}
 									onClick={() => setActiveIndex(index)}
+									disabled={isActive || isTransitioning}
 								/>
-								{state === "neighbor" && (
-									<PixelDissolve
-										width={SPINE_WIDTH}
-										height={CARD_HEIGHT}
-										revealKey={revealKey}
-										fromColor={fromColor}
-										direction={dissolveDir}
-										seed={revealKey * 31 + index}
-										trackX={spineTrackX(order)}
-										trackWidth={trackWidth}
-									/>
-								)}
+							</div>
+							<div className="cs-compact-icon pointer-events-none absolute inset-0 z-40">
+								<StorySpineIcon story={story} />
 							</div>
 							{isActive && <BracketCorners />}
 						</div>
@@ -106,36 +102,64 @@ export function DesktopAccordion() {
 					gap: ${TRACK_GAP}px;
 				}
 				.cs-card {
-					flex: 0 0 0px;
+					flex: 0 0 ${SPINE_WIDTH}px;
 					min-width: 0;
-					opacity: 0;
+					opacity: 1;
+					transition:
+						flex-grow ${EXPAND_MS}ms cubic-bezier(0.77, 0, 0.175, 1),
+						flex-basis ${EXPAND_MS}ms cubic-bezier(0.77, 0, 0.175, 1);
+					will-change: flex-grow, flex-basis;
 				}
 				.cs-card[data-state="active"] {
-					flex: 1 1 0px;
-					opacity: 1;
+					flex-grow: 1;
+					flex-basis: 0px;
 				}
 				.cs-card[data-state="neighbor"] {
-					flex: 0 0 ${SPINE_WIDTH}px;
-					opacity: 1;
+					flex-grow: 0;
+					flex-basis: ${SPINE_WIDTH}px;
 				}
-				.cs-card[data-state="hidden"] {
-					flex: 0 0 0px;
-					margin-left: -${TRACK_GAP}px;
-					opacity: 0;
+				.cs-card[data-state="departing"] {
+					flex-grow: 0;
+					flex-basis: ${SPINE_WIDTH}px;
 				}
 				.cs-content {
 					width: var(--cs-content-w);
 					visibility: hidden;
+					opacity: 0;
+					transition: opacity 140ms cubic-bezier(0.23, 1, 0.32, 1);
 				}
 				.cs-card[data-state="active"] .cs-content {
 					visibility: visible;
+					opacity: 1;
+					transition-delay: 80ms;
+				}
+				.cs-card[data-state="departing"] .cs-content {
+					visibility: visible;
+					opacity: 1;
+					transition: none;
 				}
 				.cs-spine {
-					opacity: 1;
+					visibility: visible;
 				}
 				.cs-card[data-state="active"] .cs-spine {
-					opacity: 0;
 					pointer-events: none;
+				}
+				.cs-card[data-state="departing"] .cs-spine {
+					pointer-events: none;
+				}
+				.cs-compact-icon {
+					opacity: 0;
+					transition: opacity 220ms cubic-bezier(0.23, 1, 0.32, 1);
+				}
+				.cs-card[data-state="departing"] .cs-compact-icon {
+					opacity: 1;
+				}
+				@media (prefers-reduced-motion: reduce) {
+					.cs-card,
+					.cs-content,
+					.cs-compact-icon {
+						transition: none;
+					}
 				}
 			`}</style>
 		</div>
