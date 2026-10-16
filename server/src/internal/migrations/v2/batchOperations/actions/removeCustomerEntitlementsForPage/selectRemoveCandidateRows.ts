@@ -22,7 +22,7 @@ type SelectRemoveCandidateRowsArgs = {
 };
 
 /** Pooled/rollover rows are license-owned; product remove must not touch them. */
-const rowIsRemovableSql = sql`
+export const rowIsRemovableSql = sql`
 	AND definition.pooled IS NOT TRUE
 	AND NOT live.is_pooled_balance
 	AND live.pooled_contribution_id IS NULL

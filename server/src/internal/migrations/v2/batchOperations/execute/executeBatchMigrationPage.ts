@@ -2,13 +2,16 @@ import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
+import { executePatchOnWorker } from "../actions/executePatchOnWorker/executePatchOnWorker.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
 import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
 import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEntitlementsForPage/replaceCustomerEntitlementsForPage.js";
 import { repointCustomerProductsForPage } from "../actions/repointCustomerProductsForPage/repointCustomerProductsForPage.js";
 import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
+import { createWorkerPageGate } from "../actions/throughWorker/createWorkerPageGate.js";
 import type { BatchMigrationExecutionPlan } from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
+import { isMigrationOnWorker } from "./isMigrationOnWorker.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
@@ -45,6 +48,7 @@ export const executeBatchMigrationPage = async ({
 	plan,
 	customers,
 	phases,
+	signal,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -52,6 +56,7 @@ export const executeBatchMigrationPage = async ({
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
 	phases?: BatchMigrationPagePhases;
+	signal: AbortSignal;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0)
 		return {
@@ -72,8 +77,29 @@ export const executeBatchMigrationPage = async ({
 	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
 	const repointedIds = new Set<string>();
+	const failReasons: Record<string, string> = {};
+	const onWorker = isMigrationOnWorker({ ctx, plan });
+	const workerGate = createWorkerPageGate({ signal });
 
 	for (const patch of plan.patches) {
+		if (onWorker) {
+			// A customer the worker failed gets no later writes this page; a retry run finishes it.
+			const notFailed = customers.filter(
+				({ internalId }) => !Object.hasOwn(failReasons, internalId),
+			);
+			const result = await executePatchOnWorker({
+				ctx,
+				migrationRunId,
+				gate: workerGate,
+				patch,
+				customers: notFailed,
+				phases,
+			});
+			removedItems.push(...result.removedItems);
+			Object.assign(failReasons, result.failReasons);
+			continue;
+		}
+
 		// Op types stay ordered (removes, then replaces, then adds) but ops
 		// WITHIN a type run concurrently: each op owns one feature, and
 		// different features touch disjoint customer_entitlements rows.
@@ -244,7 +270,11 @@ export const executeBatchMigrationPage = async ({
 		...repointedIds,
 	]);
 	for (const id of excludedIds) succeeded.delete(id);
-	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
+	const failedIds = new Set(Object.keys(failReasons));
+	for (const id of failedIds) succeeded.delete(id);
+	const skippedIds = pageInternalIds.filter(
+		(id) => !succeeded.has(id) && !failedIds.has(id),
+	);
 	const skipReasons = await resolveSkipReasons({
 		ctx,
 		plan,
@@ -272,6 +302,7 @@ export const executeBatchMigrationPage = async ({
 						succeededInternalCustomerIds: [...succeeded],
 						noUpdatesNeededInternalCustomerIds: noUpdatesNeededIds,
 						ineligibleInternalCustomerIds: ineligibleIds,
+						failedInternalCustomerIds: [...failedIds],
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
@@ -283,8 +314,11 @@ export const executeBatchMigrationPage = async ({
 			succeeded.has(customer.internalId),
 		),
 		skipped: customers.filter(
-			(customer) => !succeeded.has(customer.internalId),
+			({ internalId }) =>
+				!succeeded.has(internalId) && !failedIds.has(internalId),
 		),
+		failed: customers.filter(({ internalId }) => failedIds.has(internalId)),
+		failReasons,
 		skipReasons,
 		insertedItems,
 		removedItems,

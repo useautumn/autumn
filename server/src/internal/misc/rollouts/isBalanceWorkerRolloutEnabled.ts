@@ -25,3 +25,11 @@ export const isBalanceWorkerRolloutEnabled = ({
 		orgId: resolveRolloutOrgId({ org: ctx.org }),
 		customerId,
 	});
+
+/** Every customer of the org routes to the worker: no customer id means only a 100% rollout (or the override) matches. */
+export const isOrgFullyOnWorker = ({
+	ctx,
+}: {
+	ctx: Pick<AutumnContext, "org">;
+}): boolean =>
+	resolveBalanceWorkerRouting({ orgId: resolveRolloutOrgId({ org: ctx.org }) });

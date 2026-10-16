@@ -3,6 +3,7 @@ export const BatchMigrationErrorName = {
 	Stall: "BatchMigrationStallError",
 	CacheInvalidation: "BatchMigrationCacheInvalidationError",
 	PageLimit: "BatchMigrationPageLimitError",
+	WorkerUnavailable: "BatchMigrationWorkerUnavailableError",
 } as const;
 
 /** A phase stopped making progress inside its budget. Not a transient DB
@@ -23,6 +24,15 @@ export class BatchMigrationCacheInvalidationError extends BatchMigrationStallErr
 	constructor({ message }: { message: string }) {
 		super({ phase: "finalize_caches", message });
 		this.name = BatchMigrationErrorName.CacheInvalidation;
+	}
+}
+
+export class BatchMigrationWorkerUnavailableError extends Error {
+	constructor({ failures }: { failures: number }) {
+		super(
+			`batch-migration: balance worker unreachable for ${failures} customers in a row, aborting run`,
+		);
+		this.name = BatchMigrationErrorName.WorkerUnavailable;
 	}
 }
 

@@ -26,9 +26,12 @@ export const invalidateBatchMigrationCaches = async ({
 }): Promise<number> => {
 	// Org-scoped, so the per-customer callback below can return a fixed list.
 	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
-	const customers = includeSkipped
-		? [...pageResult.succeeded, ...pageResult.skipped]
-		: pageResult.succeeded;
+	// A failed customer may hold writes from patches that landed before it failed.
+	const customers = [
+		...pageResult.succeeded,
+		...(includeSkipped ? pageResult.skipped : []),
+		...(pageResult.failed ?? []),
+	];
 	const phases: Record<string, number> = {};
 	const startedAt = Date.now();
 

@@ -72,6 +72,9 @@ export type BatchMigrationPageResult = {
 	/** Customers with no batch-eligible customer product — marked skipped;
 	 * retryable via retry_item_statuses through the per-customer lane. */
 	skipped: BatchMigrationPageCustomer[];
+	/** Customers the balance worker could not write; marked failed for a retry run. */
+	failed?: BatchMigrationPageCustomer[];
+	failReasons?: Record<string, string>;
 	skipReasons?: Record<string, MigrationItemRunSkipReason>;
 	/** Rows inserted this page, in patch order. */
 	insertedItems: BatchMigrationInsertedItem[];
@@ -83,6 +86,7 @@ export type BatchMigrationExecutionSummary = {
 	pages: number;
 	succeeded: number;
 	skipped: number;
+	failed?: number;
 	/** Phase ms summed across the chunk's pages. */
 	phases: Record<string, number>;
 };

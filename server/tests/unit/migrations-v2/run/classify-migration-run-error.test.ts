@@ -7,6 +7,7 @@ import {
 	BatchMigrationCacheInvalidationError,
 	BatchMigrationPageLimitError,
 	BatchMigrationStallError,
+	BatchMigrationWorkerUnavailableError,
 } from "@/internal/migrations/v2/batchOperations/execute/errors/batchMigrationErrors.js";
 
 const CHUNK_TASK_ID = "run-batch-migration-chunk";
@@ -50,6 +51,18 @@ describe("classifyMigrationRunError", () => {
 		expect(classifyMigrationRunError({ error: cacheInvalidationError })).toBe(
 			MigrationRunErrorCode.CacheInvalidationIncomplete,
 		);
+	});
+
+	test("a worker unreachable for 25 customers in a row interrupts the run, across the chunk boundary too", () => {
+		const unreachable = new BatchMigrationWorkerUnavailableError({
+			failures: 25,
+		});
+		expect(classifyMigrationRunError({ error: unreachable })).toBe(
+			MigrationRunErrorCode.Interrupted,
+		);
+		expect(
+			classifyMigrationRunError({ error: unwrappedFromChunk(unreachable) }),
+		).toBe(MigrationRunErrorCode.Interrupted);
 	});
 
 	test("a stalled page is a timeout", () => {

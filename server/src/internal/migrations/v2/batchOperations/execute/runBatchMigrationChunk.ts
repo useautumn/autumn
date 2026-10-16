@@ -134,6 +134,7 @@ export const runBatchMigrationChunk = async ({
 		pages: 0,
 		succeeded: 0,
 		skipped: 0,
+		failed: 0,
 		phases: chunkPhases,
 	};
 	let cursor: string | null = afterInternalId ?? null;
@@ -196,7 +197,7 @@ export const runBatchMigrationChunk = async ({
 	const finish = (
 		completion: BatchMigrationChunkResult["completion"],
 	): BatchMigrationChunkResult => ({
-		processed: summary.succeeded + summary.skipped,
+		processed: summary.succeeded + summary.skipped + summary.failed,
 		completion,
 		cursor,
 		summary,
@@ -290,6 +291,7 @@ export const runBatchMigrationChunk = async ({
 			summary.pages += 1;
 			summary.succeeded += outcome.pageResult.succeeded.length;
 			summary.skipped += outcome.pageResult.skipped.length;
+			summary.failed += outcome.pageResult.failed?.length ?? 0;
 			for (const [phase, ms] of Object.entries(outcome.pagePhases)) {
 				chunkPhases[phase] = (chunkPhases[phase] ?? 0) + ms;
 			}
@@ -299,6 +301,7 @@ export const runBatchMigrationChunk = async ({
 					page: summary.pages,
 					succeeded: outcome.pageResult.succeeded.length,
 					skipped: outcome.pageResult.skipped.length,
+					failed: outcome.pageResult.failed?.length ?? 0,
 					...outcome.pagePhases,
 				},
 			});
@@ -549,6 +552,7 @@ const runNextBatchMigrationPage = async ({
 		plan,
 		customers: page.customers,
 		phases: pagePhases,
+		signal: pageDb.signal,
 	});
 
 	const label = `page ${pageNumber}`;

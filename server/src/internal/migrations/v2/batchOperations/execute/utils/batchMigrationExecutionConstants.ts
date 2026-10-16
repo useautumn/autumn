@@ -34,6 +34,17 @@ export const BATCH_MIGRATION_FEATURE_OP_CONCURRENCY = Number(
 	process.env.BATCH_MIGRATION_FEATURE_OP_CONCURRENCY ?? 3,
 );
 
+/** Customer plans in flight per page. */
+export const BATCH_MIGRATION_WORKER_SEND_CONCURRENCY = 64;
+
+/** Customers in a row the worker can't be reached for before the run stops as interrupted. */
+export const BATCH_MIGRATION_WORKER_UNAVAILABLE_LIMIT = 25;
+
+/** Waits between resends a worker refused as not ready or overloaded. */
+export const BATCH_MIGRATION_WORKER_TRANSIENT_RETRY_DELAYS_MS = [
+	250, 1_000, 3_000,
+];
+
 /** Concurrent applyReplacePatches groups (distinct grant deltas) on one page. */
 export const BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY = Number(
 	process.env.BATCH_MIGRATION_PATCH_GROUP_CONCURRENCY ?? 50,
