@@ -5,10 +5,10 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 3000;
 
-const hasChecks = (data: ListAtomChecksResponse | undefined) =>
-	(data?.checks.length ?? 0) > 0;
+const hasSeenCheck = (data: ListAtomChecksResponse | undefined) =>
+	Boolean(data?.first_check_seen_at);
 
-/** The Atom's latest checks, polled until the first arrive, then held as they first came in. */
+/** Polled until the Atom has seen the org's first check, then held with the checks it came with. */
 export const useAtomChecksQuery = ({ enabled }: { enabled: boolean }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -24,10 +24,13 @@ export const useAtomChecksQuery = ({ enabled }: { enabled: boolean }) => {
 		},
 		enabled,
 		retry: false,
-		staleTime: (query) => (hasChecks(query.state.data) ? Infinity : 0),
+		staleTime: (query) => (hasSeenCheck(query.state.data) ? Infinity : 0),
 		refetchInterval: (query) =>
-			hasChecks(query.state.data) ? false : POLL_INTERVAL_MS,
+			hasSeenCheck(query.state.data) ? false : POLL_INTERVAL_MS,
 	});
 
-	return { checks: data?.checks ?? [] };
+	return {
+		firstCheckSeenAt: data?.first_check_seen_at ?? null,
+		checks: data?.checks ?? [],
+	};
 };

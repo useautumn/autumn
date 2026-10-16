@@ -6,6 +6,7 @@ import { findCacheDeploymentById } from "./findCacheDeploymentById.js";
 import { findRemovingCacheDeployments } from "./findRemovingCacheDeployments.js";
 import { insertCacheDeployment } from "./insertCacheDeployment.js";
 import { setCacheFirstCheckAt } from "./setCacheFirstCheckAt.js";
+import { setCacheFirstCheckSeenAt } from "./setCacheFirstCheckSeenAt.js";
 import { updateCacheDeployment } from "./updateCacheDeployment.js";
 
 export const cacheDeploymentRepo = {
@@ -17,5 +18,6 @@ export const cacheDeploymentRepo = {
 	insert: insertCacheDeployment,
 	update: updateCacheDeployment,
 	setFirstCheckAt: setCacheFirstCheckAt,
+	setFirstCheckSeenAt: setCacheFirstCheckSeenAt,
 	delete: deleteCacheDeployment,
 };
