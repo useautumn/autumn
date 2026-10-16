@@ -1,8 +1,8 @@
-import type { ApprovalRule } from "@autumn/shared";
+import type { ApprovalRule } from "./approvalsStub";
 import { buildRuleSentence } from "./buildRuleSentence";
 import { useApprovalRuleLabels } from "./useApprovalRuleLabels";
 
-/** Each rule with its sentence, narrowed to rules whose subjects match `filter`. */
+/** Each rule with its sentence and 1-based order, narrowed to rules whose subjects match `filter`. */
 export const useApprovalRuleRows = ({
 	rules,
 	filter,
@@ -14,7 +14,11 @@ export const useApprovalRuleRows = ({
 	const needle = filter.trim().toLowerCase();
 
 	return rules
-		.map((rule) => ({ rule, parts: buildRuleSentence({ rule, labels }) }))
+		.map((rule, i) => ({
+			rule,
+			order: i + 1,
+			parts: buildRuleSentence({ rule, labels }),
+		}))
 		.filter(({ parts }) =>
 			parts.some(
 				(part) =>

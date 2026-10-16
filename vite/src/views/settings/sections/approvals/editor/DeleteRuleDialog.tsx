@@ -1,4 +1,3 @@
-import type { ApprovalRule } from "@autumn/shared";
 import {
 	Button,
 	Dialog,
@@ -9,6 +8,7 @@ import {
 	DialogTitle,
 } from "@autumn/ui";
 import { useDeleteApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
+import type { ApprovalRule } from "../approvalsStub";
 
 export const DeleteRuleDialog = ({
 	rule,

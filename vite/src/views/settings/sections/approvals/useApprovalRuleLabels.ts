@@ -6,6 +6,7 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
 import type { RuleLabels } from "./buildRuleSentence";
@@ -16,6 +17,7 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 	const { memberships } = useMemberships();
+	const { roles } = useRolesQuery();
 
 	return {
 		member: (userId) => {
@@ -24,6 +26,7 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 			);
 			return member?.user.name || member?.user.email || userId;
 		},
+		role: (roleId) => roles.find((role) => role.id === roleId)?.name ?? roleId,
 		plan: (planId) =>
 			products.find((product) => product.id === planId)?.name ?? planId,
 		feature: (featureId) => {

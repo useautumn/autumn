@@ -1,66 +1,63 @@
 /**
- * Contract: each complex case in approvals-api-schema.md §4 (plus a checkout
- * rule) opens in the editor as rows and saves back to the same rule.
+ * Contract: each PRD §8 example opens in the editor as rows and saves back to the
+ * same rule; switching the effect re-quantifies the rows; hand-written filters open read-only.
  */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalRule, CreateApprovalRuleParams } from "@autumn/shared";
+import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
+import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
 import {
 	editorValuesToParams,
 	ruleToEditorValues,
 } from "@/views/settings/sections/approvals/editor/ruleEditorValues";
 import type { RuleRow } from "@/views/settings/sections/approvals/editor/ruleRowCodec";
 
-const sales = { type: "role", role: "sales" } as const;
-const attachUpdate = [
-	"billing.attach",
-	"billing.update_subscription",
-] satisfies CreateApprovalRuleParams["actions"];
+const sales = { type: "role", role_id: "sales" } as const;
 
-const CASES: {
-	name: string;
-	params: CreateApprovalRuleParams;
-	rows: RuleRow[][];
-	pinned?: string[];
-}[] = [
-	{
-		name: "1 · Free trials only on Enterprise, under 2 months",
-		params: {
-			name: "Enterprise trials",
-			subjects: [sales],
-			actions: attachUpdate,
-			when: {
-				paid: false,
-				incoming: {
-					$every: {
-						plan_id: "enterprise",
-						$or: [
-							{ free_trial: null },
-							{
-								free_trial: {
-									duration_type: "day",
-									duration_length: { $lt: 60 },
-								},
-							},
-							{
-								free_trial: {
-									duration_type: "month",
-									duration_length: { $lt: 2 },
-								},
-							},
-							{
-								free_trial: {
-									duration_type: "year",
-									duration_length: { $lt: 60 / 365 },
-								},
-							},
-						],
-					},
-				},
+const asRule = (params: ApprovalRuleCreateParams): ApprovalRule => ({
+	...params,
+	id: "apr_1",
+	position: 1,
+	version: 1,
+	updated_by: { user_id: "usr_1", name: "Charlie Lamb" },
+	created_at: 0,
+	updated_at: 0,
+});
+
+const rule = ({
+	name,
+	effect,
+	actions,
+	filter,
+}: Pick<ApprovalRuleCreateParams, "name" | "effect" | "actions" | "filter">) =>
+	asRule({
+		name,
+		effect,
+		subjects: [sales],
+		actions,
+		filter,
+		note: null,
+		enabled: true,
+	});
+
+const enterpriseTrials = rule({
+	name: "A · Sales: Enterprise trials",
+	effect: "allow",
+	actions: ["billing.attach", "billing.update"],
+	filter: {
+		paid: false,
+		incoming: {
+			$every: {
+				plan_id: "enterprise",
+				free_trial: { duration: { $lt: { length: 2, unit: "month" } } },
 			},
-			note: "Sales can only give trials on Enterprise, up to 2 months.",
-			enabled: true,
 		},
+	},
+});
+
+const CASES: { rule: ApprovalRule; rows: RuleRow[][] }[] = [
+	{
+		rule: enterpriseTrials,
 		rows: [
 			[
 				{ field: "paid", operator: "is", values: ["false"] },
@@ -70,142 +67,118 @@ const CASES: {
 		],
 	},
 	{
-		name: "2 · Discounts up to 20%, recurring plans only",
-		params: {
-			name: "Recurring discounts",
-			subjects: [sales],
-			actions: attachUpdate,
-			when: {
-				discounts: { $every: { percent_off: { $lte: 20 } } },
-				incoming: { $every: { recurring: true } },
+		rule: rule({
+			name: "B · Credit add-ons on the customer",
+			effect: "block",
+			actions: ["billing.attach"],
+			filter: {
+				incoming: { $some: { plan_id: "credits_addon" } },
+				entity: { $ne: null },
 			},
-			note: "Discounts over 20% need Finance.",
-			enabled: true,
-		},
+		}),
 		rows: [
 			[
-				{ field: "incoming_recurring", operator: "is", values: ["true"] },
-				{ field: "discount_percent_off", operator: "lte", values: ["20"] },
+				{ field: "entity", operator: "is_entity", values: [] },
+				{ field: "incoming_plan", operator: "is", values: ["credits_addon"] },
 			],
 		],
 	},
 	{
-		name: "3 · Cancel at end of cycle, or immediately for Starter with a small refund",
-		params: {
-			name: "Support cancellations",
-			subjects: [{ type: "role", role: "support" }],
+		rule: rule({
+			name: "D · No Enterprise cancels",
+			effect: "block",
 			actions: ["billing.cancel"],
-			when: {
-				$or: [
-					{ cancel_action: "cancel_end_of_cycle" },
-					{
-						cancel_action: "cancel_immediately",
-						outgoing: { $every: { plan_id: "starter" } },
-						$or: [{ refund: null }, { refund: { amount: { $lte: 50 } } }],
-					},
-				],
-			},
-			note: "Immediate cancels: Starter only, refunds up to $50.",
-			enabled: true,
-		},
+			filter: { outgoing: { $some: { plan_id: "enterprise" } } },
+		}),
 		rows: [
-			[
-				{
-					field: "cancel_action",
-					operator: "is",
-					values: ["cancel_end_of_cycle"],
-				},
-			],
-			[
-				{
-					field: "cancel_action",
-					operator: "is",
-					values: ["cancel_immediately"],
-				},
-				{ field: "outgoing_plan", operator: "is", values: ["starter"] },
-				{ field: "refund", operator: "lte", values: ["50"] },
-			],
+			[{ field: "outgoing_plan", operator: "is", values: ["enterprise"] }],
 		],
 	},
 	{
-		name: "4 · A tighter limit for one person than their role",
-		params: {
-			name: "John's credit grants",
-			subjects: [{ type: "user", user_id: "usr_john" }],
-			actions: ["balances.create"],
-			when: { feature_id: "ai_credits", included_grant: { $lte: 50 } },
-			note: "John can grant up to 50 AI credits. Ask an Admin for more.",
-			enabled: true,
-		},
-		rows: [[{ field: "included_grant", operator: "lte", values: ["50"] }]],
-		pinned: ["ai_credits"],
-	},
-	{
-		name: "Checkout links on Pro or Team",
-		params: {
-			name: "Checkout links",
-			subjects: [sales],
+		rule: rule({
+			name: "E · Trials for new customers only",
+			effect: "block",
 			actions: ["billing.attach"],
-			when: {
-				checkout: true,
-				incoming: { $every: { plan_id: { $in: ["pro", "team"] } } },
+			filter: {
+				customer: { has_paid: true },
+				incoming: {
+					$some: { plan_id: "enterprise", free_trial: { $ne: null } },
+				},
 			},
-			note: null,
-			enabled: false,
-		},
+		}),
 		rows: [
 			[
-				{ field: "checkout", operator: "is", values: ["true"] },
-				{
-					field: "incoming_plan",
-					operator: "is_any_of",
-					values: ["pro", "team"],
-				},
+				{ field: "customer_has_paid", operator: "is", values: ["true"] },
+				{ field: "incoming_plan", operator: "is", values: ["enterprise"] },
+				{ field: "free_trial", operator: "has_any", values: [] },
 			],
 		],
 	},
 	{
-		name: "Customer has any of two plans",
-		params: {
-			name: "Existing customers",
-			subjects: [sales],
-			actions: ["billing.attach"],
-			when: {
-				customer: { plan: { $some: { plan_id: { $in: ["pro", "team"] } } } },
-			},
-			note: null,
-			enabled: true,
-		},
-		rows: [
-			[{ field: "customer_plan", operator: "has", values: ["pro", "team"] }],
-		],
+		rule: rule({
+			name: "F · Sales: no custom pricing",
+			effect: "block",
+			actions: ["billing.attach", "billing.update"],
+			filter: { incoming: { $some: { customized: true } } },
+		}),
+		rows: [[{ field: "customized", operator: "is", values: ["true"] }]],
 	},
 ];
 
-const storedRule = (params: CreateApprovalRuleParams): ApprovalRule => ({
-	...params,
-	when: params.when ?? null,
-	note: params.note ?? null,
-	enabled: params.enabled ?? true,
-	id: "apr_test",
-	version: 3,
-	updated_by: { user_id: "usr_charlie", name: "Charlie Lamb" },
-	created_at: 0,
-	updated_at: 0,
-});
+const rowsOf = (groups: { rules: (RuleRow & { id: string })[] }[]) =>
+	groups.map((group) => group.rules.map(({ id: _id, ...row }) => row));
 
-describe("complex rules round-trip through the editor", () => {
-	test.each(CASES)("$name", ({ params, rows, pinned }) => {
-		const opened = ruleToEditorValues({ rule: storedRule(params) });
+describe("PRD §8 rules in the editor", () => {
+	test.each(CASES)("$rule.name round-trips", ({ rule, rows }) => {
+		const opened = ruleToEditorValues({ rule });
 		expect(opened.editable).toBe(true);
-		const shown = opened.values.groups.map((group) =>
-			group.rules.map(({ id: _id, ...row }) => row),
-		);
-		expect(shown).toEqual(rows);
-		expect(opened.values.pinned?.values ?? null).toEqual(pinned ?? null);
-		expect(editorValuesToParams({ values: opened.values })).toEqual({
-			ok: true,
-			params,
+		expect(rowsOf(opened.values.groups)).toEqual(rows);
+
+		const saved = editorValuesToParams({ values: opened.values });
+		if (!saved.ok) throw new Error(JSON.stringify(saved.issues));
+		expect(saved.params.filter).toEqual(rule.filter);
+		expect(saved.params.effect).toBe(rule.effect);
+	});
+
+	test("switching an allow to can't stores the block quantifier", () => {
+		const { values } = ruleToEditorValues({ rule: enterpriseTrials });
+		const saved = editorValuesToParams({
+			values: { ...values, effect: "block" },
 		});
+		if (!saved.ok) throw new Error(JSON.stringify(saved.issues));
+		expect(saved.params.filter).toEqual({
+			paid: false,
+			incoming: {
+				$some: {
+					plan_id: "enterprise",
+					free_trial: { duration: { $lt: { length: 2, unit: "month" } } },
+				},
+			},
+		});
+	});
+
+	test.each([
+		rule({
+			name: "C · Plans on deployments, hand-written",
+			effect: "block",
+			actions: ["billing.attach"],
+			filter: {
+				incoming: {
+					$some: { plan_id: { $in: ["pro", "enterprise", "hobby"] } },
+				},
+				$or: [
+					{ entity: null },
+					{ entity: { feature_id: { $ne: "deployments" } } },
+				],
+			},
+		}),
+		rule({
+			name: "D · Enterprise cancels allowed with $some",
+			effect: "allow",
+			actions: ["billing.cancel"],
+			filter: { outgoing: { $some: { plan_id: "enterprise" } } },
+		}),
+	])("$name opens read-only", (rule) => {
+		expect(ruleToEditorValues({ rule }).editable).toBe(false);
 	});
 });

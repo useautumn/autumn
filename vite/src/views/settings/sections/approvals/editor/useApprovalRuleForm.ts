@@ -1,15 +1,12 @@
-import type {
-	ApprovalAction,
-	ApprovalRule,
-	ApprovalRuleIssue,
-} from "@autumn/shared";
 import { useState } from "react";
 import { useAppForm } from "@/hooks/form/form";
 import {
+	type ApprovalRuleIssue,
 	invalidRuleIssues,
 	useSaveApprovalRule,
 } from "@/hooks/queries/useApprovalRulesMutations";
-import { ruleWhenArea } from "./ruleActions";
+import type { ApprovalAction, ApprovalRule } from "../approvalsStub";
+import { ruleFilterKey } from "./ruleActions";
 import {
 	editorValuesToParams,
 	emptyEditorValues,
@@ -47,12 +44,12 @@ export const useApprovalRuleForm = ({
 	return {
 		form,
 		isSaving: save.isPending,
-		/** The first server issue under `path` ("name", "when"…), for inline display. */
+		/** The first server issue under `path` ("name", "filter"…), for inline display. */
 		serverIssue: (path: string) =>
 			serverIssues.find(
 				(issue) => issue.path === path || issue.path.startsWith(`${path}.`),
 			)?.message,
-		/** A different set of `when` fields starts the conditions over; old ones wouldn't fit. */
+		/** A different filter shape starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,
 			actions,
@@ -60,7 +57,7 @@ export const useApprovalRuleForm = ({
 			current: ApprovalAction[];
 			actions: ApprovalAction[];
 		}) => {
-			if (ruleWhenArea({ actions }) !== ruleWhenArea({ actions: current })) {
+			if (ruleFilterKey({ actions }) !== ruleFilterKey({ actions: current })) {
 				const { pinned, groups } = whenValuesFor({ actions });
 				form.setFieldValue("pinned", pinned);
 				form.setFieldValue("groups", groups);

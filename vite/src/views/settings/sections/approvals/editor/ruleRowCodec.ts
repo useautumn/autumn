@@ -1,11 +1,11 @@
 import {
+	type Duration,
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorOperator,
 	type EditorRow,
 	type EditorRowValue,
 	type PlanSelection,
-	type TrialDuration,
 } from "@autumn/shared/api/approvals/editor/index";
 import type { FilterRow } from "@/components/filters/types";
 import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
@@ -105,7 +105,7 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 				? null
 				: {
 						length,
-						unit: (second || DEFAULT_TRIAL_UNIT) as TrialDuration["unit"],
+						unit: (second || DEFAULT_TRIAL_UNIT) as Duration["unit"],
 					};
 		}
 		case "quantity": {
@@ -129,7 +129,7 @@ const encodeValue = ({ field, value }: EditorRow): string[] => {
 				return makePlanKey({ planId: plan_id, version });
 			});
 		case "trial": {
-			const { length, unit } = value as TrialDuration;
+			const { length, unit } = value as Duration;
 			return [String(length), unit];
 		}
 		case "quantity": {

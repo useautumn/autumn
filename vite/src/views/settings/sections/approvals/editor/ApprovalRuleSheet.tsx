@@ -1,4 +1,3 @@
-import { APPROVAL_AREAS, type ApprovalRule } from "@autumn/shared";
 import {
 	Button,
 	Input,
@@ -8,21 +7,22 @@ import {
 	SheetHeader,
 	SheetTitle,
 	Switch,
+	Tabs,
+	TabsList,
+	TabsTrigger,
 } from "@autumn/ui";
+import type { ApprovalRule, ApprovalRuleEffect } from "../approvalsStub";
 import { ChipMultiSelect } from "./ChipMultiSelect";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
 import { RuleWhenSection } from "./RuleWhenSection";
-import { ruleArea, ruleWhenArea } from "./ruleActions";
+import { areaLabel, ruleArea, ruleFilterKey } from "./ruleActions";
 import { useApprovalRuleForm } from "./useApprovalRuleForm";
 import {
 	subjectKey,
 	toggleSubject,
 	useRuleSubjectGroups,
 } from "./useRuleSubjectGroups";
-
-const SCOPE_CAPTION =
-	"Once a role has a rule for an action, every request for that action must match one of its rules.";
 
 const required =
 	({ message }: { message: string }) =>
@@ -105,6 +105,24 @@ export const ApprovalRuleSheet = ({
 						)}
 					</form.Field>
 
+					<form.Field name="effect">
+						{(field) => (
+							<RuleField label="Can or can't" error={serverIssue("effect")}>
+								<Tabs
+									value={field.state.value}
+									onValueChange={(value: ApprovalRuleEffect) =>
+										field.handleChange(value)
+									}
+								>
+									<TabsList className="w-fit">
+										<TabsTrigger value="allow">Can</TabsTrigger>
+										<TabsTrigger value="block">Can't</TabsTrigger>
+									</TabsList>
+								</Tabs>
+							</RuleField>
+						)}
+					</form.Field>
+
 					<form.Field
 						name="actions"
 						validators={{
@@ -115,12 +133,12 @@ export const ApprovalRuleSheet = ({
 							const area = ruleArea({ actions: field.state.value });
 							return (
 								<RuleField
-									label="Can"
-									hint={area ? APPROVAL_AREAS[area] : undefined}
+									label="Actions"
+									hint={area ? areaLabel(area) : undefined}
 									error={
 										field.state.meta.errors[0] ??
 										serverIssue("actions") ??
-										serverIssue("when")
+										serverIssue("filter")
 									}
 								>
 									<RuleActionsPicker
@@ -129,9 +147,6 @@ export const ApprovalRuleSheet = ({
 											changeActions({ current: field.state.value, actions })
 										}
 									/>
-									{ruleWhenArea({ actions: field.state.value }) && (
-										<p className="text-subtle text-xs">{SCOPE_CAPTION}</p>
-									)}
 								</RuleField>
 							);
 						}}
@@ -139,15 +154,15 @@ export const ApprovalRuleSheet = ({
 
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
-							const area = ruleWhenArea({ actions });
-							if (!area) return null;
+							const shape = ruleFilterKey({ actions });
+							if (!shape) return null;
 							return (
 								<form.Field name="pinned">
 									{(pinned) => (
 										<form.Field name="groups">
 											{(groups) => (
 												<RuleWhenSection
-													area={area}
+													shape={shape}
 													pinned={pinned.state.value}
 													groups={groups.state.value}
 													onPinnedChange={pinned.handleChange}
