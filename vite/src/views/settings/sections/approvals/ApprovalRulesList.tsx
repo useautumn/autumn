@@ -1,6 +1,6 @@
+import type { ApprovalRule } from "@autumn/shared";
 import { InfoIcon } from "@phosphor-icons/react";
 import { ApprovalRulesBody } from "./ApprovalRulesBody";
-import type { ApprovalRule } from "./approvalsStub";
 import type { RuleRowActions } from "./RuleRowMenu";
 
 const NOTES = [

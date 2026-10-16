@@ -1,30 +1,32 @@
 /**
- * S3 contract: `ACTIONS` lists every action on the When fields board, each
- * mapped to its area, a label, a real coarse scope and its `when` fields.
+ * S3 contract: `ACTIONS` lists every action a rule can name, with ids that are
+ * the RPC route names they gate, its area, labels, required scope and filter shape.
  *
- * Red (before):  `ACTIONS` doesn't exist.
- * Green (after): the catalog matches the board below.
+ * Red (before):  the old ids (`billing.update_subscription`, `catalog.*`) and `when` key.
+ * Green (after): the catalog matches the PRD §3/§6 tables below.
  */
 
 import { describe, expect, test } from "bun:test";
 import {
+	ACTION_ALIASES,
 	ACTIONS,
 	APPROVAL_AREAS,
+	APPROVAL_FILTER_FIELD_LABELS,
+	APPROVAL_FILTER_SHAPES,
 	type ApprovalAction,
+	type ApprovalFilterKey,
 	MODERN_SCOPES,
-	WHEN_FIELD_LABELS,
-	WHEN_SHAPES,
 } from "@autumn/shared";
 
-/** The When fields board: area → action → which `when` fields it gets (null = who-only). */
+/** PRD §3/§6: area → action → filter shape (null = who-only). */
 const BOARD: Record<string, Partial<Record<ApprovalAction, string | null>>> = {
 	billing: {
 		"billing.attach": "billing_change",
-		"billing.update_subscription": "billing_change",
+		"billing.update": "billing_change",
 		"billing.set_plans": "billing_change",
-		"billing.schedule": "billing_change",
+		"billing.create_schedule": "billing_change",
 		"billing.cancel": "billing_cancel",
-		"billing.uncancel": "billing_cancel",
+		"billing.uncancel": "billing_uncancel",
 	},
 	invoices: {
 		"invoices.create": "invoice",
@@ -33,24 +35,27 @@ const BOARD: Record<string, Partial<Record<ApprovalAction, string | null>>> = {
 		"invoices.void": "invoice",
 		"invoices.update": "invoice",
 		"invoices.reissue": "invoice",
-		"invoices.credit_note": "invoice",
+		"invoices.issue_credit_note": "invoice",
 	},
 	balances: {
 		"balances.create": "balance_create",
 		"balances.update": "balance_update",
 	},
-	rewards: {
-		"rewards.create": null,
-		"rewards.apply": "reward_apply",
-	},
+	rewards: { "rewards.create": null, "rewards.redeem": "reward_redeem" },
 	customers: {
-		"customers.create": null,
-		"customers.update": "customer",
-		"customers.delete": "customer",
+		"customers.get_or_create": null,
+		"customers.update": "customer_change",
+		"customers.delete": "customer_change",
 	},
-	catalog: {
-		"catalog.edit_plans": "catalog_plan",
-		"catalog.edit_features": "catalog_feature",
+	plans: {
+		"plans.create": "plan",
+		"plans.update": "plan",
+		"plans.delete": "plan",
+	},
+	features: {
+		"features.create": "feature",
+		"features.update": "feature",
+		"features.delete": "feature",
 	},
 	api_keys: { "api_keys.create": null },
 	migrations: { "migrations.create": null, "migrations.run": null },
@@ -58,35 +63,47 @@ const BOARD: Record<string, Partial<Record<ApprovalAction, string | null>>> = {
 };
 
 const actionIds = Object.keys(ACTIONS) as ApprovalAction[];
+const BARE_VERB_AREAS = [
+	"invoices",
+	"customers",
+	"plans",
+	"features",
+	"api_keys",
+	"migrations",
+	"members",
+];
 
 describe("ACTIONS catalog", () => {
-	test("matches the When fields board, area by area", () => {
+	test("matches the PRD board, area by area", () => {
 		const catalog: Record<string, Record<string, string | null>> = {};
 		for (const id of actionIds) {
-			const { area, when } = ACTIONS[id];
-			catalog[area] = { ...catalog[area], [id]: when };
+			const { area, filter } = ACTIONS[id];
+			catalog[area] = { ...catalog[area], [id]: filter };
 		}
 		expect(catalog).toEqual(BOARD);
 	});
 
-	test.each(actionIds)("%s maps to a real coarse write scope", (id) => {
+	test("each id is named after its area", () => {
+		for (const id of actionIds)
+			expect(id.startsWith(`${ACTIONS[id].area}.`)).toBe(true);
+	});
+
+	test.each(actionIds)("%s requires a real coarse write scope", (id) => {
 		const { scope } = ACTIONS[id];
 		expect(MODERN_SCOPES).toContain(scope);
 		expect(scope.endsWith(":write")).toBe(true);
 	});
 
-	test("billing and invoice actions need billing:write", () => {
-		const billingScopes = actionIds
-			.filter((id) => ["billing", "invoices"].includes(ACTIONS[id].area))
-			.map((id) => ACTIONS[id].scope);
-		expect(new Set(billingScopes)).toEqual(new Set(["billing:write"]));
-	});
-
-	test("every action has a label and is named after its area", () => {
+	test("scopes follow the area", () => {
+		const scopesByArea: Record<string, Set<string>> = {};
 		for (const id of actionIds) {
-			expect(ACTIONS[id].label.length).toBeGreaterThan(0);
-			expect(id.startsWith(`${ACTIONS[id].area}.`)).toBe(true);
+			const { area, scope } = ACTIONS[id];
+			scopesByArea[area] = (scopesByArea[area] ?? new Set()).add(scope);
 		}
+		expect(scopesByArea.billing).toEqual(new Set(["billing:write"]));
+		expect(scopesByArea.invoices).toEqual(new Set(["billing:write"]));
+		expect(scopesByArea.plans).toEqual(new Set(["plans:write"]));
+		expect(scopesByArea.features).toEqual(new Set(["features:write"]));
 	});
 
 	test("area labels are unique and cover every area", () => {
@@ -97,36 +114,35 @@ describe("ACTIONS catalog", () => {
 		);
 	});
 
-	test("there is no checkout.create_link action (checkout is a billing condition)", () => {
-		expect(actionIds).not.toContain("checkout.create_link");
-	});
-
 	test("bare-verb areas carry a sentence label", () => {
-		const bareVerbAreas = [
-			"invoices",
-			"customers",
-			"api_keys",
-			"migrations",
-			"members",
-		];
 		for (const id of actionIds) {
-			const action: { area: string; label: string; sentence_label?: string } =
-				ACTIONS[id];
-			if (!bareVerbAreas.includes(action.area)) continue;
+			const action: { area: string; sentence_label?: string } = ACTIONS[id];
+			if (!BARE_VERB_AREAS.includes(action.area)) continue;
 			expect(action.sentence_label).toBeDefined();
 		}
-		expect(ACTIONS["invoices.create"]).toMatchObject({
-			sentence_label: "Create invoices",
+		expect(ACTIONS["plans.update"]).toMatchObject({
+			sentence_label: "Update plans",
 		});
+	});
+
+	test("ACTION_ALIASES point routes checked as another action at real actions", () => {
+		expect(ACTION_ALIASES).toEqual({
+			"billing.multi_attach": "billing.attach",
+			"billing.multi_update": "billing.update",
+			"migrations.lazy_run": "migrations.run",
+		});
+		for (const action of Object.values(ACTION_ALIASES))
+			expect(actionIds).toContain(action);
 	});
 });
 
-describe("WHEN_FIELD_LABELS", () => {
-	test.each(Object.keys(WHEN_SHAPES) as (keyof typeof WHEN_SHAPES)[])(
+describe("APPROVAL_FILTER_FIELD_LABELS", () => {
+	test.each(Object.keys(APPROVAL_FILTER_SHAPES) as ApprovalFilterKey[])(
 		"%s labels every top-level field",
-		(whenKey) => {
-			const labels: Record<string, string> = WHEN_FIELD_LABELS[whenKey];
-			const unlabelled = Object.keys(WHEN_SHAPES[whenKey]).filter(
+		(filterKey) => {
+			const labels: Record<string, string> =
+				APPROVAL_FILTER_FIELD_LABELS[filterKey];
+			const unlabelled = Object.keys(APPROVAL_FILTER_SHAPES[filterKey]).filter(
 				(field) => !labels[field],
 			);
 			expect(unlabelled).toEqual([]);
@@ -134,13 +150,22 @@ describe("WHEN_FIELD_LABELS", () => {
 	);
 
 	test("board labels", () => {
-		expect(WHEN_FIELD_LABELS.billing_change).toMatchObject({
+		expect(APPROVAL_FILTER_FIELD_LABELS.billing_change).toMatchObject({
 			paid: "Charges customer",
 			checkout: "Sends checkout link",
 			total: "Due now",
+			entity: "Entity",
+			"entity.feature_id": "Entity type",
+			billing_cycle_anchor: "Billing cycle",
 			"incoming.free_trial": "Free trial",
+			"incoming.free_trial.duration": "Free trial length",
+			"customer.has_paid": "Customer has paid before",
 		});
-		expect(WHEN_FIELD_LABELS.balance_update.included_grant).toBe("Included");
-		expect(WHEN_FIELD_LABELS.invoice.refund).toBe("Refund or credit amount");
+		expect(APPROVAL_FILTER_FIELD_LABELS.balance_update.included_grant).toBe(
+			"Included",
+		);
+		expect(APPROVAL_FILTER_FIELD_LABELS.invoice.refund).toBe(
+			"Refund or credit amount",
+		);
 	});
 });

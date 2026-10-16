@@ -1,3 +1,4 @@
+import type { ApprovalRule } from "@autumn/shared";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -8,7 +9,6 @@ import {
 import { SettingsTable } from "../../SettingsTable";
 import { ApprovalRuleRow } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
-import type { ApprovalRule } from "./approvalsStub";
 import { moveRule } from "./moveRule";
 import { type RuleRowActions, RuleRowMenu } from "./RuleRowMenu";
 import { useApprovalRuleRows } from "./useApprovalRuleRows";

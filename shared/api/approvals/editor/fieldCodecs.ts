@@ -1,10 +1,7 @@
+import type { DurationBound } from "../../common/filters/durationMatcher";
+import type { ApprovalRuleEffect as RuleEffect } from "../schemas/approvalRule";
 import { isPlainObject } from "../schemas/isPlainObject";
-import type {
-	Duration,
-	EditorField,
-	EditorRow,
-	FeatureQuantity,
-} from "./editorFields";
+import type { EditorField, EditorRow, FeatureQuantity } from "./editorFields";
 import {
 	at,
 	entriesOf,
@@ -21,7 +18,6 @@ import {
 	toMatcher,
 	toPlanFilter,
 } from "./filterParts";
-import type { RuleEffect } from "./s3Stub";
 
 /** How one field's rows are stored in a group's filter, and read back out of it. */
 type FieldCodec = {
@@ -161,7 +157,7 @@ const FREE_TRIAL = [...INCOMING_PLAN, "free_trial"];
 const TRIAL_UNITS = ["day", "month", "year"];
 
 /** Whole units only: a 0.5-year trial is entered as 6 months. */
-const isDuration = (value: unknown): value is Duration =>
+const isDuration = (value: unknown): value is DurationBound =>
 	isPlainObject(value) &&
 	Number.isInteger(value.length) &&
 	(value.length as number) > 0 &&

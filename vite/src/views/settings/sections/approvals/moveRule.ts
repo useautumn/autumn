@@ -1,4 +1,4 @@
-import type { ApprovalRule } from "./approvalsStub";
+import type { ApprovalRule } from "@autumn/shared";
 
 export type RuleMove = "up" | "down" | "top" | "bottom";
 

@@ -4,18 +4,24 @@ import {
 	isCustomerProductPaid,
 	isCustomerProductPaidRecurring,
 } from "../../../../utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
-import { cusProductToPrices } from "../../../../utils/cusProductUtils/convertCusProduct.js";
-import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
-import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
+import {
+	cusProductToEnts,
+	cusProductToPrices,
+} from "../../../../utils/cusProductUtils/convertCusProduct.js";
+import { pricesAndEntitlementsToBasePriceAndEntitlementPrices } from "../../../../utils/productUtils/entitlementPriceUtils/convertEntitlementPrice/pricesAndEntitlementsToBasePriceAndEntitlementPrices.js";
+import { stringMatcherMatches } from "../../../common/filters/match/index.js";
+import { numberMatcherMatches } from "../../../common/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
+import { basePriceFilterMatches } from "./basePriceFilterMatches.js";
+import { itemFilterMatchesEntitlementPrices } from "./itemFilterMatchesEntitlementPrices.js";
 
 /**
  * Predicate: does `filter` match `cusProduct`?
  *
  * JS-side mirror of `compilePlanFilter` for callers that already have
- * the cusproduct in memory (migration runner, scripts). Today supports
- * `plan_id`, `addon`, `paid`, `recurring`, `custom`, and `$or`; `price`
- * and `item` throw to make the gap explicit.
+ * the cusproduct in memory (migration runner, scripts, approval rules).
+ * Supports every `PlanFilter` field, including `item` shapes the compiler
+ * doesn't yet (`$every` / `$none`, `unlimited`, `price.billing_method`).
  */
 export const planFilterMatchesCustomerProduct = ({
 	filter,
@@ -81,34 +87,28 @@ export const planFilterMatchesCustomerProduct = ({
 		return false;
 	}
 
-	// Null-existence forms only: `price` asks whether a BASE customer price
-	// (price with entitlement_id null) exists — mirrors the compiler's SQL.
-	if (filter.price !== undefined) {
-		const hasBasePrice = cusProductToPrices({ cusProduct }).some(
-			(price) => price.entitlement_id == null,
-		);
-		if (filter.price === null) {
-			if (hasBasePrice) return false;
-		} else if (isPriceNullExistenceMatcher(filter.price)) {
-			if ("$ne" in filter.price && filter.price.$ne === null && !hasBasePrice)
-				return false;
-			if ("$eq" in filter.price && filter.price.$eq === null && hasBasePrice)
-				return false;
-		} else {
-			throw new Error(
-				"planFilterMatchesCustomerProduct: nested price filters not supported in JS matcher yet",
-			);
-		}
+	if (
+		filter.price !== undefined &&
+		!basePriceFilterMatches({
+			filter: filter.price,
+			prices: cusProductToPrices({ cusProduct }),
+		})
+	) {
+		return false;
 	}
 
-	if (filter.item !== undefined)
-		throw new Error(
-			"planFilterMatchesCustomerProduct: filter.item not supported in JS matcher yet",
-		);
+	if (filter.item !== undefined) {
+		const { entitlementPrices } =
+			pricesAndEntitlementsToBasePriceAndEntitlementPrices({
+				prices: cusProductToPrices({ cusProduct }),
+				entitlements: cusProductToEnts({ cusProduct }),
+			});
+		const itemsMatch = itemFilterMatchesEntitlementPrices({
+			filter: filter.item,
+			entitlementPrices,
+		});
+		if (!itemsMatch) return false;
+	}
+
 	return true;
 };
-
-const isPriceNullExistenceMatcher = (
-	price: NonNullable<PlanFilter["price"]>,
-): price is { $eq?: null; $ne?: null } =>
-	typeof price === "object" && ("$eq" in price || "$ne" in price);

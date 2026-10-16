@@ -10,8 +10,9 @@ import { useActiveOrgId } from "./useActiveOrgId";
  * serving cached main-org data. The org comes from the session (or its last
  * known value) rather than /organization, so keys are stable from the start.
  */
-export const useQueryKeyFactory = () => {
-	const env = useEnv();
+export const useQueryKeyFactory = (params?: { env?: AppEnv }) => {
+	const currentEnv = useEnv();
+	const env = params?.env ?? currentEnv;
 	const { activeOrgId: orgId } = useActiveOrgId();
 	const activeSandbox = useActiveSandbox();
 	const sandboxId = env === AppEnv.Sandbox ? (activeSandbox?.id ?? null) : null;

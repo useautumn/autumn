@@ -1,7 +1,7 @@
 /** Contract: Move up / Move down / To top / To bottom send the full id list, and the list shows rules in that order. */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
+import type { ApprovalRule } from "@autumn/shared";
 import {
 	moveRule,
 	type RuleMove,

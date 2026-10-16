@@ -1,18 +1,13 @@
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type {
 	ApprovalRule,
-	ApprovalRuleUpdateParams,
-} from "@/views/settings/sections/approvals/approvalsStub";
-
-export type ApprovalRuleCreateParams = Pick<
-	ApprovalRule,
-	"name" | "effect" | "subjects" | "actions" | "filter" | "note" | "enabled"
->;
+	CreateApprovalRuleParams,
+	UpdateApprovalRuleParams,
+} from "@autumn/shared";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Rule routes always read and write live rules, whatever env the dashboard is in. */
 export const useApprovalRulesApi = () => {
 	const axiosInstance = useAxiosInstance();
-
 	return {
 		list: async () => {
 			const { data } = await axiosInstance.post<{ list: ApprovalRule[] }>(
@@ -21,23 +16,17 @@ export const useApprovalRulesApi = () => {
 			);
 			return data;
 		},
-		create: async ({ params }: { params: ApprovalRuleCreateParams }) => {
+		create: async (params: CreateApprovalRuleParams) => {
 			const { data } = await axiosInstance.post<ApprovalRule>(
 				"/approval_rules.create",
 				params,
 			);
 			return data;
 		},
-		update: async ({
-			id,
-			params,
-		}: {
-			id: string;
-			params: ApprovalRuleUpdateParams;
-		}) => {
+		update: async (params: UpdateApprovalRuleParams) => {
 			const { data } = await axiosInstance.post<ApprovalRule>(
 				"/approval_rules.update",
-				{ id, ...params },
+				params,
 			);
 			return data;
 		},

@@ -1,8 +1,8 @@
+import type { ApprovalRule } from "@autumn/shared";
 import { Switch, TableCell, TableRow } from "@autumn/ui";
 import { format } from "date-fns";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { ApprovalRule } from "./approvalsStub";
 import type { SentencePart } from "./buildRuleSentence";
 import { RuleSentencePart } from "./RuleSentencePart";
 

@@ -10,7 +10,7 @@ import {
 	type ApprovalRule,
 	type ApprovalRuleEffect,
 	type RuleSubject,
-} from "@/views/settings/sections/approvals/approvalsStub";
+} from "@autumn/shared";
 import {
 	buildRuleSentence,
 	type RuleLabels,
@@ -122,10 +122,18 @@ describe("rule sentence: who and effect", () => {
 });
 
 describe("rule sentence: actions", () => {
-	test.each(Object.entries(ACTIONS))("%s", (action, { label }) => {
+	test.each(Object.keys(ACTIONS) as ApprovalAction[])("%s", (action) => {
+		const definition: { label: string; sentence_label?: string } =
+			ACTIONS[action];
+		expect(textOf({ subjects: [everyone], actions: [action] })).toBe(
+			`Everyone can ${definition.sentence_label ?? definition.label}`,
+		);
+	});
+
+	test("bare-verb areas read their sentence label", () => {
 		expect(
-			textOf({ subjects: [everyone], actions: [action as ApprovalAction] }),
-		).toBe(`Everyone can ${label}`);
+			textOf({ actions: ["invoices.create", "members.change_role"] }),
+		).toBe("Sales can Create invoices Change member roles");
 	});
 
 	test("renamed actions read their new labels", () => {
@@ -133,10 +141,10 @@ describe("rule sentence: actions", () => {
 			textOf({
 				actions: ["billing.update", "billing.create_schedule"],
 			}),
-		).toBe("Sales can Update Create schedule");
+		).toBe("Sales can Update subscription Create schedule");
 		expect(
 			textOf({ actions: ["invoices.issue_credit_note", "rewards.redeem"] }),
-		).toBe("Sales can Issue credit notes Redeem rewards");
+		).toBe("Sales can Issue credit notes Redeem reward");
 	});
 });
 
@@ -156,7 +164,7 @@ describe("rule sentence: PRD §8 examples", () => {
 					"billing.uncancel",
 				],
 			},
-			"Everyone can't Attach Update Set plans Create schedule Cancel Uncancel",
+			"Everyone can't Attach Update subscription Set plans Create schedule Cancel Uncancel",
 		],
 		[
 			"A: allow Sales enterprise trials",
@@ -168,7 +176,7 @@ describe("rule sentence: PRD §8 examples", () => {
 					},
 				},
 			},
-			"Sales can Attach when Charges customer is No and Incoming plan is Enterprise and Free trial < 2 months",
+			"Sales can Attach when Charges customer is No and Incoming plan is Enterprise and Free trial length < 2 months",
 		],
 		[
 			"B: credit add-ons on an entity",
@@ -181,7 +189,7 @@ describe("rule sentence: PRD §8 examples", () => {
 					entity: { $ne: null },
 				},
 			},
-			"Everyone can't Attach Update when Incoming plan is Credits add-on and Level is any entity",
+			"Everyone can't Attach Update subscription when Incoming plan is Credits add-on and Entity is any",
 		],
 		[
 			"C: hand-written entity $or stays custom",
@@ -199,7 +207,7 @@ describe("rule sentence: PRD §8 examples", () => {
 					],
 				},
 			},
-			"Everyone can't Attach Update when Incoming plan is any of Pro, Enterprise, Hobby and Custom condition",
+			"Everyone can't Attach Update subscription when Incoming plan is any of Pro, Enterprise, Hobby and Custom condition",
 		],
 		[
 			"D: block Enterprise cancels",
@@ -244,7 +252,7 @@ describe("rule sentence: PRD §8 examples", () => {
 				actions: attachUpdate,
 				filter: { incoming: { $some: { customized: true } } },
 			},
-			"Sales can't Attach Update when Custom pricing is Yes",
+			"Sales can't Attach Update subscription when Custom pricing is Yes",
 		],
 	])("%s", (_name, input, expected) => {
 		expect(textOf(input)).toBe(expected);
@@ -265,7 +273,7 @@ describe("rule sentence: conditions", () => {
 					},
 				},
 			},
-			"Sales can Attach when Free trial < 31 days and Incoming plan is any of Pro, Team",
+			"Sales can Attach when Free trial length < 31 days and Incoming plan is any of Pro, Team",
 		],
 		[
 			"a one-unit trial reads singular",
@@ -278,7 +286,7 @@ describe("rule sentence: conditions", () => {
 					},
 				},
 			},
-			"Sales can Attach when Free trial ≤ 1 year",
+			"Sales can Attach when Free trial length ≤ 1 year",
 		],
 		[
 			"no trial",
@@ -331,9 +339,9 @@ describe("rule sentence: conditions", () => {
 			"Sales can't Attach when Entity type is Deployments",
 		],
 		[
-			"customer level",
+			"customer level reads Entity is none",
 			{ effect: "block", filter: { entity: null } },
-			"Sales can't Attach when Level is customer",
+			"Sales can't Attach when Entity is none",
 		],
 		[
 			"billing cycle anchor",
@@ -342,7 +350,7 @@ describe("rule sentence: conditions", () => {
 				actions: ["billing.update"],
 				filter: { billing_cycle_anchor: "now" },
 			},
-			"Sales can't Update when Billing cycle is Reset now",
+			"Sales can't Update subscription when Billing cycle is Reset now",
 		],
 		[
 			"is not a plan reads $none",
@@ -382,7 +390,7 @@ describe("rule sentence: conditions", () => {
 					incoming: { $every: { recurring: true } },
 				},
 			},
-			"Sales can Attach Update when Discount percent off ≤ 20% and Recurring is Yes",
+			"Sales can Attach Update subscription when Discount percent off ≤ 20% and Recurring is Yes",
 		],
 		[
 			"OR groups on cancel with a refund cap",

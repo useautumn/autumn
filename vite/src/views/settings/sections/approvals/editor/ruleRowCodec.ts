@@ -1,5 +1,5 @@
+import type { DurationBound } from "@autumn/shared";
 import {
-	type Duration,
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorOperator,
@@ -106,7 +106,7 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 				? null
 				: {
 						length,
-						unit: (second || DEFAULT_TRIAL_UNIT) as Duration["unit"],
+						unit: (second || DEFAULT_TRIAL_UNIT) as DurationBound["unit"],
 					};
 		}
 		case "quantity": {
@@ -130,7 +130,7 @@ const encodeValue = ({ field, value }: EditorRow): string[] => {
 				return makePlanKey({ planId: plan_id, version });
 			});
 		case "trial": {
-			const { length, unit } = value as Duration;
+			const { length, unit } = value as DurationBound;
 			return [String(length), unit];
 		}
 		case "quantity": {

@@ -1,17 +1,15 @@
+import type {
+	ApprovalRuleIssue,
+	CreateApprovalRuleParams,
+} from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { getBackendErr } from "@/utils/genUtils";
-import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
 import { sortRulesByIds } from "@/views/settings/sections/approvals/moveRule";
-import {
-	type ApprovalRuleCreateParams,
-	useApprovalRulesApi,
-} from "./useApprovalRulesApi";
+import { useApprovalRulesApi } from "./useApprovalRulesApi";
 import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
-
-export type ApprovalRuleIssue = { path: string; message: string };
 
 /** The server's 400 `invalid_approval_rule` issues, or null for any other error. */
 export const invalidRuleIssues = ({ error }: { error: unknown }) => {
@@ -35,7 +33,7 @@ export const useToggleApprovalRule = () => {
 	const invalidate = useInvalidateApprovalRules();
 	return useMutation({
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-			api.update({ id, params: { enabled } }),
+			api.update({ id, enabled }),
 		onSettled: invalidate,
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to update rule")),
@@ -52,8 +50,8 @@ export const useSaveApprovalRule = () => {
 			params,
 		}: {
 			id: string | null;
-			params: ApprovalRuleCreateParams;
-		}) => (id ? api.update({ id, params }) : api.create({ params })),
+			params: CreateApprovalRuleParams;
+		}) => (id ? api.update({ id, ...params }) : api.create(params)),
 		// Awaiting the refetch keeps the sheet open until the list shows the change.
 		onSuccess: async (_rule, { id }) => {
 			toast.success(id ? "Rule updated" : "Rule created");
