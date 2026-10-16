@@ -30,6 +30,7 @@ export const priceToRequiredStripeSlots = ({
 	billingVersion?: BillingVersion;
 }): RequiredStripeResourceSlot[] => {
 	if (isFixedPrice(price)) {
+		if (billingVersion === BillingVersion.V1) return ["stripe_price_id"];
 		if ((price.config.amount ?? 0) <= 0) return [];
 		return ["stripe_price_id"];
 	}
