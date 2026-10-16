@@ -57,7 +57,7 @@ export function BalanceCreateSheet() {
 	const { customer, refetch } = useCusQuery();
 	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
-	const balanceWrite = useBalanceWrite();
+	const balanceWrite = useBalanceWrite({ onSuccess: refetch });
 
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
 
@@ -181,7 +181,6 @@ export function BalanceCreateSheet() {
 				path: "/v1/balances.create",
 				body: params,
 			});
-			await refetch();
 			closeSheet();
 			toast.success("Balance created");
 		} catch (error) {

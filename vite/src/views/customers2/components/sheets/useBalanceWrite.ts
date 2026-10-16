@@ -17,12 +17,18 @@ export const BALANCE_DENIAL_SECTIONS: PermissionSections = {
 	expires_at: "expires",
 };
 
-export const useBalanceWrite = () => {
+/** `onSuccess` is awaited before the write stops pending, so a refetch there keeps submit busy. */
+export const useBalanceWrite = ({
+	onSuccess,
+}: {
+	onSuccess?: () => Promise<unknown>;
+} = {}) => {
 	const axios = useAxiosInstance();
 	return useMutation({
 		mutationKey: BALANCE_WRITE_KEY,
 		gcTime: 0,
 		mutationFn: ({ path, body }: { path: string; body: object }) =>
 			axios.post(path, body),
+		onSuccess,
 	});
 };

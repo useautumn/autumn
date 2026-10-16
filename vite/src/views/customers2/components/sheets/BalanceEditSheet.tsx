@@ -279,6 +279,7 @@ function UnlimitedBalanceForm({
 			</SheetSection>
 
 			<div className="flex flex-col gap-3 px-4 pb-4">
+				<PermissionDenial section="feature" className="px-0 pt-0" />
 				<PermissionDenial section="summary" />
 				<Button
 					variant="primary"
@@ -890,6 +891,7 @@ function SubmitButton({
 
 	return (
 		<div className="flex flex-col gap-3 px-4 pb-4">
+			<PermissionDenial section="feature" className="px-0 pt-0" />
 			<PermissionDenial section="summary" />
 			<Button
 				variant="primary"
