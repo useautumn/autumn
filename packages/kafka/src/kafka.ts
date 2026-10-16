@@ -42,6 +42,7 @@ export type {
 export {
 	isConsumerGroupGoneError,
 	isKafkaAccessRefusal,
+	isKafkaGroupChurn,
 	KafkaPartitionOffsetsNotFoundError,
 } from "./consumer/consumerErrors.js";
 export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";

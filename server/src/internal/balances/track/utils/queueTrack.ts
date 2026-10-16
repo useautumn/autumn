@@ -73,6 +73,9 @@ export const queueTrack = async ({
 				customerId: body.customer_id,
 				entityId: body.entity_id,
 				requestId: requestId ?? ctx.id,
+				// A batch item has its own request id; the batch's header key must not name it.
+				...(requestId === undefined &&
+					ctx.idempotencyKey && { idempotencyKey: ctx.idempotencyKey }),
 				apiVersion: ctx.apiVersion.value,
 				body,
 				tokens,

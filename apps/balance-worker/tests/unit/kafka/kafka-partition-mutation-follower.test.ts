@@ -1,4 +1,5 @@
-import { createProgressTracker } from "@autumn/kafka";
+import { createProgressTracker, createSettledAdmin } from "@autumn/kafka";
+import { type Admin, KafkaJSProtocolError } from "kafkajs";
 import { createPartitionReplay } from "../../../src/kafka/meteringConsumer/replay/createPartitionReplay.js";
 
 async function coordinatesReplayWithoutMutatingConsumer(): Promise<void> {
@@ -260,6 +261,105 @@ describe("Kafka partition outcome follower", () => {
 			positionTracker.advance({ topic, partition, nextOffset: 10n });
 			await catchUp;
 			expect(replayFloorByPartition.has(partition)).toBe(false);
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("refills the window when the first lookup hit a moved leader, instead of starting at the bookmark", async () => {
+		const fixture = createStoreFixture({ nextOffset: 8n });
+		try {
+			const consumer = createPartitionControl();
+			const offsets = createPartitionOffsets({ low: "0", high: "10" });
+			// The 15 Oct roll: kafkajs answers NOT_LEADER from a cached leader and does not refresh it.
+			const staleLeader = {
+				...offsets,
+				connect: async () => undefined,
+				disconnect: async () => undefined,
+				fetchTopicOffsetsByTimestamp: async () => {
+					throw new KafkaJSProtocolError({
+						message: "This server is not the leader for that topic-partition",
+						type: "NOT_LEADER_FOR_PARTITION",
+						code: 6,
+					} as unknown as Error);
+				},
+			};
+			const currentLeader = {
+				...staleLeader,
+				fetchTopicOffsetsByTimestamp: async () => [{ partition, offset: "3" }],
+			};
+			const admins = [staleLeader, currentLeader];
+			const partitionOffsets = createSettledAdmin({
+				createAdmin: () => admins.shift() as unknown as Admin,
+				retry: {
+					deadlineMs: 10,
+					backoffMs: 1,
+					now: () => 0,
+					sleep: async () => undefined,
+				},
+			});
+			const positionTracker = createProgressTracker();
+			const replayFloorByPartition = new Map<number, bigint>();
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer,
+				partitionOffsets,
+				stateStore: fixture.store,
+				positionTracker,
+				replayFloorByPartition,
+			});
+			await follower.readLogRange({ topic, partition, signal: activeSignal() });
+			const catchUp = follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 10n,
+				onUnavailable: () => undefined,
+			});
+			await new Promise<void>(setImmediate);
+			expect(consumer.seeks).toEqual([{ topic, partition, offset: "3" }]);
+			expect(replayFloorByPartition.get(partition)).toBe(3n);
+			positionTracker.advance({ topic, partition, nextOffset: 10n });
+			await catchUp;
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("reads the window again when a lookup fails inside its budget, whatever the client", async () => {
+		const fixture = createStoreFixture({ nextOffset: 8n });
+		try {
+			const consumer = createPartitionControl();
+			let lookups = 0;
+			const positionTracker = createProgressTracker();
+			const follower = createKafkaPartitionOutcomeFollower({
+				consumer,
+				partitionOffsets: {
+					...createPartitionOffsets({ low: "0", high: "10" }),
+					fetchTopicOffsetsByTimestamp: async () => {
+						lookups += 1;
+						if (lookups === 1) throw new Error("not the leader");
+						return [{ partition, offset: "3" }];
+					},
+				},
+				stateStore: fixture.store,
+				positionTracker,
+				replayWindow: {
+					windowMs: 600_000,
+					lookupTimeoutMs: 1_000,
+					now: () => 0,
+				},
+			});
+			await follower.readLogRange({ topic, partition, signal: activeSignal() });
+			const catchUp = follower.startAndCatchUp({
+				topic,
+				partition,
+				targetNextOffset: 10n,
+				onUnavailable: () => undefined,
+			});
+			await Bun.sleep(250);
+			expect(lookups).toBe(2);
+			expect(consumer.seeks).toEqual([{ topic, partition, offset: "3" }]);
+			positionTracker.advance({ topic, partition, nextOffset: 10n });
+			await catchUp;
 		} finally {
 			closeStoreFixture(fixture);
 		}

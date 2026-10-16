@@ -7,9 +7,130 @@ index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2
 diff --git a/node_modules/kafkajs/.bun-tag-9af2d68b0d3bdbc0 b/.bun-tag-9af2d68b0d3bdbc0
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/kafkajs/.bun-tag-d511d1505e6c7f73 b/.bun-tag-d511d1505e6c7f73
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/kafkajs/.bun-tag-f1b111e363a9f75c b/.bun-tag-f1b111e363a9f75c
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/src/admin/index.js b/src/admin/index.js
+index 8e98691b155e7f9c52743c698bf7585eb0b46325..7262d0bf5d0d95fdddaa500a2d777c18bffe9d81 100644
+--- a/src/admin/index.js
++++ b/src/admin/index.js
+@@ -334,7 +334,8 @@ module.exports = ({
+             .offset,
+         }))
+       } catch (e) {
+-        if (e.type === 'UNKNOWN_TOPIC_OR_PARTITION') {
++        // A partition leader moved under the ListOffsets: refresh metadata and retry, as for an unknown topic.
++        if (staleMetadata(e)) {
+           await cluster.refreshMetadata()
+           throw e
+         }
+@@ -391,7 +392,8 @@ module.exports = ({
+                   .offset,
+         }))
+       } catch (e) {
+-        if (e.type === 'UNKNOWN_TOPIC_OR_PARTITION') {
++        // A partition leader moved under the ListOffsets: refresh metadata and retry, as for an unknown topic.
++        if (staleMetadata(e)) {
+           await cluster.refreshMetadata()
+           throw e
+         }
+diff --git a/src/consumer/consumerGroup.js b/src/consumer/consumerGroup.js
+index 442312c1a8ddeabf498060575b70f217c46049c6..50f327bd8d3a77d3fd9671230561f492a720d8d0 100644
+--- a/src/consumer/consumerGroup.js
++++ b/src/consumer/consumerGroup.js
+@@ -35,6 +35,8 @@ const PRIVATE = {
+   JOIN: Symbol('private:ConsumerGroup:join'),
+   SYNC: Symbol('private:ConsumerGroup:sync'),
+   SHARED_HEARTBEAT: Symbol('private:ConsumerGroup:sharedHeartbeat'),
++  JOINS_IN_PROGRESS: Symbol('private:ConsumerGroup:joinsInProgress'),
++  IS_SUPERSEDED_HEARTBEAT_ERROR: Symbol('private:ConsumerGroup:isSupersededHeartbeatError'),
+ }
+ 
+ module.exports = class ConsumerGroup {
+@@ -128,6 +130,7 @@ module.exports = class ConsumerGroup {
+     this.subscriptionState = new SubscriptionState()
+ 
+     this.lastRequest = Date.now()
++    this[PRIVATE.JOINS_IN_PROGRESS] = 0
+ 
+     this[PRIVATE.SHARED_HEARTBEAT] = sharedPromiseTo(async ({ interval }) => {
+       const { groupId, generationId, memberId } = this
+@@ -140,13 +143,39 @@ module.exports = class ConsumerGroup {
+           groupGenerationId: generationId,
+         }
+ 
+-        await this.coordinator.heartbeat(payload)
++        try {
++          await this.coordinator.heartbeat(payload)
++        } catch (e) {
++          if (!this[PRIVATE.IS_SUPERSEDED_HEARTBEAT_ERROR]({ error: e, generationId })) throw e
++
++          this.logger.debug('Ignoring a heartbeat error the group has already moved past', {
++            groupId,
++            memberId,
++            generationId,
++            currentGenerationId: this.generationId,
++            error: e.message,
++          })
++          this.lastRequest = Date.now()
++          return
++        }
++
+         this.instrumentationEmitter.emit(HEARTBEAT, payload)
+         this.lastRequest = Date.now()
+       }
+     })
+   }
+ 
++  /**
++   * A stale generation, or a rebalance this member is already rejoining, needs no rejoin of its own:
++   * the Java client drops such answers too. Rejoining on them started a new generation every time.
++   * @private
++   */
++  [PRIVATE.IS_SUPERSEDED_HEARTBEAT_ERROR]({ error, generationId }) {
++    if (error.type === 'ILLEGAL_GENERATION' && this.generationId !== generationId) return true
++    if (this[PRIVATE.JOINS_IN_PROGRESS] === 0) return false
++    return isRebalancing(error) || error.type === 'UNKNOWN_MEMBER_ID'
++  }
++
+   isLeader() {
+     return this.leaderId && this.memberId === this.leaderId
+   }
+@@ -330,7 +359,8 @@ module.exports = class ConsumerGroup {
+ 
+   joinAndSync() {
+     const startJoin = Date.now()
+-    return this.retrier(async bail => {
++    this[PRIVATE.JOINS_IN_PROGRESS] += 1
++    const joining = this.retrier(async bail => {
+       try {
+         await this[PRIVATE.JOIN]()
+         await this[PRIVATE.SYNC]()
+@@ -369,6 +399,10 @@ module.exports = class ConsumerGroup {
+         bail(e)
+       }
+     })
++
++    return joining.finally(() => {
++      this[PRIVATE.JOINS_IN_PROGRESS] -= 1
++    })
+   }
+ 
+   /**
+@@ -558,8 +592,9 @@ module.exports = class ConsumerGroup {
+         error: e.message,
+       })
+ 
++      // Leadership moved; the assignment did not. A rejoin here restarts the whole group's
++      // rebalance on every leader election, so only the metadata is refreshed.
+       await this.cluster.refreshMetadata()
+-      await this.joinAndSync()
+       return
+     }
+ 
 diff --git a/src/network/connection.js b/src/network/connection.js
 index dded584d8f8f2ccb001939a97f40739f3e51605a..e976117984a30fb1bb82ef6fc488f0314defc0a7 100644
 --- a/src/network/connection.js

@@ -21,17 +21,17 @@ export const SCHEMA_SOURCES: SchemaSource[] = [
 		sdkFile: "get-or-create-customer-op.ts",
 		outputFile: "getOrCreateCustomerSchemas.ts",
 	},
-	{ sdkFile: "attach-response.ts", outputFile: "attachSchemas.ts" },
+	{ exportedType: "AttachResponse", outputFile: "attachSchemas.ts" },
 	{
 		sdkFile: "preview-attach-response.ts",
 		outputFile: "previewAttachSchemas.ts",
 	},
 	{
-		sdkFile: "billing-update-response.ts",
+		exportedType: "BillingUpdateResponse",
 		outputFile: "updateSubscriptionSchemas.ts",
 	},
 	{
-		sdkFile: "preview-update-response.ts",
+		exportedType: "PreviewUpdateResponse",
 		outputFile: "previewUpdateSubscriptionSchemas.ts",
 	},
 	{
@@ -39,7 +39,7 @@ export const SCHEMA_SOURCES: SchemaSource[] = [
 		outputFile: "openCustomerPortalSchemas.ts",
 	},
 	{
-		sdkFile: "setup-payment-response.ts",
+		exportedType: "SetupPaymentResponse",
 		outputFile: "setupPaymentSchemas.ts",
 	},
 	{ sdkFile: "multi-attach-op.ts", outputFile: "multiAttachSchemas.ts" },

@@ -36,7 +36,7 @@ const waitFor = async (condition: () => boolean, attempts = 200) => {
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 5));
 
 type OwnershipEvent =
-	| { type: "ready"; partition: number; endpoint: string }
+	| { type: "ready"; partition: number; endpoint: string; readyAt?: number }
 	| { type: "preparing"; partition: number; endpoint: string }
 	| { type: "draining"; partition: number; endpoint: string; successor: string }
 	| { type: "claimed"; partition: number; endpoint: string; routeEpoch: string }
@@ -245,9 +245,14 @@ const createWorker = ({
 				record("release");
 				log.publish({ type: "unowned", partition, endpoint });
 			},
-			announceReady: async () => {
+			announceReady: async (params) => {
 				record("announce");
-				log.publish({ type: "ready", partition, endpoint });
+				log.publish({
+					type: "ready",
+					partition,
+					endpoint,
+					readyAt: params?.readyAt,
+				});
 			},
 			announcePreparing: async () => {
 				if (silentPreparation) return;
@@ -316,17 +321,22 @@ const createWorker = ({
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
-			awaitClaim: ({ signal }) =>
-				log.await({
+			awaitClaim: ({ signal, afterReadyAt }) => {
+				let answersReady = afterReadyAt === undefined;
+				return log.await({
 					signal,
-					match: (event) =>
-						event.type === "claimed" &&
-						event.partition === partition &&
-						event.endpoint === endpoint
+					match: (event) => {
+						if (event.partition !== partition || event.endpoint !== endpoint)
+							return undefined;
+						if (event.type === "ready" && event.readyAt === afterReadyAt)
+							answersReady = true;
+						return event.type === "claimed" && answersReady
 							? { routeEpoch: event.routeEpoch }
-							: undefined,
-				}),
-			awaitRouteClaim: (params) => publication.awaitClaim(params),
+							: undefined;
+					},
+				});
+			},
+			awaitRouteClaim: ({ signal }) => publication.awaitClaim({ signal }),
 		};
 		return { runtime, publication, markUnavailable: () => undefined };
 	};

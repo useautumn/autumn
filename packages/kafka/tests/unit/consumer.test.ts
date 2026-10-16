@@ -526,6 +526,86 @@ async function reconcilesInitialOffsetAndRejoins(): Promise<void> {
 	await consumer.stop();
 }
 
+/** kafkajs's `consumer.commitOffsets` wraps a group refusal in a non-retriable error, as here. */
+function wrappedCommitRefusal({
+	type,
+	message,
+}: {
+	type: string;
+	message: string;
+}): KafkaJSNonRetriableError {
+	const refusal = groupRefusal({ type, message });
+	return Object.assign(new KafkaJSNonRetriableError(refusal), {
+		cause: refusal,
+	});
+}
+
+async function supersededResumeCommitIsDropped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "ILLEGAL_GENERATION",
+				message: "Specified group generation id is not valid",
+			}),
+		);
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([]);
+		expect(progress.read({ topic, partition })).toBeNull();
+
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([{ topic, partition, offset: "1" }]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
+async function resumeCommitChurnReachesRunnerUnwrapped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "REBALANCE_IN_PROGRESS",
+				message: "The group is rebalancing, so a rejoin is needed",
+			}),
+		);
+		const delivery = fixture.deliverBatch({ records: [createRecord("3")] });
+		await expect(delivery).rejects.toBeInstanceOf(KafkaJSProtocolError);
+		await expect(delivery).rejects.toMatchObject({
+			type: "REBALANCE_IN_PROGRESS",
+		});
+		expect(fixture.seeks).toEqual([]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
 async function reconcilesAdvancedApplicationOffset(): Promise<void> {
 	const fixture = createConsumerFixture();
 	const progress = createProgressTracker();
@@ -807,6 +887,14 @@ function topicConsumerTests(): void {
 	test(
 		"reconciles initial offsets only after successful commits and resets on group join",
 		reconcilesInitialOffsetAndRejoins,
+	);
+	test(
+		"a resume-offset commit refused for a superseded generation is dropped instead of crashing the consumer",
+		supersededResumeCommitIsDropped,
+	);
+	test(
+		"other group churn on a resume-offset commit reaches kafkajs unwrapped, so it rejoins instead of crashing",
+		resumeCommitChurnReachesRunnerUnwrapped,
 	);
 	test(
 		"seeks beyond already applied records without folding the rest of the batch",

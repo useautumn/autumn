@@ -36,19 +36,7 @@ const ACCESS_REFUSAL_TYPES = new Set([
  *  group for good, but a verdict is the broker's to change: prod has refused a healthy fleet
  *  twice and taken it back within minutes, with no policy or role changed in between. */
 export function isKafkaAccessRefusal({ cause }: { cause: unknown }): boolean {
-	const seen = new Set<unknown>();
-	let current = cause;
-	while (
-		typeof current === "object" &&
-		current !== null &&
-		!seen.has(current)
-	) {
-		if (isAccessRefusalError(current)) return true;
-		seen.add(current);
-		if (!("cause" in current)) return false;
-		current = current.cause;
-	}
-	return false;
+	return findCause({ cause, matches: isAccessRefusalError }) !== undefined;
 }
 
 function isAccessRefusalError(error: object): boolean {
@@ -56,4 +44,53 @@ function isAccessRefusalError(error: object): boolean {
 		return ACCESS_REFUSAL_TYPES.has(error.type);
 	if (!(error instanceof Error)) return false;
 	return error.name === "KafkaJSSASLAuthenticationError";
+}
+
+const GROUP_CHURN_TYPES = new Set([
+	"ILLEGAL_GENERATION",
+	"REBALANCE_IN_PROGRESS",
+	"UNKNOWN_MEMBER_ID",
+]);
+
+/** The group moved on without this member: kafkajs marks these non-retriable, and wrapped by
+ *  `consumer.commitOffsets` they crash the consumer instead of rejoining it. */
+export function groupChurnCauseOf({
+	cause,
+}: {
+	cause: unknown;
+}): KafkaJSProtocolError | undefined {
+	const found = findCause({ cause, matches: isGroupChurnError });
+	return found instanceof KafkaJSProtocolError ? found : undefined;
+}
+
+export function isKafkaGroupChurn({ cause }: { cause: unknown }): boolean {
+	return groupChurnCauseOf({ cause }) !== undefined;
+}
+
+function isGroupChurnError(error: object): boolean {
+	return (
+		error instanceof KafkaJSProtocolError && GROUP_CHURN_TYPES.has(error.type)
+	);
+}
+
+function findCause({
+	cause,
+	matches,
+}: {
+	cause: unknown;
+	matches: (error: object) => boolean;
+}): object | undefined {
+	const seen = new Set<unknown>();
+	let current = cause;
+	while (
+		typeof current === "object" &&
+		current !== null &&
+		!seen.has(current)
+	) {
+		if (matches(current)) return current;
+		seen.add(current);
+		if (!("cause" in current)) return undefined;
+		current = current.cause;
+	}
+	return undefined;
 }
