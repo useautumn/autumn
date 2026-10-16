@@ -39,6 +39,8 @@ const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 };
 /** How often an idle job's lag clock is reset by its leaders answering fetches. */
 const FETCH_LIVENESS_INTERVAL_MS = 1_000;
+/** A slice this slow is logged: a poll's slices on every partition share one poll window. */
+const SLOW_SLICE_MS = 10_000;
 
 /** Runs one job over the balance log with a consumer group of its own. Everything Kafka lives here, none of it in a job. */
 export function createStreamConsumer({
@@ -127,16 +129,49 @@ export function createStreamConsumer({
 
 	// Stopped mid-slice: thrown so nothing of the slice is resolved; the runner is already stopping, so it ends there.
 	async function applyRecords(slice: MeteringRecordSlice): Promise<void> {
-		const settled = await landRecords({
-			ctx: {
-				logger: ctx.logger,
-				signal: stopping.signal,
-				heartbeat: slice.heartbeat,
+		const startedAtMs = now();
+		try {
+			const settled = await landRecords({
+				ctx: {
+					logger: ctx.logger,
+					signal: stopping.signal,
+					heartbeat: slice.heartbeat,
+				},
+				job: streamConsumer,
+				records: slice.applications,
+			});
+			if (!settled) throw new HeraldStoppedMidSliceError();
+		} finally {
+			noteSlice({ slice, startedAtMs });
+		}
+	}
+
+	/** Every slice, landed or cut short, is timed: a slow one is how a poll overruns its window. */
+	function noteSlice({
+		slice,
+		startedAtMs,
+	}: {
+		slice: MeteringRecordSlice;
+		startedAtMs: number;
+	}): void {
+		const first = slice.applications[0];
+		if (!first) return;
+		const durationMs = now() - startedAtMs;
+		if (durationMs < SLOW_SLICE_MS) return;
+		ctx.logger.warn(
+			{
+				type: "herald_slice_slow",
+				data: {
+					job,
+					topic: slice.topic,
+					partition: slice.partition,
+					firstOffset: first.position.offset.toString(),
+					records: slice.applications.length,
+					durationMs,
+				},
 			},
-			job: streamConsumer,
-			records: slice.applications,
-		});
-		if (!settled) throw new HeraldStoppedMidSliceError();
+			"Herald took long to land a slice",
+		);
 	}
 
 	function readResumeOffset(): null {
