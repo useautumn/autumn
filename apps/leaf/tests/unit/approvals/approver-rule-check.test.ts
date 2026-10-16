@@ -54,3 +54,16 @@ test("one denied step denies the whole grouped card", () => {
 		firstRuleDenial({ previews: [{ total: 0 }, undefined] }),
 	).toBeUndefined();
 });
+
+test("a denial inside the display wrapper still denies the card", () => {
+	expect(
+		firstRuleDenial({
+			previews: [
+				{
+					_display: { customer: "Example", plan: "Pro" },
+					preview: { total: 20, permission: deny },
+				},
+			],
+		}),
+	).toStartWith("You can't approve this.");
+});
