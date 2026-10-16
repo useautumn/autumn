@@ -11,6 +11,7 @@ import {
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
 import {
 	getRateLimitRouteGroup,
+	RATE_LIMIT_CONFIGS,
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
 
@@ -70,8 +71,9 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			c as Context,
 			getRateLimitKey({ c, rateLimitType: orgLimit.type }),
 		);
-		// Without a customer the per-customer key is one org-wide `:undefined` bucket, so only the org cap applies.
-		const skipPrimaryLimiter = !ctx.customerId;
+		const skipPrimaryLimiter =
+			RATE_LIMIT_CONFIGS[rateLimitType].orgCapOnlyWithoutCustomer === true &&
+			!ctx.customerId;
 
 		let innerResponse: Response | undefined;
 		const aggregateResponse = await orgLimit.limiter(

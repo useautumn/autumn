@@ -104,6 +104,8 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/balances/update" }),
 			route({ method: "POST", url: "/v1/balances.track" }),
 			route({ method: "POST", url: "/v1/balances.track_tokens" }),
+			// Fallback only: isSyncBalanceWrite claims finalize first.
+			route({ method: "POST", url: "/v1/balances.finalize" }),
 			route({ method: "POST", url: "/v1/balances.update" }),
 		],
 	},
@@ -198,6 +200,8 @@ export type RateLimitConfig = {
 	/** Org-wide cap checked before this one; per-customer limits never bind
 	 *  for many-customer storms (2026-06-08 incident). */
 	orgLimit?: RateLimitType;
+	/** With no resolved customer, apply only the org cap instead of one shared `:undefined` customer bucket. */
+	orgCapOnlyWithoutCustomer?: boolean;
 };
 
 export const resolveRateLimit = ({
@@ -277,6 +281,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Customer,
 		store: "redis",
 		orgLimit: RateLimitType.SyncBalanceWriteOrg,
+		orgCapOnlyWithoutCustomer: true,
 	},
 	[RateLimitType.SyncBalanceWriteOrg]: {
 		limit: 120_000,
@@ -312,6 +317,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Customer,
 		store: "redis",
 		orgLimit: RateLimitType.ListCustomers,
+		orgCapOnlyWithoutCustomer: true,
 	},
 	[RateLimitType.CustomerEntitiesGet]: {
 		limit: 50,

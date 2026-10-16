@@ -130,6 +130,16 @@ describe("synchronous balance write limiters", () => {
 		expect(response.status).toBe(200);
 		expect(limiterCalls).toEqual([RateLimitType.TrackOrg, RateLimitType.Track]);
 	});
+
+	test("a queued track without a customer still runs TrackOrg then Track", async () => {
+		const response = await request({
+			path: "/v1/balances.track",
+			body: { feature_id: "messages", async: true },
+		});
+
+		expect(response.status).toBe(200);
+		expect(limiterCalls).toEqual([RateLimitType.TrackOrg, RateLimitType.Track]);
+	});
 });
 
 afterAll(() => {

@@ -6,6 +6,7 @@ import { _setAsyncTrackConfigForTesting } from "@/internal/misc/asyncTrack/async
 import {
 	getRateLimitRouteGroup,
 	RATE_LIMIT_CONFIGS,
+	RATE_LIMIT_ROUTE_GROUPS,
 	RateLimitScope,
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
@@ -144,6 +145,33 @@ describe("synchronous balance write limits", () => {
 		}
 	});
 
+	test("finalize stays in the Track group, but SyncBalanceWrite takes precedence", () => {
+		const trackGroup = RATE_LIMIT_ROUTE_GROUPS.find(
+			({ type }) => type === RateLimitType.Track,
+		);
+		expect(trackGroup?.patterns).toContainEqual({
+			method: "POST",
+			url: "/v1/balances.finalize",
+		});
+
+		expect(
+			typeFor({
+				spec: "POST /v1/balances.finalize",
+				apiVersion: ApiVersion.V2_6,
+				body: { lock_id: "lock_1", action: "confirm", customer_id: "cus_123" },
+			}),
+		).toBe(RateLimitType.SyncBalanceWrite);
+	});
+
+	test("finalize falls back to Track when isSyncBalanceWrite does not claim it", () => {
+		const type = getRateLimitRouteGroup({
+			req: { method: "POST", path: "/v1/balances.finalize" },
+			get: () => ({ requestBody: { lock_id: "lock_1" }, features: [] }),
+		} as unknown as Context<HonoEnv>).type;
+
+		expect(type).toBe(RateLimitType.Track);
+	});
+
 	test("balance updates and usage never use SyncBalanceWrite", () => {
 		for (const spec of ["POST /v1/balances.update", "POST /v1/usage"]) {
 			expect(
@@ -159,6 +187,7 @@ describe("synchronous balance write limits", () => {
 			scope: RateLimitScope.Customer,
 			store: "redis",
 			orgLimit: RateLimitType.SyncBalanceWriteOrg,
+			orgCapOnlyWithoutCustomer: true,
 		});
 		expect(RATE_LIMIT_CONFIGS[RateLimitType.SyncBalanceWriteOrg]).toEqual({
 			limit: 120_000,
