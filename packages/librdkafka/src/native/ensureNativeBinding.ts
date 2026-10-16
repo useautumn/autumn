@@ -13,10 +13,19 @@ import {
 import { availableParallelism, homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { nativeBuildKeyOf } from "./nativeBuildKey.js";
-import { CONFLUENT_PACKAGE, NATIVE_BINARY_FILE } from "./nativePackage.js";
-import { nativeToolchainOf } from "./nativeToolchain.js";
+import { nativeLibcOf } from "./nativeLibc.js";
+import {
+	CONFLUENT_PACKAGE,
+	NATIVE_BINARY_FILE,
+	PREBUILT_ADDON_REPOSITORY,
+} from "./nativePackage.js";
 
-export type NativeBindingOutcome = "current" | "restored" | "built";
+export type NativeBindingOutcome =
+	| "current"
+	| "restored"
+	| "downloaded"
+	| "built"
+	| "missing";
 
 type NativeBuildPaths = {
 	/** The installed (patched) package `bindings` loads the addon from. */
@@ -162,12 +171,81 @@ export function nativeBuildKey(): string {
 		sources: readSources({ packageDir: resolvePackageDir() }),
 		platform: process.platform,
 		arch: process.arch,
-		toolchain: nativeToolchainOf(),
+		libc: nativeLibcOf(),
 	});
 }
 
-/** Puts a native build of the patched sources where `bindings` looks, compiling only on a cache miss. */
-export async function ensureNativeBinding(): Promise<NativeBindingOutcome> {
+/** A glibc older than CI's builder can't load its addon, so a download is kept only once it loads here. */
+function loadsHere({ addon }: { addon: string }): boolean {
+	return (
+		Bun.spawnSync(
+			[process.execPath, "-e", `require(${JSON.stringify(addon)})`],
+			{
+				stdout: "ignore",
+				stderr: "ignore",
+			},
+		).exitCode === 0
+	);
+}
+
+/** Pulls the addon's single layer from GHCR with an anonymous token; undefined when the key isn't published. */
+async function fetchPrebuilt({
+	key,
+}: {
+	key: string;
+}): Promise<Response | undefined> {
+	const registry = `https://ghcr.io/v2/${PREBUILT_ADDON_REPOSITORY}`;
+	const auth = await fetch(
+		`https://ghcr.io/token?scope=repository:${PREBUILT_ADDON_REPOSITORY}:pull`,
+	);
+	if (!auth.ok) return undefined;
+	const { token } = (await auth.json()) as { token: string };
+	const headers = { Authorization: `Bearer ${token}` };
+	const manifest = await fetch(`${registry}/manifests/${key}`, {
+		headers: {
+			...headers,
+			Accept: "application/vnd.oci.image.manifest.v1+json",
+		},
+	});
+	if (!manifest.ok) return undefined;
+	const { layers } = (await manifest.json()) as {
+		layers: { digest: string }[];
+	};
+	const blob = await fetch(`${registry}/blobs/${layers[0]?.digest}`, {
+		headers,
+	});
+	return blob.ok ? blob : undefined;
+}
+
+/** CI publishes Linux glibc x64 builds only; anything else compiles. */
+async function downloadPrebuilt({
+	key,
+	paths,
+}: {
+	key: string;
+	paths: NativeBuildPaths;
+}): Promise<boolean> {
+	if (nativeLibcOf() !== "glibc" || process.arch !== "x64") return false;
+	const response = await fetchPrebuilt({ key }).catch(() => undefined);
+	if (!response) return false;
+	// require only loads it as an addon when the name ends in .node.
+	const download = `${paths.cached}.${process.pid}.download.node`;
+	mkdirSync(dirname(paths.cached), { recursive: true });
+	await Bun.write(download, response);
+	if (!loadsHere({ addon: download })) {
+		rmSync(download, { force: true });
+		return false;
+	}
+	renameSync(download, paths.cached);
+	return true;
+}
+
+/** Puts a native build of the patched sources where `bindings` looks: cached, then CI's prebuilt, then compiled. */
+export async function ensureNativeBinding({
+	compileOnMiss = true,
+}: {
+	compileOnMiss?: boolean;
+} = {}): Promise<NativeBindingOutcome> {
 	const packageDir = resolvePackageDir();
 	const key = nativeBuildKey();
 	const paths = pathsOf({ key, packageDir });
@@ -178,6 +256,11 @@ export async function ensureNativeBinding(): Promise<NativeBindingOutcome> {
 		install({ paths, key, from: paths.cached });
 		return "restored";
 	}
+	if (await downloadPrebuilt({ key, paths })) {
+		install({ paths, key, from: paths.cached });
+		return "downloaded";
+	}
+	if (!compileOnMiss) return "missing";
 	await compile({ paths });
 	install({ paths, key, from: paths.cached });
 	return "built";
