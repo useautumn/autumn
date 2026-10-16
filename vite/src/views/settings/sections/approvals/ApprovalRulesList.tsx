@@ -1,11 +1,12 @@
-import type { ApprovalRule } from "@autumn/shared";
 import { InfoIcon } from "@phosphor-icons/react";
-import type { RuleRowActions } from "./ApprovalRuleRow";
 import { ApprovalRulesBody } from "./ApprovalRulesBody";
+import type { ApprovalRule } from "./approvalsStub";
+import type { RuleRowActions } from "./RuleRowMenu";
 
 const NOTES = [
-	"Rules are checked most specific first. If no rule covers an action, the role's access applies.",
-	"Owners, Admins and full-access keys are never limited. Sandbox stays unrestricted.",
+	"The most specific matching rule decides: a member beats their role, a role beats Everyone. At the same level, the rule lower in the list wins.",
+	"Rules apply to everyone they name, owners and admins included. API keys skip approvals. Sandbox is never restricted.",
+	"Rules only narrow what a role can already do.",
 ];
 
 export const ApprovalRulesList = ({
@@ -17,7 +18,7 @@ export const ApprovalRulesList = ({
 	rules: ApprovalRule[];
 	error: unknown;
 	isSandbox: boolean;
-	rowActions: RuleRowActions;
+	rowActions: RuleRowActions | null;
 }) => (
 	<div className="flex flex-col gap-6">
 		{isSandbox && (
@@ -28,8 +29,8 @@ export const ApprovalRulesList = ({
 		<ApprovalRulesBody rules={rules} error={error} rowActions={rowActions} />
 		<ul className="flex flex-col gap-1.5 text-subtle text-xs">
 			{NOTES.map((note) => (
-				<li key={note} className="flex items-center gap-1.5">
-					<InfoIcon className="size-3.5 shrink-0" />
+				<li key={note} className="flex items-start gap-1.5">
+					<InfoIcon className="mt-px size-3.5 shrink-0" />
 					{note}
 				</li>
 			))}

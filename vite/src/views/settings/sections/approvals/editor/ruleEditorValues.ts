@@ -1,32 +1,30 @@
+import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
 import type {
 	ApprovalAction,
 	ApprovalRule,
-	ApprovalRuleWhen,
-	CreateApprovalRuleParams,
+	ApprovalRuleEffect,
+	ApprovalRuleFilter,
 	RuleSubject,
-} from "@autumn/shared";
-import { ruleWhenArea } from "./ruleActions";
+} from "../approvalsStub";
+import { ruleFilterKey } from "./ruleActions";
 
 export type RuleEditorValues = {
 	name: string;
+	effect: ApprovalRuleEffect;
 	subjects: RuleSubject[];
 	actions: ApprovalAction[];
-	/** Kept opaque: the form's deep-key types can't walk the `when` union. */
-	when: unknown;
+	/** Kept opaque: the form's deep-key types can't walk the filter union. */
+	filter: unknown;
 	note: string;
 	enabled: boolean;
 };
 
-export type EditorValuesResult = {
-	ok: true;
-	params: CreateApprovalRuleParams;
-};
-
 export const emptyEditorValues = (): RuleEditorValues => ({
 	name: "",
+	effect: "block",
 	subjects: [],
 	actions: [],
-	when: null,
+	filter: null,
 	note: "",
 	enabled: true,
 });
@@ -35,20 +33,29 @@ export const ruleToEditorValues = ({
 	rule,
 }: {
 	rule: ApprovalRule;
-}): RuleEditorValues => ({ ...rule, note: rule.note ?? "" });
+}): RuleEditorValues => ({
+	name: rule.name,
+	effect: rule.effect,
+	subjects: rule.subjects,
+	actions: rule.actions,
+	filter: rule.filter,
+	note: rule.note ?? "",
+	enabled: rule.enabled,
+});
 
 export const editorValuesToParams = ({
 	values,
 }: {
 	values: RuleEditorValues;
-}): EditorValuesResult => ({
+}): { ok: true; params: ApprovalRuleCreateParams } => ({
 	ok: true,
 	params: {
 		name: values.name.trim(),
+		effect: values.effect,
 		subjects: values.subjects,
 		actions: values.actions,
-		when: ruleWhenArea({ actions: values.actions })
-			? (values.when as ApprovalRuleWhen | null)
+		filter: ruleFilterKey({ actions: values.actions })
+			? (values.filter as ApprovalRuleFilter | null)
 			: null,
 		note: values.note.trim() || null,
 		enabled: values.enabled,

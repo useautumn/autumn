@@ -1,22 +1,24 @@
-import type {
-	ApprovalRuleIssue,
-	CreateApprovalRuleParams,
-} from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { getBackendErr } from "@/utils/genUtils";
-import { useApprovalRulesApi } from "./useApprovalRulesApi";
+import {
+	type ApprovalRuleCreateParams,
+	useApprovalRulesApi,
+} from "./useApprovalRulesApi";
 import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
+
+export type ApprovalRuleIssue = { path: string; message: string };
 
 /** The server's 400 `invalid_approval_rule` issues, or null for any other error. */
 export const invalidRuleIssues = ({ error }: { error: unknown }) => {
 	if (!(error instanceof AxiosError)) return null;
 	const body = error.response?.data as
-		| { code?: string; issues?: ApprovalRuleIssue[] }
+		| { code?: string; details?: { issues?: ApprovalRuleIssue[] } }
 		| undefined;
-	return body?.code === "invalid_approval_rule" ? (body.issues ?? []) : null;
+	if (body?.code !== "invalid_approval_rule") return null;
+	return body.details?.issues ?? [];
 };
 
 const useInvalidateApprovalRules = () => {
@@ -48,7 +50,7 @@ export const useSaveApprovalRule = () => {
 			params,
 		}: {
 			id: string | null;
-			params: CreateApprovalRuleParams;
+			params: ApprovalRuleCreateParams;
 		}) => (id ? api.update({ id, params }) : api.create({ params })),
 		// Awaiting the refetch keeps the sheet open until the list shows the change.
 		onSuccess: async (_rule, { id }) => {
