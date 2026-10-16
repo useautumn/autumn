@@ -205,6 +205,17 @@ test.concurrent(
 				body: { id: `approvals-who-only-new-${Date.now()}` },
 			});
 			expect(customer).toMatchObject({ status: 200 });
+
+			// A creation grant doesn't cover get-or-create's update of an existing customer.
+			const existing = await postRaw({
+				client,
+				path: "/customers",
+				body: { id: customerId, name: "Renamed" },
+			});
+			expect(existing).toMatchObject({
+				status: 403,
+				body: { code: "insufficient_scopes" },
+			});
 		} finally {
 			await cleanup();
 		}
