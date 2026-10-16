@@ -18,7 +18,7 @@ type CheckBillingApprovalParams = {
 	action: ApprovalAction;
 	/** As the action's preview passes it, so facts match that preview. */
 	nextCycleStripeSubscriptionId?: string;
-	/** False for a pre-check whose write is checked (and logged) again later. */
+	/** False for a pre-check whose write is checked again; it then logs only a deny it blocks. */
 	logDecision?: boolean;
 };
 
@@ -47,7 +47,9 @@ const decideBillingApproval = async ({
 	// Exempt members and members no rule names keep today's checks, so there's nothing to log.
 	if (verdict.verdict === "fallback" || !facts) return;
 
-	if (logDecision) {
+	// A pre-check that blocks is the last check, so its deny is the one logged.
+	const blocks = enforced && verdict.verdict === "deny";
+	if (logDecision || blocks) {
 		await logApprovalDecision({
 			ctx,
 			principal,
@@ -59,7 +61,7 @@ const decideBillingApproval = async ({
 		});
 	}
 
-	if (!enforced || verdict.verdict === "allow") return;
+	if (!blocks) return;
 	throw new PermissionDeniedError({
 		message: verdict.message,
 		violations: verdict.violations,
