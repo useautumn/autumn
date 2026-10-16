@@ -394,7 +394,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "2.0.158",
+      "version": "2.0.159",
       "bin": {
         "atmn": "dist/bin.js",
       },
@@ -524,7 +524,7 @@
     },
     "packages/autumn-js": {
       "name": "autumn-js",
-      "version": "1.5.8",
+      "version": "1.5.9",
       "dependencies": {
         "query-string": "^9.2.2",
         "rou3": "^0.6.1",
