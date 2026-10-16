@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
-import { billingContextToUpdateAction } from "@/internal/approvals/facts/billing/billingContextToUpdateAction";
+import { itemsToApprovalChecks } from "@/internal/approvals/enforce/itemsToApprovalChecks";
 import { executeMultiSubscriptionBillingPlan } from "@/internal/billing/v2/execute/executeMultiSubscriptionBillingPlan";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -90,6 +90,7 @@ export async function multiUpdate({
 			ctx,
 			customerId: params.customer_id,
 			stripeBillingPlans,
+			itemResults,
 		});
 		return {
 			billingContext: primaryBillingContext,
@@ -112,20 +113,9 @@ export async function multiUpdate({
 		});
 	}
 
-	// Approvals: every subscription's change is checked before anything executes
-	for (const subscriptionPlan of stripeBillingPlans) {
-		await checkBillingApproval({
-			ctx,
-			billingContext: subscriptionPlan.billingContext,
-			billingPlan: {
-				autumn: subscriptionPlan.autumnBillingPlan,
-				stripe: subscriptionPlan.stripeBillingPlan,
-			},
-			action: billingContextToUpdateAction({
-				billingContext: subscriptionPlan.billingContext,
-			}),
-			nextCycleStripeSubscriptionId: subscriptionPlan.subscriptionId,
-		});
+	// Approvals: every item's change is checked before anything executes
+	for (const check of itemsToApprovalChecks({ itemResults })) {
+		await checkBillingApproval({ ctx, ...check });
 	}
 
 	// 5. Execute: one Stripe execution per subscription, one Autumn execution
