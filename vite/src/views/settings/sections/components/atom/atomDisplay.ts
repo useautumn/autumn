@@ -2,13 +2,13 @@ import {
 	type ApiAtomLimits,
 	type ApiByocCache,
 	type AtomCheck,
-	BYOC_CACHE_DISK_GB,
 	BYOC_CACHE_REMOVAL_STAGES,
 	BYOC_CACHE_STAGES,
 	type ByocCacheMachine,
 	type ByocCacheStage,
 	ByocCacheStageStatus,
 	ByocCacheStatus,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 } from "@autumn/shared";
 import type { StatusGlyph, StatusTone } from "@autumn/ui";
 
@@ -41,7 +41,7 @@ export const atomStageDetail = ({
 }): string => {
 	const details: Record<ByocCacheStage, string> = {
 		stack: stackName,
-		disk: `${BYOC_CACHE_DISK_GB} GB volume`,
+		disk: `${DEFAULT_BYOC_CACHE_VOLUME_GIB} GB volume`,
 		machine: [machine?.instanceType, region].filter(Boolean).join(" · "),
 		load_balancer: "TLS certificate",
 		atom: "Health check",

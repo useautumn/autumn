@@ -1,8 +1,8 @@
 import {
 	BYOC_CACHE_AWS_REGIONS,
-	BYOC_CACHE_DISK_GB,
 	BYOC_CACHE_REPLICAS,
 	type ByocCacheAwsRegion,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
 import { Button, GroupedTabButton, Input, SearchableSelect } from "@autumn/ui";
@@ -48,8 +48,8 @@ export const AtomCloudSection = ({
 				</p>
 				<p>
 					Created in your AWS account: {BYOC_CACHE_REPLICAS} × EC2 instance ·{" "}
-					{BYOC_CACHE_REPLICAS} × EBS volume ({BYOC_CACHE_DISK_GB} GB gp3) · 1 ×
-					SQS queue
+					{BYOC_CACHE_REPLICAS} × EBS volume ({DEFAULT_BYOC_CACHE_VOLUME_GIB} GB
+					gp3) · 1 × SQS queue
 				</p>
 			</>
 		}
