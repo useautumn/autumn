@@ -75,6 +75,8 @@ beforeEach(() => {
 	state.throws = false;
 	state.checks = [];
 	process.env.AUTUMN_SECRET_KEY = "am_sk_test_key";
+	// A Capy or dw stack's .env.local sets development, which skips the check this file tests.
+	process.env.NODE_ENV = "test";
 });
 
 describe("billingFeatureMiddleware (atoms gate on byoc.* routes)", () => {
@@ -124,6 +126,16 @@ describe("billingFeatureMiddleware (atoms gate on byoc.* routes)", () => {
 
 	test("lets the call through without AUTUMN_SECRET_KEY, without calling Autumn", async () => {
 		process.env.AUTUMN_SECRET_KEY = "";
+		state.allowed = false;
+
+		const res = await post({ ctx: testCtx(), path: "/byoc.ping" });
+
+		expect(res).toEqual({ status: 200, body: { ok: true } });
+		expect(state.checks).toEqual([]);
+	});
+
+	test("lets the call through on the local dev server, without calling Autumn", async () => {
+		process.env.NODE_ENV = "development";
 		state.allowed = false;
 
 		const res = await post({ ctx: testCtx(), path: "/byoc.ping" });
