@@ -17,6 +17,7 @@
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
 		"test:native": "bun test --config ./bunfig.toml tests/native",
+		"chaos:fatal-after-records": "bun tests/chaos/fatalAfterRecords.ts",
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {

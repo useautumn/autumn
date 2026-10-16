@@ -5,6 +5,7 @@ import {
 	mkdirSync,
 	readdirSync,
 	readFileSync,
+	renameSync,
 	rmSync,
 	symlinkSync,
 	writeFileSync,
@@ -45,8 +46,12 @@ function readSources({
 		"binding.gyp",
 		readFileSync(join(packageDir, "binding.gyp"), "utf8"),
 	);
+	sources.set(
+		"deps/librdkafka.gyp",
+		readFileSync(join(packageDir, "deps", "librdkafka.gyp"), "utf8"),
+	);
 	// librdkafka is compiled from deps/ too, and patched there.
-	for (const dir of ["src", "deps/librdkafka/src"])
+	for (const dir of ["src", "deps/librdkafka/src", "deps/librdkafka/src-cpp"])
 		for (const entry of readdirSync(join(packageDir, dir), {
 			withFileTypes: true,
 		}).sort((a, b) => a.name.localeCompare(b.name)))
@@ -74,8 +79,16 @@ function pathsOf({
 		installed: join(releaseDir, NATIVE_BINARY_FILE),
 		marker: join(releaseDir, ".autumn-build-key"),
 		cached: join(cacheDir, `${key}.node`),
-		scratch: join(cacheDir, `build-${key}`),
+		// Per process: two cold builds of one key must not delete each other's tree.
+		scratch: join(cacheDir, `build-${key}-${process.pid}`),
 	};
+}
+
+/** A process may have the old addon mapped; a rename replaces the file without rewriting the pages it reads. */
+function copyAtomically({ from, to }: { from: string; to: string }): void {
+	const temporary = `${to}.${process.pid}.tmp`;
+	copyFileSync(from, temporary);
+	renameSync(temporary, to);
 }
 
 function install({
@@ -88,7 +101,7 @@ function install({
 	from: string;
 }): void {
 	mkdirSync(dirname(paths.installed), { recursive: true });
-	copyFileSync(from, paths.installed);
+	copyAtomically({ from, to: paths.installed });
 	writeFileSync(paths.marker, key);
 }
 
@@ -135,10 +148,10 @@ async function compile({ paths }: { paths: NativeBuildPaths }): Promise<void> {
 		}
 	}
 	mkdirSync(dirname(paths.cached), { recursive: true });
-	copyFileSync(
-		join(paths.scratch, "build", "Release", NATIVE_BINARY_FILE),
-		paths.cached,
-	);
+	copyAtomically({
+		from: join(paths.scratch, "build", "Release", NATIVE_BINARY_FILE),
+		to: paths.cached,
+	});
 	rmSync(paths.scratch, { recursive: true, force: true });
 }
 

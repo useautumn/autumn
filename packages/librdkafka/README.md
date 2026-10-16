@@ -18,7 +18,7 @@ Needs a C/C++ toolchain, Python 3 and Perl (macOS: Xcode command line tools).
 ## The patch
 
 `patches/@confluentinc%2Fkafka-javascript@1.10.0.patch` at the repo root is applied by `bun install`.
-It is three patches, kept here for provenance:
+It is eight patches, kept here for provenance:
 
 - `patches/pr471.patch`: upstream PR #471 (NAN → N-API) at `47334c9`, verbatim.
 - `patches/bunUvToNapi.patch`: ours. Bun implements only `uv_mutex_*` of libuv; the addon's rwlocks,
@@ -27,6 +27,23 @@ It is three patches, kept here for provenance:
 - `patches/brokerWakeup.patch`: ours, in librdkafka itself. A seek or resume on a partition that is already
   fetching changes no fetch state, so nothing wakes a broker thread idling on IO and the refetch waited up
   to a second. Both now wake it.
+- `patches/consumeErrorAfterRecords.patch`: ours. A batch consume that read an error after it already held
+  records returned the records and dropped the error. librdkafka raises a consumer's fatal error exactly once,
+  so the consumer stayed up owning nothing; the next consume now returns it.
+- `patches/fatalErrorCause.patch`: ours. librdkafka queues a fatal error as a bare `ERR__FATAL` and keeps its
+  cause on the handle. A consume now returns the cause (`GROUP_AUTHORIZATION_FAILED`, `FENCED_INSTANCE_ID`, …) with
+  `isFatal: true`, so an owner can tell a broker refusal it should wait out from a client it should replace.
+- `patches/lockPoolThreadCalls.patch`: ours. A consumer's seek, commit, committed and position run on pool
+  threads and took no lock, so a disconnect could free the client under them; they now share the connection
+  lock as consume does. Admin requests held it exclusively across their network wait, serializing every
+  request on one client behind the slowest; they now share it too.
+- `patches/adminEventInit.patch`: ours. The admin workers left their result event pointer uninitialized and
+  destroyed it in their destructor, so an admin call that failed before polling (a client not connected)
+  freed a garbage pointer: `double free or corruption` under a broker kill.
+- `patches/leaderQueryOnMainThread.patch`: ours, in librdkafka. `query_leaders_async` ran its first pass on
+  the caller's thread; with a partition leaderless it registered a metadata-cache observer and then replied,
+  while a cache update on the main thread could fire that observer and reply too. Both destroyed the op: a
+  double free in `rd_kafka_ListOffsets` under repeated broker kills. The first pass now runs on the main thread.
 
 After editing any, `bun run --cwd packages/librdkafka patch:regenerate` rebuilds the root patch.
 Drop ours once #471 (or its successor) lands upstream without libuv.
