@@ -19,13 +19,25 @@ import {
 	whenValuesFor,
 } from "./ruleEditorValues";
 
-const matchesPath = ({
-	issue,
-	path,
-}: {
-	issue: ApprovalRuleIssue;
-	path: string;
-}) => issue.path === path || issue.path.startsWith(`${path}.`);
+// Fields the sheet shows issues under; anything else (an unknown key) still needs to be seen.
+const FIELD_PATHS = [
+	"name",
+	"subjects",
+	"effect",
+	"actions",
+	"filter",
+	"note",
+	"enabled",
+];
+
+const isUnder = ({ path, field }: { path: string; field: string }) =>
+	path === field || path.startsWith(`${field}.`);
+
+export const unplacedIssue = ({ issues }: { issues: ApprovalRuleIssue[] }) =>
+	issues.find(
+		(issue) =>
+			!FIELD_PATHS.some((field) => isUnder({ path: issue.path, field })),
+	)?.message;
 
 const PINNED_PATH = "filter.feature_id";
 
@@ -76,7 +88,8 @@ export const useApprovalRuleForm = ({
 	});
 
 	const serverIssue = (path: string) =>
-		issues.server.find((issue) => matchesPath({ issue, path }))?.message;
+		issues.server.find((issue) => isUnder({ path: issue.path, field: path }))
+			?.message;
 	const serverPinned = serverIssue(PINNED_PATH);
 
 	return {
@@ -88,7 +101,8 @@ export const useApprovalRuleForm = ({
 		serverIssue,
 		filterError: issues.server.find(
 			(issue) =>
-				matchesPath({ issue, path: "filter" }) && issue.path !== PINNED_PATH,
+				isUnder({ path: issue.path, field: "filter" }) &&
+				issue.path !== PINNED_PATH,
 		)?.message,
 		rowIssues: serverPinned
 			? [
@@ -97,6 +111,7 @@ export const useApprovalRuleForm = ({
 				]
 			: issues.rows,
 		clearRowIssues: () => setIssues((prev) => ({ ...prev, rows: [] })),
+		unplacedIssue: unplacedIssue({ issues: issues.server }),
 		/** A different filter shape starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,

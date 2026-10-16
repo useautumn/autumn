@@ -60,6 +60,7 @@ export const ApprovalRuleSheet = ({
 		showsRows,
 		isSaving,
 		serverIssue,
+		unplacedIssue,
 		filterError,
 		rowIssues,
 		clearRowIssues,
@@ -246,6 +247,9 @@ export const ApprovalRuleSheet = ({
 					</form.Field>
 				</fieldset>
 
+				{unplacedIssue && (
+					<p className="px-4 pb-2 text-destructive text-xs">{unplacedIssue}</p>
+				)}
 				<div className="flex gap-2 border-t px-4 pt-4 pb-4">
 					<Button
 						variant="secondary"
