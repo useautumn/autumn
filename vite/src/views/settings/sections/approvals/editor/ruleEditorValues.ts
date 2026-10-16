@@ -11,7 +11,7 @@ import {
 	rowsToWhen,
 	whenToRows,
 } from "@autumn/shared/api/approvals/editor/index";
-import { ruleWhenArea } from "./ruleActions";
+import { isDeferredAction, ruleWhenArea } from "./ruleActions";
 import { decodeRow, encodeRow, type RuleRow } from "./ruleRowCodec";
 
 /** Rows and groups carry an id so React keeps each one's inputs as others are removed. */
@@ -69,6 +69,7 @@ export const ruleToEditorValues = ({ rule }: { rule: ApprovalRule }) => {
 		note: rule.note ?? "",
 		enabled: rule.enabled,
 	};
+	if (rule.actions.some(isDeferredAction)) return { editable: false, values };
 	const area = ruleWhenArea({ actions: rule.actions });
 	if (!area) return { editable: rule.when === null, values };
 
