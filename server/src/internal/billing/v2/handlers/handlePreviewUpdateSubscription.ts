@@ -28,22 +28,22 @@ export const handlePreviewUpdateSubscription = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const pendingCustomerProduct = await findPendingCustomerProduct({
-			ctx,
-			customerId: body.customer_id,
-			productId: body.plan_id,
-			entityId: body.entity_id,
-			customerProductId: body.customer_product_id,
-			subscriptionId: body.subscription_id,
-		});
+		const shouldEnablePendingPlan =
+			enablesPendingPlan({ params: body }) &&
+			Boolean(
+				await findPendingCustomerProduct({
+					ctx,
+					customerId: body.customer_id,
+					productId: body.plan_id,
+					entityId: body.entity_id,
+					customerProductId: body.customer_product_id,
+					subscriptionId: body.subscription_id,
+				}),
+			);
 		const liveUpdate = await pendingReplacementToLiveUpdate({
 			ctx,
 			params: body,
-			customerProduct: pendingCustomerProduct,
 		});
-		const requestedImmediateEnable = enablesPendingPlan({ params: body });
-		const shouldEnablePendingPlan =
-			requestedImmediateEnable && !!pendingCustomerProduct;
 
 		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
 		const isSwitch =
@@ -65,7 +65,6 @@ export const handlePreviewUpdateSubscription = createRoute({
 			const pendingPreview = await previewPendingPlanIfAny({
 				ctx,
 				params: body,
-				customerProduct: pendingCustomerProduct,
 			});
 			if (pendingPreview) return c.json(pendingPreview, 200);
 		}

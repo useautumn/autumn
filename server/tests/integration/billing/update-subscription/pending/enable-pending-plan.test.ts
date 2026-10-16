@@ -317,6 +317,16 @@ test.concurrent(
 			(row) => row.product.id === pro.id,
 		);
 		expect(pending).toBeDefined();
+		const editPreview = await autumnV2_2.subscriptions.previewUpdate({
+			customer_id: customerId,
+			customer_product_id: pending!.id,
+			plan_id: pro.id,
+			customize: {
+				price: { amount: 7000, interval: BillingInterval.Month },
+			},
+			invoice_mode: { enabled: true },
+		});
+		expect(editPreview).toBeDefined();
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>

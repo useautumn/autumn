@@ -1,5 +1,4 @@
 import {
-	type FullCusProduct,
 	UpdateSubscriptionPreviewIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -13,36 +12,32 @@ import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/ut
 export const previewPendingPlanIfAny = async ({
 	ctx,
 	params,
-	customerProduct,
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
-	customerProduct?: FullCusProduct;
 }) => {
 	if (params.cancel_action) return;
 
-	const pendingCustomerProduct =
-		customerProduct ??
-		(await findPendingCustomerProduct({
-			ctx,
-			customerId: params.customer_id,
-			productId: params.plan_id,
-			entityId: params.entity_id,
-			customerProductId: params.customer_product_id,
-			subscriptionId: params.subscription_id,
-		}));
-	if (!pendingCustomerProduct) return;
+	const customerProduct = await findPendingCustomerProduct({
+		ctx,
+		customerId: params.customer_id,
+		productId: params.plan_id,
+		entityId: params.entity_id,
+		customerProductId: params.customer_product_id,
+		subscriptionId: params.subscription_id,
+	});
+	if (!customerProduct) return;
 
 	const deferredData = await getDeferredBillingPlanData({
 		ctx,
-		customerProduct: pendingCustomerProduct,
+		customerProduct,
 	});
 	if (!deferredData) return;
 
 	const { replacementPreview, rebills } = await previewPendingReattach({
 		ctx,
 		params,
-		customerProduct: pendingCustomerProduct,
+		customerProduct,
 		deferredData,
 	});
 	const { billingContext, billingPlan } = replacementPreview;
