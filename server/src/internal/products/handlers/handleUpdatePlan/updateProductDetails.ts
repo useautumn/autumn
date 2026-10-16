@@ -192,9 +192,13 @@ export const handleUpdateProductDetails = async ({
 		? { ...curProduct.config, ...newProduct.config }
 		: undefined;
 
-	await ProductService.updateByInternalId({
+	const isChangingId =
+		notNullish(newProduct.id) && newProduct.id !== curProduct.id;
+	const saved = await ProductService.updateByInternalId({
 		db,
 		internalId: curProduct.internal_id,
+		// A rename only applies to the id it read, so two racing renames can't both land.
+		expectedId: isChangingId ? curProduct.id : undefined,
 		update: {
 			id: newProduct.id,
 			name: newProduct.name,
@@ -210,6 +214,12 @@ export const handleUpdateProductDetails = async ({
 			...pickBillingControlColumns(newProduct.billing_controls),
 		},
 	});
+	if (!saved) {
+		throw new RecaseError({
+			message: `Plan ${curProduct.id} was changed by another request. Reload it and try again.`,
+			statusCode: 409,
+		});
+	}
 
 	// Update product-owned Stripe names.
 	if (
