@@ -93,7 +93,7 @@ const parseArgs = () => {
 	};
 };
 
-const DELETE_BATCH_SIZE = 10_000;
+const DELETE_BATCH_SIZE = 500;
 
 const deleteSeededRows = async ({
 	ctx,
