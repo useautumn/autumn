@@ -40,6 +40,7 @@ import {
 import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -353,6 +354,7 @@ function ScheduleCheckoutContent() {
 
 function CreateScheduleSheetBody() {
 	const sheetType = useSheetStore((s) => s.type);
+	const { preview } = useCreateScheduleFormContext();
 
 	let StageContent = CreateScheduleSheetContent;
 	if (sheetType === "create-schedule-send-invoice") {
@@ -364,10 +366,10 @@ function CreateScheduleSheetBody() {
 	}
 
 	return (
-		<>
+		<PermissionDenialProvider preview={preview}>
 			<StageContent />
 			<CustomerStatePlanEditor />
-		</>
+		</PermissionDenialProvider>
 	);
 }
 

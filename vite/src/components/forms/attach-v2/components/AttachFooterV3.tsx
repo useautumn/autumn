@@ -77,18 +77,22 @@ export function AttachFooterV3() {
 	};
 
 	return (
-		<BillingFooter layout="stacked">
-			<DisabledTooltipButton
-				variant="secondary"
-				className="w-full"
-				disabled={shouldDisableInvoiceButton({ isPending, previewError })}
-				disabledReason={invoiceDisabledReason}
-				tooltipClassName="max-w-(--anchor-width)"
-				isLoading={isInvoiceOnlyStart && isPending}
-				onClick={handleInvoiceButtonClick}
-			>
-				{label}
-			</DisabledTooltipButton>
+		<BillingFooter
+			layout="stacked"
+			stageAction={
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={shouldDisableInvoiceButton({ isPending, previewError })}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					isLoading={isInvoiceOnlyStart && isPending}
+					onClick={handleInvoiceButtonClick}
+				>
+					{label}
+				</DisabledTooltipButton>
+			}
+		>
 			<Button
 				variant="primary"
 				className="w-full"

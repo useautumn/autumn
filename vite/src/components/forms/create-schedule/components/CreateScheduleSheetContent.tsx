@@ -4,6 +4,7 @@ import { CustomerStateUnscheduledPlans } from "@/components/forms/customer-state
 import { DisabledTooltipButton } from "@/components/forms/shared";
 import { BillingFooter } from "@/components/forms/shared/BillingFooter";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
 import { getInvoiceButtonState } from "@/components/forms/shared/utils/invoiceButtonState";
 import {
 	SheetFooter,
@@ -163,22 +164,28 @@ export function CreateScheduleReviewContent() {
 
 			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
 				{IS_PER_PHASE_REVIEW_READY && <SetPlansReviewChanges />}
+				<PermissionDenial section="plan" />
 				<CreateScheduleAdvancedSection />
+				<PermissionDenial section="options" />
 				<SchedulePreview />
 			</div>
 
-			<BillingFooter layout="stacked">
-				<DisabledTooltipButton
-					variant="secondary"
-					className="w-full"
-					disabled={isPending || isDisabled}
-					disabledReason={invoiceDisabledReason}
-					tooltipClassName="max-w-(--anchor-width)"
-					isLoading={isInvoiceOnlyStart && isPending}
-					onClick={handleInvoiceButtonClick}
-				>
-					{invoiceButtonLabel}
-				</DisabledTooltipButton>
+			<BillingFooter
+				layout="stacked"
+				stageAction={
+					<DisabledTooltipButton
+						variant="secondary"
+						className="w-full"
+						disabled={isPending || isDisabled}
+						disabledReason={invoiceDisabledReason}
+						tooltipClassName="max-w-(--anchor-width)"
+						isLoading={isInvoiceOnlyStart && isPending}
+						onClick={handleInvoiceButtonClick}
+					>
+						{invoiceButtonLabel}
+					</DisabledTooltipButton>
+				}
+			>
 				<Button
 					variant="primary"
 					className="w-full"

@@ -37,6 +37,8 @@ import {
 	PREVIEW_REVEAL_TRANSITION,
 	PreviewLoadingSection,
 } from "@/components/forms/shared/PreviewSection";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { scopeLabel } from "@/components/forms/shared/utils/scopeLabel";
 import {
@@ -302,7 +304,9 @@ function ReviewContent() {
 			/>
 
 			{planReview}
+			<PermissionDenial section="plan" />
 			<AttachAdvancedSection />
+			<PermissionDenial section="options" />
 			<ReviewPreviewBlock />
 		</>
 	);
@@ -341,26 +345,28 @@ function SendInvoiceContent() {
 		(taxStatus === "requires_location" || hasTypedDetails);
 
 	return (
-		<SendInvoiceStageWithPreview
-			billingAddressSection={
-				showBillingAddress ? (
-					<InvoiceBillingAddressSection taxIncomplete={taxIncomplete} />
-				) : undefined
-			}
-			submitBlocked={
-				showBillingAddress &&
-				(taxStatus === "requires_location" || taxIncomplete)
-			}
-			onEmailSaved={() => previewQuery.refetch()}
-			productName={product?.name}
-			previewQuery={previewQuery}
-			isPending={isPending}
-			onSubmit={handleInvoiceAttach}
-			stripeAccount={stripeAccount ?? undefined}
-			env={env}
-			onBack={() => setSheet({ type: "attach-review", itemId })}
-			scheduledStartDate={scheduledStartDate}
-		/>
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<SendInvoiceStageWithPreview
+				billingAddressSection={
+					showBillingAddress ? (
+						<InvoiceBillingAddressSection taxIncomplete={taxIncomplete} />
+					) : undefined
+				}
+				submitBlocked={
+					showBillingAddress &&
+					(taxStatus === "requires_location" || taxIncomplete)
+				}
+				onEmailSaved={() => previewQuery.refetch()}
+				productName={product?.name}
+				previewQuery={previewQuery}
+				isPending={isPending}
+				onSubmit={handleInvoiceAttach}
+				stripeAccount={stripeAccount ?? undefined}
+				env={env}
+				onBack={() => setSheet({ type: "attach-review", itemId })}
+				scheduledStartDate={scheduledStartDate}
+			/>
+		</PermissionDenialProvider>
 	);
 }
 
@@ -428,6 +434,7 @@ function SheetContent() {
 		handlePlanEditorCancel,
 		formValues,
 		additionalPlans,
+		previewQuery,
 	} = useAttachFormContext();
 
 	let StageContent = SelectContent;
@@ -444,7 +451,9 @@ function SheetContent() {
 	return (
 		<LayoutGroup>
 			<SheetBody>
-				<StageContent />
+				<PermissionDenialProvider preview={previewQuery.data}>
+					<StageContent />
+				</PermissionDenialProvider>
 
 				{planEditorProduct && (
 					<InlinePlanEditor

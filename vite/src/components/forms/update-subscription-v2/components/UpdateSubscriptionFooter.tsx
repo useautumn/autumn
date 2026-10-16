@@ -43,19 +43,25 @@ export function UpdateSubscriptionFooter() {
 		: null;
 
 	return (
-		<BillingFooter layout="stacked" isReady={hasChanges && previewReady} reveal>
-			<DisabledTooltipButton
-				variant="secondary"
-				className="w-full"
-				disabled={isPending}
-				disabledReason={invoiceDisabledReason}
-				tooltipClassName="max-w-(--anchor-width)"
-				onClick={() =>
-					setSheet({ type: "subscription-update-send-invoice", itemId })
-				}
-			>
-				Send an Invoice
-			</DisabledTooltipButton>
+		<BillingFooter
+			layout="stacked"
+			isReady={hasChanges && previewReady}
+			reveal
+			stageAction={
+				<DisabledTooltipButton
+					variant="secondary"
+					className="w-full"
+					disabled={isPending}
+					disabledReason={invoiceDisabledReason}
+					tooltipClassName="max-w-(--anchor-width)"
+					onClick={() =>
+						setSheet({ type: "subscription-update-send-invoice", itemId })
+					}
+				>
+					Send an Invoice
+				</DisabledTooltipButton>
+			}
+		>
 			<Button
 				variant="primary"
 				className="w-full"

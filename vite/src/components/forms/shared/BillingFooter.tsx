@@ -1,5 +1,8 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { type ReactNode, useEffect, useState } from "react";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import { PermissionDenial } from "./permission/PermissionDenial";
+import { usePermissionDenial } from "./permission/PermissionDenialContext";
 
 const REVEAL_DELAY_MS = 350;
 const FADE_CLASS = "animate-in fade-in duration-200";
@@ -22,6 +25,7 @@ export function BillingFooter({
 	layout,
 	isReady = true,
 	reveal = false,
+	stageAction,
 	children,
 }: {
 	layout: BillingFooterLayout;
@@ -29,9 +33,12 @@ export function BillingFooter({
 	isReady?: boolean;
 	/** Wait, then fade in, rather than rendering immediately. */
 	reveal?: boolean;
+	/** Switches to another path (invoice stage, cancel mode) that previews and locks on its own, so a denial leaves it enabled. */
+	stageAction?: ReactNode;
 	children: ReactNode;
 }) {
 	const [showFooter, setShowFooter] = useState(false);
+	const permission = usePermissionDenial();
 
 	useEffect(() => {
 		if (!reveal) return;
@@ -44,22 +51,39 @@ export function BillingFooter({
 
 	if (reveal && !showFooter) return null;
 
-	// Split callers fade each button themselves via BillingFooterButton.
-	if (layout === "split") {
-		return (
-			<SheetFooter className={LAYOUT_CLASSES.split}>{children}</SheetFooter>
-		);
-	}
-
-	return (
-		<SheetFooter className={LAYOUT_CLASSES[layout]}>
-			<div
-				className={`${layout === "stacked" ? "flex flex-col gap-2 w-full" : ""} ${
-					reveal ? FADE_CLASS : ""
-				}`.trim()}
-			>
+	const actions = (
+		<>
+			{stageAction}
+			<fieldset disabled={permission?.locksSubmit} className="contents">
 				{children}
-			</div>
-		</SheetFooter>
+			</fieldset>
+		</>
+	);
+
+	// Split callers fade each button themselves via BillingFooterButton.
+	const footer =
+		layout === "split" ? (
+			<SheetFooter className={LAYOUT_CLASSES.split}>{actions}</SheetFooter>
+		) : (
+			<SheetFooter className={LAYOUT_CLASSES[layout]}>
+				<div
+					className={cn(
+						layout === "stacked" && "flex flex-col gap-2 w-full",
+						reveal && FADE_CLASS,
+					)}
+				>
+					{actions}
+				</div>
+			</SheetFooter>
+		);
+	return (
+		<>
+			{permission && (
+				<div className="px-4 pt-4">
+					<PermissionDenial section="summary" />
+				</div>
+			)}
+			{footer}
+		</>
 	);
 }
