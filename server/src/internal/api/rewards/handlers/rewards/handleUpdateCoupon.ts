@@ -11,22 +11,14 @@ import {
 	UpdateRewardSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import {
-	createStripeCoupon,
-	resolveCouponStripeProductIds,
-} from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
-import { validateCouponStripeProductScope } from "@/internal/rewards/actions/validateCouponStripeProductScope.js";
+import { replaceStripeCoupon } from "@/internal/rewards/actions/replaceStripeCoupon.js";
 import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { rewardMutationLock } from "@/internal/rewards/rewardLock.js";
-import {
-	getRewardCat,
-	initRewardStripePrices,
-} from "@/internal/rewards/rewardUtils.js";
+import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 const UpdateCouponParamsSchema = z.object({
 	internalId: z.string(),
@@ -48,11 +40,6 @@ export const handleUpdateCoupon = createRoute({
 		const { internalId } = c.req.param();
 		const { legacyStripe } = c.req.valid("query");
 		const rewardBody = c.req.valid("json");
-
-		const stripeCli = createStripeCli({
-			org,
-			env,
-		});
 
 		const reward = await rewardRepo.get({
 			db,
@@ -111,38 +98,13 @@ export const handleUpdateCoupon = createRoute({
 			}
 		}
 
-		const willRecreateStripeCoupon =
-			rewardCat === RewardCategory.Discount ||
-			(rewardCat === RewardCategory.FreeProduct && prices.length > 0);
-
-		// Preflight before deleting the old Stripe coupon, so a plan missing
-		// in Stripe fails the update while the existing coupon is still intact.
-		if (willRecreateStripeCoupon) {
-			await initRewardStripePrices({ ctx, prices });
-			await validateCouponStripeProductScope({
-				ctx,
-				reward: updatedReward,
-				prices,
-			});
-			resolveCouponStripeProductIds({ reward: updatedReward, prices });
-		}
-
-		// Delete old prices from stripe
-		try {
-			await stripeCli.coupons.del(reward.id);
-			await stripeCli.coupons.del(reward.internal_id);
-		} catch (_) {}
-
-		if (willRecreateStripeCoupon) {
-			await createStripeCoupon({
-				reward: updatedReward,
-				org,
-				env,
-				prices,
-				logger,
-				legacyVersion: legacyStripe,
-			});
-		}
+		await replaceStripeCoupon({
+			ctx,
+			reward,
+			updatedReward,
+			prices,
+			legacyStripe,
+		});
 
 		const updatedCoupon = await rewardRepo.update({
 			db,
