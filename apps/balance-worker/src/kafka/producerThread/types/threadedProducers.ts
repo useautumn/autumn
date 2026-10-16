@@ -7,7 +7,12 @@ import type { ProducerThreadInit } from "./producerThreadMessages.js";
 
 export type ThreadedProducersConfig = Pick<
 	ProducerThreadInit,
-	"clientId" | "brokers" | "authMode" | "sasl" | "limits" | "dedupeCjsChildren"
+	| "clientId"
+	| "brokers"
+	| "authMode"
+	| "sasl"
+	| "limits"
+	| "dedupeCjsChildren"
 > & {
 	/** Powers of two. */
 	sendRingBytes: number;
