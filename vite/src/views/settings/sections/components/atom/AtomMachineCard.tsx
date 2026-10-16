@@ -10,10 +10,12 @@ import {
 export const AtomMachineCard = ({
 	caption,
 	machine,
+	volumeSizeGib,
 	isTarget = false,
 }: {
 	caption: string;
 	machine: ByocCacheMachine;
+	volumeSizeGib: number;
 	isTarget?: boolean;
 }) => (
 	<div
@@ -40,7 +42,7 @@ export const AtomMachineCard = ({
 			{atomMachinesLabel(machine)}
 		</span>
 		<span className="pt-1.5 text-[13px] font-semibold text-foreground">
-			{atomMonthlyEstimate(machine)}
+			{atomMonthlyEstimate({ machine, volumeSizeGib })}
 			<span className="text-xs font-normal text-subtle"> /mo on AWS</span>
 		</span>
 	</div>

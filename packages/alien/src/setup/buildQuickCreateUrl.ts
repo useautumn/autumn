@@ -45,20 +45,23 @@ const poolsToStackParams = ({
 		}),
 	);
 
-/** Each container's allocation, as a release with resource ranges names it: `Container<Id>Cpu` and `Container<Id>Memory`. */
+/** Each container's allocation, as a release with resource ranges and a volume names it: `Container<Id>Cpu`, `Container<Id>Memory` and `Container<Id>VolumeSizeGib`. */
 const containersToStackParams = ({
 	containers,
 }: {
 	containers: AlienContainerResources;
 }): Record<string, string> =>
 	Object.fromEntries(
-		Object.entries(containers).flatMap(([id, { cpu, memory }]) => {
-			const container = `Container${toTemplateIdentifier(id)}`;
-			return [
-				[`${container}Cpu`, String(cpu)],
-				[`${container}Memory`, memory],
-			];
-		}),
+		Object.entries(containers).flatMap(
+			([id, { cpu, memory, volumeSizeGib }]) => {
+				const container = `Container${toTemplateIdentifier(id)}`;
+				return [
+					[`${container}Cpu`, String(cpu)],
+					[`${container}Memory`, memory],
+					[`${container}VolumeSizeGib`, String(volumeSizeGib)],
+				];
+			},
+		),
 	);
 
 /** CloudFormation's quick-create page in `region`, prefilled; the setup link's `token` registers the stack against that link, and the template needs alien's managing role. */

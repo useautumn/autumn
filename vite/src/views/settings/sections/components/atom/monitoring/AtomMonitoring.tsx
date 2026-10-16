@@ -1,15 +1,17 @@
 import {
+	type ApiByocCache,
 	ATOM_METRICS_RANGES,
 	ATOM_METRICS_STATISTICS,
 	type AtomMetricsRange,
 	type AtomMetricsStatistic,
-	type ByocCacheMachine,
 } from "@autumn/shared";
 import { GroupedTabButton } from "@autumn/ui";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import { useAtomMetricsQuery } from "@/hooks/queries/useAtomMetricsQuery";
 import { SettingsGroup } from "@/views/settings/components/SettingsGroup";
+import { cacheToMachine } from "../atomMachineDisplay";
 import { AtomRequestsChart } from "./AtomRequestsChart";
+import { AtomStorageChart } from "./AtomStorageChart";
 import { AtomUtilizationChart } from "./AtomUtilizationChart";
 import { toAtomMetricsChartData } from "./atomMetricsChartData";
 import { STATISTIC_LABELS } from "./atomMetricsFormat";
@@ -24,12 +26,12 @@ const STATISTIC_OPTIONS = ATOM_METRICS_STATISTICS.map((statistic) => ({
 	label: STATISTIC_LABELS[statistic].name,
 }));
 
-/** How hard Atom's machine works and how much traffic it answers, over a chosen range and statistic. */
+/** How hard Atom's machine works, how much traffic it answers and how full its disk is, over a chosen range and statistic. */
 export const AtomMonitoring = ({
-	machine,
+	cache,
 	isPending = false,
 }: {
-	machine: ByocCacheMachine | null;
+	cache: ApiByocCache | null;
 	/** Holds the loading layout without fetching, while the Atom itself still loads. */
 	isPending?: boolean;
 }) => {
@@ -46,7 +48,8 @@ export const AtomMonitoring = ({
 		]).withDefault("maximum"),
 	);
 	const metrics = useAtomMetricsQuery({ range, enabled: !isPending });
-	const { points, latest, periodSeconds, fetchedAt, isLoading } = metrics;
+	const { points, latest, volumes, periodSeconds, fetchedAt, isLoading } =
+		metrics;
 	const chartData = toAtomMetricsChartData({
 		points,
 		latest,
@@ -77,11 +80,18 @@ export const AtomMonitoring = ({
 			}
 		>
 			<AtomUtilizationChart
-				machine={machine}
+				machine={cache && cacheToMachine(cache)}
 				chartData={chartData}
 				isLoading={isLoading}
 			/>
 			<AtomRequestsChart chartData={chartData} isLoading={isLoading} />
+			<AtomStorageChart
+				cache={cache}
+				chartData={chartData}
+				volumes={volumes}
+				range={metrics.range}
+				isLoading={isLoading}
+			/>
 		</SettingsGroup>
 	);
 };

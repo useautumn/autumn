@@ -55,6 +55,7 @@ const atomRow = ({
 	encrypted_token: "encrypted",
 	token_hash: crypto.randomUUID(),
 	region: "us-east-1",
+	volume_size_gib: 20,
 	network: null,
 	stack_name: null,
 	stages: toCacheStages({ doneStages: [], status }),

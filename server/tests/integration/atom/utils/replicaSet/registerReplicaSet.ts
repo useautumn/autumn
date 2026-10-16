@@ -53,6 +53,7 @@ export const registerReplicaSet = async ({
 		encrypted_token: encryptData(token),
 		token_hash: atomTokenToHash({ token }),
 		region: "us-east-1",
+		volume_size_gib: 20,
 		network: null,
 		stack_name: null,
 		stages: toCacheStages({

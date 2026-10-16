@@ -4,6 +4,7 @@ import {
 	AppEnv,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	type Organization,
 } from "@autumn/shared";
 import { atomNames, cacheOwner } from "@/internal/byoc/utils/byocCacheUtils.js";
@@ -85,6 +86,7 @@ test("off a dev stack the customer path resolves alien, even beside a multi-tena
 		auth: { mode: "deployed", tokenHash: "a".repeat(64) },
 		machine: DEFAULT_BYOC_CACHE_MACHINE,
 		region: DEFAULT_BYOC_CACHE_AWS_REGION,
+		volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	});
 
 	expect(alienStarts).toHaveLength(1);

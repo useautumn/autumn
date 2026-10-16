@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import type {
 	AtomMetricsChartData,
+	AtomMetricsPlotRow,
 	AtomMetricsRow,
 	AtomMetricsSeries,
 	AtomMetricsValues,
@@ -28,17 +29,18 @@ const MonitoringTooltip = ({
 	unit,
 	showStatistics,
 }: {
-	row: AtomMetricsRow;
+	row: AtomMetricsPlotRow & Partial<Pick<AtomMetricsRow, "statistics">>;
 	series: AtomMetricsSeries[];
 	formatValue: FormatValue;
 	unit?: string;
 	showStatistics?: boolean;
 }) => {
-	const columns: { label?: string; values: AtomMetricsValues }[] =
-		showStatistics
+	const { statistics } = row;
+	const columns: { label?: string; values: Partial<AtomMetricsValues> }[] =
+		showStatistics && statistics
 			? ATOM_METRICS_STATISTICS.map((statistic) => ({
 					label: STATISTIC_LABELS[statistic].column,
-					values: row.statistics[statistic],
+					values: statistics[statistic],
 				}))
 			: [{ values: row }];
 	return (
@@ -75,7 +77,7 @@ const MonitoringTooltip = ({
 								key={column ?? key}
 								className="text-right tabular-nums text-muted-foreground"
 							>
-								{formatValue(values[key])}
+								{formatValue(values[key] ?? null)}
 							</span>
 						))}
 					</Fragment>
@@ -85,17 +87,22 @@ const MonitoringTooltip = ({
 	);
 };
 
-/** The time axis, value axis, grid and hover both monitoring charts share; the series are its children. */
+/** The time axis, value axis, grid and hover every monitoring chart shares; the series are its children. */
 export const MonitoringPlot = ({
 	chartData,
+	rows = chartData.rows,
 	series,
 	yTicks,
 	formatValue,
 	unit,
 	showStatistics,
+	showTimeTicks = true,
+	showValueTicks = true,
 	children,
 }: {
 	chartData: AtomMetricsChartData;
+	/** Spans other than the periods, e.g. hours, on the same time axis. */
+	rows?: AtomMetricsPlotRow[];
 	series: AtomMetricsSeries[];
 	yTicks: number[];
 	formatValue: FormatValue;
@@ -103,20 +110,26 @@ export const MonitoringPlot = ({
 	unit?: string;
 	/** Hover shows each statistic's value, for series the statistic applies to. */
 	showStatistics?: boolean;
+	/** Off for a chart stacked above another that labels the same times. */
+	showTimeTicks?: boolean;
+	/** Off for a strip whose values are labelled on it: no value labels, no grid. */
+	showValueTicks?: boolean;
 	children: React.ReactNode;
 }) => {
-	const { rows, timeAxis } = chartData;
+	const { timeAxis } = chartData;
 	return (
 		<ResponsiveContainer width="100%" height="100%">
 			<ComposedChart
 				data={rows}
 				margin={{ top: 6, right: 6, bottom: 0, left: 0 }}
 			>
-				<CartesianGrid
-					vertical={false}
-					strokeDasharray="2 2"
-					stroke="var(--chart-grid-stroke)"
-				/>
+				{showValueTicks && (
+					<CartesianGrid
+						vertical={false}
+						strokeDasharray="2 2"
+						stroke="var(--chart-grid-stroke)"
+					/>
+				)}
 				<XAxis
 					dataKey="x"
 					type="number"
@@ -124,7 +137,8 @@ export const MonitoringPlot = ({
 					domain={timeAxis.domain}
 					ticks={timeAxis.ticks}
 					tickFormatter={timeAxis.formatTick}
-					tick={TICK}
+					tick={showTimeTicks && TICK}
+					height={showTimeTicks ? 30 : 8}
 					tickLine={false}
 					axisLine={false}
 					tickMargin={6}
@@ -133,7 +147,8 @@ export const MonitoringPlot = ({
 					domain={[0, yTicks[yTicks.length - 1]]}
 					ticks={yTicks}
 					tickFormatter={formatValue}
-					tick={TICK}
+					tick={showValueTicks && TICK}
+					interval={0}
 					tickLine={false}
 					axisLine={false}
 					width={40}

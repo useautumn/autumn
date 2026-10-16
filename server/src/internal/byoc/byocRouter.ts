@@ -7,6 +7,8 @@ import { handleDeleteCache } from "./handlers/handleDeleteCache.js";
 import { handleFinishCacheSetup } from "./handlers/handleFinishCacheSetup.js";
 import { handleGetAtomMetrics } from "./handlers/handleGetAtomMetrics.js";
 import { handleGetCache } from "./handlers/handleGetCache.js";
+import { handleGetCacheUpdate } from "./handlers/handleGetCacheUpdate.js";
+import { handleIncreaseCacheStorage } from "./handlers/handleIncreaseCacheStorage.js";
 import { handleListAtomChecks } from "./handlers/handleListAtomChecks.js";
 import { handleListAtoms } from "./handlers/handleListAtoms.js";
 import { handleResizeCache } from "./handlers/handleResizeCache.js";
@@ -25,8 +27,13 @@ byocRpcRouter.use(
 
 byocRpcRouter.post("/byoc.create_atom", ...handleCreateCache);
 byocRpcRouter.post("/byoc.get_atom", ...handleGetCache);
+byocRpcRouter.post("/byoc.get_atom_update", ...handleGetCacheUpdate);
 byocRpcRouter.post("/byoc.list_atoms", ...handleListAtoms);
 byocRpcRouter.post("/byoc.resize_atom", ...handleResizeCache);
+byocRpcRouter.post(
+	"/byoc.increase_atom_storage",
+	...handleIncreaseCacheStorage,
+);
 byocRpcRouter.post("/byoc.retry_atom", ...handleRetryCache);
 byocRpcRouter.post("/byoc.delete_atom", ...handleDeleteCache);
 byocRpcRouter.post("/byoc.list_atom_checks", ...handleListAtomChecks);

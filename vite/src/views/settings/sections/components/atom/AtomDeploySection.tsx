@@ -95,6 +95,7 @@ export const AtomDeploySection = ({
 			stackName,
 			machine,
 			region: cache.region,
+			volumeSizeGib: cache.volume_size_gib,
 		}),
 		chip: ATOM_STAGE_STATUS_CHIPS[cache.stages[stage]],
 		isReached: cache.stages[stage] !== ByocCacheStageStatus.Waiting,

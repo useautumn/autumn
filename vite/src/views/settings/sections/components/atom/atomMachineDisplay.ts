@@ -2,7 +2,7 @@ import {
 	type ApiByocCache,
 	BYOC_CACHE_REPLICAS,
 	type ByocCacheMachine,
-	byocCacheMachineMonthlyUsd,
+	byocCacheMonthlyUsd,
 	findByocCacheMachine,
 } from "@autumn/shared";
 
@@ -31,8 +31,14 @@ export const atomMachineSpecs = (machine: ByocCacheMachine) =>
 export const atomMachinesLabel = (machine: ByocCacheMachine) =>
 	`${BYOC_CACHE_REPLICAS} × ${machine.instanceType}`;
 
-export const atomMonthlyEstimate = (machine: ByocCacheMachine) =>
-	`~$${byocCacheMachineMonthlyUsd(machine)}`;
+/** Both replicas' machines and volumes a month, e.g. `~$241`. */
+export const atomMonthlyEstimate = ({
+	machine,
+	volumeSizeGib,
+}: {
+	machine: ByocCacheMachine;
+	volumeSizeGib: number;
+}) => `~$${byocCacheMonthlyUsd({ machine, volumeSizeGib })}`;
 
 /** The Atom container's limits on that machine, which its utilization is measured against. */
 export const atomContainerSpecs = ({ container }: ByocCacheMachine) =>

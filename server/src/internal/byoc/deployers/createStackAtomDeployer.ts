@@ -80,6 +80,7 @@ const findStackAtom = async ({
 		doneStages: Object.values(ByocCacheStage),
 		removedStages: [],
 		error: null,
+		update: null,
 	};
 };
 
@@ -124,6 +125,8 @@ export const createStackAtomDeployer = ({
 		hasGroup: () => Promise.resolve(false),
 		find: (params) => findStackAtom({ ctx, ...params }),
 		resize: (params) => resizeStackAtom({ ctx, ...params }),
+		// A dev stack's Atoms share the machine's disk, so there is no volume to grow.
+		growVolume: () => Promise.resolve(),
 		// Nothing deploys on a dev stack, so nothing can fail to.
 		retry: () => Promise.resolve(),
 		delete: (params) => deleteStackAtom({ ctx, ...params }),

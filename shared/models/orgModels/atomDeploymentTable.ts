@@ -37,13 +37,15 @@ export const atomDeployments = pgTable(
 		/** The token's SHA-256, which the Atom holds and calls Autumn with; null only on a backfilled row until its first refresh. */
 		token_hash: text("token_hash"),
 		region: text("region"),
+		/** Each replica's data volume in GiB: the size its setup asked for, then the size its deployment selects. It only grows. */
+		volume_size_gib: integer("volume_size_gib").notNull().default(20),
 		network: jsonb("network").$type<ByocCacheNetwork>(),
 		/** The stack's full name in the org's cloud; null on rows made before it could be chosen. */
 		stack_name: text("stack_name"),
 		stages: jsonb("stages").$type<ByocCacheStages>().notNull(),
-		/** When the org finished setup on its first checks; setup is done from then on. */
+		/** When the org finished setup on a connected Atom; setup is done from then on. */
 		first_check_at: bigint("first_check_at", { mode: "number" }),
-		/** When the Atom's health first counted a check from the org's app; written once, and setup can finish from then on. */
+		/** When the Atom's health first counted a check from the org's app; written once, and only informs the Verify step. */
 		first_check_seen_at: bigint("first_check_seen_at", { mode: "number" }),
 		/** Why the deploy or teardown stopped, in alien's words. */
 		error: text("error"),

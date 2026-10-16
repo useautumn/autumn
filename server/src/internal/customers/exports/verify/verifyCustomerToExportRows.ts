@@ -35,8 +35,8 @@ export const verifyCustomerToExportRows = async ({
 		...billingVerifyExportConfig.customer,
 		...limits,
 	};
-	const stripeCustomerId = scalar.processor?.id;
-	if (!stripeCustomerId) return [];
+	// A paid plan attached without billing can leave no Stripe customer at all.
+	const stripeCustomerId = scalar.processor?.id ?? null;
 
 	const customer = {
 		customer_id: scalar.id,
@@ -61,7 +61,9 @@ export const verifyCustomerToExportRows = async ({
 			params,
 			prefetched: {
 				fullCustomer,
-				subscriptions: sweptSubscriptions.get(stripeCustomerId) ?? [],
+				subscriptions: stripeCustomerId
+					? (sweptSubscriptions.get(stripeCustomerId) ?? [])
+					: [],
 			},
 			stripeCli: stripeReader,
 		});

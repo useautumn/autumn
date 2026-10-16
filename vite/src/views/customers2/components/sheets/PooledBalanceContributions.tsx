@@ -63,11 +63,12 @@ export function PooledBalanceContributions({
 
 	const combine = featureToCombine({ feature });
 
+	/** An unlimited share rides a limited pool with a zero amount, so its own
+	 * flag decides the label, not the pool's identity. */
 	const amountLabel = (contribution: ApiPooledBalanceContributionV0) => {
+		if (contribution.unlimited) return "Unlimited";
 		if (contribution.competes) {
-			return contribution.unlimited
-				? "Unlimited"
-				: numberWithCommas(contribution.current_contribution);
+			return numberWithCommas(contribution.current_contribution);
 		}
 		return pooledBalance.unlimited
 			? "Unlimited"

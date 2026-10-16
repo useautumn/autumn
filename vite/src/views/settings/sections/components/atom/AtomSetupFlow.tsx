@@ -14,16 +14,21 @@ import { type AtomStep, AtomStepper } from "./AtomStepper";
 import { AtomVerifySection } from "./AtomVerifySection";
 import { ATOM_PAGE_CARD_CLASS } from "./atomCardLayout";
 import { atomMachineSpecs } from "./atomMachineDisplay";
+import { atomVolumeSize } from "./atomVolumeDisplay";
 import { useAtomActions } from "./useAtomActions";
 import { useAtomDeleteDialog } from "./useAtomDeleteDialog";
 import { useAtomSetupFlow } from "./useAtomSetupFlow";
 import { type AtomSetupValues, useAtomSetupForm } from "./useAtomSetupForm";
 
-const cloudBadges = ({ instanceType, region }: AtomSetupValues) => {
+const cloudBadges = ({ instanceType, region, volume }: AtomSetupValues) => {
 	const machine = findByocCacheMachineByInstanceType({ instanceType });
-	return ["AWS", region, machine && atomMachineSpecs(machine)].filter(
-		(badge): badge is string => Boolean(badge),
-	);
+	const { gib } = atomVolumeSize({ choice: volume });
+	return [
+		"AWS",
+		region,
+		machine && atomMachineSpecs(machine),
+		gib && `${gib} GiB storage`,
+	].filter((badge): badge is string => Boolean(badge));
 };
 
 const NETWORK_BADGES: Record<AtomSetupValues["vpc"], string[]> = {
