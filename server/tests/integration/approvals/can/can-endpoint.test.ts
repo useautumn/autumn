@@ -27,9 +27,8 @@ const askCan = async ({
 	dashboardFetch<CanResponse>(ctx, member, `/approvals/can?action=${action}`, {
 		headers: {
 			...(live ? { "x-approvals-sandbox-as-live": "true" } : {}),
-			...(enforced
-				? { "org-config": JSON.stringify({ approvals_enforced: true }) }
-				: {}),
+			// Always sent, so the test sets the flag rather than reading the org's saved value.
+			"org-config": JSON.stringify({ approvals_enforced: enforced }),
 		},
 	});
 
