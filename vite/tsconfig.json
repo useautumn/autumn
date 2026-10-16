@@ -9,6 +9,10 @@
 		"paths": {
 			"@/*": ["./src/*"],
 			"@autumn/ui": ["../packages/ui/src/index.ts"],
+			"@autumn/ui/ai-elements": [
+				"../packages/ui/src/components/ai-elements/index.ts"
+			],
+			"@autumn/ui/table": ["../packages/ui/src/components/table/index.tsx"],
 			"@autumn/ui/*": ["../packages/ui/src/*"],
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
 			"autumn-js/react": ["../packages/autumn-js/src/react/index.ts"],

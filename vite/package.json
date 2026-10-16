@@ -27,7 +27,7 @@
 		"@autumn/env": "workspace:*",
 		"@autumn/render": "workspace:*",
 		"@autumn/shared": "workspace:*",
-		"@autumn/ui": "workspace:*",
+		"@autumn/ui": "workspace:@useautumn/ui@*",
 		"@base-ui/react": "^1.4.1",
 		"@better-auth/dash": "catalog:",
 		"@better-auth/passkey": "catalog:",

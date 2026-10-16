@@ -115,6 +115,14 @@
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
+		"packages/ui": {
+			"entry": [
+				"src/index.ts",
+				"src/components/ai-elements/index.ts",
+				"src/components/table/index.tsx"
+			],
+			"project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"]
+		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
 		},
