@@ -129,3 +129,49 @@ test(
 		expect(afterDelete.poolCustomerEntitlements[0].expires_at).toBeNull();
 	},
 );
+
+test(
+	chalk.yellowBright(
+		"pooled expiry: deleting the last contributing entities concurrently expires the pool",
+	),
+	async () => {
+		const customerId = "pooled-expire-entity-delete-concurrent";
+		const group = "pooled-entity-delete-concurrent-group";
+		const firstPlan = pooledPlan({
+			id: "pooled-entity-delete-concurrent-first",
+			group,
+			grant: FIRST_GRANT,
+		});
+		const secondPlan = pooledPlan({
+			id: "pooled-entity-delete-concurrent-second",
+			group,
+			grant: SECOND_GRANT,
+		});
+
+		const { entities, autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [firstPlan, secondPlan] }),
+			],
+			actions: [
+				s.billing.attach({ productId: firstPlan.id, entityIndex: 0 }),
+				s.billing.attach({ productId: secondPlan.id, entityIndex: 1 }),
+			],
+		});
+
+		await Promise.all(
+			entities.map((entity) => autumnV1.entities.delete(customerId, entity.id)),
+		);
+
+		const afterDelete = await getPooledBalanceDbState({
+			db: ctx.db,
+			customerId,
+		});
+		expect(afterDelete.contributions).toHaveLength(0);
+		expect(afterDelete.pools).toHaveLength(1);
+		expect(afterDelete.pools[0].expires_at).not.toBeNull();
+		expect(afterDelete.poolCustomerEntitlements[0].expires_at).not.toBeNull();
+	},
+);

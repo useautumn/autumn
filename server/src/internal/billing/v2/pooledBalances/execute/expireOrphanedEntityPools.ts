@@ -22,22 +22,37 @@ export const removeEntityPoolContributions = async ({
 	if (internalEntityIds.length === 0) return [];
 
 	const entityIdList = sqlIdList(internalEntityIds);
+	const entityContributions = sql`
+		SELECT contribution.id, contribution.pooled_balance_id
+		FROM pooled_balance_contributions AS contribution
+		INNER JOIN pooled_balances AS pool
+			ON pool.id = contribution.pooled_balance_id
+		LEFT JOIN customer_products AS source_product
+			ON source_product.id = contribution.source_customer_product_id
+		LEFT JOIN customer_entitlements AS source_entitlement
+			ON source_entitlement.id = contribution.source_customer_entitlement_id
+		WHERE pool.customer_license_link_id IS NULL
+			AND (
+				source_product.internal_entity_id IN (${entityIdList})
+				OR source_entitlement.internal_entity_id IN (${entityIdList})
+			)
+	`;
+
+	// Concurrent deletes of a pool's last contributors queue on this lock, so
+	// the later one's expiry check sees the earlier one's removal.
+	await db.execute(sql`
+		SELECT pool.id
+		FROM pooled_balances AS pool
+		WHERE pool.id IN (
+			SELECT entity_contribution.pooled_balance_id
+			FROM (${entityContributions}) AS entity_contribution
+		)
+		ORDER BY pool.id
+		FOR UPDATE
+	`);
+
 	const removed = await db.execute<{ pooled_balance_id: string }>(sql`
-		WITH target_contributions AS MATERIALIZED (
-			SELECT contribution.id, contribution.pooled_balance_id
-			FROM pooled_balance_contributions AS contribution
-			INNER JOIN pooled_balances AS pool
-				ON pool.id = contribution.pooled_balance_id
-			LEFT JOIN customer_products AS source_product
-				ON source_product.id = contribution.source_customer_product_id
-			LEFT JOIN customer_entitlements AS source_entitlement
-				ON source_entitlement.id = contribution.source_customer_entitlement_id
-			WHERE pool.customer_license_link_id IS NULL
-				AND (
-					source_product.internal_entity_id IN (${entityIdList})
-					OR source_entitlement.internal_entity_id IN (${entityIdList})
-				)
-		),
+		WITH target_contributions AS MATERIALIZED (${entityContributions}),
 		detached_sources AS (
 			UPDATE customer_entitlements AS source_entitlement
 			SET pooled_contribution_id = NULL
