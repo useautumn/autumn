@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import {
 	balanceLocks,
 	customerEntitlements,
+	customerProducts,
 	customers,
 	entities,
 } from "@autumn/shared";
@@ -42,6 +43,7 @@ export const postgresEntityBalancesOf = async ({
 			.select({
 				featureId: customerEntitlements.feature_id,
 				internalEntityId: customerEntitlements.internal_entity_id,
+				productEntityId: customerProducts.internal_entity_id,
 				balance: customerEntitlements.balance,
 				entities: customerEntitlements.entities,
 			})
@@ -49,6 +51,10 @@ export const postgresEntityBalancesOf = async ({
 			.innerJoin(
 				customers,
 				eq(customers.internal_id, customerEntitlements.internal_customer_id),
+			)
+			.leftJoin(
+				customerProducts,
+				eq(customerProducts.id, customerEntitlements.customer_product_id),
 			)
 			.where(ofCustomer),
 		defaultCtx.db
@@ -80,7 +86,8 @@ export const postgresEntityBalancesOf = async ({
 		.map(
 			(row): PostgresBalanceRow => ({
 				featureId: row.featureId,
-				entityId: entityIdOf(row.internalEntityId),
+				// A plan attached to an entity scopes its rows through the customer product, not the row itself.
+				entityId: entityIdOf(row.internalEntityId ?? row.productEntityId),
 				balance: row.balance,
 				entities: row.entities
 					? Object.fromEntries(
