@@ -21,7 +21,7 @@ export type AtomHealthSource = {
 	bootedAt: string;
 	/** One Int32 the main thread counts in. */
 	restarts: Int32Array;
-	/** One Int32 the main thread sets to 1 once every thread has started; a thread replaced later leaves it set. */
+	/** One Int32 the main thread sets to the second every thread had started; 0 until then, kept once set. */
 	ready: Int32Array;
 	/** One Int32 per thread: 1 once that thread has caught up, back to 0 when it dies. */
 	threadsReady: Int32Array;
@@ -34,7 +34,23 @@ export type ThreadHealthSource = AtomHealthSource & { thread: number };
 
 export const isAtomReady = ({
 	ready,
-}: Pick<AtomHealthSource, "ready">): boolean => Atomics.load(ready, 0) === 1;
+}: Pick<AtomHealthSource, "ready">): boolean => Atomics.load(ready, 0) !== 0;
+
+/** Epoch seconds fit an Int32 until 2038; a second is fine for the load balancer's settle. */
+export const markAtomReady = ({
+	ready,
+	at,
+}: Pick<AtomHealthSource, "ready"> & { at: number }): void => {
+	Atomics.store(ready, 0, Math.max(1, Math.floor(at / 1000)));
+};
+
+/** Epoch ms the Atom became ready at; null while starting. */
+export const atomReadyAt = ({
+	ready,
+}: Pick<AtomHealthSource, "ready">): number | null => {
+	const seconds = Atomics.load(ready, 0);
+	return seconds === 0 ? null : seconds * 1000;
+};
 
 export const isThreadReady = ({
 	threadsReady,

@@ -54,6 +54,8 @@ test("an Atom whose volume holds a slot file SQLite cannot read starts and serve
 
 	await atom.start();
 
-	const health = await fetch(`http://127.0.0.1:${port}/health`);
+	const health = await fetch(`http://127.0.0.1:${port}/health`, {
+		headers: { "user-agent": "ELB-HealthChecker/2.0" },
+	});
 	expect(health.status).toBe(200);
 }, 20_000);
