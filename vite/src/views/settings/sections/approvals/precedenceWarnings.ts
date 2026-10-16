@@ -1,4 +1,5 @@
 import type { ApprovalAction, ApprovalRule, RuleSubject } from "@autumn/shared";
+import { RULE_EXEMPT_ROLES } from "../roles/roleAccess";
 import {
 	type IncludedVia,
 	joinWithAnd,
@@ -41,6 +42,7 @@ export const precedenceWarnings = ({
 		if (subject.type !== "user") return [];
 		const userId = subject.user_id;
 		const role = roleOf(userId);
+		if (role && RULE_EXEMPT_ROLES.includes(role)) return [];
 		// A rule that also names the member still decides for them.
 		const broader = rulesThatInclude({
 			rules: others,
