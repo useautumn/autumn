@@ -26,7 +26,8 @@ export const ApiPooledBalanceContributionV0Schema = z.object({
 			"True when this source competes under a 'max' / 'min' feature: only the winning competing share counts, instead of adding up.",
 	}),
 	unlimited: z.boolean().meta({
-		description: "True when this competing source grants unlimited usage.",
+		description:
+			"True when this source grants unlimited usage, either as a competing source or as an unlimited share riding a limited pool.",
 	}),
 	created_at: z.number(),
 });
