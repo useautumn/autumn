@@ -110,6 +110,7 @@ describe("approval rule row", () => {
 				actions={{ canEdit: false, onOpen: () => {}, onDelete: () => {} }}
 				isFirst={false}
 				isLast={false}
+				isMoving={false}
 				onMove={() => {}}
 			/>
 		);

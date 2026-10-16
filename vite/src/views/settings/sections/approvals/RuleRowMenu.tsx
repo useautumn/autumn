@@ -29,12 +29,15 @@ export const RuleRowMenu = ({
 	actions,
 	isFirst,
 	isLast,
+	isMoving,
 	onMove,
 }: {
 	rule: ApprovalRule;
 	actions: RuleRowActions;
 	isFirst: boolean;
 	isLast: boolean;
+	/** A reorder in flight; a second one could land first and undo the later click. */
+	isMoving: boolean;
 	onMove: (move: RuleMove) => void;
 }) => (
 	<DropdownMenu>
@@ -59,7 +62,7 @@ export const RuleRowMenu = ({
 					{MOVES.map(({ move, label, towardsTop }) => (
 						<DropdownMenuItem
 							key={move}
-							disabled={towardsTop ? isFirst : isLast}
+							disabled={isMoving || (towardsTop ? isFirst : isLast)}
 							onClick={() => onMove(move)}
 						>
 							{label}

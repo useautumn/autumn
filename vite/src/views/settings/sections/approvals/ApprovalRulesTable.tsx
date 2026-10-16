@@ -73,6 +73,7 @@ export const ApprovalRulesTable = ({
 									actions={rowActions}
 									isFirst={order === 1}
 									isLast={order === rules.length}
+									isMoving={reorder.isPending}
 									onMove={(move) =>
 										reorder.mutate({
 											ids: moveRule({ ids, id: rule.id, move }),
