@@ -1,15 +1,15 @@
+import { parsePreviewPayload } from "@autumn/render";
 import type { PreviewPermission } from "@autumn/shared";
 
 type DeniedPermission = Extract<PreviewPermission, { verdict: "deny" }>;
 
+// Unwraps the display wrapper (`{ _display, preview }`) and MCP envelopes first.
 const readPermission = ({
 	preview,
 }: {
 	preview: unknown;
-}): PreviewPermission | undefined => {
-	if (!preview || typeof preview !== "object") return undefined;
-	return (preview as { permission?: PreviewPermission }).permission;
-};
+}): PreviewPermission | undefined =>
+	parsePreviewPayload(preview)?.permission as PreviewPermission | undefined;
 
 const formatValue = (value: string | boolean) => {
 	if (value === true) return "Yes";
