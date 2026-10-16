@@ -13,6 +13,8 @@ import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fu
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
+const CACHE_INVALIDATE_MAX_ATTEMPTS = 3;
+
 export interface ClearCreditSystemCachePayload {
 	orgId: string;
 	env: AppEnv;
@@ -170,6 +172,7 @@ export const runClearCreditSystemCacheTask = async ({
 					getRedisTargetsForCustomer({
 						org: orgWithFeatures.org,
 					}),
+				maxAttempts: CACHE_INVALIDATE_MAX_ATTEMPTS,
 				logger,
 			});
 			totalDeleted += deleted;
