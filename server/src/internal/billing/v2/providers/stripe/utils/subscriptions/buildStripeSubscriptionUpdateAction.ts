@@ -43,7 +43,9 @@ export const buildStripeSubscriptionUpdateAction = ({
 
 	// When a schedule manages the sub, leave trial_end/cancel alone — the
 	// schedule sets those via phase-level settings.
-	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
+	const scheduleManagesSubscription =
+		!!stripeSubscriptionScheduleAction &&
+		stripeSubscriptionScheduleAction.type !== "release";
 
 	const appliesToBilling = trialContext?.appliesToBilling;
 	let shouldSetTrialEnd: boolean | undefined;

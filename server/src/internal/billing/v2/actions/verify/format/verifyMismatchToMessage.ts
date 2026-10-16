@@ -116,6 +116,13 @@ const describe = (mismatch: SubscriptionMismatch): string => {
 			return `Active Stripe subscription is unlinked while the customer's plan is linked to ${mismatch.ending_subscription_id}, which is ending — the customer loses the plan when it ends`;
 		case "stale_subscription_link":
 			return "Autumn products link to a Stripe subscription that is not in the customer's active set";
+		case "missing_stripe_subscription": {
+			const plan = mismatch.plan_name ?? mismatch.plan_id;
+			const entity = mismatch.entity_id
+				? ` on entity ${mismatch.entity_id}`
+				: "";
+			return `Paid plan ${plan}${entity} has no Stripe subscription — its prices are not being billed`;
+		}
 		case "expected_state_error":
 			return `Could not compute Autumn's expected Stripe state — ${mismatch.error}`;
 		case "shared_stripe_customer":

@@ -15,7 +15,7 @@ import {
 	subscriptionPickerRowToTarget,
 } from "./utils/buildSubscriptionPickerRows";
 import { editSubscriptionLabel } from "./utils/editSubscriptionLabel";
-import { findUnlinkedFreePlanNames } from "./utils/findUnlinkedFreePlanNames";
+import { findUnlinkedPlanNames } from "./utils/findUnlinkedPlanNames";
 
 const MAX_ROWS_WITHOUT_CHOICE = 1;
 
@@ -44,9 +44,8 @@ export function ChooseSubscriptionSheet() {
 			}),
 		[isLoading, error, proposals, customerProducts, fullCustomer?.entities],
 	);
-	const freePlanNames = useMemo(
-		() =>
-			findUnlinkedFreePlanNames({ customerProducts: customerProducts ?? [] }),
+	const unlinkedPlanNames = useMemo(
+		() => findUnlinkedPlanNames({ customerProducts: customerProducts ?? [] }),
 		[customerProducts],
 	);
 
@@ -92,12 +91,14 @@ export function ChooseSubscriptionSheet() {
 			<div className="min-h-0 overflow-y-auto px-4 pt-4">
 				{rows.length > MAX_ROWS_WITHOUT_CHOICE && (
 					<>
-						{freePlanNames.length > 0 && (
+						{unlinkedPlanNames.length > 0 && (
 							<Alert className="mb-3">
 								<InfoIcon weight="fill" />
 								<AlertDescription>
-									Free plans ({freePlanNames.join(", ")}) can be updated under
-									any subscription. Changes apply to the whole customer.
+									Plans not billed on any subscription (
+									{unlinkedPlanNames.join(", ")}) can be updated under any
+									subscription. Adding a paid one to a subscription starts
+									billing it there.
 								</AlertDescription>
 							</Alert>
 						)}
