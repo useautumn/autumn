@@ -4,6 +4,7 @@ import {
 	computeCheck,
 	computeTrackDecision,
 	findLockInsertInMutation,
+	findOpenLockByLockId,
 	type TrackCommand,
 	trackResultToCheckResult,
 	UnsupportedCommandError,
@@ -73,9 +74,10 @@ export const deductOnSubject = ({
 	// Only while the lock is still open in the view: one this slot already settled is taken anew.
 	const held = lockId
 		? timeStage("lockLookup", () =>
-				subject.fullSubject.open_locks.some(
-					(openLock) => openLock.lock_id === lockId,
-				)
+				findOpenLockByLockId({
+					openLocks: subject.fullSubject.open_locks,
+					lockId,
+				})
 					? ctx.openLocks.trackOf({
 							customerId,
 							lockId,
