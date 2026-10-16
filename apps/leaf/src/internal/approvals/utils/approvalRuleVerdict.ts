@@ -51,3 +51,18 @@ export const firstRuleDenial = ({
 	previews
 		.map((preview) => previewRuleDenial({ preview }))
 		.find((denial) => denial !== undefined);
+
+/**
+ * Whether the approval rules vouch for every step: each allowed by a rule that
+ * names the clicker. Exempt allows and steps no rule covers don't count.
+ */
+export const everyStepAllowedByRule = ({
+	previews,
+}: {
+	previews: ReadonlyArray<unknown>;
+}): boolean =>
+	previews.length > 0 &&
+	previews.every((preview) => {
+		const permission = readPermission({ preview });
+		return permission?.verdict === "allow" && permission.decided_by !== null;
+	});

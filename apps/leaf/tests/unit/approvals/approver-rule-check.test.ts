@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	everyStepAllowedByRule,
 	firstRuleDenial,
 	previewRuleDenial,
 } from "../../../src/internal/approvals/utils/approvalRuleVerdict.js";
@@ -66,4 +67,35 @@ test("a denial inside the display wrapper still denies the card", () => {
 			],
 		}),
 	).toStartWith("You can't approve this.");
+});
+
+const ruleAllow = {
+	verdict: "allow",
+	decided_by: { level: "user", rule_id: "apr_2", rule_name: "Free trials" },
+};
+
+test("a rule is enough on its own only when every step is allowed by a rule", () => {
+	expect(
+		everyStepAllowedByRule({
+			previews: [
+				{ total: 0, permission: ruleAllow },
+				{ permission: ruleAllow },
+			],
+		}),
+	).toBe(true);
+	// Exempt (no deciding rule), no permission, or a deny: the rules don't vouch for it.
+	expect(
+		everyStepAllowedByRule({
+			previews: [
+				{ permission: ruleAllow },
+				{ permission: { verdict: "allow", decided_by: null } },
+			],
+		}),
+	).toBe(false);
+	expect(
+		everyStepAllowedByRule({
+			previews: [{ permission: ruleAllow }, { total: 0 }],
+		}),
+	).toBe(false);
+	expect(everyStepAllowedByRule({ previews: [] })).toBe(false);
 });

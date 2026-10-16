@@ -59,11 +59,14 @@ export const resolveApproval = async ({
 	approval,
 	providerUserId,
 	actingUserId,
+	rulesMustAllow,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
 	/** The clicker's Autumn user; approval rules are checked against them. */
 	actingUserId?: string;
+	/** The clicker lacks the scope, so every step must be allowed by a rule. */
+	rulesMustAllow?: boolean;
 }): Promise<ApprovalRunResult> => {
 	if (approval.harness && approval.harness !== "eve") {
 		logger.error("[chat] Unsupported legacy approval harness", undefined, {
@@ -76,12 +79,14 @@ export const resolveApproval = async ({
 		);
 	}
 
-	if (surfaceRendersGroup(approval.provider ?? "")) {
+	// The guard is the only place rules can vouch for a clicker, so it always runs then.
+	if (rulesMustAllow || surfaceRendersGroup(approval.provider ?? "")) {
 		try {
 			const drifted = await guardApprovalDrift({
 				approval,
 				providerUserId,
 				actingUserId,
+				rulesMustAllow,
 			});
 			if (drifted) return drifted;
 		} catch (error) {
