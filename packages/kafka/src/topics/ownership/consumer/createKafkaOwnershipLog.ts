@@ -1,4 +1,4 @@
-import type { Kafka } from "kafkajs";
+import type { Kafka } from "../../../client/types/kafkaWire.js";
 import { readTopicHighWatermarks } from "../../../consumer/partitionOffsets.js";
 import { createPartitionReader } from "../../../consumer/reader/createPartitionReader.js";
 import type { OwnershipLog } from "../types/ownershipLog.js";

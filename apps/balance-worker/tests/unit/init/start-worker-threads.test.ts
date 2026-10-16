@@ -52,7 +52,6 @@ function ctxFor({ fatal }: { fatal: string[] }) {
 		fetch: async () => new Response("ok"),
 		logger,
 		onFatal: ({ scope }: { scope: string }) => fatal.push(scope),
-		onToken() {},
 	};
 }
 

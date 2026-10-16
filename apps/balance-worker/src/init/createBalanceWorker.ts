@@ -8,9 +8,8 @@ import {
 import type {
 	KafkaOffsetCommit,
 	KafkaProducerClient,
-	KafkaTokenInfo,
+	ProducerConfig,
 } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -72,7 +71,6 @@ import {
 	workerConsumerGroupIdOf,
 } from "./workerConfig.js";
 import {
-	logWorkerKafkaToken,
 	openWorkerResources,
 	WORKER_KAFKA_PRODUCER_LIMITS,
 } from "./workerResources.js";
@@ -105,7 +103,6 @@ export async function createBalanceWorker({
 	const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: address.endpoint,
-		groupId,
 	});
 	const subjectMapBudget = runtimeConfig.writerLimits.subjectMapBudget;
 	if (subjectMapBudget)
@@ -137,18 +134,14 @@ export async function createBalanceWorker({
 			dependencies.logger.info(
 				`Blue-green fleet ${fleetId}: service ${identity.serviceArn}, group ${groupId}, build ${identity.imageSha ?? "unknown"}`,
 			);
-		// Every partition runtime records what it commits here; the consumer group reports it when it rejoins.
+		// Every partition runtime records what it commits here and which partitions it serves.
 		const partitionLoad = createPartitionLoad({ now: Date.now });
 		const consumer = resources.kafka.consumer(
-			createWorkerConsumerConfig({
-				groupId,
-				timings: runtimeConfig.timings,
-				partitionLoad,
-			}),
+			createWorkerConsumerConfig({ groupId, timings: runtimeConfig.timings }),
 		);
 		// A command that leaves no record has no transaction to carry its offset, so the group commits it itself.
 		async function commitCommandOffsets(
-			offsets: KafkaOffsetCommit,
+			offsets: Pick<KafkaOffsetCommit, "topics">,
 		): Promise<void> {
 			const flat: { topic: string; partition: number; offset: string }[] = [];
 			for (const { topic, partitions } of offsets.topics) {
@@ -288,10 +281,6 @@ export async function createBalanceWorker({
 			dependencies.onServiceStopped?.({ cause, scope });
 		}
 
-		function logProducerThreadToken(info: KafkaTokenInfo): void {
-			logWorkerKafkaToken({ logger: dependencies.logger, info });
-		}
-
 		async function listen(): Promise<WorkerListener> {
 			const threads =
 				resources.edgeConfigs?.balanceWorkerThreads.get() ??
@@ -301,7 +290,6 @@ export async function createBalanceWorker({
 					fetch: app.fetch,
 					logger: dependencies.logger,
 					onFatal: stopForThreads,
-					onToken: logProducerThreadToken,
 					heldReplies: {
 						positions: commitPositions,
 						renderFailure: heldFailureOf,
@@ -326,7 +314,6 @@ export async function createBalanceWorker({
 						clientId: `balance-worker-producers-${crypto.randomUUID()}`,
 						brokers: env.KAFKA_BROKERS,
 						authMode: env.KAFKA_AUTH_MODE,
-						region: env.AWS_REGION,
 						sasl: env.KAFKA_SASL,
 						limits: WORKER_KAFKA_PRODUCER_LIMITS,
 						sendRingBytes: threads.sendRingBytes,

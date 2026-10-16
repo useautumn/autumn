@@ -1,68 +1,80 @@
 import { describe, expect, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import {
-	KafkaJSConnectionError,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-	KafkaJSRequestTimeoutError,
-} from "kafkajs";
+	KafkaDeliveryReportOverdueError,
+	KafkaPartialDeliveryError,
+} from "@autumn/kafka";
 import { isRetriableAppendError } from "@/internal/balances/track/balanceWorker/spool/isRetriableAppendError.js";
 
-const protocolError = ({
-	type,
+/** librdkafka's error shape: the message, a numeric code (negative for its own), and its retriable verdict. */
+const librdkafkaError = ({
+	message,
 	code,
-	retriable = true,
+	isRetriable = true,
 }: {
-	type: string;
+	message: string;
 	code: number;
-	retriable?: boolean;
-}) =>
-	new KafkaJSProtocolError(
-		Object.assign(new Error(type), { type, code, retriable }),
-	);
-const retriesRanOutOn = (cause: Error) =>
-	new KafkaJSNumberOfRetriesExceeded(cause, { retryCount: 3, retryTime: 900 });
+	isRetriable?: boolean;
+}) => Object.assign(new Error(message), { code, isRetriable });
 
 describe("isRetriableAppendError", () => {
 	test.each([
 		[
-			"a closed connection, once kafkajs's retries ran out",
-			retriesRanOutOn(
-				// kafkajs's typings omit KafkaJSConnectionClosedError; this is its shape.
-				Object.assign(new KafkaJSConnectionError("Closed connection"), {
-					name: "KafkaJSConnectionClosedError",
-				}),
-			),
+			"a send librdkafka gave up on at its message timeout",
+			librdkafkaError({ message: "Local: Message timed out", code: -192 }),
 		],
 		[
-			"a refused connection while the broker restarts",
-			retriesRanOutOn(
-				new KafkaJSConnectionError("Connection error: connect ECONNREFUSED", {
-					code: "ECONNREFUSED",
-				}),
-			),
+			"a dropped broker connection",
+			librdkafkaError({
+				message: "Local: Broker transport failure",
+				code: -195,
+			}),
 		],
 		[
-			"a request timeout",
-			new KafkaJSRequestTimeoutError("Request Produce(key: 0) timed out"),
+			"every broker down while one restarts",
+			librdkafkaError({
+				message: "Local: All broker connections are down",
+				code: -187,
+			}),
 		],
 		[
 			"NOT_LEADER_FOR_PARTITION",
-			retriesRanOutOn(
-				protocolError({ type: "NOT_LEADER_FOR_PARTITION", code: 6 }),
-			),
+			librdkafkaError({ message: "Broker: Not leader for partition", code: 6 }),
 		],
 		[
 			"LEADER_NOT_AVAILABLE",
-			protocolError({ type: "LEADER_NOT_AVAILABLE", code: 5 }),
+			librdkafkaError({ message: "Broker: Leader not available", code: 5 }),
 		],
 		[
 			"REQUEST_TIMED_OUT",
-			protocolError({ type: "REQUEST_TIMED_OUT", code: 7 }),
+			librdkafkaError({ message: "Broker: Request timed out", code: 7 }),
 		],
 		[
-			"a leader move reported by protocol code alone",
-			Object.assign(new Error("Broker: Not leader for partition"), { code: 6 }),
+			"a delivery report that never arrived",
+			new KafkaDeliveryReportOverdueError({
+				topic: "commands",
+				deadlineMs: 6_000,
+			}),
+		],
+		[
+			"a send only part of which landed",
+			new KafkaPartialDeliveryError({
+				delivered: 1,
+				total: 2,
+				failure: librdkafkaError({
+					message: "Local: Message timed out",
+					code: -192,
+				}),
+			}),
+		],
+		[
+			"a timeout wrapped by the client",
+			new Error("Command log append failed", {
+				cause: librdkafkaError({
+					message: "Local: Message timed out",
+					code: -192,
+				}),
+			}),
 		],
 	])("retries %s", (_, error) => {
 		expect(isRetriableAppendError(error)).toBe(true);
@@ -71,7 +83,11 @@ describe("isRetriableAppendError", () => {
 	test.each([
 		[
 			"a broker refusal no retry fixes",
-			protocolError({ type: "MESSAGE_TOO_LARGE", code: 10, retriable: false }),
+			librdkafkaError({
+				message: "Broker: Message size too large",
+				code: 10,
+				isRetriable: false,
+			}),
 		],
 		[
 			"the client's own deadline",

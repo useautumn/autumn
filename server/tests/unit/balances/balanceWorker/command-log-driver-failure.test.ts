@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createBalanceWorkerClient } from "@autumn/balance-worker-client";
 import type { UpdateBalanceParamsV0 } from "@autumn/shared";
-import {
-	KafkaJSConnectionError,
-	KafkaJSNumberOfRetriesExceeded,
-} from "kafkajs";
 import { runBalanceWorkerBatchTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerBatchTrack.js";
 import { toBatchTrackEntries } from "@/internal/balances/track/batchTrackEntries.js";
 import { runBalanceWorkerAsyncUpdateBalance } from "@/internal/balances/updateBalance/balanceWorker/runBalanceWorkerAsyncUpdateBalance.js";
@@ -19,10 +15,10 @@ const clientWithFailingBroker = () =>
 			commandLog: {
 				append: async () =>
 					Promise.reject(
-						new KafkaJSNumberOfRetriesExceeded(
-							new KafkaJSConnectionError("Closed connection"),
-							{ retryCount: 3, retryTime: 1_000 },
-						),
+						Object.assign(new Error("Local: Message timed out"), {
+							code: -192,
+							isRetriable: true,
+						}),
 					),
 			},
 		},

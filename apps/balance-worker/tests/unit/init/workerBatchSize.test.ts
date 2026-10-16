@@ -12,7 +12,6 @@ test("a commit carries up to 500 records, so one append in flight per partition 
 	const { writerLimits } = balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: "http://127.0.0.1:12982",
-		groupId: env.BALANCE_WORKER_GROUP_ID,
 	});
 	expect(writerLimits.maxBatchSize).toBe(500);
 });

@@ -16,7 +16,6 @@ function workerRuntimeConfig() {
 	return balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: "http://127.0.0.1:12982",
-		groupId: env.BALANCE_WORKER_GROUP_ID,
 	});
 }
 
@@ -26,7 +25,7 @@ test("partition producers retry within milliseconds and keep retrying through a 
 	// CONCURRENT_TRANSACTIONS clears in a few ms; a 100ms first backoff was the tail.
 	expect(producerLimits.initialRetryTimeMs).toBeLessThanOrEqual(10);
 
-	// kafkajs doubles each wait up to maxRetryTimeMs: 10 + 20 + … + 1280 + 2500 + 2500 ms.
+	// librdkafka doubles each wait up to maxRetryTimeMs: 10 + 20 + … + 1280 + 2500 + 2500 ms.
 	let totalBackoffMs = 0;
 	for (let attempt = 0; attempt < producerLimits.retryCount; attempt++) {
 		totalBackoffMs += Math.min(

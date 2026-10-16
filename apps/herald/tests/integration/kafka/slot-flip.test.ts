@@ -27,11 +27,11 @@ import {
 } from "@autumn/edge-config";
 import {
 	createIdempotentProducerConfig,
+	createKafka,
 	createKafkaClient,
 	type KafkaConsumerGroupTimings,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import {
 	createCatalogFor,
 	createCustomerEntitlement,
@@ -72,11 +72,11 @@ const logger = {
 } as never;
 
 const createTestKafka = () =>
-	new Kafka(
+	createKafka(
 		createKafkaClient({
 			clientId: unique("herald-slot-flip"),
 			brokers,
-			transport: { logLevel: logLevel.NOTHING },
+			transport: {},
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
@@ -251,7 +251,6 @@ test("a flip moves the jobs from blue to green and back; every record lands, rep
 	const admin = kafka.admin();
 	await admin.connect();
 	await admin.createTopics({
-		waitForLeaders: true,
 		topics: [{ topic, numPartitions: PARTITIONS, replicationFactor: 1 }],
 	});
 	const groupIdPrefix = unique("herald");

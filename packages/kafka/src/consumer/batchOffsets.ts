@@ -1,14 +1,20 @@
-import type { EachBatchPayload } from "kafkajs";
+import { isKafkaProtocolError } from "../client/kafkaErrorClassification.js";
 import {
 	parseKafkaOffset,
 	parseKafkaTimestamp,
 } from "../client/kafkaOffsetUtils.js";
-import { groupChurnCauseOf } from "./consumerErrors.js";
+import type { EachBatchPayload } from "../client/types/kafkaWire.js";
 import type {
 	TopicBatchParams,
 	TopicConsumerContext,
 	TopicConsumerState,
 } from "./types/consumer.js";
+
+/** The group moved on (classic generation or KIP-848 member epoch); the new owner commits for itself. */
+const SUPERSEDED_GENERATION_TYPES: ReadonlySet<string> = new Set([
+	"ILLEGAL_GENERATION",
+	"STALE_MEMBER_EPOCH",
+]);
 
 export function hasCurrentBatchGeneration({
 	state,
@@ -106,8 +112,7 @@ export async function commitBatchOffsets({
 	state.initializedPartitions.add(JSON.stringify([topic, partition]));
 }
 
-/** A commit refused for a superseded generation is dropped; any other group churn is rethrown
- *  unwrapped, because kafkajs crashes the consumer on its non-retriable wrapper instead of rejoining. */
+/** A commit refused for a superseded generation or member epoch is dropped: the new owner commits for itself. */
 async function commitUnlessSuperseded({
 	commit,
 }: {
@@ -117,9 +122,9 @@ async function commitUnlessSuperseded({
 		await commit();
 		return true;
 	} catch (cause) {
-		const churn = groupChurnCauseOf({ cause });
-		if (churn?.type === "ILLEGAL_GENERATION") return false;
-		throw churn ?? cause;
+		if (isKafkaProtocolError({ cause, types: SUPERSEDED_GENERATION_TYPES }))
+			return false;
+		throw cause;
 	}
 }
 

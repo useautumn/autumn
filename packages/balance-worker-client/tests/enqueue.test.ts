@@ -3,10 +3,6 @@ import type { EvictCommand, TrackCommand } from "@autumn/balance-engine";
 import type { CommandAppend } from "@autumn/kafka";
 import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
 import {
-	KafkaJSConnectionError,
-	KafkaJSNumberOfRetriesExceeded,
-} from "kafkajs";
-import {
 	BalanceWorkerClientError,
 	createBalanceWorkerClient,
 } from "../src/balanceWorkerClient.js";
@@ -187,10 +183,10 @@ test("a caller's own signal aborts the wait with an abort, not a deadline", asyn
 });
 
 test("a driver failure is a command-log failure with an unknown outcome, keeping the driver's error as its cause", async () => {
-	const driverError = new KafkaJSNumberOfRetriesExceeded(
-		new KafkaJSConnectionError("Closed connection"),
-		{ retryCount: 3, retryTime: 1_000 },
-	);
+	const driverError = Object.assign(new Error("Local: Message timed out"), {
+		code: -192,
+		isRetriable: true,
+	});
 	const client = createBalanceWorkerClient({
 		ctx: {
 			owners: { findOwner: () => undefined, refresh: async () => undefined },

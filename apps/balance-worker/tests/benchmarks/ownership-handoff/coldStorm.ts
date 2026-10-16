@@ -34,7 +34,7 @@ import {
 } from "@autumn/kafka";
 import { schemas } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { Kafka, logLevel } from "kafkajs";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 import {
 	openFixturePostgres,
 	type SeededCustomer,
@@ -86,15 +86,10 @@ const topics = {
 	commands: `${deployment}-commands`,
 	catalog: `${deployment}-catalog-invalidations`,
 };
-const kafka = new Kafka({
-	clientId: deployment,
-	brokers,
-	logLevel: logLevel.NOTHING,
-});
+const kafka = createTestKafka({ clientId: deployment, brokers });
 const admin = kafka.admin();
 await admin.connect();
 await admin.createTopics({
-	waitForLeaders: true,
 	topics: [
 		{
 			topic: topics.metering,
@@ -200,12 +195,9 @@ console.error(
 	`seeded ${COLD_COUNT} cold customers in ${Date.now() - seedStart}ms`,
 );
 
-const watcher = kafka.consumer({
-	groupId: `${deployment}-watch`,
-	sessionTimeout: 60_000,
-});
+const watcher = kafka.consumer({ groupId: `${deployment}-watch` });
 await watcher.connect();
-await watcher.subscribe({ topic: topics.ownership, fromBeginning: true });
+await watcher.subscribe({ topics: [topics.ownership], fromBeginning: true });
 await watcher.run({
 	eachMessage: async ({ partition, message }) => {
 		const record = ownershipTopic.parse({

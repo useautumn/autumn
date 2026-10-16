@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 /**
  * One balance worker in its own process, wired exactly like createBalanceWorker
  * but with the partition runtime and the group consumer instrumented so every
@@ -27,31 +26,9 @@ import {
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import { databaseTimings } from "../../../src/logging/databaseTimings.js";
-import { createPartitionLoad } from "../../../src/processor/writer/partitionLoad/createPartitionLoad.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
 import { installPgLatency } from "./pgLatency.js";
-
-// BENCH_FETCH_REJOIN=1 restores unpatched kafkajs: a fetch that finds stale leadership also rejoins the group.
-if (process.env.BENCH_FETCH_REJOIN === "1") {
-	const require = createRequire(import.meta.resolve("kafkajs"));
-	const ConsumerGroup = require("./src/consumer/consumerGroup.js");
-	const recoverFromFetch = ConsumerGroup.prototype.recoverFromFetch;
-	ConsumerGroup.prototype.recoverFromFetch = async function (error: {
-		type?: string;
-	}) {
-		await recoverFromFetch.call(this, error);
-		if (STALE_LEADERSHIP_ERRORS.includes(error.type ?? ""))
-			await this.joinAndSync();
-	};
-}
-const STALE_LEADERSHIP_ERRORS = [
-	"LEADER_NOT_AVAILABLE",
-	"NOT_LEADER_FOR_PARTITION",
-	"FENCED_LEADER_EPOCH",
-	"UNKNOWN_LEADER_EPOCH",
-	"UNKNOWN_TOPIC_OR_PARTITION",
-];
 
 const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
 	| (BalanceWorkerEnv & {
@@ -59,7 +36,6 @@ const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
 			BENCH_BACKEND: StateBackend;
 			BENCH_SERVICE_ARN?: string;
 			BENCH_EDGE_CONFIG_DIR?: string;
-			BENCH_LOAD_AWARE?: string;
 	  })
 	| null;
 if (!env) throw new Error("BENCH_WORKER_ENV is required");
@@ -73,7 +49,12 @@ function emit(event: string, fields: Record<string, unknown> = {}): void {
 function ignoreLog(): void {}
 const logger = {
 	debug: ignoreLog,
-	info: ignoreLog,
+	/** Only structured lines (the rejoin's `balance_worker.*` events); the rest is noise here. */
+	info: (...args: unknown[]) => {
+		const [first] = args;
+		if (typeof first === "object" && first !== null && "event" in first)
+			emit("log.info", { args: describe(args) });
+	},
 	warn: (...args: unknown[]) => emit("log.warn", { args: describe(args) }),
 	error: (...args: unknown[]) => emit("log.error", { args: describe(args) }),
 };
@@ -115,7 +96,6 @@ const groupId = workerConsumerGroupIdOf({ env, fleetId });
 const runtimeConfig = balanceWorkerEnvToRuntimeConfig({
 	env,
 	endpoint: address.endpoint,
-	groupId,
 });
 const resources = await openWorkerResources({
 	ctx: {
@@ -140,14 +120,8 @@ const ownershipHandoff = createOwnershipHandoffLink({
 		producerLimits: runtimeConfig.producerLimits,
 	},
 });
-// Prod deals partitions by reported load; BENCH_LOAD_AWARE=1 runs the same assigner.
-const partitionLoad =
-	env.BENCH_LOAD_AWARE === "1"
-		? createPartitionLoad({ now: Date.now })
-		: undefined;
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
-		partitionLoad,
 		logger,
 		kafka: resources.kafka,
 		ownershipOffsets: resources.admin,
@@ -242,7 +216,6 @@ const consumer = resources.kafka.consumer(
 	createWorkerConsumerConfig({
 		groupId,
 		timings: runtimeConfig.timings,
-		partitionLoad,
 	}),
 );
 consumer.on(consumer.events.REBALANCING, () => emit("consumer.rebalancing"));
@@ -250,11 +223,15 @@ consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	emit("consumer.group_join", {
 		partitions:
 			event.payload.memberAssignment[env.BALANCE_WORKER_METERING_TOPIC] ?? [],
-		generation: event.payload.groupProtocol,
+		assignment: event.payload.memberAssignment,
 	}),
 );
 consumer.on(consumer.events.CRASH, (event) =>
-	emit("consumer.crash", { error: describe(event.payload.error) }),
+	emit("consumer.crash", {
+		error: describe(event.payload.error),
+		restart: event.payload.restart,
+		groupId: event.payload.groupId,
+	}),
 );
 
 const slotGate =
