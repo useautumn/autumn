@@ -10,6 +10,8 @@ import { CancelFooter } from "@/components/forms/cancel-subscription/components/
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -29,7 +31,7 @@ import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheet
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-function SheetContent() {
+function CancelContent() {
 	const { formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
@@ -87,8 +89,10 @@ function SheetContent() {
 
 				{!isPending && (
 					<>
+						<PermissionDenial section="plan" />
 						<CancelModeSection />
 						<RefundBehaviorSection />
+						<PermissionDenial section="options" />
 						<CancelAdvancedSection />
 						<CancelPreviewSection />
 					</>
@@ -96,6 +100,15 @@ function SheetContent() {
 				<CancelFooter />
 			</SheetBody>
 		</LayoutGroup>
+	);
+}
+
+function SheetContent() {
+	const { previewQuery } = useUpdateSubscriptionFormContext();
+	return (
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<CancelContent />
+		</PermissionDenialProvider>
 	);
 }
 
