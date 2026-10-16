@@ -459,7 +459,7 @@ const main = async () => {
 	process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 	const { ctx, org, benchProducts } = await getBenchContext({
 		startBalanceWorker: !options.cleanup,
-		addEveryUserAsMember: !options.sharedDb,
+		sharedDb: options.sharedDb,
 	});
 
 	const cleanupStartedAt = Date.now();

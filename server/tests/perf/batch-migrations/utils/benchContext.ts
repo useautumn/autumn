@@ -256,10 +256,10 @@ const ensureBenchProducts = async ({
  * its features, and the three bench plans covering every anchor-ladder rung. */
 export const getBenchContext = async ({
 	startBalanceWorker = false,
-	addEveryUserAsMember = true,
+	sharedDb = false,
 }: {
 	startBalanceWorker?: boolean;
-	addEveryUserAsMember?: boolean;
+	sharedDb?: boolean;
 } = {}): Promise<BenchContext> => {
 	assertBenchDatabaseSafe();
 	const { db } = initDrizzle();
@@ -271,11 +271,11 @@ export const getBenchContext = async ({
 			id: generateId("org"),
 			slug: BENCH_ORG_SLUG,
 			name: "Batch Migrations Bench",
-			createdBy: "batch-bench-seed",
+			createdBy: sharedDb ? undefined : "batch-bench-seed",
 		});
 	}
 
-	if (addEveryUserAsMember) await ensureAllUsersAreMembers({ db, org });
+	if (!sharedDb) await ensureAllUsersAreMembers({ db, org });
 	const features = await ensureFeatures({ db, org });
 	const benchProducts = await ensureBenchProducts({ db, org, features });
 	if (startBalanceWorker) await startBalanceWorkerClient();
