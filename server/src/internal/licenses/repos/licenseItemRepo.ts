@@ -9,7 +9,7 @@ import {
 	planLicenses,
 	prices,
 } from "@autumn/shared";
-import { and, eq, inArray, notExists } from "drizzle-orm";
+import { and, eq, inArray, notExists, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
@@ -97,6 +97,7 @@ const sweepUnreferencedCustomRows = async ({
 			);
 	}
 	if (entitlementIds.length > 0) {
+		// entitlements.id is COLLATE "C"; compare in the default collation so the plain entitlement_id indexes can probe.
 		await db
 			.delete(entitlements)
 			.where(
@@ -107,13 +108,17 @@ const sweepUnreferencedCustomRows = async ({
 						db
 							.select({ id: licenseEntitlements.id })
 							.from(licenseEntitlements)
-							.where(eq(licenseEntitlements.entitlement_id, entitlements.id)),
+							.where(
+								sql`${licenseEntitlements.entitlement_id} = ${entitlements.id} COLLATE "default"`,
+							),
 					),
 					notExists(
 						db
 							.select({ id: customerEntitlements.id })
 							.from(customerEntitlements)
-							.where(eq(customerEntitlements.entitlement_id, entitlements.id)),
+							.where(
+								sql`${customerEntitlements.entitlement_id} = ${entitlements.id} COLLATE "default"`,
+							),
 					),
 				),
 			);
