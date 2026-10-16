@@ -30,6 +30,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntilAsserted } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { listBalances } from "../utils/listHistoryClient.js";
@@ -281,17 +282,25 @@ test.concurrent(
 			skip_cache: "true",
 		});
 
-		const live = await listBalances({
-			autumn: autumnV2_4,
-			params: { customer_id: customerId, feature_id: TestFeature.Messages },
+		// balances.list reads Postgres, which trails the balance worker's reset by its apply linger.
+		await pollUntilAsserted({
+			fetch: () =>
+				listBalances({
+					autumn: autumnV2_4,
+					params: { customer_id: customerId, feature_id: TestFeature.Messages },
+				}),
+			assert: (live) => {
+				const [poolRow, ...extraRows] = live.list;
+				expect(extraRows).toHaveLength(0);
+				expect(poolRow.included_grant).toBe(grant * 2);
+				expect(poolRow.usage).toBe(0);
+				// Pool grant 400 at 50% caps the rollover at 200; the 200 source grant would cap it at 100
+				expect(poolRow.rollovers.map((rollover) => rollover.balance)).toEqual([
+					200,
+				]);
+			},
+			timeoutMs: 5000,
+			intervalMs: 250,
 		});
-		const [poolRow, ...extraRows] = live.list;
-		expect(extraRows).toHaveLength(0);
-		expect(poolRow.included_grant).toBe(grant * 2);
-		expect(poolRow.usage).toBe(0);
-		// Pool grant 400 at 50% caps the rollover at 200; the 200 source grant would cap it at 100
-		expect(poolRow.rollovers.map((rollover) => rollover.balance)).toEqual([
-			200,
-		]);
 	},
 );

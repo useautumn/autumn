@@ -25,7 +25,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { expireCusEntForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { listBalances, walkAllPages } from "../utils/listHistoryClient.js";
@@ -187,14 +187,24 @@ test.concurrent(
 			skip_cache: "true",
 		});
 
-		const live = await listBalances({
-			autumn: autumnV2_4,
-			params: { customer_id: customerId, feature_id: TestFeature.Messages },
+		// balances.list reads Postgres, which trails the balance worker's reset by its apply linger.
+		await pollUntilAsserted({
+			fetch: () =>
+				listBalances({
+					autumn: autumnV2_4,
+					params: { customer_id: customerId, feature_id: TestFeature.Messages },
+				}),
+			assert: (live) => {
+				expect(live.list).toHaveLength(1);
+				const [row] = live.list;
+				expect(row.plan_id).toBeNull();
+				expect(row.included_grant).toBe(400);
+				expect(row.rollovers.map((rollover) => rollover.balance)).toEqual([
+					150,
+				]);
+			},
+			timeoutMs: 5000,
+			intervalMs: 250,
 		});
-		expect(live.list).toHaveLength(1);
-		const [row] = live.list;
-		expect(row.plan_id).toBeNull();
-		expect(row.included_grant).toBe(400);
-		expect(row.rollovers.map((rollover) => rollover.balance)).toEqual([150]);
 	},
 );
