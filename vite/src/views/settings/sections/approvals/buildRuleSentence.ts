@@ -97,18 +97,24 @@ const PLAN_QUANTIFIERS: Record<string, string> = {
 	$every: "current plan is",
 };
 
-/** `{ plan_id, version? }` or `{ plan_id: { $in } }` as plan names, or null for any other shape. */
+/** `{ plan_id, version? }` or `{ plan_id: { $in } }` as plan names; any broader shape is null, so it reads as Custom condition. */
 const planNames = ({ filter, ctx }: { filter: unknown; ctx: Ctx }) => {
 	if (!isFilter(filter)) return null;
 	const { plan_id: planId, version, ...rest } = filter;
 	if (Object.keys(rest).length > 0) return null;
 	if (typeof planId === "string") {
 		const name = ctx.labels.plan(planId);
-		return version === undefined ? name : `${name} v${version}`;
+		if (version === undefined) return name;
+		return typeof version === "number" ? `${name} v${version}` : null;
 	}
-	const ids = isFilter(planId) && planId.$in;
-	if (!Array.isArray(ids) || version !== undefined) return null;
-	return ids.map((id) => ctx.labels.plan(String(id))).join(", ");
+	const isInOnly =
+		isFilter(planId) &&
+		Object.keys(planId).join() === "$in" &&
+		Array.isArray(planId.$in);
+	if (!isInOnly || version !== undefined) return null;
+	return (planId.$in as unknown[])
+		.map((id) => ctx.labels.plan(String(id)))
+		.join(", ");
 };
 
 const planConditions = ({

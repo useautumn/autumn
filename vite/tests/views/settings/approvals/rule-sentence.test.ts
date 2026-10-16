@@ -399,6 +399,24 @@ describe("rule sentence: invoice, reward, customer and catalog fields", () => {
 			{ customer: { plan: { $none: {} } } },
 			"Customer has no plans",
 		],
+		[
+			"customers.delete",
+			{
+				customer: { plan: { $some: { plan_id: "pro", version: { $gte: 2 } } } },
+			},
+			"Custom condition",
+		],
+		[
+			"customers.delete",
+			{
+				customer: {
+					plan: {
+						$some: { plan_id: { $in: ["pro", "team"], $nin: ["team"] } },
+					},
+				},
+			},
+			"Custom condition",
+		],
 		["rewards.apply", { reward_id: "launch20" }, "Reward is LAUNCH20"],
 		[
 			"rewards.apply",
