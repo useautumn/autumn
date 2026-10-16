@@ -8,6 +8,7 @@ import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.
 import type { SlotProcessorContext } from "../../../src/processor/types/slotProcessor.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
+import { createLaggingEntities } from "../../../src/state/laggingEntities/createLaggingEntities.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
@@ -43,6 +44,7 @@ export const openSlotProcessor = ({
 		subjectPulls: noFolderPulls,
 		journal,
 		openLocks: createOpenLocks(),
+		laggingEntities: createLaggingEntities(),
 	};
 	return {
 		ctx,

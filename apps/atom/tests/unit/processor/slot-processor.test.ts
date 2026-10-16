@@ -22,6 +22,7 @@ import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import type { JournalEntry } from "../../../src/state/journal/types/journal.js";
+import { createLaggingEntities } from "../../../src/state/laggingEntities/createLaggingEntities.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
@@ -55,6 +56,7 @@ const createProcessor = () => {
 			subjectPulls: noFolderPulls,
 			journal,
 			openLocks: createOpenLocks(),
+			laggingEntities: createLaggingEntities(),
 		},
 	});
 	return {
@@ -424,6 +426,7 @@ describe("a push the slot could not store", () => {
 				},
 				journal,
 				openLocks: createOpenLocks(),
+				laggingEntities: createLaggingEntities(),
 			},
 		});
 		const request = checkBalance({ requiredBalance: 5 });
@@ -544,9 +547,10 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		subjectStateToFullSubject({
 			state: replay.replayOwed({
 				owed: journal.owed({ customerId: "cus_1" }),
-				state,
+				parts: { customer: state, entities: new Map() },
 				catalog,
-			}),
+				entityPartOf: () => null,
+			}).customer,
 			catalog,
 		});
 

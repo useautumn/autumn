@@ -629,12 +629,12 @@ describe("a check Atom does not answer itself", () => {
 		await app.request("/v1/subjects.set", setSubject({ balance: 10 }));
 		autumnAnswering({ status: 200, body: {} });
 
-		const deducting = await app.request(
+		const previewing = await app.request(
 			"/v1/balances.check",
-			checkMessages({ send_event: true, entity_id: "ent_42" }),
+			checkMessages({ with_preview: true, entity_id: "ent_42" }),
 		);
 
-		expect(deducting.headers.get("x-atom-forwarded")).toBe("send_event");
+		expect(previewing.headers.get("x-atom-forwarded")).toBe("with_preview");
 	});
 
 	test("one without a secret key isn't forwarded: the API could only refuse it", async () => {

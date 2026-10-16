@@ -6,6 +6,7 @@ import { InvalidPushError } from "../../../src/lib/contracts/invalidPushError.js
 import { getAtomLogger } from "../../../src/lib/logging/getAtomLogger.js";
 import { createSlotProcessor } from "../../../src/processor/createSlotProcessor.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
+import { createLaggingEntities } from "../../../src/state/laggingEntities/createLaggingEntities.js";
 import { openCatalogStore } from "../../../src/state/openCatalogStore.js";
 import { createOpenLocks } from "../../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../../src/state/openSqliteStore.js";
@@ -60,6 +61,7 @@ const createProcessor = ({
 			},
 			journal,
 			openLocks: createOpenLocks(),
+			laggingEntities: createLaggingEntities(),
 		},
 	});
 	const checkCustomer = () =>

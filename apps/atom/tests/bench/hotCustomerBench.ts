@@ -18,6 +18,7 @@ import { readViewFoldThreadStats } from "../../src/processor/actions/readCurrent
 import { createSlotProcessor } from "../../src/processor/createSlotProcessor.js";
 import { createHeldSubjects } from "../../src/state/heldSubjects/createHeldSubjects.js";
 import { openJournal } from "../../src/state/journal/openJournal.js";
+import { createLaggingEntities } from "../../src/state/laggingEntities/createLaggingEntities.js";
 import { openCatalogStore } from "../../src/state/openCatalogStore.js";
 import { createOpenLocks } from "../../src/state/openLocks/createOpenLocks.js";
 import { openSqliteStore } from "../../src/state/openSqliteStore.js";
@@ -98,6 +99,7 @@ const processor = createSlotProcessor({
 		subjectPulls: noFolderPulls,
 		journal,
 		openLocks: createOpenLocks(),
+		laggingEntities: createLaggingEntities(),
 	},
 });
 const client = createAutumnClient({

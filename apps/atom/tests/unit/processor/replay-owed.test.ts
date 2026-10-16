@@ -42,6 +42,23 @@ const seededRandom = (seed: number) => {
 	};
 };
 
+/** The customer's own rows with what it owes replayed: no entity is named, so none is read. */
+const replayOnCustomer = ({
+	owed,
+	state,
+	catalog,
+}: {
+	owed: readonly JournalEntry[];
+	state: SubjectState;
+	catalog: Catalog;
+}) =>
+	replayOwed({
+		owed,
+		parts: { customer: state, entities: new Map() },
+		catalog,
+		entityPartOf: () => null,
+	}).customer;
+
 const today = getUsageWindowBounds({
 	interval: EntInterval.Day,
 	now: occurredAt,
@@ -180,7 +197,7 @@ describe("replaying what the Atom owes", () => {
 			const { state, catalog } = generateSubject({ random });
 			const owed = generateOwed({ random });
 
-			const replayed = replayOwed({ owed, state, catalog });
+			const replayed = replayOnCustomer({ owed, state, catalog });
 
 			expect({ seed, state: replayed }).toEqual({
 				seed,
@@ -198,7 +215,7 @@ describe("replaying what the Atom owes", () => {
 		for (let seed = 1; seed <= 200; seed++) {
 			const random = seededRandom(seed);
 			const { state, catalog } = generateSubject({ random });
-			const replayed = replayOwed({
+			const replayed = replayOnCustomer({
 				owed: generateOwed({ random }),
 				state,
 				catalog,
@@ -238,7 +255,7 @@ describe("replaying what the Atom owes", () => {
 						customerId: "cus_1",
 						entityId: null,
 					});
-					const replayed = replayOwed({
+					const replayed = replayOnCustomer({
 						owed: journal.owed({ customerId: "cus_1" }),
 						state,
 						catalog,
@@ -262,6 +279,6 @@ describe("replaying what the Atom owes", () => {
 	test("nothing owed is the snapshot itself", () => {
 		const { state, catalog } = generateSubject({ random: seededRandom(7) });
 
-		expect(replayOwed({ owed: [], state, catalog })).toBe(state);
+		expect(replayOnCustomer({ owed: [], state, catalog })).toBe(state);
 	});
 });
