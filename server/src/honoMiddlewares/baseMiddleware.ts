@@ -190,6 +190,14 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 				process.env.NODE_ENV !== "production"
 					? parseBillingFeaturesHeader(c.req.header("x-billing-features"))
 					: undefined,
+			// Parsed where it's used, so a bad header is a 400 rather than a crash here.
+			includePermissionFacts:
+				process.env.NODE_ENV !== "production"
+					? c.req.header("x-include-permission-facts")
+					: undefined,
+			approvalsSandboxAsLive:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-approvals-sandbox-as-live") === "true",
 			revenueCat:
 				process.env.NODE_ENV !== "production"
 					? parseMockRevenueCatFixtures(
