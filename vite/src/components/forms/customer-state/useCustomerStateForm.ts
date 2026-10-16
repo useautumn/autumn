@@ -1,6 +1,7 @@
 import {
 	type CustomerStateForm,
 	CustomerStateFormSchema,
+	DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/discountUtils";
@@ -29,8 +30,7 @@ export function useCustomerStateForm({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
-		carryOverUsages: true,
-		carryOverUsageFeatureIds: [],
+		...DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
 		trialEdited: false,
 		...EMPTY_DISCOUNTS_FORM_VALUES,

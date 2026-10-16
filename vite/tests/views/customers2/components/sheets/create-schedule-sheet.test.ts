@@ -1192,3 +1192,11 @@ describe("getActiveCustomerPlans", () => {
 		);
 	});
 });
+
+describe("buildInitialValues carry-over default", () => {
+	test("the set plans sheet opens with Carry Over Usages on", () => {
+		const result = buildInitialValues({ customer: undefined, products: [] });
+		expect(result.carryOverUsages).toBe(true);
+		expect(result.carryOverUsageFeatureIds).toEqual([]);
+	});
+});

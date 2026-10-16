@@ -34,6 +34,7 @@ import {
 import {
 	type CustomerStateForm,
 	type CustomerStatePlan,
+	DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { getActiveCustomerPlans } from "@/components/forms/customer-state/getActiveCustomerPlans";
@@ -194,8 +195,7 @@ export function buildInitialValues({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
-		carryOverUsages: false,
-		carryOverUsageFeatureIds: [],
+		...DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 		...defaultScheduleTrialFormValues({
 			currentTrial: findCurrentScheduleTrial({ customerProducts, nowMs }),
 			catalogFreeTrial: findCatalogScheduleTrial({

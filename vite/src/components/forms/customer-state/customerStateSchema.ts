@@ -38,6 +38,12 @@ export const EMPTY_CUSTOMER_STATE_PLAN: CustomerStatePlan = {
 	entityId: null,
 };
 
+/** Every set plans sheet seeds carry-over from here, so they all start with usage carried. */
+export const DEFAULT_CARRY_OVER_USAGES_FORM_VALUES = {
+	carryOverUsages: true,
+	carryOverUsageFeatureIds: [] as string[],
+};
+
 /** Where a plan row sits: in a phase, or among the unscheduled plans. */
 export type PlanLocation =
 	| { location: "phase"; phaseIndex: number; planIndex: number }
