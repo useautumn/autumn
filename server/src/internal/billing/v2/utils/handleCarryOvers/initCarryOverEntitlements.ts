@@ -30,6 +30,7 @@ export const initCarryOverEntitlement = ({
 	entity_feature_id: null,
 	usage_limit: null,
 	rollover: null,
+	feature_override: cusEnt.entitlement.feature_override ?? null,
 });
 
 export const initCarryOverCustomerEntitlement = ({
