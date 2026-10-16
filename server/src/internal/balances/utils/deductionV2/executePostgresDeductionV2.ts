@@ -13,6 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import { copyLockReceiptToBackup } from "@/internal/balances/utils/lockV2/lockReceiptBackup.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
@@ -256,6 +257,11 @@ export const executePostgresDeductionV2 = async ({
 						featureId: feature.id,
 						entityId,
 						items: mutation_logs ?? [],
+						redisInstance: ctx.redisV2,
+					});
+					await copyLockReceiptToBackup({
+						ctx,
+						lockReceiptKey: preparedLock.redis_receipt_key,
 						redisInstance: ctx.redisV2,
 					});
 				}
