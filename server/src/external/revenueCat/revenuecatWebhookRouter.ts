@@ -1,4 +1,5 @@
 import { reportError } from "@autumn/errors";
+import { RecaseError } from "@autumn/shared";
 import type {
 	Webhook,
 	WebhookBillingIssue,
@@ -122,6 +123,7 @@ revenuecatWebhookRouter.post(
 
 			return c.json({ success: true }, 200);
 		} catch (error) {
+			if (error instanceof RecaseError) throw error;
 			reportError({ ctx: { logger }, error, operation: "revenuecat webhook" });
 			return c.json({ error: `Internal server error: ${error}` }, 500);
 		}
