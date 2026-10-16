@@ -1,4 +1,4 @@
-import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackErrors.js";
 import { JobName } from "./JobName.js";
 import type { SqsJob } from "./processMessage.js";
 

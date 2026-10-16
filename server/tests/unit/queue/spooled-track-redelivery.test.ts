@@ -6,7 +6,7 @@ import {
 	type Message,
 	ReceiveMessageCommand,
 } from "@aws-sdk/client-sqs";
-import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackErrors.js";
 import { JobName } from "@/queue/JobName.js";
 import { spooledTrackRedeliveryDelaySeconds } from "@/queue/spooledTrackRedelivery.js";
 

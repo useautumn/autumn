@@ -19,6 +19,7 @@ const mockState = {
 	getFeatureDeductionCalls: [] as Record<string, unknown>[],
 	runTrackV3Error: null as unknown,
 	spooledReplayCalls: [] as Record<string, unknown>[],
+	spooledReplayVerdict: "settled" as "settled" | "apply_on_redis",
 };
 
 await mockModuleWithRestore(
@@ -81,6 +82,7 @@ await mockModuleWithRestore(
 	() => ({
 		replaySpooledTrack: async (args: Record<string, unknown>) => {
 			mockState.spooledReplayCalls.push(args);
+			return mockState.spooledReplayVerdict;
 		},
 	}),
 );
@@ -221,27 +223,41 @@ describe("runQueuedTrack with a spooled worker-path track", () => {
 		mockState.spooledReplayCalls = [];
 	});
 
-	for (const routing of ["true", "false"])
-		test(`re-appends to the worker's command log with its token cost, rollout ${routing}`, async () => {
-			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = routing;
-			try {
-				const spooledAt = Date.now() - 1_000;
-				await runQueuedTrack({
-					ctx,
-					body,
-					tokens,
-					validateTrackBodyIdempotencyKey: false,
-					spooledAt,
-				});
-				expect(mockState.spooledReplayCalls).toEqual([
-					{ ctx, body, tokens, spooledAt },
-				]);
-				expect(mockState.workerTrackCalls).toHaveLength(0);
-				expect(mockState.runTrackV3Calls).toHaveLength(0);
-			} finally {
-				process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
-			}
+	test("a spool the worker settled is done: neither engine runs it again", async () => {
+		const spooledAt = Date.now() - 1_000;
+		await runQueuedTrack({
+			ctx,
+			body,
+			tokens,
+			validateTrackBodyIdempotencyKey: false,
+			spooledAt,
 		});
+		expect(mockState.spooledReplayCalls).toEqual([
+			{ ctx, body, tokens, spooledAt },
+		]);
+		expect(mockState.workerTrackCalls).toHaveLength(0);
+		expect(mockState.runTrackV3Calls).toHaveLength(0);
+	});
+
+	test("a spool the worker fenced out runs on Redis, even if routing flipped back to the worker", async () => {
+		mockState.spooledReplayVerdict = "apply_on_redis";
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		try {
+			await runQueuedTrack({
+				ctx,
+				body,
+				tokens,
+				validateTrackBodyIdempotencyKey: false,
+				spooledAt: Date.now() - 1_000,
+			});
+			expect(mockState.workerTrackCalls).toHaveLength(0);
+			expect(mockState.runTrackV3Calls).toHaveLength(1);
+			expect(mockState.runTrackV3Calls[0]).toMatchObject({ ctx, body });
+		} finally {
+			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+			mockState.spooledReplayVerdict = "settled";
+		}
+	});
 });
 
 afterAll(() => {

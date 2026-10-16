@@ -36,9 +36,11 @@ export const runQueuedTrack = async ({
 	/** Set when a worker-path track was spooled because its command-log append failed or stalled. */
 	spooledAt?: number;
 }) => {
-	// Whatever the routing says now: only the worker's log can dedupe it against an original that landed late.
-	if (spooledAt !== undefined)
-		return replaySpooledTrack({ ctx, body, tokens, spooledAt });
+	// Settled on the worker, or applied on Redis below once the worker has fenced the original out.
+	if (spooledAt !== undefined) {
+		const replay = await replaySpooledTrack({ ctx, body, tokens, spooledAt });
+		if (replay === "settled") return;
+	}
 
 	const featureDeductions = getValidatedTrackFeatureDeductions({
 		ctx,
@@ -48,10 +50,10 @@ export const runQueuedTrack = async ({
 			? toTokenFeatureDeduction({ feature: deduction.feature, tokens })
 			: deduction,
 	);
-	const onWorker = isBalanceWorkerRolloutEnabled({
-		ctx,
-		customerId: body.customer_id,
-	});
+	// A fenced spool stays on Redis even if routing flipped back: the worker now refuses its command ids.
+	const onWorker =
+		spooledAt === undefined &&
+		isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id });
 	try {
 		await withIdempotencyKey({
 			ctx,

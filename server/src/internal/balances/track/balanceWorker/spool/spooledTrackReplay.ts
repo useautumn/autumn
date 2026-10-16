@@ -6,20 +6,15 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { TokenDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { trackParamsToTrackCommands } from "../balanceWorkerTrackRequest.js";
+import { fenceOriginalOnWorker } from "./fenceOriginalOnWorker.js";
+import { SpooledTrackTooOldError } from "./spooledTrackErrors.js";
 
-type QueueClient = Pick<BalanceWorkerClient, "queue">;
+type ReplayClient = Pick<BalanceWorkerClient, "queue" | "track">;
+
+/** "settled": nothing more to do. "apply_on_redis": the original provably never deducts, so Redis applies it. */
+export type SpooledTrackReplay = "settled" | "apply_on_redis";
 
 const SPOOLED_TRACK_REPLAY_APPEND_TIMEOUT_MS = 1_000;
-
-/** Retried rather than dropped, so the queue's redrive parks it in the DLQ: replaying could deduct twice, dropping could lose it. */
-export class SpooledTrackTooOldError extends Error {
-	constructor({ ageMs }: { ageMs: number }) {
-		super(
-			`Spooled track is ${ageMs}ms old, past the ${BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS}ms the balance worker's dedup covers`,
-		);
-		this.name = "SpooledTrackTooOldError";
-	}
-}
 
 function assertSpooledTrackReplayable({
 	ctx,
@@ -45,8 +40,11 @@ function assertSpooledTrackReplayable({
 	throw new SpooledTrackTooOldError({ ageMs });
 }
 
-/** Re-appends the exact commands the stalled append carried, onto the same command-log partition. The worker
- *  decides both copies in log order under one command id, so whichever lands second is a no-op. */
+/**
+ * A customer still on the worker gets the exact commands re-appended to its command-log partition, where the worker
+ * dedupes them against a late original. A customer now on Redis is applied there only once the worker has settled
+ * that the original never deducts; one that did land is dropped, and one whose fate is unknown is retried.
+ */
 export async function replaySpooledTrack({
 	ctx,
 	body,
@@ -58,53 +56,64 @@ export async function replaySpooledTrack({
 	body: TrackParams;
 	tokens?: TokenDeduction;
 	spooledAt: number;
-	client?: QueueClient;
-}): Promise<void> {
+	client?: ReplayClient;
+}): Promise<SpooledTrackReplay> {
 	assertSpooledTrackReplayable({ ctx, body, spooledAt });
 	const commands = trackParamsToTrackCommands({
 		ctx,
 		body,
 		recordsCreditCost: tokens !== undefined,
 	});
-	// Short, so a replay failing on a still-sick log frees its poll batch fast; SQS retries it later.
-	await client.queue.track({
-		commands,
-		signal: AbortSignal.timeout(SPOOLED_TRACK_REPLAY_APPEND_TIMEOUT_MS),
-	});
-	logSpooledTrackDrained({ ctx, body, spooledAt });
+	if (isBalanceWorkerRolloutEnabled({ ctx, customerId: body.customer_id })) {
+		// Short, so a replay failing on a still-sick log frees its poll batch fast; SQS retries it later.
+		await client.queue.track({
+			commands,
+			signal: AbortSignal.timeout(SPOOLED_TRACK_REPLAY_APPEND_TIMEOUT_MS),
+		});
+		logSpooledTrackDrained({ ctx, body, spooledAt, drain: "command_log" });
+		return "settled";
+	}
+
+	let fate: Awaited<ReturnType<typeof fenceOriginalOnWorker>>;
+	try {
+		fate = await fenceOriginalOnWorker({ commands, client });
+	} catch (error) {
+		ctx.logger.warn(
+			"[track] could not settle a spooled track's original on the balance worker; retrying",
+			{
+				type: "balance_worker_track_spool_fate_unknown",
+				drain_lag_ms: Date.now() - spooledAt,
+				feature_id: body.feature_id,
+				event_name: body.event_name,
+				error: error instanceof Error ? error.message : String(error),
+			},
+		);
+		throw error;
+	}
+	if (fate === "landed") {
+		logSpooledTrackDrained({ ctx, body, spooledAt, drain: "original_landed" });
+		return "settled";
+	}
+	logSpooledTrackDrained({ ctx, body, spooledAt, drain: "redis" });
+	return "apply_on_redis";
 }
 
 function logSpooledTrackDrained({
 	ctx,
 	body,
 	spooledAt,
+	drain,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	spooledAt: number;
+	drain: "command_log" | "original_landed" | "redis";
 }): void {
-	const routedToWorker = isBalanceWorkerRolloutEnabled({
-		ctx,
-		customerId: body.customer_id,
-	});
-	const fields = {
+	ctx.logger.info("[track] spooled track drained", {
 		type: "balance_worker_track_spool_drained",
 		drain_lag_ms: Date.now() - spooledAt,
-		drain_engine: "command_log",
-		routed_to_worker: routedToWorker,
+		drain_engine: drain,
 		feature_id: body.feature_id,
 		event_name: body.event_name,
-	};
-	if (routedToWorker) {
-		ctx.logger.info(
-			"[track] spooled track re-appended to the command log",
-			fields,
-		);
-		return;
-	}
-	// The original may already be on the worker's log, so Redis would apply it a second time.
-	ctx.logger.warn(
-		"[track] spooled track re-appended to the command log after its customer moved off the worker",
-		fields,
-	);
+	});
 }

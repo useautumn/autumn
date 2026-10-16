@@ -1,5 +1,9 @@
 import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import type { TrackCommand } from "@autumn/balance-engine";
+import {
+	type BalanceWorkerClient,
+	BalanceWorkerClientError,
+} from "@autumn/balance-worker-client";
 import { BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS } from "@autumn/env/balanceWorkerConstants";
 import type { MeteringRecord } from "@autumn/kafka";
 import type { FullSubject, TrackParams } from "@autumn/shared";
@@ -14,10 +18,15 @@ import { mockModuleWithRestore } from "../../utils/mockModuleWithRestore.js";
 import { createCustomerFixture } from "./customer-fixture.js";
 import { createWorkerFixture, partition, topic } from "./worker-fixture.js";
 
-// A stalled append may still land on the worker's command log. Its SQS copy must reach the same log, whatever the
-// routing says at replay time, so the worker's command-id dedupe sees both; Redis cannot see the original.
+// A stalled append may still land on the worker's command log. A customer still on the worker gets the SQS copy on
+// that log, where the worker dedupes it; one now on Redis is applied there only once the worker has fenced the original.
 const appendedByReplay: TrackCommand[][] = [];
 const redisTracks: unknown[] = [];
+/** The worker the replay's sync fence reaches; a failure stands in for an unreachable owner. */
+const fenceTarget: {
+	client?: Pick<BalanceWorkerClient, "track">;
+	failure?: Error;
+} = {};
 
 await mockModuleWithRestore(
 	"@/external/balanceWorker/getBalanceWorkerClient.js",
@@ -27,6 +36,11 @@ await mockModuleWithRestore(
 				track: async ({ commands }: { commands: TrackCommand[] }) => {
 					appendedByReplay.push(commands);
 				},
+			},
+			track: async (params: Parameters<BalanceWorkerClient["track"]>[0]) => {
+				if (fenceTarget.failure) throw fenceTarget.failure;
+				if (!fenceTarget.client) throw new Error("no worker to fence on");
+				return fenceTarget.client.track(params);
 			},
 		}),
 	}),
@@ -53,9 +67,11 @@ const { runBalanceWorkerCheck } = await import(
 const { runQueuedTrack } = await import(
 	"@/internal/balances/track/runQueuedTrack.js"
 );
-const { SpooledTrackTooOldError } = await import(
-	"@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js"
+const { SpooledTrackFateUnknownError, SpooledTrackTooOldError } = await import(
+	"@/internal/balances/track/balanceWorker/spool/spooledTrackErrors.js"
 );
+const { shouldRetrySqsJobError } = await import("@/queue/processMessage.js");
+const { JobName } = await import("@/queue/JobName.js");
 
 const standardQueueUrl =
 	"https://sqs.us-east-2.amazonaws.com/123456789012/spooled-replay-routing-test";
@@ -104,6 +120,8 @@ afterAll(() => {
 beforeEach(() => {
 	appendedByReplay.length = 0;
 	redisTracks.length = 0;
+	fenceTarget.client = undefined;
+	fenceTarget.failure = undefined;
 });
 
 /** Spools the track through a stalled append and returns what the append carried, to land late, and the SQS copy. */
@@ -197,13 +215,44 @@ const replay = ({
 		spooledAt: message.spooledAt,
 	});
 
-describe("a spooled track replays onto the worker's command log, never Redis", () => {
-	test("the customer moved off the worker after the original landed: the replay is a no-op, not a second deduction", async () => {
+describe("a spooled track replays on the engine its customer is routed to, exactly once", () => {
+	test("customer still on the worker: re-appended to its command log, and whichever copy lands second is a no-op", async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
 		const { worker, usage, consume, trackRecords } = await startWorker({
 			ctx,
 			fullSubject,
 		});
+		fenceTarget.client = worker.client;
+		const before = await usage();
+		const body: TrackParams = {
+			customer_id: fullSubject.customerId,
+			event_name: "message_sent",
+			value: 2,
+		};
+		ctx.features = ctx.features.map((feature) => ({
+			...feature,
+			event_names: ["message_sent"],
+		}));
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
+		const { stalled, message } = await spoolThroughStalledAppend({ ctx, body });
+
+		await replay({ ctx, message });
+		expect(redisTracks).toHaveLength(0);
+		expect(appendedByReplay).toEqual([stalled]);
+		for (const command of appendedByReplay.flat())
+			expect(await consume(command)).toBe("decided");
+		for (const command of stalled)
+			expect(await consume(command)).toBe("applied");
+
+		expect(await usage()).toBe(before + 2);
+		expect(trackRecords()).toBe(1);
+		await worker.close();
+	});
+
+	test("customer moved to Redis after the original landed on the worker: the replay is dropped", async () => {
+		const { ctx, fullSubject } = createCustomerFixture();
+		const { worker, usage, consume } = await startWorker({ ctx, fullSubject });
+		fenceTarget.client = worker.client;
 		const before = await usage();
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
@@ -219,46 +268,42 @@ describe("a spooled track replays onto the worker's command log, never Redis", (
 		await replay({ ctx, message });
 
 		expect(redisTracks).toHaveLength(0);
-		expect(appendedByReplay).toEqual([stalled]);
-		for (const command of appendedByReplay.flat())
-			expect(await consume(command)).toBe("applied");
+		expect(appendedByReplay).toHaveLength(0);
 		expect(await usage()).toBe(before + 4);
-		expect(trackRecords()).toBe(1);
 		await worker.close();
 	});
 
-	test("the replay lands before the late original: the original is the no-op", async () => {
+	test("customer moved to Redis and the original never landed: Redis applies it, and a late original deducts nothing", async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
-		const { worker, usage, consume, trackRecords } = await startWorker({
-			ctx,
-			fullSubject,
-		});
+		const { worker, usage, consume } = await startWorker({ ctx, fullSubject });
+		fenceTarget.client = worker.client;
 		const before = await usage();
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
-			event_name: "message_sent",
-			value: 2,
+			feature_id: "messages",
+			value: 4,
 		};
-		ctx.features = ctx.features.map((feature) => ({
-			...feature,
-			event_names: ["message_sent"],
-		}));
 		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 		const { stalled, message } = await spoolThroughStalledAppend({ ctx, body });
 
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
 		await replay({ ctx, message });
-		expect(appendedByReplay).toEqual([stalled]);
-		for (const command of appendedByReplay.flat())
-			expect(await consume(command)).toBe("decided");
+		// A redelivery finds its own fence and applies on Redis again, where the queue key dedupes it.
+		await replay({ ctx, message });
+
+		expect(appendedByReplay).toHaveLength(0);
+		expect(redisTracks).toHaveLength(2);
+		expect(redisTracks[0]).toMatchObject({
+			ctx: { id: message.requestId },
+			body: message.body,
+		});
 		for (const command of stalled)
 			expect(await consume(command)).toBe("applied");
-
-		expect(await usage()).toBe(before + 2);
-		expect(trackRecords()).toBe(1);
+		expect(await usage()).toBe(before);
 		await worker.close();
 	});
 
-	test("a spool older than the worker's dedup window is refused on either routing", async () => {
+	test("customer moved to Redis and the worker cannot answer: retried, never applied, refused once too old", async () => {
 		const { ctx, fullSubject } = createCustomerFixture();
 		const body: TrackParams = {
 			customer_id: fullSubject.customerId,
@@ -267,16 +312,26 @@ describe("a spooled track replays onto the worker's command log, never Redis", (
 		};
 		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "true";
 		const { message } = await spoolThroughStalledAppend({ ctx, body });
+		process.env.BALANCE_WORKER_ROLLOUT_ENABLED = "false";
+		fenceTarget.failure = new BalanceWorkerClientError({
+			code: "NO_OWNER",
+			outcome: "not_submitted",
+			message: "no owner for the partition",
+		});
+
+		const unknown = await replay({ ctx, message }).catch((error) => error);
+		expect(unknown).toBeInstanceOf(SpooledTrackFateUnknownError);
+		expect(
+			shouldRetrySqsJobError({ jobName: JobName.Track, error: unknown }),
+		).toBe(true);
+
 		const stale = {
 			...message,
 			spooledAt: Date.now() - BALANCE_WORKER_SPOOLED_TRACK_MAX_AGE_MS - 1_000,
 		};
-		for (const routing of ["true", "false"]) {
-			process.env.BALANCE_WORKER_ROLLOUT_ENABLED = routing;
-			await expect(replay({ ctx, message: stale })).rejects.toBeInstanceOf(
-				SpooledTrackTooOldError,
-			);
-		}
+		await expect(replay({ ctx, message: stale })).rejects.toBeInstanceOf(
+			SpooledTrackTooOldError,
+		);
 		expect(appendedByReplay).toHaveLength(0);
 		expect(redisTracks).toHaveLength(0);
 	});
