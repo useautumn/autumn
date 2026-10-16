@@ -207,8 +207,8 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 		await built.publication.release();
 		emit("release.done", { partition });
 	}
-	async function announceReady(): Promise<void> {
-		await built.publication.announceReady();
+	async function announceReady(params?: { readyAt: number }): Promise<void> {
+		await built.publication.announceReady(params);
 		emit("ready.announced", { partition });
 	}
 	return {
