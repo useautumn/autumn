@@ -201,8 +201,8 @@ test.concurrent(
 
 			const customer = await postRaw({
 				client,
-				path: "/customers.get_or_create",
-				body: { customer_id: `approvals-who-only-new-${Date.now()}` },
+				path: "/customers",
+				body: { id: `approvals-who-only-new-${Date.now()}` },
 			});
 			expect(customer).toMatchObject({ status: 200 });
 		} finally {

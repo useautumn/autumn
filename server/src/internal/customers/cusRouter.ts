@@ -78,7 +78,6 @@ cusRouter.post("/:customer_id/balances", ...handleUpdateBalancesV2);
 export const customerRpcRouter = new Hono<HonoEnv>();
 customerRpcRouter.post(
 	"/customers.get_or_create",
-	declareApprovalAction({ resolve: () => "customers.create" }),
 	...handleGetOrCreateCustomerV2,
 );
 customerRpcRouter.post("/customers.get", ...handleGetCustomerV3);
