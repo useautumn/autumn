@@ -4,7 +4,6 @@ import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
 	AttachFormProvider,
@@ -54,6 +53,7 @@ import {
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
+import { copyToClipboard } from "@/utils/clipboardUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
@@ -485,10 +485,12 @@ export function AttachProductSheet() {
 			initialProductId={itemId ?? undefined}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
-			onCheckoutRedirect={(checkoutUrl) => {
-				navigator.clipboard.writeText(checkoutUrl);
-				toast.success("Checkout URL copied to clipboard");
-			}}
+			onCheckoutRedirect={(checkoutUrl) =>
+				copyToClipboard({
+					text: checkoutUrl,
+					successMessage: "Checkout URL copied to clipboard",
+				})
+			}
 			onApplied={onApplied}
 			onSuccess={closeSheet}
 			onScopeChange={setScopeEntityId}
