@@ -17,8 +17,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToActionFacts } from "@/internal/approvals/facts/billing/billingPlanToActionFacts";
 import type { BillingPreviewTotals } from "@/internal/approvals/facts/billing/billingPreviewTotals";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
-import { ctxToApprovalPrincipal } from "./ctxToApprovalPrincipal";
 import { listRulesForAction } from "./listRulesForAction";
+import { resolveApprovalPrincipal } from "./resolveApprovalPrincipal";
 import { resolveApprovalsEnv } from "./resolveApprovalsEnv";
 
 export type BillingApprovalResult = {
@@ -49,7 +49,7 @@ export const evaluateBillingApproval = async ({
 	preview?: BillingPreviewTotals;
 	nextCycleStripeSubscriptionId?: string;
 }): Promise<BillingApprovalResult | null> => {
-	const principal = ctxToApprovalPrincipal({ ctx });
+	const principal = await resolveApprovalPrincipal({ ctx });
 	if (!principal) return null;
 
 	const env = resolveApprovalsEnv({ ctx });
