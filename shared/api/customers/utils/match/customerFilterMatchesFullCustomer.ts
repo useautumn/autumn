@@ -6,6 +6,7 @@ import {
 } from "../../../common/filters/match/index.js";
 import type { CustomerFilter } from "../../../migrations/filters/customerFilter.js";
 import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/planFilterMatchesCustomerProduct.js";
+import { customerFilterUsesHasPaid } from "./customerFilterUsesHasPaid.js";
 
 /**
  * Predicate: does `filter` match a customer with `customer_products`?
@@ -15,16 +16,30 @@ import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/
  * Mirrors the `cp.status IN RELEVANT_STATUSES` ambient predicate baked into
  * the SQL plan scope — expired/paused cusProducts are ignored.
  *
- * Supports `customer_id`, `plan` (`$some` / `$every` / `$none` and the
- * implicit-`$some` bare form), the `item` sugar, and `$and` / `$or` branches.
+ * Supports `customer_id`, `has_paid`, `plan` (`$some` / `$every` / `$none`
+ * and the implicit-`$some` bare form), the `item` sugar, and `$and` / `$or`
+ * branches. `has_paid` needs the caller's `hasPaid`: `fullCustomer.invoices`
+ * is capped, so it can't answer "ever paid".
  */
 export const customerFilterMatchesFullCustomer = ({
 	filter,
 	fullCustomer,
+	hasPaid,
 }: {
 	filter: CustomerFilter;
 	fullCustomer: Pick<FullCustomer, "id" | "customer_products">;
+	hasPaid?: boolean;
 }): boolean => {
+	if (hasPaid === undefined && customerFilterUsesHasPaid({ filter })) {
+		throw new Error(
+			"customerFilterMatchesFullCustomer: has_paid needs hasPaid",
+		);
+	}
+
+	if (filter.has_paid !== undefined && filter.has_paid !== hasPaid) {
+		return false;
+	}
+
 	if (
 		filter.customer_id !== undefined &&
 		!stringMatcherMatches({
@@ -66,7 +81,11 @@ export const customerFilterMatchesFullCustomer = ({
 	}
 
 	const branchMatches = (branch: CustomerFilter) =>
-		customerFilterMatchesFullCustomer({ filter: branch, fullCustomer });
+		customerFilterMatchesFullCustomer({
+			filter: branch,
+			fullCustomer,
+			hasPaid,
+		});
 
 	if (filter.$and !== undefined && !filter.$and.every(branchMatches)) {
 		return false;
