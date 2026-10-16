@@ -218,6 +218,14 @@ export function createRoute<
 		}
 
 		const ctx = c.get("ctx");
+		// Approval rules can let a member past missing scopes; checked first so no scope branch denies them.
+		if (
+			!checkScopes(opts.scopes, ctx.scopes ?? []).allowed &&
+			(await routeScopesGrantedByRules({ ctx }))
+		) {
+			return next();
+		}
+
 		const granted = ctx.scopes;
 
 		// Legacy fail-open: no scopes on key/session ⇒ allow with warning.
@@ -230,9 +238,6 @@ export function createRoute<
 		}
 
 		const { allowed, missing } = checkScopes(opts.scopes, granted);
-		if (!allowed && (await routeScopesGrantedByRules({ ctx }))) {
-			return next();
-		}
 		if (!allowed) {
 			throw new RecaseError({
 				message: `Insufficient scopes. Missing: ${missing.join(", ")}`,
