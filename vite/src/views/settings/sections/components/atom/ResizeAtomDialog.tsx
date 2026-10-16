@@ -19,6 +19,7 @@ export const ResizeAtomDialog = ({
 	onOpenChange,
 	current,
 	target,
+	volumeSizeGib,
 	onConfirm,
 }: {
 	open: boolean;
@@ -26,6 +27,7 @@ export const ResizeAtomDialog = ({
 	/** Null when Atom runs on a machine Autumn does not offer. */
 	current: ByocCacheMachine | null;
 	target: ByocCacheMachine;
+	volumeSizeGib: number;
 	onConfirm: () => Promise<void>;
 }) => {
 	const form = useAppForm({
@@ -58,11 +60,20 @@ export const ResizeAtomDialog = ({
 					<div className="flex items-center gap-2">
 						{current && (
 							<>
-								<AtomMachineCard caption="Current" machine={current} />
+								<AtomMachineCard
+									caption="Current"
+									machine={current}
+									volumeSizeGib={volumeSizeGib}
+								/>
 								<ArrowRightIcon className="size-3.5 shrink-0 text-subtle" />
 							</>
 						)}
-						<AtomMachineCard caption="New" machine={target} isTarget />
+						<AtomMachineCard
+							caption="New"
+							machine={target}
+							volumeSizeGib={volumeSizeGib}
+							isTarget
+						/>
 					</div>
 
 					<p className="text-sm text-tertiary-foreground">{ATOM_RESIZE_NOTE}</p>

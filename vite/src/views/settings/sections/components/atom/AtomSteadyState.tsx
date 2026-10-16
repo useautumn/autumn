@@ -1,6 +1,5 @@
 import type { ApiByocCache } from "@autumn/shared";
 import { AtomDetails, AtomDetailsSkeleton } from "./AtomDetails";
-import { cacheToMachine } from "./atomMachineDisplay";
 import { AtomMonitoring } from "./monitoring/AtomMonitoring";
 
 /** A connected Atom: where it runs and how to reach it, then how it is doing. */
@@ -13,7 +12,7 @@ export const AtomSteadyState = ({
 }) => (
 	<div className="flex flex-col gap-10">
 		<AtomDetails cache={cache} onDelete={onDelete} />
-		<AtomMonitoring machine={cacheToMachine(cache)} />
+		<AtomMonitoring cache={cache} />
 	</div>
 );
 
@@ -21,6 +20,6 @@ export const AtomSteadyState = ({
 export const AtomSteadyStateSkeleton = () => (
 	<div className="flex flex-col gap-10" aria-busy="true">
 		<AtomDetailsSkeleton />
-		<AtomMonitoring machine={null} isPending />
+		<AtomMonitoring cache={null} isPending />
 	</div>
 );

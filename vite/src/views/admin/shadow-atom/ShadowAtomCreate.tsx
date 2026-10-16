@@ -2,6 +2,7 @@ import {
 	BYOC_CACHE_MACHINES,
 	type ByocCacheNetwork,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
 import { Button } from "@autumn/ui";
@@ -79,6 +80,7 @@ export const ShadowAtomCreate = ({ actions }: { actions: AtomActions }) => {
 										instanceType: field.state.value,
 									}) ?? BYOC_CACHE_MACHINES[0]
 								}
+								volumeSizeGib={DEFAULT_BYOC_CACHE_VOLUME_GIB}
 								onSelect={(machine) => field.handleChange(machine.instanceType)}
 								disabled={actions.create.isPending}
 							/>

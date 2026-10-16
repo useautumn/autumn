@@ -85,7 +85,7 @@ const startSetup = () =>
 		region: "us-east-1",
 		environmentVariables: [],
 		pools: { stateful: { machine: "c8g.2xlarge", machines: 1 } },
-		containers: { atom: { cpu: 7, memory: "12Gi" } },
+		containers: { atom: { cpu: 7, memory: "12Gi", volumeSizeGib: 20 } },
 		network: null,
 	});
 

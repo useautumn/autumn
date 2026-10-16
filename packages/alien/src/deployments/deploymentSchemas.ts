@@ -8,6 +8,7 @@ export const AlienDeploymentSchema = z.object({
 	error: z.unknown().optional(),
 	stackState: z.unknown().optional(),
 	stackSettings: z.unknown().optional(),
+	updateState: z.unknown().optional(),
 });
 
 export const AlienDeploymentListSchema = z.object({

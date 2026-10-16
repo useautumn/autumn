@@ -1,0 +1,68 @@
+import type { ByocCacheMachine } from "@autumn/shared";
+
+type AtomMachineCapacity = {
+	/** Checks per second across both replicas, measured on our benchmarks. */
+	checksPerSecond: number;
+	/** Active customers each replica holds. */
+	activeCustomers: number;
+	/** Extrapolated past what the benchmarks reached, not measured. */
+	isCustomerEstimate: boolean;
+};
+
+/** What each size handles; the create flow's capacity columns read only this. */
+export const ATOM_MACHINE_CAPACITY: Record<
+	ByocCacheMachine["instanceType"],
+	AtomMachineCapacity
+> = {
+	"t4g.micro": {
+		checksPerSecond: 130,
+		activeCustomers: 250,
+		isCustomerEstimate: false,
+	},
+	"t4g.small": {
+		checksPerSecond: 200,
+		activeCustomers: 1_500,
+		isCustomerEstimate: false,
+	},
+	"c8g.large": {
+		checksPerSecond: 800,
+		activeCustomers: 5_000,
+		isCustomerEstimate: false,
+	},
+	"c8g.xlarge": {
+		checksPerSecond: 8_000,
+		activeCustomers: 25_000,
+		isCustomerEstimate: false,
+	},
+	"c8g.2xlarge": {
+		checksPerSecond: 14_000,
+		activeCustomers: 50_000,
+		isCustomerEstimate: true,
+	},
+	"c8g.4xlarge": {
+		checksPerSecond: 16_000,
+		activeCustomers: 100_000,
+		isCustomerEstimate: true,
+	},
+};
+
+export const ATOM_ACTIVE_CUSTOMERS_NOTE =
+	"Customers checking or tracking at the same time. Your total customers isn't capped.";
+
+export const ATOM_CAPACITY_FOOTNOTE =
+	"Measured on our benchmarks; ~ estimated. Capacity varies with workload.";
+
+/** 8000 → `8k`, 1500 → `1.5k`, 250 → `250`. */
+const compactCount = (count: number) =>
+	count < 1_000 ? String(count) : `${Number((count / 1_000).toFixed(1))}k`;
+
+/** e.g. `~8k`. */
+export const atomChecksPerSecondLabel = (machine: ByocCacheMachine) =>
+	`~${compactCount(ATOM_MACHINE_CAPACITY[machine.instanceType].checksPerSecond)}`;
+
+/** e.g. `25k`, or `~50k` when extrapolated. */
+export const atomActiveCustomersLabel = (machine: ByocCacheMachine) => {
+	const { activeCustomers, isCustomerEstimate } =
+		ATOM_MACHINE_CAPACITY[machine.instanceType];
+	return `${isCustomerEstimate ? "~" : ""}${compactCount(activeCustomers)}`;
+};

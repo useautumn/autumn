@@ -8,6 +8,7 @@ import {
 	type CreateByocCacheResponse,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 } from "@autumn/shared";
 import { featureAccess } from "@/external/autumn/featureAccess.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
@@ -41,6 +42,7 @@ import { withAtomLock } from "./withAtomLock.js";
 /** What a setup asks the org's cloud for. */
 type CacheSetupSettings = {
 	machine: ByocCacheMachine;
+	volumeSizeGib: number;
 	region: string;
 	network: ByocCacheNetwork | null;
 	stackName: string;
@@ -49,7 +51,7 @@ type CacheSetupSettings = {
 /** A named setting wins; a fresh link for a waiting setup keeps what it asked for; otherwise the default. */
 const setupSettings = ({
 	ctx: { org, env },
-	params: { cpu, memory, region, network, stack_name },
+	params: { cpu, memory, volume_size_gib, region, network, stack_name },
 	existing,
 	atomId,
 }: {
@@ -66,6 +68,10 @@ const setupSettings = ({
 			: null;
 	return {
 		machine: namedMachine ?? askedMachine ?? DEFAULT_BYOC_CACHE_MACHINE,
+		volumeSizeGib:
+			volume_size_gib ??
+			existing?.volume_size_gib ??
+			DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		region: region ?? existing?.region ?? DEFAULT_BYOC_CACHE_AWS_REGION,
 		network: network ?? existing?.network ?? null,
 		stackName: stack_name
@@ -86,7 +92,7 @@ const claimCacheDeployment = async ({
 	name,
 	deploymentGroupId,
 	token,
-	settings: { machine, region, network, stackName },
+	settings: { machine, volumeSizeGib, region, network, stackName },
 }: {
 	ctx: AutumnContext;
 	atomId: string;
@@ -110,6 +116,7 @@ const claimCacheDeployment = async ({
 		encrypted_token: encryptData(token),
 		token_hash: atomTokenToHash({ token }),
 		region,
+		volume_size_gib: volumeSizeGib,
 		network,
 		stack_name: stackName,
 		stages: toCacheStages({ doneStages: [], status }),
@@ -130,7 +137,7 @@ const followSetup = async ({
 	ctx,
 	existing,
 	deploymentGroupId,
-	settings: { machine, region, network, stackName },
+	settings: { machine, volumeSizeGib, region, network, stackName },
 }: {
 	ctx: AutumnContext;
 	existing: ByocCacheDeployment;
@@ -140,10 +147,18 @@ const followSetup = async ({
 	const sameGroup = existing.deployment_group_id === deploymentGroupId;
 	const sameMachine =
 		existing.cpu === machine.cpu && existing.memory === machine.memory;
+	const sameVolume = existing.volume_size_gib === volumeSizeGib;
 	const sameRegion = existing.region === region;
 	const sameNetwork = isDeepStrictEqual(existing.network, network);
 	const sameStackName = existing.stack_name === stackName;
-	if (sameGroup && sameMachine && sameRegion && sameNetwork && sameStackName)
+	if (
+		sameGroup &&
+		sameMachine &&
+		sameVolume &&
+		sameRegion &&
+		sameNetwork &&
+		sameStackName
+	)
 		return existing;
 	const moved: ByocCacheDeployment = {
 		...existing,
@@ -153,6 +168,7 @@ const followSetup = async ({
 		endpoint_url: null,
 		cpu: machine.cpu,
 		memory: machine.memory,
+		volume_size_gib: volumeSizeGib,
 		region,
 		network,
 		stack_name: stackName,
@@ -268,6 +284,7 @@ const setUpCache = async ({
 		}),
 		auth: { mode: "deployed", tokenHash: atomTokenToHash({ token }) },
 		machine: settings.machine,
+		volumeSizeGib: settings.volumeSizeGib,
 		region: settings.region,
 		network: settings.network,
 	});
