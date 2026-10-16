@@ -7,6 +7,7 @@ import {
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
+import { rejectRuleAdmittedRequest } from "@/internal/approvals/enforce/access/rejectRuleAdmittedRequest";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
@@ -47,6 +48,8 @@ export const handleUpdateSubscription = createRoute({
 		});
 
 		if (!liveUpdate && isCollectionMethodSwitch(body)) {
+			// A switch bills nothing now, so no rule decides it.
+			rejectRuleAdmittedRequest({ ctx, action: "billing.update_subscription" });
 			return c.json(
 				await billingActions.switchCollectionMethod({ ctx, params: body }),
 				200,

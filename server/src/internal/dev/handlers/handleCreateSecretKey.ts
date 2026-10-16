@@ -9,6 +9,8 @@ import { z } from "zod/v4";
 import { auth } from "@/utils/auth";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
+import { rejectRuleAdmittedRequest } from "../../approvals/enforce/access/rejectRuleAdmittedRequest";
+import { scopesWereGrantedByRules } from "../../approvals/enforce/access/routeApprovalAction";
 import { ApiKeyPrefix, createKey } from "../apiKeys/apiKeyUtils";
 export const handleCreateSecretKey = createRoute({
 	scopes: [Scopes.ApiKeys.Write],
@@ -31,6 +33,18 @@ export const handleCreateSecretKey = createRoute({
 					statusCode: 403,
 				});
 			}
+		}
+
+		// A member let in by a rule never mints an unrestricted key: no scopes asked for means their own.
+		const keyScopes =
+			requestedScopes && requestedScopes.length > 0
+				? requestedScopes
+				: scopesWereGrantedByRules({ ctx })
+					? ctx.scopes
+					: null;
+		// An empty scope list reads as unrestricted, so a member with no scopes of their own can't mint one.
+		if (keyScopes?.length === 0) {
+			rejectRuleAdmittedRequest({ ctx, action: "api_keys.create" });
 		}
 
 		// 1. Create API key
@@ -62,8 +76,7 @@ export const handleCreateSecretKey = createRoute({
 			userId: ctx.user?.id,
 			prefix,
 			meta,
-			scopes:
-				requestedScopes && requestedScopes.length > 0 ? requestedScopes : null,
+			scopes: keyScopes,
 		});
 
 		await captureOrgEvent({

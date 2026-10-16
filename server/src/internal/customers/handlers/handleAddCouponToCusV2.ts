@@ -11,6 +11,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveCoupon } from "@/external/stripe/coupons";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkRewardApplyApproval } from "@/internal/approvals/enforce/checkRewardApplyApproval.js";
 import { rewardActions } from "@/internal/rewards/actions/index.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { CusService } from "../CusService.js";
@@ -64,6 +65,12 @@ export const handleAddCouponToCusV2 = createRoute({
 
 			return c.json({ customer, coupon });
 		}
+
+		await checkRewardApplyApproval({
+			ctx,
+			customerId: customer.internal_id,
+			rewardId: coupon?.id ?? coupon_id,
+		});
 
 		// Autumn reward ids double as Stripe coupon ids, so a single Stripe
 		// lookup covers both Autumn rewards and Stripe-only coupons.

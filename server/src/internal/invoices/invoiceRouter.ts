@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import { handleCreateInvoice } from "./handlers/handleCreateInvoice.js";
 import { handleFinalizeInvoice } from "./handlers/handleFinalizeInvoice.js";
 import { handleGetStripeInvoice } from "./handlers/handleGetStripeInvoice.js";
@@ -41,13 +42,41 @@ invoiceRouter.get("/:stripe_invoice_id/stripe", ...handleGetStripeInvoice);
 
 export const invoiceRpcRouter = new Hono<HonoEnv>();
 
-invoiceRpcRouter.post("/invoices.create", ...handleCreateInvoice);
-invoiceRpcRouter.post("/invoices.finalize", ...handleFinalizeInvoice);
+invoiceRpcRouter.post(
+	"/invoices.create",
+	declareApprovalAction({ resolve: () => "invoices.create" }),
+	...handleCreateInvoice,
+);
+invoiceRpcRouter.post(
+	"/invoices.finalize",
+	declareApprovalAction({ resolve: () => "invoices.finalize" }),
+	...handleFinalizeInvoice,
+);
 invoiceRpcRouter.post("/invoices.insert", ...handleInsertInvoices);
 invoiceRpcRouter.post("/invoices.list", ...handleListInvoices);
 invoiceRpcRouter.post("/invoices.listTemplates", ...handleListInvoiceTemplates);
-invoiceRpcRouter.post("/invoices.pay", ...handlePayInvoice);
-invoiceRpcRouter.post("/invoices.void", ...handleVoidInvoice);
-invoiceRpcRouter.post("/invoices.reissue", ...handleReissueInvoice);
-invoiceRpcRouter.post("/invoices.update", ...handleUpdateInvoice);
-invoiceRpcRouter.post("/invoices.issue_credit_note", ...handleIssueCreditNote);
+invoiceRpcRouter.post(
+	"/invoices.pay",
+	declareApprovalAction({ resolve: () => "invoices.pay" }),
+	...handlePayInvoice,
+);
+invoiceRpcRouter.post(
+	"/invoices.void",
+	declareApprovalAction({ resolve: () => "invoices.void" }),
+	...handleVoidInvoice,
+);
+invoiceRpcRouter.post(
+	"/invoices.reissue",
+	declareApprovalAction({ resolve: () => "invoices.reissue" }),
+	...handleReissueInvoice,
+);
+invoiceRpcRouter.post(
+	"/invoices.update",
+	declareApprovalAction({ resolve: () => "invoices.update" }),
+	...handleUpdateInvoice,
+);
+invoiceRpcRouter.post(
+	"/invoices.issue_credit_note",
+	declareApprovalAction({ resolve: () => "invoices.credit_note" }),
+	...handleIssueCreditNote,
+);

@@ -11,7 +11,10 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { rejectRuleAdmittedRequest } from "@/internal/approvals/enforce/access/rejectRuleAdmittedRequest.js";
+import { scopesWereGrantedByRules } from "@/internal/approvals/enforce/access/routeApprovalAction.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 
 export const handlePostCustomer = createRoute({
@@ -49,6 +52,20 @@ export const handlePostCustomer = createRoute({
 					CustomerExpand.BalancesFeature,
 				],
 			});
+		}
+
+		// A creation grant doesn't cover get-or-create's update of an existing customer.
+		if (
+			scopesWereGrantedByRules({ ctx }) &&
+			(!createCusParams.id ||
+				(await CusService.get({
+					db: ctx.db,
+					idOrInternalId: createCusParams.id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				})))
+		) {
+			rejectRuleAdmittedRequest({ ctx, action: "customers.update" });
 		}
 
 		applySubjectLookupDbOnly({ ctx });

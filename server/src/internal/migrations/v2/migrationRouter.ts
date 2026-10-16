@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import { handleCancelMigrationRun } from "./handlers/handleCancelMigrationRun.js";
 import { handleCreateMigration } from "./handlers/handleCreateMigration.js";
 import { handleDeleteMigration } from "./handlers/handleDeleteMigration.js";
@@ -21,7 +22,11 @@ import { handleRunMigration } from "./handlers/handleRunMigration.js";
  */
 export const migrationRpcRouter = new Hono<HonoEnv>();
 
-migrationRpcRouter.post("/migrations.create", ...handleCreateMigration);
+migrationRpcRouter.post(
+	"/migrations.create",
+	declareApprovalAction({ resolve: () => "migrations.create" }),
+	...handleCreateMigration,
+);
 migrationRpcRouter.post("/migrations.list", ...handleListMigrations);
 migrationRpcRouter.post(
 	"/migrations.customer_counts",
@@ -35,8 +40,16 @@ migrationRpcRouter.post(
 	"/migrations.filter.preview",
 	...handlePreviewMigrationFilter,
 );
-migrationRpcRouter.post("/migrations.run", ...handleRunMigration);
-migrationRpcRouter.post("/migrations.lazy_run", ...handleLazyRunMigration);
+migrationRpcRouter.post(
+	"/migrations.run",
+	declareApprovalAction({ resolve: () => "migrations.run" }),
+	...handleRunMigration,
+);
+migrationRpcRouter.post(
+	"/migrations.lazy_run",
+	declareApprovalAction({ resolve: () => "migrations.run" }),
+	...handleLazyRunMigration,
+);
 migrationRpcRouter.post("/migrations.cancel_run", ...handleCancelMigrationRun);
 migrationRpcRouter.post("/migrations.runs.list", ...handleListMigrationRuns);
 migrationRpcRouter.post(

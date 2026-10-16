@@ -3,6 +3,7 @@ import {
 	CreateScheduleParamsV0Schema,
 	Scopes,
 } from "@autumn/shared";
+import { billingPreviewPermissionFields } from "@/internal/approvals/preview/billingPreviewPermissionFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
@@ -29,6 +30,14 @@ export const handlePreviewCreateSchedule = createRoute({
 			billingPlan,
 		});
 
-		return c.json(preview, 200);
+		const permissionFields = await billingPreviewPermissionFields({
+			ctx,
+			billingContext,
+			billingPlan,
+			preview,
+			action: "billing.schedule",
+		});
+
+		return c.json({ ...preview, ...permissionFields }, 200);
 	},
 });

@@ -20,6 +20,7 @@ import {
 	STRIPE_MAX_KEY_LENGTH,
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkCustomerApproval } from "@/internal/approvals/enforce/checkCustomerApproval";
 import { notifyAllocationsAdjusted } from "@/internal/balances/allocate/actions/notifyAllocationsAdjusted.js";
 import { patchCachedAllocations } from "@/internal/balances/allocate/actions/patchCachedAllocations.js";
 import {
@@ -71,6 +72,12 @@ export const updateCustomer = async ({
 	if (!originalCustomer) {
 		throw new CustomerNotFoundError({ customerId });
 	}
+
+	await checkCustomerApproval({
+		ctx,
+		action: "customers.update",
+		customerId: originalCustomer.internal_id,
+	});
 
 	validateAutoTopupPurchaseLimitCounts({
 		autoTopups: billing_controls?.auto_topups ?? [],

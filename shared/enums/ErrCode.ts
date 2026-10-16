@@ -18,6 +18,8 @@ export const ErrCode = {
 	FailedToVerifySecretKey: "failed_to_verify_secret_key",
 	FailedToFetchKeyFromAutumn: "failed_to_fetch_key_from_autumn",
 	InsufficientScopes: "insufficient_scopes",
+	InvalidActingUser: "invalid_acting_user",
+	PermissionDenied: "permission_denied",
 
 	NoPublishableKey: "no_publishable_key",
 	InvalidPublishableKey: "invalid_publishable_key",
@@ -224,6 +226,12 @@ export const ErrCode = {
 	VariantCannotBeDefault: "variant_cannot_be_default",
 	HistoricalPlanVersionCannotBeDefault:
 		"historical_plan_version_cannot_be_default",
+
+	// Roles
+	RoleNotFound: "role_not_found",
+	RoleExists: "role_exists",
+	RoleBuiltIn: "role_built_in",
+	RoleInUse: "role_in_use",
 
 	// Maintenance
 	UnderMaintenance: "under_maintenance",

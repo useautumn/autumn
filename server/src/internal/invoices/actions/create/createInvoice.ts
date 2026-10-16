@@ -5,6 +5,8 @@ import type {
 } from "@autumn/shared";
 import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkRouteApproval } from "@/internal/approvals/enforce/checkRouteApproval";
+import { createInvoicePreviewToFacts } from "@/internal/approvals/facts/invoices/createInvoicePreviewToFacts";
 import { computeInvoiceLines } from "./compute/computeInvoiceLines";
 import { evaluateStripeInvoicePlan } from "./evaluate/evaluateStripeInvoicePlan";
 import { executeStripeInvoicePlan } from "./execute/executeStripeInvoicePlan";
@@ -29,27 +31,61 @@ export const createInvoice = async ({
 	const preview = params.preview === true;
 	const nowMs = Date.now();
 
-	// 1. Setup
-	const invoiceContext = await setupCreateInvoiceContext({
-		ctx,
-		params,
+	const planInvoice = async ({
 		preview,
+		previewNewCustomer,
+	}: {
+		preview: boolean;
+		previewNewCustomer?: boolean;
+	}) => {
+		// 1. Setup
+		const invoiceContext = await setupCreateInvoiceContext({
+			ctx,
+			params,
+			preview,
+			previewNewCustomer,
+		});
+
+		// 2. Compute Autumn lines
+		const lines = computeInvoiceLines({ ctx, invoiceContext, nowMs });
+
+		// 3. Evaluate the Stripe projection
+		const stripePlan = evaluateStripeInvoicePlan({
+			invoiceContext,
+			lines,
+			issueDateMs: params.issue_date ?? nowMs,
+			dueDateMs:
+				params.due_date ?? nowMs + ms.days(invoiceContext.daysUntilDue),
+		});
+		return { invoiceContext, lines, stripePlan };
+	};
+
+	if (preview) {
+		const { stripePlan } = await planInvoice({ preview: true });
+		return { invoice: null, preview: stripePlan.preview };
+	}
+
+	// 4. Approvals: judged on a write-free preview, since setup creates or updates the customer
+	await checkRouteApproval({
+		ctx,
+		action: "invoices.create",
+		buildFacts: async () => {
+			const { invoiceContext, stripePlan } = await planInvoice({
+				preview: true,
+				previewNewCustomer: true,
+			});
+			return createInvoicePreviewToFacts({
+				fullCustomer: invoiceContext.fullCustomer,
+				preview: stripePlan.preview,
+			});
+		},
 	});
 
-	// 2. Compute Autumn lines
-	const lines = computeInvoiceLines({ ctx, invoiceContext, nowMs });
-
-	// 3. Evaluate the Stripe projection
-	const stripePlan = evaluateStripeInvoicePlan({
-		invoiceContext,
-		lines,
-		issueDateMs: params.issue_date ?? nowMs,
-		dueDateMs: params.due_date ?? nowMs + ms.days(invoiceContext.daysUntilDue),
+	const { invoiceContext, lines, stripePlan } = await planInvoice({
+		preview: false,
 	});
 
-	if (preview) return { invoice: null, preview: stripePlan.preview };
-
-	// 4. Execute
+	// 5. Execute
 	const { invoice, issueDateMs, dueDateMs } = await executeStripeInvoicePlan({
 		ctx,
 		invoiceContext,

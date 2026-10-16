@@ -8,6 +8,7 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { assertFirstTimeStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { checkRewardApplyApproval } from "@/internal/approvals/enforce/checkRewardApplyApproval";
 import { CusService } from "@/internal/customers/CusService.js";
 import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -45,6 +46,8 @@ export const redeemPromoCode = async ({
 			statusCode: 404,
 		});
 	}
+
+	await checkRewardApplyApproval({ ctx, customerId, rewardId: reward.id });
 
 	if (reward.type !== RewardType.FeatureGrant) {
 		throw new RecaseError({

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { catalogEditApproval } from "@/internal/approvals/enforce/access/catalogEditApproval";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { handleCreateFeatureV1 } from "./handlers/handleCreateFeature/handleCreateFeatureV1";
 import { handleCreateFeatureV2 } from "./handlers/handleCreateFeature/handleCreateFeatureV2";
@@ -14,11 +15,32 @@ import { handleGetModelPricing } from "./internalHandlers/handleGetModelPricing"
 
 export const featureRouter = new Hono<HonoEnv>();
 featureRouter.get("", ...handleListFeaturesV1);
-featureRouter.post("", ...handleCreateFeatureV1);
+featureRouter.post(
+	"",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ body }) => [body.id],
+	}),
+	...handleCreateFeatureV1,
+);
 featureRouter.get("/ai/model_pricing", ...handleGetModelPricing);
 featureRouter.get("/:feature_id", ...handleGetFeatureV1);
-featureRouter.post("/:feature_id", ...handleUpdateFeatureV1);
-featureRouter.delete("/:feature_id", ...handleDeleteFeatureV1);
+featureRouter.post(
+	"/:feature_id",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ body, params }) => [params.feature_id, body.id],
+	}),
+	...handleUpdateFeatureV1,
+);
+featureRouter.delete(
+	"/:feature_id",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ params }) => [params.feature_id],
+	}),
+	...handleDeleteFeatureV1,
+);
 
 featureRouter.get(
 	"/:feature_id/deletion_info",
@@ -28,6 +50,27 @@ featureRouter.get(
 export const featureRpcRouter = new Hono<HonoEnv>();
 featureRpcRouter.post("/features.list", ...handleListFeaturesV1);
 featureRpcRouter.post("/features.get", ...handleGetFeatureV2);
-featureRpcRouter.post("/features.create", ...handleCreateFeatureV2);
-featureRpcRouter.post("/features.update", ...handleUpdateFeatureV2);
-featureRpcRouter.post("/features.delete", ...handleDeleteFeatureV2);
+featureRpcRouter.post(
+	"/features.create",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ body }) => [body.feature_id],
+	}),
+	...handleCreateFeatureV2,
+);
+featureRpcRouter.post(
+	"/features.update",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ body }) => [body.feature_id, body.new_feature_id],
+	}),
+	...handleUpdateFeatureV2,
+);
+featureRpcRouter.post(
+	"/features.delete",
+	catalogEditApproval({
+		action: "catalog.edit_features",
+		ids: ({ body }) => [body.feature_id],
+	}),
+	...handleDeleteFeatureV2,
+);

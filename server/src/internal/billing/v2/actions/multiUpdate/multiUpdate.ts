@@ -8,6 +8,8 @@ import {
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
+import { itemsToApprovalChecks } from "@/internal/approvals/enforce/itemsToApprovalChecks";
 import { executeMultiSubscriptionBillingPlan } from "@/internal/billing/v2/execute/executeMultiSubscriptionBillingPlan";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -88,6 +90,7 @@ export async function multiUpdate({
 			ctx,
 			customerId: params.customer_id,
 			stripeBillingPlans,
+			itemResults,
 		});
 		return {
 			billingContext: primaryBillingContext,
@@ -108,6 +111,11 @@ export async function multiUpdate({
 			statusCode: 400,
 			message: `Multi update does not support updates that require checkout (plan: ${checkoutItem.billingContext.customerProduct.product.id})`,
 		});
+	}
+
+	// Approvals: every item's change is checked before anything executes
+	for (const check of itemsToApprovalChecks({ itemResults })) {
+		await checkBillingApproval({ ctx, ...check });
 	}
 
 	// 5. Execute: one Stripe execution per subscription, one Autumn execution

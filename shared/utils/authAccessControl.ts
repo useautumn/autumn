@@ -68,3 +68,6 @@ export const roles = {
 	sales: salesRole,
 	member: memberAc,
 } as const;
+
+/** better-auth AC statements stored on every custom role: like developer and sales, no member or invitation management. */
+export const CUSTOM_ROLE_AC_PERMISSION = JSON.stringify({ ac: ["read"] });

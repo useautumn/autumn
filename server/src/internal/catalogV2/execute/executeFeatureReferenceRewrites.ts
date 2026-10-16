@@ -6,13 +6,14 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { rewriteApprovalRuleIds } from "@/internal/approvals/renames/rewriteApprovalRuleIds";
 import type {
 	FeatureRewritePlan,
 	UpdateCreditSystemSchemaPlan,
 	UpdateFeaturePlan,
 } from "@/internal/catalogV2/actions/updateCatalog/types/updateFeaturePlan";
-import type { FeatureRewriteScopeIds } from "@/internal/features/repos/featureReferenceRewriteScopes.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import type { FeatureRewriteScopeIds } from "@/internal/features/repos/featureReferenceRewriteScopes.js";
 
 const scopeIds = ({
 	ctx,
@@ -219,8 +220,12 @@ export const executeFeatureReferenceRewrites = async ({
 		scope: scopeIds({ ctx, updateFeaturePlan }),
 		rewrites: updateFeaturePlan.rewrites,
 	});
-	if (!query) return;
-	await ctx.db.execute(query);
+	if (query) await ctx.db.execute(query);
+
+	const { idChange } = updateFeaturePlan.rewrites;
+	if (idChange) {
+		await rewriteApprovalRuleIds({ ctx, key: "feature_id", ...idChange });
+	}
 };
 
 /** Flatten per-feature credit-schema bags (last config wins). */

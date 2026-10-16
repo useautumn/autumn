@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import type { HonoEnv } from "../../../honoUtils/HonoEnv.js";
 import { handleRedeemReward } from "./handlers/handleRedeemReward.js";
 import {
@@ -49,9 +50,17 @@ referralRpcRouter.post(
 	"/referral_programs.delete",
 	...handleDeleteReferralProgram,
 );
-referralRpcRouter.post("/rewards.redeem", ...handleRedeemReward);
+referralRpcRouter.post(
+	"/rewards.redeem",
+	declareApprovalAction({ resolve: () => "rewards.apply" }),
+	...handleRedeemReward,
+);
 referralRpcRouter.post("/rewards.list", ...handleListRewards);
-referralRpcRouter.post("/rewards.create", ...handleCreateReward);
+referralRpcRouter.post(
+	"/rewards.create",
+	declareApprovalAction({ resolve: () => "rewards.create" }),
+	...handleCreateReward,
+);
 referralRpcRouter.post("/rewards.get", ...handleGetReward);
 referralRpcRouter.post("/rewards.update", ...handleUpdateReward);
 referralRpcRouter.post("/rewards.delete", ...handleDeleteReward);

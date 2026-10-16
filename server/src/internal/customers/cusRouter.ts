@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import { handleGetCustomerV3 } from "@/internal/customers/handlers/handleGetCustomerV3.js";
 import { handleGetOrCreateCustomerV2 } from "@/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomerV2.js";
 import { handleUpdateCustomerV2 } from "@/internal/customers/handlers/handleUpdateCustomer/handleUpdateCustomerV2.js";
@@ -27,18 +28,38 @@ export const cusRouter = new Hono<HonoEnv>();
 
 cusRouter.get("", ...handleListCustomers);
 cusRouter.post("list", ...handleListCustomersV2);
-cusRouter.post("", ...handlePostCustomer);
+cusRouter.post(
+	"",
+	declareApprovalAction({ resolve: () => "customers.create" }),
+	...handlePostCustomer,
+);
 
 cusRouter.post("/clear_cache", ...handleClearCustomerCache);
 
 cusRouter.get("/:customer_id/products", ...handleListCustomerProducts);
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
-cusRouter.post("/:customer_id", ...handleUpdateCustomer);
-cusRouter.patch("/:customer_id", ...handleUpdateCustomer);
+cusRouter.post(
+	"/:customer_id",
+	declareApprovalAction({ resolve: () => "customers.update" }),
+	...handleUpdateCustomer,
+);
+cusRouter.patch(
+	"/:customer_id",
+	declareApprovalAction({ resolve: () => "customers.update" }),
+	...handleUpdateCustomer,
+);
 
-cusRouter.delete("/:customer_id", ...handleDeleteCustomer);
+cusRouter.delete(
+	"/:customer_id",
+	declareApprovalAction({ resolve: () => "customers.delete" }),
+	...handleDeleteCustomer,
+);
 
-cusRouter.post("/:customer_id/coupons/:coupon_id", ...handleAddCouponToCusV2);
+cusRouter.post(
+	"/:customer_id/coupons/:coupon_id",
+	declareApprovalAction({ resolve: () => "rewards.apply" }),
+	...handleAddCouponToCusV2,
+);
 cusRouter.delete("/:customer_id/coupons", ...handleRemoveCouponFromCusV2);
 cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
 cusRouter.post(
@@ -60,9 +81,17 @@ customerRpcRouter.post(
 	...handleGetOrCreateCustomerV2,
 );
 customerRpcRouter.post("/customers.get", ...handleGetCustomerV3);
-customerRpcRouter.post("/customers.update", ...handleUpdateCustomerV2);
+customerRpcRouter.post(
+	"/customers.update",
+	declareApprovalAction({ resolve: () => "customers.update" }),
+	...handleUpdateCustomerV2,
+);
 customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
-customerRpcRouter.post("/customers.delete", ...handleDeleteCustomerV2);
+customerRpcRouter.post(
+	"/customers.delete",
+	declareApprovalAction({ resolve: () => "customers.delete" }),
+	...handleDeleteCustomerV2,
+);
 customerRpcRouter.post(
 	"/customers.advance_test_clock",
 	...handleAdvanceTestClock,

@@ -12,6 +12,10 @@ export const orgConfigMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	if (orgConfigHeader && ctx.org) {
 		try {
 			const newConfigFields = JSON.parse(orgConfigHeader);
+			// Callers must not switch approval enforcement off for themselves; tests may.
+			if (process.env.NODE_ENV === "production") {
+				delete newConfigFields.approvals_enforced;
+			}
 
 			// Copy rather than mutate: ctx.org can be a cached object shared with other requests.
 			ctx.org = {

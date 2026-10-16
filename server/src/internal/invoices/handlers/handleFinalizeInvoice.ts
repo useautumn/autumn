@@ -5,6 +5,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkInvoiceApproval } from "@/internal/approvals/enforce/checkInvoiceApproval.js";
 import { invoiceActions } from "../actions/index.js";
 import { invoiceLineItemRepo } from "../lineItems/repos/index.js";
 import { invoiceListRowToApi } from "../utils/invoiceListRowToApi.js";
@@ -16,6 +17,12 @@ export const handleFinalizeInvoice = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { invoice_id } = c.req.valid("json");
+
+		await checkInvoiceApproval({
+			ctx,
+			action: "invoices.finalize",
+			invoiceId: invoice_id,
+		});
 
 		const row = await invoiceActions.finalize({ ctx, invoiceId: invoice_id });
 		const lineItems = await invoiceLineItemRepo.getByInvoiceIds({

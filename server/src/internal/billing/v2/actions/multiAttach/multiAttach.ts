@@ -7,6 +7,7 @@ import type {
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import {
 	findPendingInvoiceConflict,
@@ -112,6 +113,14 @@ export async function multiAttach({
 			billingPlan: { ...billingPlan, preview: previewBillingPlan },
 		};
 	}
+
+	// Approvals: log the decision, and block a deny when the org enforces approvals
+	await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan,
+		action: "billing.attach",
+	});
 
 	const cachedResult = await checkCheckoutSessionLock({
 		ctx,

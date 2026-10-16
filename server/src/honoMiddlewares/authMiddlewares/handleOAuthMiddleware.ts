@@ -26,6 +26,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { setApprovalsActingUser } from "@/internal/approvals/actingUser/approvalsActingUser.js";
 import { isServedOAuthAudience } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 
 const masterOrg = alias(organizations, "master_org");
@@ -107,6 +108,7 @@ const getOAuthRequestContext = async ({
 	const rows = await ctx.db
 		.select({
 			tokenUserId: oauthAccessToken.userId,
+			tokenClientId: oauthAccessToken.clientId,
 			tokenResource: oauthAccessToken.resource,
 			tokenScopes: oauthAccessToken.scopes,
 			consentEnv: oauthConsent.env,
@@ -207,6 +209,7 @@ const getOAuthRequestContext = async ({
 		org,
 		scopes: first.tokenScopes,
 		userId: first.tokenUserId,
+		clientId: first.tokenClientId,
 	};
 };
 
@@ -228,6 +231,11 @@ export const handleOAuthMiddleware = async ({
 	ctx.userId = data.userId;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = data.scopes;
+	setApprovalsActingUser({
+		ctx,
+		oauthClientId: data.clientId,
+		header: c.req.header("x-approvals-acting-user"),
+	});
 
 	await next();
 };

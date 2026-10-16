@@ -13,6 +13,7 @@ import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStrip
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkInvoiceApproval } from "@/internal/approvals/enforce/checkInvoiceApproval";
 import { InvoiceService } from "../../InvoiceService";
 import { assertInvoiceNotReissued } from "../../invoiceUtils/assertInvoiceNotReissued";
 import { invoiceLineItemRepo } from "../../lineItems/repos";
@@ -130,6 +131,17 @@ export const issueCreditNote = async ({
 			: baseParams;
 
 	const isPreview = params.preview === true;
+	if (!isPreview) {
+		await checkInvoiceApproval({
+			ctx,
+			action: "invoices.credit_note",
+			invoiceId,
+			refundAmount: stripeToAtmnAmount({
+				amount: sizing.total,
+				currency: sizing.currency,
+			}),
+		});
+	}
 	const creditNote = isPreview
 		? await stripeCli.creditNotes.preview(creditParams)
 		: await stripeCli.creditNotes.create(
