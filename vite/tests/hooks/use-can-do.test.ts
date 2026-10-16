@@ -36,7 +36,7 @@ const { AttachProductSheetTrigger } = await import(
 
 type CanDo = { can: boolean; reason: "rule" | "scope" | "exempt" | "none" };
 
-describe("canDoAllows trusts can, never the coarse scope", () => {
+describe("canDoAllows gates on can alone", () => {
 	test.each([
 		[
 			"enforced: a rule lets a member without billing:write",
@@ -44,14 +44,18 @@ describe("canDoAllows trusts can, never the coarse scope", () => {
 			true,
 		],
 		["scope allows", { can: true, reason: "scope" }, true],
+		["exempt (owner, admin, sandbox)", { can: true, reason: "exempt" }, true],
 		[
 			"enforced: a rule covers the member but doesn't allow",
 			{ can: false, reason: "rule" },
 			false,
 		],
-		["scope denies", { can: false, reason: "scope" }, false],
-		["exempt", { can: false, reason: "exempt" }, true],
-		["no rule and no scope decision", { can: false, reason: "none" }, true],
+		[
+			"no billing:write and no rule decided",
+			{ can: false, reason: "scope" },
+			false,
+		],
+		["no rule applies and no scope", { can: false, reason: "none" }, false],
 		["not answered", undefined, true],
 	] as const)("%s", (_name, response, expected) => {
 		expect(canDoAllows({ response })).toBe(expected);
@@ -112,6 +116,11 @@ describe("attach trigger", () => {
 		const html = renderTrigger({ attach: denied, setPlans: allowed });
 		expect(html).not.toContain("Attach Plan");
 		expect(html).toContain("Set Plans");
+	});
+
+	test("hides the trigger for an unruled member without the scope", () => {
+		const unruled: CanDo = { can: false, reason: "none" };
+		expect(renderTrigger({ attach: unruled, setPlans: unruled })).toBe("");
 	});
 
 	test("hides the trigger when both are denied", () => {

@@ -50,10 +50,10 @@ export type CanDoResponse = {
 	reason: "rule" | "scope" | "exempt" | "none";
 };
 
-/** Where a violation renders: next to the plans, next to the billing options, or in the footer summary. */
-export type PermissionSection = "plan" | "options" | "summary";
+/** Where a sheet renders a violation, by its field's root; unmapped fields go to "summary". */
+export type PermissionSections = Record<string, string>;
 
-const SECTION_BY_FIELD: Record<string, PermissionSection> = {
+export const BILLING_DENIAL_SECTIONS: PermissionSections = {
 	incoming: "plan",
 	outgoing: "plan",
 	discounts: "options",
@@ -82,16 +82,12 @@ export const fetchCanDo = async ({
 	(await axios.get<CanDoResponse>("/approvals/can", { params: { action } }))
 		.data;
 
-/** An unanswered check allows, so a missing or failing endpoint never hides a button. */
+/** Gates on `can` alone; `reason` is informational. An unanswered check allows. */
 export const canDoAllows = ({
 	response,
 }: {
 	response: CanDoResponse | undefined;
-}) =>
-	!response ||
-	response.can ||
-	response.reason === "exempt" ||
-	response.reason === "none";
+}) => !response || response.can;
 
 const denialFromPreview = ({ preview }: { preview: unknown }) => {
 	const parsed = z
@@ -107,6 +103,9 @@ const denialFromError = ({ error }: { error: unknown }) => {
 	const parsed = PermissionDeniedErrorSchema.safeParse(error);
 	return parsed.success ? parsed.data.response.data : null;
 };
+
+export const isPermissionDeniedError = ({ error }: { error: unknown }) =>
+	denialFromError({ error }) !== null;
 
 /**
  * The preview's deny locks submit. A 403 from submit shows the same way but
@@ -134,13 +133,14 @@ const fieldRoot = ({ field }: { field: string }) =>
 export const violationsInSection = ({
 	denial,
 	section,
+	sections = BILLING_DENIAL_SECTIONS,
 }: {
 	denial: PermissionDenial;
-	section: PermissionSection;
+	section: string;
+	sections?: PermissionSections;
 }) =>
 	denial.violations.filter(
-		({ field }) =>
-			(SECTION_BY_FIELD[fieldRoot({ field })] ?? "summary") === section,
+		({ field }) => (sections[fieldRoot({ field })] ?? "summary") === section,
 	);
 
 const formatValue = (value: string | boolean) => {
