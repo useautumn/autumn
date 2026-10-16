@@ -30,6 +30,20 @@ creates the local `chat` database. The `@chat-adapter/state-pg` package creates
 its state tables automatically on connect, so there is no separate migration
 command for the chat state database.
 
+eve's durable workflow world also lives in the chat database:
+
+| Variable | Carries |
+| --- | --- |
+| `CHAT_DATABASE_URL` | Every world query. In prod this is PlanetScale's PgBouncer (`:6432`, transaction mode). |
+| `CHAT_DATABASE_DIRECT_URL` | Optional. The world's one stream `LISTEN` connection, direct to Postgres (`:5432`). Transaction poolers drop `LISTEN`. |
+
+At boot leaf proves that a `NOTIFY` sent through `CHAT_DATABASE_URL` reaches a
+`LISTEN` on `CHAT_DATABASE_DIRECT_URL` (or on `CHAT_DATABASE_URL` when the direct
+URL is unset). If it doesn't, eve falls back to its local world and
+`leaf.eve_server_starting` logs `durable_journal: false`. The world module is
+`agent/lib/workflowWorld/workflowWorld.ts`. To reproduce prod's bouncer setup,
+see `tests/integration/pgbouncerWorld.test.ts`.
+
 3. Create a Slack app at https://api.slack.com/apps using `slack-manifest.example.json`.
 
 For production, use `slack-manifest.prod.json`. It points Slack at `https://api.useautumn.com/slack/*`, which the API proxies to the chat service.

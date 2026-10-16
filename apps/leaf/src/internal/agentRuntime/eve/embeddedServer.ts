@@ -1,8 +1,8 @@
 import { $ } from "bun";
 import { logger } from "../../../lib/logger.js";
+import { durableWorldEnv, selectDurableWorld } from "./durableWorld.js";
 import { setEmbeddedEveStatus } from "./embeddedStatus.js";
 import { logProcessMemory } from "./logProcessMemory.js";
-import { verifyNotifyDelivery } from "./verifyNotifyDelivery.js";
 
 const EVE_PORT = process.env.EVE_PORT ?? "3999";
 const CHAT_PORT = process.env.CHAT_PORT ?? process.env.PORT ?? "3099";
@@ -57,51 +57,34 @@ const waitForEveReady = async () => {
 	});
 };
 
-/** The chat database is eve's durable world only once NOTIFY delivery is
- * proven on it; otherwise eve runs on its local world and leaf logs why. */
-const durableWorldUrl = async () => {
-	const chatDatabaseUrl = process.env.CHAT_DATABASE_URL;
-	if (!chatDatabaseUrl) return undefined;
-	const delivered = await verifyNotifyDelivery({
-		connectionString: chatDatabaseUrl,
-	});
-	return delivered ? chatDatabaseUrl : undefined;
-};
-
-/** eve derives its world from CHAT_DATABASE_URL, so an unproven URL is
- * withheld from it entirely; the world package reads WORKFLOW_POSTGRES_URL. */
-const eveProcessEnv = (worldUrl: string | undefined) => {
-	const { CHAT_DATABASE_URL: _chatDatabaseUrl, ...base } = process.env;
-	return worldUrl
-		? {
-				WORKFLOW_POSTGRES_WORKER_CONCURRENCY: DURABLE_WORLD_WORKER_CONCURRENCY,
-				WORKFLOW_POSTGRES_MAX_POOL_SIZE: DURABLE_WORLD_MAX_POOL_SIZE,
-				...base,
-				CHAT_DATABASE_URL: worldUrl,
-				WORKFLOW_POSTGRES_URL: worldUrl,
-			}
-		: base;
-};
-
 /** Runs eve inside the leaf task over loopback, so prod needs no extra
  * service. Build and runtime get the same env: eve picks its world at build. */
 export const startEmbeddedEveServer = async () => {
 	setEmbeddedEveStatus("starting");
 	const leafRoot = new URL("../../../../", import.meta.url).pathname;
-	const worldUrl = await durableWorldUrl();
+	const world = await selectDurableWorld({
+		chatDatabaseUrl: process.env.CHAT_DATABASE_URL,
+		chatDatabaseDirectUrl: process.env.CHAT_DATABASE_DIRECT_URL,
+	});
 	logger.info("Starting embedded eve server", {
 		event: "leaf.eve_server_starting",
 		data: {
-			durable_journal: Boolean(worldUrl),
+			durable_journal: Boolean(world),
+			direct_listener: Boolean(world && world.listenUrl !== world.queryUrl),
 			queue_namespace: process.env.WORKFLOW_QUEUE_NAMESPACE,
 		},
 	});
-	const eveEnv = eveProcessEnv(worldUrl);
+	const eveEnv = durableWorldEnv({
+		env: process.env,
+		world,
+		workerConcurrency: DURABLE_WORLD_WORKER_CONCURRENCY,
+		maxPoolSize: DURABLE_WORLD_MAX_POOL_SIZE,
+	});
 	await $`bunx eve build`
 		.cwd(leafRoot)
 		.env({ ...eveEnv, CHAT_PORT, NITRO_PRESET: EVE_SERVER_PRESET });
 	await logBuiltServerPreset(leafRoot);
-	if (worldUrl) {
+	if (world) {
 		// `workflow-postgres-setup` is now a stub that always exits 1.
 		await $`bunx --package @workflow/world-postgres bootstrap`
 			.cwd(leafRoot)
