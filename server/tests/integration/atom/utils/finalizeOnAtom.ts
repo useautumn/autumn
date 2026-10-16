@@ -10,6 +10,7 @@ export const finalizeOnAtom = async ({
 	action = "release",
 	overrideValue,
 	apiVersion = LATEST_VERSION,
+	idempotencyKey,
 }: {
 	atom: TestAtom;
 	customerId: string;
@@ -17,6 +18,7 @@ export const finalizeOnAtom = async ({
 	action?: "release" | "confirm";
 	overrideValue?: number;
 	apiVersion?: ApiVersion;
+	idempotencyKey?: string;
 }): Promise<{ status: number; forwarded: string | null; body: unknown }> => {
 	const namesCustomer = apiVersion === ApiVersion.V2_6;
 	const response = await fetch(`${atom.endpointUrl}/v1/balances.finalize`, {
@@ -26,6 +28,7 @@ export const finalizeOnAtom = async ({
 			Authorization: `Bearer ${defaultCtx.orgSecretKey}`,
 			"x-api-version": apiVersion,
 			"x-atom-token": atom.token,
+			...(idempotencyKey && { "Idempotency-Key": idempotencyKey }),
 		},
 		body: JSON.stringify({
 			...(namesCustomer && { customer_id: customerId }),
