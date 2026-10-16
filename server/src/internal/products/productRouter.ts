@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { handleListRevenueCatMappings } from "@/external/revenueCat/handlers/handleListRevenueCatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { catalogEditApproval } from "@/internal/approvals/enforce/access/catalogEditApproval.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleGetLicenseProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
@@ -28,15 +29,50 @@ export const honoProductRouter = new Hono<HonoEnv>();
 
 // CRUD
 honoProductRouter.get("", ...handleListPlans);
-honoProductRouter.post("", ...handleCreatePlan);
+honoProductRouter.post(
+	"",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.id],
+	}),
+	...handleCreatePlan,
+);
 honoProductRouter.get("/license_products", ...handleGetLicenseProducts);
 honoProductRouter.get("/:product_id", ...handleGetPlanV1);
-honoProductRouter.post("/:product_id", ...handleUpdatePlanV1); // will be deprecated
-honoProductRouter.patch("/:product_id", ...handleUpdatePlanV1); // will be deprecated
-honoProductRouter.delete("/:product_id", ...handleDeletePlanV1);
+honoProductRouter.post(
+	"/:product_id",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body, params }) => [params.product_id, body.id],
+	}),
+	...handleUpdatePlanV1,
+); // will be deprecated
+honoProductRouter.patch(
+	"/:product_id",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body, params }) => [params.product_id, body.id],
+	}),
+	...handleUpdatePlanV1,
+); // will be deprecated
+honoProductRouter.delete(
+	"/:product_id",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ params }) => [params.product_id],
+	}),
+	...handleDeletePlanV1,
+);
 
 // Others
-honoProductRouter.post("/:product_id/copy", ...handleCopyProductV2);
+honoProductRouter.post(
+	"/:product_id/copy",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.id],
+	}),
+	...handleCopyProductV2,
+);
 
 // Info before deleting plan
 honoProductRouter.get(
@@ -52,16 +88,44 @@ honoProductRouter.get("/:product_id/deletion_info", ...handleGetPlanDeleteInfo);
 // RPC
 export const plansRpcRouter = new Hono<HonoEnv>();
 plansRpcRouter.post("/plans.list", ...handleListPlansV2);
-plansRpcRouter.post("/plans.create", ...handleCreatePlanV2);
-plansRpcRouter.post("/plans.update", ...handleUpdatePlanV2);
-plansRpcRouter.post("/plans.delete", ...handleDeletePlanV2);
+plansRpcRouter.post(
+	"/plans.create",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.plan_id],
+	}),
+	...handleCreatePlanV2,
+);
+plansRpcRouter.post(
+	"/plans.update",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.plan_id, body.new_plan_id],
+	}),
+	...handleUpdatePlanV2,
+);
+plansRpcRouter.post(
+	"/plans.delete",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.plan_id],
+	}),
+	...handleDeletePlanV2,
+);
 plansRpcRouter.post("/plans.get", ...handleGetPlanV2);
 plansRpcRouter.post(
 	"/plans.revenuecat_mappings",
 	...handleListRevenueCatMappings,
 );
 plansRpcRouter.post("/plans.has_customers", ...handlePlanHasCustomersV2);
-plansRpcRouter.post("/plans.create_variant", ...handleCreateVariantV2);
+plansRpcRouter.post(
+	"/plans.create_variant",
+	catalogEditApproval({
+		action: "catalog.edit_plans",
+		ids: ({ body }) => [body.base_plan_id, body.variant_plan_id],
+	}),
+	...handleCreateVariantV2,
+);
 plansRpcRouter.post(
 	"/plans.split_variant_stripe_product",
 	...handleSplitVariantStripeProduct,
