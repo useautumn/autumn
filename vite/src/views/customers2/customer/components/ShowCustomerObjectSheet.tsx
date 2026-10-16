@@ -11,6 +11,7 @@ import {
 } from "@/components/v2/CodeGroup";
 import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
+import { copyToClipboard } from "@/utils/clipboardUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { EntityScopeSelector } from "../../components/sheets/EntityScopeSelector";
@@ -95,7 +96,12 @@ export function ShowCustomerObjectSheet({
 							<CodeGroupList>
 								<CodeGroupTab value="response">Response</CodeGroupTab>
 								<CodeGroupCopyButton
-									onCopy={() => navigator.clipboard.writeText(formattedJson)}
+									onCopy={() =>
+										copyToClipboard({
+											text: formattedJson,
+											successMessage: "Copied to clipboard",
+										})
+									}
 								/>
 							</CodeGroupList>
 							<VirtualizedJson

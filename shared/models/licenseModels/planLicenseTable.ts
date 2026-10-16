@@ -88,6 +88,10 @@ export const licenseEntitlements = pgTable(
 		index("idx_license_entitlements_entitlement")
 			.on(table.entitlement_id)
 			.concurrently(),
+		// entitlements.id is COLLATE "C", so joins on it can't probe the plain index.
+		index("idx_license_entitlements_entitlement_id_c")
+			.on(sql`${table.entitlement_id} COLLATE "C"`)
+			.concurrently(),
 	],
 );
 

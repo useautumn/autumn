@@ -14,6 +14,7 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { copyToClipboard } from "@/utils/clipboardUtils";
 import { ConfigRow } from "./ConfigRow";
 import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
 import { PlanActivationSection } from "./SendInvoiceStage";
@@ -162,8 +163,10 @@ export function GenerateCheckoutStage({
 		const { paymentUrl } = await onSubmit(params);
 		if (paymentUrl) {
 			setCompletedCheckoutUrl(paymentUrl);
-			navigator.clipboard.writeText(paymentUrl);
-			toast.success("Checkout URL copied to clipboard");
+			copyToClipboard({
+				text: paymentUrl,
+				successMessage: "Checkout URL copied to clipboard",
+			});
 		} else {
 			toast.error("No checkout URL was returned. Please try again.");
 		}
@@ -178,7 +181,7 @@ export function GenerateCheckoutStage({
 						? `Checkout session created for ${productName}`
 						: "Checkout session has been created"
 				}
-				message="The checkout URL has been generated and copied to your clipboard."
+				message="The checkout URL has been generated."
 				buttonLabel="Open checkout URL"
 				url={completedCheckoutUrl}
 			/>

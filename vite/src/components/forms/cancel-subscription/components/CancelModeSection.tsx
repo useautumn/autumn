@@ -8,17 +8,14 @@ export function CancelModeSection() {
 	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
-	const isDefault = customerProduct.product?.is_default ?? false;
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
-	const hasSubscription =
-		customerProduct.subscription_ids &&
-		customerProduct.subscription_ids.length > 0;
 
+	// Free and one-off plans have no billing cycle to end, so they can only be
+	// cancelled immediately. Paid recurring plans get both options, including
+	// ones with no Stripe subscription (e.g. a trial that needs no card).
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
-	const isFreeDefault = isDefault && isFreeOrOneOff;
 
-	const canChooseCancelMode =
-		!isScheduled && !isFreeDefault && !!hasSubscription;
+	const canChooseCancelMode = !isScheduled && !isFreeOrOneOff;
 
 	if (!canChooseCancelMode) return null;
 

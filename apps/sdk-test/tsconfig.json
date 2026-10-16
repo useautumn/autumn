@@ -33,6 +33,8 @@
         "./hooks/*",
         "../../packages/autumn-js/src/libraries/react/hooks/*"
       ],
+      "@autumn/ui": ["../../packages/ui/src/index.ts"],
+      "@autumn/ui/*": ["../../packages/ui/src/*"],
       "@sdk": ["../../packages/autumn-js/src/sdk/index.ts"],
       "@sdk/*": ["../../packages/autumn-js/src/sdk/*"],
       "@utils/*": ["../../packages/autumn-js/src/utils/*"],
