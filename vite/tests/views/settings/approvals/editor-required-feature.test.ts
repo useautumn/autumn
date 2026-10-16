@@ -1,7 +1,10 @@
 /** Contract: Balances pin a required Feature row above the groups, never inside one, saved at the top of `filter`. */
 
 import { describe, expect, test } from "bun:test";
-import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
+import {
+	EDITOR_FIELDS,
+	type EditorRowIssue,
+} from "@autumn/shared/api/approvals/editor/index";
 import type { ApprovalAction } from "@/views/settings/sections/approvals/approvalsStub";
 import {
 	editorValuesToParams,
@@ -94,4 +97,12 @@ describe("editor required Feature", () => {
 			included_grant: { $lte: 100 },
 		});
 	});
+
+	// S3 rejects {}, $ne and $nin at filter.feature_id, so the pinned row can't offer them.
+	test.each(["balance_create", "balance_update"] as const)(
+		"%s's Feature only offers is and is any of",
+		(shape) => {
+			expect(EDITOR_FIELDS[shape].feature).toEqual(["is", "is_any_of"]);
+		},
+	);
 });
