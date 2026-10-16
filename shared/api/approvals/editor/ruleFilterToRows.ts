@@ -1,3 +1,5 @@
+import type { ApprovalRuleEffect as RuleEffect } from "../schemas/approvalRule";
+import type { ApprovalFilterKey } from "../schemas/filters/approvalFilterShapes";
 import { isPlainObject } from "../schemas/isPlainObject";
 import {
 	EDITOR_FIELDS,
@@ -12,12 +14,7 @@ import {
 	isEmptyObject,
 	isSameFilter,
 } from "./filterParts";
-import { ruleRowsToFilter } from "./ruleRowsToFilter";
-import {
-	type ApprovalFilterKey,
-	buildApprovalFilterSchema,
-	type RuleEffect,
-} from "./s3Stub";
+import { ruleRowsToFilter, shapeSchema } from "./ruleRowsToFilter";
 
 export type RuleFilterToRowsResult =
 	| { editable: true; groups: EditorGroup[] }
@@ -77,7 +74,7 @@ export const ruleFilterToRows = ({
 	if (filter === null || filter === undefined || isEmptyObject(filter)) {
 		return { editable: true, groups: [] };
 	}
-	const schema = buildApprovalFilterSchema({ key: shape });
+	const schema = shapeSchema({ shape });
 	if (!isPlainObject(filter) || !schema.safeParse(filter).success) {
 		return { editable: false };
 	}

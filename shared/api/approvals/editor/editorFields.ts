@@ -1,4 +1,4 @@
-import type { ApprovalFilterKey } from "./s3Stub";
+import type { ApprovalFilterKey } from "../schemas/filters/approvalFilterShapes";
 
 const ID_OPERATORS = ["is", "is_not", "is_any_of", "is_none_of"] as const;
 const NUMBER_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte"] as const;
@@ -11,16 +11,20 @@ const customerFields = {
 	customer_has_paid: IS,
 } as const;
 
-const cancelFields = {
-	...customerFields,
-	cancel_action: ENUM_OPERATORS,
-} as const;
+const ENTITY_OPERATORS = [
+	"is_customer",
+	"is_entity",
+	"is_any_of",
+	"is_none_of",
+] as const;
+
+const uncancelFields = { ...customerFields, entity: ENTITY_OPERATORS } as const;
 
 /** The "When fields by area" board: filter shape → field → operators, in board order. */
 export const EDITOR_FIELDS = {
 	billing_change: {
 		...customerFields,
-		entity: ["is_customer", "is_entity", "is_any_of", "is_none_of"],
+		entity: ENTITY_OPERATORS,
 		paid: IS,
 		checkout: IS,
 		total: NUMBER_OPERATORS,
@@ -37,8 +41,8 @@ export const EDITOR_FIELDS = {
 		starts_at: IS,
 		invoice_mode: IS,
 	},
-	billing_cancel: cancelFields,
-	billing_uncancel: cancelFields,
+	billing_cancel: { ...uncancelFields, cancel_action: ENUM_OPERATORS },
+	billing_uncancel: uncancelFields,
 	invoice: {
 		...customerFields,
 		total: NUMBER_OPERATORS,

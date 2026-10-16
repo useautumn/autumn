@@ -9,9 +9,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { ApprovalRuleEffect as RuleEffect } from "@autumn/shared";
 import {
 	type EditorRow,
-	type RuleEffect,
 	ruleFilterToRows,
 	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index.js";

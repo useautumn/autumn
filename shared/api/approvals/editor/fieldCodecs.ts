@@ -1,3 +1,4 @@
+import type { ApprovalRuleEffect as RuleEffect } from "../schemas/approvalRule";
 import { isPlainObject } from "../schemas/isPlainObject";
 import type { EditorField, EditorRow } from "./editorFields";
 import {
@@ -12,7 +13,6 @@ import {
 	toMatcher,
 	toPlanFilter,
 } from "./filterParts";
-import type { RuleEffect } from "./s3Stub";
 
 /** How one field's rows are stored in a group's filter, and read back out of it. */
 type FieldCodec = {

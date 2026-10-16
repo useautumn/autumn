@@ -19,6 +19,10 @@ export function parseCustomerFilter({
 		children.push(
 			parseLeaf({ field: "customer_id", rawValue: filter.customer_id, ctx }),
 		);
+	if (filter.has_paid !== undefined)
+		children.push(
+			parseLeaf({ field: "has_paid", rawValue: filter.has_paid, ctx }),
+		);
 	if (filter.plan !== undefined)
 		children.push(parsePlanNav({ raw: filter.plan, ctx }));
 	// `item` is sugar for `plan: { item: ... }` — wraps the item nav in a

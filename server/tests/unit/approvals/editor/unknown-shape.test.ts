@@ -7,10 +7,8 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	type ApprovalFilterKey,
-	ruleFilterToRows,
-} from "@autumn/shared/api/approvals/editor/index.js";
+import type { ApprovalFilterKey } from "@autumn/shared";
+import { ruleFilterToRows } from "@autumn/shared/api/approvals/editor/index.js";
 
 const filters: { name: string; shape: ApprovalFilterKey; filter: unknown }[] = [
 	{ name: "a string", shape: "billing_change", filter: "paid" },
