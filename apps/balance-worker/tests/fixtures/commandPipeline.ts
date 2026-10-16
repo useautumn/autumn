@@ -281,8 +281,16 @@ export const createCommandPipeline = ({
 		bookmarks,
 		parked,
 		logs,
-		readState: ({ customerId }: { customerId: string }) =>
-			store.readState({ identity: identityOf({ customerId }) }),
+		readState: ({
+			customerId,
+			entityId = null,
+		}: {
+			customerId: string;
+			entityId?: string | null;
+		}) =>
+			store.readState({
+				identity: { ...identityOf({ customerId }), entityId },
+			}),
 		readBookmark: () => bookmark,
 		lockReads,
 		storedLockIds: () => [...storedLocks.keys()],
