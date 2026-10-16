@@ -21,7 +21,7 @@ import {
 } from "./atomMachineDisplay";
 
 const GRID_CLASS =
-	"grid grid-cols-[minmax(0,1fr)_64px_104px_88px_128px_72px] items-center gap-3 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
+	"grid grid-cols-[minmax(0,1fr)_64px_120px_88px_120px_72px] items-center gap-3 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
 
 /** Atom's sizes as rows on a section's surface, each with what it handles and priced with its volumes; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
@@ -63,7 +63,7 @@ export const AtomMachineTable = ({
 			>
 				<span>Size</span>
 				<span title="Across both replicas">Checks/s</span>
-				<span className="inline-flex items-center justify-end gap-1">
+				<span className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
 					Active customers
 					<InfoTooltip>{ATOM_ACTIVE_CUSTOMERS_NOTE}</InfoTooltip>
 				</span>
