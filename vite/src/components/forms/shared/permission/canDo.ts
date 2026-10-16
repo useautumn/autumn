@@ -1,7 +1,7 @@
 import type { ApprovalAction } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
-// Mirrors E3's `approvals.can` response; swap for the @autumn/shared type once E3 freezes.
+// Mirrors E3 (#5019) `ApprovalsCanResponseSchema`; swap for the @autumn/shared type once E3 is on this base.
 export type CanDoResponse = {
 	can: boolean;
 	reason: "scope" | "blocked" | "none";
