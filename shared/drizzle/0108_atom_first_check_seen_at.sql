@@ -1,1 +1,1 @@
-ALTER TABLE "atom_deployments" ADD COLUMN "first_check_seen_at" bigint;
+ALTER TABLE "atom_deployments" ADD COLUMN IF NOT EXISTS "first_check_seen_at" bigint;
