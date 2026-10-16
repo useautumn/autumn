@@ -25,6 +25,7 @@ import type { AtomActions } from "./useAtomActions";
 
 const AtomSetupSchema = withAtomNetworkRules(
 	AtomNetworkValuesSchema.extend({
+		name: z.string().trim().max(64, "Keep it under 64 characters"),
 		instanceType: z.string(),
 		region: z.enum(BYOC_CACHE_AWS_REGIONS),
 		stackName: ByocStackNameSchema,
@@ -46,6 +47,7 @@ const cacheToSetupValues = ({
 }): AtomSetupValues => {
 	const region = cache?.region ?? null;
 	return {
+		name: cache?.name ?? "",
 		instanceType:
 			(cache && cacheToMachine(cache)?.instanceType) ??
 			DEFAULT_ATOM_INSTANCE_TYPE,
@@ -62,6 +64,7 @@ const setupValuesToCreateParams = (
 		instanceType: values.instanceType,
 	});
 	return {
+		name: values.name.trim() || undefined,
 		cpu: machine?.cpu,
 		memory: machine?.memory,
 		region: values.region,
@@ -87,7 +90,10 @@ export const useAtomSetupForm = ({
 		validators: { onSubmit: AtomSetupSchema },
 		onSubmit: async ({ value }) => {
 			try {
-				await startSetup(setupValuesToCreateParams(value));
+				await startSetup({
+					...setupValuesToCreateParams(value),
+					atom_id: cache?.id,
+				});
 				onStarted();
 			} catch (error) {
 				toast.error(getBackendErr(error, "Failed to set up Atom"));

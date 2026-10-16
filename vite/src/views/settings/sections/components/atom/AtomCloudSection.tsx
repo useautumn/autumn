@@ -5,7 +5,7 @@ import {
 	type ByocCacheAwsRegion,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { Button, GroupedTabButton, SearchableSelect } from "@autumn/ui";
+import { Button, GroupedTabButton, Input, SearchableSelect } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { LabelTag } from "@/components/general/LabelTag";
 import { AtomFieldRow } from "./AtomFieldRow";
@@ -30,7 +30,7 @@ const PROVIDER_OPTIONS = [
 	},
 ];
 
-/** Step 1: the cloud, its region and Atom's size. */
+/** Step 1: the Atom's name, its cloud and region, and its size. */
 export const AtomCloudSection = ({
 	form,
 	onContinue,
@@ -60,6 +60,19 @@ export const AtomCloudSection = ({
 			</Button>
 		}
 	>
+		<AtomFieldRow label="Name" isMuted>
+			<form.Field name="name">
+				{(field) => (
+					<Input
+						aria-label="Name"
+						placeholder="e.g. US East"
+						className="w-80"
+						value={field.state.value}
+						onChange={(event) => field.handleChange(event.target.value)}
+					/>
+				)}
+			</form.Field>
+		</AtomFieldRow>
 		<AtomFieldRow label="Provider" isMuted>
 			<GroupedTabButton
 				value="aws"

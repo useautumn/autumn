@@ -1,6 +1,8 @@
 import { z } from "zod/v4";
 
-export const ListAtomChecksParamsSchema = z.object({});
+export const ListAtomChecksParamsSchema = z.object({
+	atom_id: z.string().optional(),
+});
 
 export const AtomCheckSchema = z.object({
 	at: z.number().describe("When Atom answered, in epoch milliseconds."),
@@ -25,6 +27,7 @@ export const ATOM_METRICS_RANGES = ["1h", "24h", "7d"] as const;
 export const ATOM_METRICS_STATISTICS = ["maximum", "average"] as const;
 
 export const GetAtomMetricsParamsSchema = z.object({
+	atom_id: z.string().optional(),
 	range: z.enum(ATOM_METRICS_RANGES),
 });
 

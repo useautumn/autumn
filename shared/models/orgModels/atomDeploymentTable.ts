@@ -1,12 +1,11 @@
-import { sql } from "drizzle-orm";
 import {
 	bigint,
+	index,
 	integer,
 	jsonb,
 	pgTable,
 	text,
 	unique,
-	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type { AppEnv } from "../genModels/genEnums.js";
 import type {
@@ -16,7 +15,7 @@ import type {
 } from "./byocConfig.js";
 import { organizations } from "./orgTable.js";
 
-/** One env's Atom in the org's own cloud, as alien knows it. */
+/** One of an env's Atoms in the org's own cloud, as alien knows it. */
 export const atomDeployments = pgTable(
 	"atom_deployments",
 	{
@@ -47,16 +46,15 @@ export const atomDeployments = pgTable(
 		/** Why the deploy or teardown stopped, in alien's words. */
 		error: text("error"),
 		created_at: bigint("created_at", { mode: "number" }).notNull(),
+		/** What the org calls this Atom in its dashboard; null shows its region and stack name. */
+		name: text("name"),
 	},
 	(table) => [
 		unique("atom_deployments_deployment_group_id_key").on(
 			table.deployment_group_id,
 		),
-		// Atoms being removed step aside, so a new one can start while they finish.
-		uniqueIndex("atom_deployments_active_org_id_env_key")
-			.on(table.org_id, table.env)
-			.where(sql`${table.status} NOT IN ('removing', 'teardown_required')`),
 		unique("atom_deployments_token_hash_key").on(table.token_hash),
+		index("atom_deployments_org_id_env_idx").on(table.org_id, table.env),
 	],
 );
 
