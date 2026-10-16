@@ -12,7 +12,6 @@ import { useEffect, useRef, useState } from "react";
 import { Bar, LabelList, Line, ReferenceDot, ReferenceLine } from "recharts";
 import { toast } from "sonner";
 import { useAtomUpdateQuery } from "@/hooks/queries/useAtomUpdateQuery";
-import { cn } from "@/lib/utils";
 import { IncreaseStorageDialog } from "../IncreaseStorageDialog";
 import { useAtomActions } from "../useAtomActions";
 import { AtomStorageGrowProgress } from "./AtomStorageGrowProgress";
@@ -58,13 +57,13 @@ const BAR_LABEL_HEADROOM = 1.6;
 
 const PLOT_LABEL_CLASS = "pl-10 text-xs text-tertiary-foreground";
 
-/** The fullest replica's volume, and how many customers the window evicted. */
+/** The fullest replica's volume, and how many customers the window evicted, if any. */
 const StorageSummary = ({
 	volumes,
 	evictionsTotal,
 }: {
 	volumes: AtomVolume[];
-	evictionsTotal: number | null;
+	evictionsTotal: number;
 }) => {
 	const usage = atomVolumeUsage(volumes[0]);
 	return (
@@ -78,13 +77,8 @@ const StorageSummary = ({
 					</span>
 				</span>
 			)}
-			{evictionsTotal !== null && (
-				<span
-					className={cn(
-						"text-tertiary-foreground",
-						evictionsTotal > 0 && "text-amber-500",
-					)}
-				>
+			{evictionsTotal > 0 && (
+				<span className="text-amber-500">
 					{formatEvictionsCount(evictionsTotal)}
 				</span>
 			)}
@@ -94,13 +88,15 @@ const StorageSummary = ({
 
 const STORAGE_INFO = `Disk used on the fullest replica. Above ${formatPercent(ATOM_DISK_EVICTION_SHARE)}, the Atom evicts customers, and their checks go to the API until they're re-cached.`;
 
-/** Disk used against the 80% line, and above the same time axis the evictions it set off, per bucket. */
+/** Disk used against the 80% line, and above the same time axis the evictions it set off, per bucket, if any. */
 const StoragePlots = ({
 	chartData,
 	range,
+	hasEvictions,
 }: {
 	chartData: AtomMetricsChartData;
 	range: AtomMetricsRange;
+	hasEvictions: boolean;
 }) => {
 	const bucket = EVICTION_BUCKETS[range];
 	const buckets = atomEvictionBuckets({ chartData, bucketMs: bucket.ms });
@@ -108,13 +104,13 @@ const StoragePlots = ({
 	const latestDisk = chartData.latest.disk;
 	return (
 		<div className="flex size-full flex-col gap-1.5">
-			<div className="h-40">
+			<div className={hasEvictions ? "h-40" : "size-full"}>
 				<MonitoringPlot
 					chartData={chartData}
 					series={[DISK]}
 					yTicks={DISK_TICKS}
 					formatValue={formatPercent}
-					showTimeTicks={false}
+					showTimeTicks={!hasEvictions}
 				>
 					<ReferenceLine
 						y={ATOM_DISK_EVICTION_SHARE}
@@ -147,37 +143,43 @@ const StoragePlots = ({
 					)}
 				</MonitoringPlot>
 			</div>
-			<span className={PLOT_LABEL_CLASS}>{bucket.label}</span>
-			<div className="h-[76px]">
-				<MonitoringPlot
-					chartData={chartData}
-					rows={buckets}
-					series={[EVICTED]}
-					yTicks={[0, mostEvicted * BAR_LABEL_HEADROOM]}
-					formatValue={formatEvictionCount}
-					showValueTicks={false}
-				>
-					<ReferenceLine y={0} stroke="var(--chart-grid-stroke)" />
-					<Bar
-						dataKey={EVICTED.key}
-						fill={EVICTED.color}
-						fillOpacity={0.75}
-						barSize={14}
-						radius={2}
-						isAnimationActive={false}
-					>
-						<LabelList
-							dataKey={EVICTED.key}
-							position="top"
-							fontSize={11}
-							fill={EVICTED.color}
-							formatter={(value) =>
-								formatEvictionCount(typeof value === "number" ? value : null)
-							}
-						/>
-					</Bar>
-				</MonitoringPlot>
-			</div>
+			{hasEvictions && (
+				<>
+					<span className={PLOT_LABEL_CLASS}>{bucket.label}</span>
+					<div className="h-[76px]">
+						<MonitoringPlot
+							chartData={chartData}
+							rows={buckets}
+							series={[EVICTED]}
+							yTicks={[0, mostEvicted * BAR_LABEL_HEADROOM]}
+							formatValue={formatEvictionCount}
+							showValueTicks={false}
+						>
+							<ReferenceLine y={0} stroke="var(--chart-grid-stroke)" />
+							<Bar
+								dataKey={EVICTED.key}
+								fill={EVICTED.color}
+								fillOpacity={0.75}
+								barSize={14}
+								radius={2}
+								isAnimationActive={false}
+							>
+								<LabelList
+									dataKey={EVICTED.key}
+									position="top"
+									fontSize={11}
+									fill={EVICTED.color}
+									formatter={(value) =>
+										formatEvictionCount(
+											typeof value === "number" ? value : null,
+										)
+									}
+								/>
+							</Bar>
+						</MonitoringPlot>
+					</div>
+				</>
+			)}
 		</div>
 	);
 };
@@ -238,6 +240,8 @@ export const AtomStorageChart = ({
 		targetGib: cache?.volume_size_gib,
 	});
 	const hasDisk = Boolean(chartData?.rows.some((row) => row.disk !== null));
+	const evictionsTotal = chartData ? atomEvictionsTotal(chartData) : 0;
+	const hasEvictions = evictionsTotal > 0;
 
 	return (
 		<>
@@ -268,18 +272,21 @@ export const AtomStorageChart = ({
 					growth && hasDisk && <AtomStorageGrowProgress growth={growth} />
 				}
 				summary={
-					<StorageSummary
-						volumes={volumes}
-						evictionsTotal={chartData && atomEvictionsTotal(chartData)}
-					/>
+					<StorageSummary volumes={volumes} evictionsTotal={evictionsTotal} />
 				}
 				isLoading={isLoading}
 				isEmpty={!hasDisk}
 				emptyLabel={UNAVAILABLE}
 				isEmptyCompact
-				plotClassName="h-[248px]"
+				plotClassName={hasEvictions ? "h-[248px]" : undefined}
 			>
-				{chartData && <StoragePlots chartData={chartData} range={range} />}
+				{chartData && (
+					<StoragePlots
+						chartData={chartData}
+						range={range}
+						hasEvictions={hasEvictions}
+					/>
+				)}
 			</MonitoringChartCard>
 			{cache && (
 				<IncreaseStorageDialog
