@@ -1,1 +1,0 @@
-ALTER TABLE "atom_deployments" ADD COLUMN "volume_size_gib" integer DEFAULT 20 NOT NULL;
