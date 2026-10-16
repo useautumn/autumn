@@ -12,6 +12,10 @@ import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import {
+  CreditDimensionUnion,
+  CreditDimensionUnion$inboundSchema,
+} from "./credit-dimension-union.js";
+import {
   CustomerExpand,
   CustomerExpand$outboundSchema,
 } from "./customer-expand.js";
@@ -675,63 +679,6 @@ export const GetCustomerCombine = {
  */
 export type GetCustomerCombine = OpenEnum<typeof GetCustomerCombine>;
 
-export type GetCustomerDimensions6 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const GetCustomerDimensionsToEnum3 = {
-  Inf: "inf",
-} as const;
-export type GetCustomerDimensionsToEnum3 = ClosedEnum<
-  typeof GetCustomerDimensionsToEnum3
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type GetCustomerDimensionsToUnion3 =
-  | number
-  | GetCustomerDimensionsToEnum3;
-
-export type GetCustomerDimensionsTier3 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | GetCustomerDimensionsToEnum3;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type GetCustomerDimensions5 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<GetCustomerDimensionsTier3>;
-};
-
-export type GetCustomerDimensionsUnion3 =
-  | GetCustomerDimensions5
-  | GetCustomerDimensions6;
-
 export type GetCustomerMultipliers3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -756,9 +703,7 @@ export type GetCustomerCreditSchema3 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?:
-    | { [k: string]: GetCustomerDimensions5 | GetCustomerDimensions6 }
-    | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -768,63 +713,6 @@ export type GetCustomerCreditSchema3 = {
    */
   creditCost: number;
 };
-
-export type GetCustomerDimensions4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const GetCustomerDimensionsToEnum2 = {
-  Inf: "inf",
-} as const;
-export type GetCustomerDimensionsToEnum2 = ClosedEnum<
-  typeof GetCustomerDimensionsToEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type GetCustomerDimensionsToUnion2 =
-  | number
-  | GetCustomerDimensionsToEnum2;
-
-export type GetCustomerDimensionsTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | GetCustomerDimensionsToEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type GetCustomerDimensions3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<GetCustomerDimensionsTier2>;
-};
-
-export type GetCustomerDimensionsUnion2 =
-  | GetCustomerDimensions3
-  | GetCustomerDimensions4;
 
 export type GetCustomerMultipliers2 = {
   /**
@@ -853,9 +741,7 @@ export type GetCustomerCreditSchema2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?:
-    | { [k: string]: GetCustomerDimensions3 | GetCustomerDimensions4 }
-    | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -865,63 +751,6 @@ export type GetCustomerCreditSchema2 = {
    */
   creditCost: number;
 };
-
-export type GetCustomerDimensions2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const GetCustomerDimensionsToEnum1 = {
-  Inf: "inf",
-} as const;
-export type GetCustomerDimensionsToEnum1 = ClosedEnum<
-  typeof GetCustomerDimensionsToEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type GetCustomerDimensionsToUnion1 =
-  | number
-  | GetCustomerDimensionsToEnum1;
-
-export type GetCustomerDimensionsTier1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | GetCustomerDimensionsToEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type GetCustomerDimensions1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<GetCustomerDimensionsTier1>;
-};
-
-export type GetCustomerDimensionsUnion1 =
-  | GetCustomerDimensions1
-  | GetCustomerDimensions2;
 
 export type GetCustomerMultipliers1 = {
   /**
@@ -971,9 +800,7 @@ export type GetCustomerCreditSchema1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?:
-    | { [k: string]: GetCustomerDimensions1 | GetCustomerDimensions2 }
-    | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -2255,130 +2082,6 @@ export const GetCustomerCombine$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerCombine);
 
 /** @internal */
-export const GetCustomerDimensions6$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions6,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensions6FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions6, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions6$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions6' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
-  typeof GetCustomerDimensionsToEnum3
-> = z.enum(GetCustomerDimensionsToEnum3);
-
-/** @internal */
-export const GetCustomerDimensionsToUnion3$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsToUnion3,
-  unknown
-> = smartUnion([types.number(), GetCustomerDimensionsToEnum3$inboundSchema]);
-
-export function getCustomerDimensionsToUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsToUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsToUnion3' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsTier3$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsTier3,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      GetCustomerDimensionsToEnum3$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensionsTier3FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsTier3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsTier3' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensions5$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions5,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => GetCustomerDimensionsTier3$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function getCustomerDimensions5FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions5, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions5$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions5' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsUnion3$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsUnion3,
-  unknown
-> = smartUnion([
-  z.lazy(() => GetCustomerDimensions5$inboundSchema),
-  z.lazy(() => GetCustomerDimensions6$inboundSchema),
-]);
-
-export function getCustomerDimensionsUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsUnion3' from JSON`,
-  );
-}
-
-/** @internal */
 export const GetCustomerMultipliers3$inboundSchema: z.ZodMiniType<
   GetCustomerMultipliers3,
   unknown
@@ -2406,17 +2109,12 @@ export const GetCustomerCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => GetCustomerDimensions5$inboundSchema),
-        z.lazy(() => GetCustomerDimensions6$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => GetCustomerMultipliers3$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(z.string(), z.lazy(() => GetCustomerMultipliers3$inboundSchema)),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2435,130 +2133,6 @@ export function getCustomerCreditSchema3FromJSON(
     jsonString,
     (x) => GetCustomerCreditSchema3$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetCustomerCreditSchema3' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensions4$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions4,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensions4FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions4, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions4$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions4' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
-  typeof GetCustomerDimensionsToEnum2
-> = z.enum(GetCustomerDimensionsToEnum2);
-
-/** @internal */
-export const GetCustomerDimensionsToUnion2$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsToUnion2,
-  unknown
-> = smartUnion([types.number(), GetCustomerDimensionsToEnum2$inboundSchema]);
-
-export function getCustomerDimensionsToUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsToUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsToUnion2' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsTier2$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsTier2,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      GetCustomerDimensionsToEnum2$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensionsTier2FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsTier2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsTier2' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensions3$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions3,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => GetCustomerDimensionsTier2$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function getCustomerDimensions3FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions3' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsUnion2$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsUnion2,
-  unknown
-> = smartUnion([
-  z.lazy(() => GetCustomerDimensions3$inboundSchema),
-  z.lazy(() => GetCustomerDimensions4$inboundSchema),
-]);
-
-export function getCustomerDimensionsUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsUnion2' from JSON`,
   );
 }
 
@@ -2590,17 +2164,12 @@ export const GetCustomerCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => GetCustomerDimensions3$inboundSchema),
-        z.lazy(() => GetCustomerDimensions4$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => GetCustomerMultipliers2$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(z.string(), z.lazy(() => GetCustomerMultipliers2$inboundSchema)),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2619,130 +2188,6 @@ export function getCustomerCreditSchema2FromJSON(
     jsonString,
     (x) => GetCustomerCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetCustomerCreditSchema2' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensions2$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions2,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensions2FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions2' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
-  typeof GetCustomerDimensionsToEnum1
-> = z.enum(GetCustomerDimensionsToEnum1);
-
-/** @internal */
-export const GetCustomerDimensionsToUnion1$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsToUnion1,
-  unknown
-> = smartUnion([types.number(), GetCustomerDimensionsToEnum1$inboundSchema]);
-
-export function getCustomerDimensionsToUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsToUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsToUnion1' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsTier1$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsTier1,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      GetCustomerDimensionsToEnum1$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function getCustomerDimensionsTier1FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsTier1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsTier1' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensions1$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensions1,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => GetCustomerDimensionsTier1$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function getCustomerDimensions1FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensions1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensions1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensions1' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetCustomerDimensionsUnion1$inboundSchema: z.ZodMiniType<
-  GetCustomerDimensionsUnion1,
-  unknown
-> = smartUnion([
-  z.lazy(() => GetCustomerDimensions1$inboundSchema),
-  z.lazy(() => GetCustomerDimensions2$inboundSchema),
-]);
-
-export function getCustomerDimensionsUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<GetCustomerDimensionsUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetCustomerDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetCustomerDimensionsUnion1' from JSON`,
   );
 }
 
@@ -2821,17 +2266,12 @@ export const GetCustomerCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => GetCustomerDimensions1$inboundSchema),
-        z.lazy(() => GetCustomerDimensions2$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => GetCustomerMultipliers1$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(z.string(), z.lazy(() => GetCustomerMultipliers1$inboundSchema)),
+    ),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => GetCustomerTier$inboundSchema)),
   }),

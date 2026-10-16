@@ -16,6 +16,7 @@ export const initPooledBalanceContribution = ({
 	customerProduct,
 	contributionAmounts,
 	competes = false,
+	unlimitedShare = false,
 	now,
 }: {
 	pooledCustomerEntitlement: MutablePooledCustomerEntitlement;
@@ -23,10 +24,12 @@ export const initPooledBalanceContribution = ({
 	customerProduct: FullCusProduct;
 	contributionAmounts: PooledBalanceContributionAmounts;
 	competes?: boolean;
+	/** An unlimited grant riding a limited pool: it adds nothing to granted, only the pool's unlimited flag. */
+	unlimitedShare?: boolean;
 	now: number;
 }): InsertPooledBalanceContribution => {
 	const unlimited =
-		competes &&
+		(competes || unlimitedShare) &&
 		isUnlimitedEntitlement({
 			entitlement: contributionCustomerEntitlement.entitlement,
 		});

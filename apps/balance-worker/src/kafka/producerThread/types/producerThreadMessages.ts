@@ -1,4 +1,8 @@
-import type { KafkaSaslCredentials, ProducerConfig } from "@autumn/kafka";
+import type {
+	KafkaProducerStatistics,
+	KafkaSaslCredentials,
+	ProducerConfig,
+} from "@autumn/kafka";
 import type { Ring } from "../../../threads/ring/types/ring.js";
 import type { ProducerError } from "./producerError.js";
 
@@ -61,4 +65,10 @@ export type ProducerToDecideMessage =
 	| { kind: "failed"; reqId: number; error: ProducerError }
 	/** One per broker per statistics window, for `kafkaRequestTimings`. */
 	| { kind: "request"; event: KafkaRequestEvent }
+	/** One per producer per statistics window, for `kafkaBrokerStatistics`. */
+	| {
+			kind: "statistics";
+			producerId: number;
+			statistics: KafkaProducerStatistics;
+	  }
 	| { kind: "stopped" };

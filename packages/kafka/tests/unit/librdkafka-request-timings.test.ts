@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { requestTimingsOf } from "../../src/client/librdkafka/producer/createLibrdkafkaProducer.js";
 
 /** A 10s window of a partition producer during a 1.5s broker stall: ~170 fast answers, ~30 held ones. */
-const stalledWindow = JSON.stringify({
+const stalledWindow = {
 	brokers: {
 		"bootstrap:9092/bootstrap": { nodeid: -1, rtt: { cnt: 0 } },
 		"broker-1:9092/1": {
@@ -17,10 +17,10 @@ const stalledWindow = JSON.stringify({
 		},
 		"broker-3:9092/3": { nodeid: 3, rtt: { cnt: 0, avg: 0, p99: 0 } },
 	},
-});
+};
 
 test("a broker stall shows in the window's request timing, not averaged away", () => {
-	expect(requestTimingsOf({ statistics: stalledWindow })).toEqual([
+	expect(requestTimingsOf({ document: stalledWindow })).toEqual([
 		{
 			apiName: "Produce",
 			broker: "broker-1:9092/1",
