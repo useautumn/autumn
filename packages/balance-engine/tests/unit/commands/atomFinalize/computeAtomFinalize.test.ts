@@ -49,7 +49,7 @@ const balanceOf = (state: SubjectState) =>
 	state.customerEntitlements.find((row) => row.id === "messages_monthly")
 		?.balance;
 
-/** Journaled by the Atom undecided: no entity or feature named; the worker resolved the row's feature before deciding. */
+/** Journaled by the Atom undecided: no entity or feature named, for Autumn's own row to name. */
 const undecidedFinalize = ({
 	finalValue,
 	seq = 2,
@@ -66,10 +66,16 @@ const undecidedFinalize = ({
 	org,
 	lockId: "L1",
 	featureId: null,
-	internalFeatureId: "feat_messages",
+	internalFeatureId: null,
 	finalValue,
 	properties: null,
 	source: { atomId: "atom_1", writerId: "w_1", seq },
+});
+
+/** The row as the worker reads it back: with its feature's internal id joined on. */
+const readBack = (lock: WorkerLock): WorkerLock => ({
+	...lock,
+	internal_feature_id: "feat_messages",
 });
 
 describe("an Atom's finalize at hand-in", () => {
@@ -118,12 +124,12 @@ describe("an Atom's finalize at hand-in", () => {
 		const released = computeAtomFinalizeDecision({
 			fullSubject: createSubjectFor({ state: locked.state }),
 			command: undecidedFinalize({ finalValue: 0 }),
-			lock: locked.lock,
+			lock: readBack(locked.lock),
 		});
 		const rejected = computeAtomFinalizeDecision({
 			fullSubject: createSubjectFor({ state: locked.state }),
 			command: undecidedFinalize({ finalValue: 101 }),
-			lock: locked.lock,
+			lock: readBack(locked.lock),
 		});
 
 		const settled = applyMutation({
@@ -148,10 +154,7 @@ describe("an Atom's finalize at hand-in", () => {
 		expect(() =>
 			computeAtomFinalizeDecision({
 				fullSubject: createSubjectFor({ state: createState({ balance: 100 }) }),
-				command: {
-					...undecidedFinalize({ finalValue: 0 }),
-					internalFeatureId: null,
-				},
+				command: undecidedFinalize({ finalValue: 0 }),
 				lock: null,
 			}),
 		).toThrow(LockNotFoundError);
@@ -164,14 +167,14 @@ describe("an Atom's finalize at hand-in", () => {
 			mutation: computeAtomFinalizeDecision({
 				fullSubject: createSubjectFor({ state: locked.state }),
 				command: undecidedFinalize({ finalValue: 0 }),
-				lock: locked.lock,
+				lock: readBack(locked.lock),
 			}).mutation,
 		});
 
 		const { mutation } = computeAtomFinalizeDecision({
 			fullSubject: createSubjectFor({ state: settled }),
 			command: undecidedFinalize({ finalValue: 0, seq: 3 }),
-			lock: locked.lock,
+			lock: readBack(locked.lock),
 		});
 
 		expect(mutation.result.type).toBe("track");

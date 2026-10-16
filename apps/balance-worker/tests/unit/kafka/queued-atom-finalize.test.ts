@@ -8,17 +8,20 @@
  *  a held row whose feature is not the one named → settles nothing, the lock stays open, the seq lands;
  *  a settle lands the seq in its own mutation, one record; a resend inside the writer's window is a duplicate.
  *
- * Left undecided by the Atom (no feature named), the worker settles it from its own row, the row's feature resolved
- * from the subject's catalog:
+ * Left undecided by the Atom (no feature named), the worker settles it from its own row, which carries its feature's
+ * internal id from the track that opened it or from the read that joined it:
  *  the lock pending in the same batch, or stored in an earlier one → settled, the seq lands;
  *  a confirm above what the row's own overage allows → rejected and logged, the lock stays open, the seq lands;
  *  a lock Autumn holds no row for → refused and logged, nothing lands;
- *  a row whose feature the catalog does not hold → the record fails and is redelivered, never settled another way.
+ *  a row read back without its feature (its feature row gone) → the record fails and is redelivered, never settled another way.
  */
 
 import { describe, expect, test } from "bun:test";
-import type { TrackCommand, WorkerLock } from "@autumn/balance-engine";
-import { LockFeatureNotLoadedError } from "../../../src/processor/common/processorErrors.js";
+import {
+	LockFeatureNotLoadedError,
+	type TrackCommand,
+	type WorkerLock,
+} from "@autumn/balance-engine";
 import {
 	type CommandPipeline,
 	createCommandPipeline,
@@ -309,7 +312,7 @@ describe("an Atom's queued finalize", () => {
 			});
 		}));
 
-	test("undecided, for a row whose feature the subject's catalog does not hold, the record fails loudly and is redelivered", () =>
+	test("undecided, for a row read back without its feature's internal id, the record fails loudly and is redelivered", () =>
 		withPipeline(async (pipeline) => {
 			await pipeline.consumeBatch({ commands: [lockTrack] });
 			await pipeline.drain();
@@ -324,7 +327,7 @@ describe("an Atom's queued finalize", () => {
 					seq: 2,
 					featureId: null,
 				}),
-				lock: { ...(row[0] as WorkerLock), feature_id: "credit_funded" },
+				lock: { ...(row[0] as WorkerLock), internal_feature_id: null },
 			});
 
 			await expect(decided).rejects.toBeInstanceOf(LockFeatureNotLoadedError);

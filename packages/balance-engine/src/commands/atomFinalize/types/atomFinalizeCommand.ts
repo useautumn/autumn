@@ -19,7 +19,7 @@ export const atomFinalizeCommandSchema = mutatingCommandSchema
 		lockId: nonEmptyStringSchema,
 		/** Null when the Atom journaled the finalize undecided: Autumn's own row names the feature, and its overage behaviour governs. */
 		featureId: nonEmptyStringSchema.nullable(),
-		/** The feature's catalog internal id, as a track carries it; null with `featureId` until the worker resolves it from the row. */
+		/** The feature's catalog internal id, as a track carries it; null with `featureId`, the row read back carrying it instead. */
 		internalFeatureId: nonEmptyStringSchema.nullable(),
 		/** 0 releases the lock, null confirms it at what it took. */
 		finalValue: finiteNumberSchema.nullable(),

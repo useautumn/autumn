@@ -1,6 +1,7 @@
 import { UnsupportedCommandError } from "../../errors.js";
 import type { WorkerLock } from "../../models/subject/rows/workerLock.js";
 import type { FinalizeCommand } from "../finalize/types/finalizeCommand.js";
+import { lockFeatureOf } from "./lockFeatureOf.js";
 import type { AtomFinalizeCommand } from "./types/atomFinalizeCommand.js";
 
 /** The finalize the API would send for this row: its identity from the row, the settlement from the Atom. */
@@ -11,7 +12,8 @@ export const atomFinalizeToFinalize = ({
 	command: AtomFinalizeCommand;
 	lock: WorkerLock;
 }): FinalizeCommand => {
-	if (command.internalFeatureId === null)
+	const feature = lockFeatureOf({ command, lock });
+	if (!feature)
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	return {
 		schemaVersion: 1,
@@ -31,7 +33,7 @@ export const atomFinalizeToFinalize = ({
 			command.featureId === null
 				? lock
 				: { ...lock, overage_behavior: "overflow" },
-		internalFeatureId: command.internalFeatureId,
+		internalFeatureId: feature.internalFeatureId,
 		finalValue: command.finalValue,
 		properties: command.properties,
 	};
