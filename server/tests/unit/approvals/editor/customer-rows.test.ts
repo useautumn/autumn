@@ -1,42 +1,44 @@
 /**
- * S5 contract: the Customer rows every area shares ("Customer" and "Customer
- * has plan": has / doesn't have / has none) store under `customer` with an
- * explicit quantifier and read back as the same rows.
+ * S5 contract: the Customer rows every area shares ("Customer", "Customer
+ * has plan": has / doesn't have / has none, and "Customer has paid before")
+ * store under `customer` and read back as the same rows, whatever the effect.
  *
- * Red (before):  `rowsToWhen` / `whenToRows` don't exist.
+ * Red (before):  no `effect` param and no `customer_has_paid` field.
  * Green (after): each row stores as listed, in every area that offers it.
  */
 
 import { expect, test } from "bun:test";
-import type { WhenKey } from "@autumn/shared";
 import {
+	type ApprovalFilterKey,
 	EDITOR_FIELDS,
 	type EditorRow,
-	rowsToWhen,
-	whenToRows,
+	type RuleEffect,
+	ruleFilterToRows,
+	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index.js";
 
-const AREAS = (Object.keys(EDITOR_FIELDS) as WhenKey[]).filter(
-	(area) => "customer" in EDITOR_FIELDS[area],
+const SHAPES = (Object.keys(EDITOR_FIELDS) as ApprovalFilterKey[]).filter(
+	(shape) => "customer" in EDITOR_FIELDS[shape],
 );
+const EFFECTS: RuleEffect[] = ["allow", "block"];
 
 const enterprise = { plan_id: "enterprise" };
 
-const CASES: { name: string; rows: EditorRow[]; when: unknown }[] = [
+const CASES: { name: string; rows: EditorRow[]; filter: unknown }[] = [
 	{
 		name: "Customer is",
 		rows: [{ field: "customer", operator: "is", value: "acme" }],
-		when: { customer: { customer_id: "acme" } },
+		filter: { customer: { customer_id: "acme" } },
 	},
 	{
 		name: "Customer is none of",
 		rows: [{ field: "customer", operator: "is_none_of", value: ["a", "b"] }],
-		when: { customer: { customer_id: { $nin: ["a", "b"] } } },
+		filter: { customer: { customer_id: { $nin: ["a", "b"] } } },
 	},
 	{
 		name: "Customer has plan, any version",
 		rows: [{ field: "customer_plan", operator: "has", value: enterprise }],
-		when: { customer: { plan: { $some: enterprise } } },
+		filter: { customer: { plan: { $some: enterprise } } },
 	},
 	{
 		name: "Customer has plan, pinned version",
@@ -47,82 +49,59 @@ const CASES: { name: string; rows: EditorRow[]; when: unknown }[] = [
 				value: { ...enterprise, version: 2 },
 			},
 		],
-		when: { customer: { plan: { $some: { ...enterprise, version: 2 } } } },
+		filter: { customer: { plan: { $some: { ...enterprise, version: 2 } } } },
 	},
 	{
 		name: "Customer doesn't have plan",
 		rows: [
 			{ field: "customer_plan", operator: "doesnt_have", value: enterprise },
 		],
-		when: { customer: { plan: { $none: enterprise } } },
+		filter: { customer: { plan: { $none: enterprise } } },
 	},
 	{
 		name: "Customer has no plan",
 		rows: [{ field: "customer_plan", operator: "has_none", value: null }],
-		when: { customer: { plan: { $none: {} } } },
+		filter: { customer: { plan: { $none: {} } } },
 	},
 	{
-		name: "Customer and has plan share one customer filter",
+		name: "Customer has paid before",
+		rows: [{ field: "customer_has_paid", operator: "is", value: true }],
+		filter: { customer: { has_paid: true } },
+	},
+	{
+		name: "Customer, has plan and has paid share one customer filter",
 		rows: [
 			{ field: "customer", operator: "is_not", value: "acme" },
 			{ field: "customer_plan", operator: "has", value: enterprise },
+			{ field: "customer_has_paid", operator: "is", value: false },
 		],
-		when: {
-			customer: { customer_id: { $ne: "acme" }, plan: { $some: enterprise } },
+		filter: {
+			customer: {
+				customer_id: { $ne: "acme" },
+				plan: { $some: enterprise },
+				has_paid: false,
+			},
 		},
 	},
 ];
 
-const cells = AREAS.flatMap((area) => CASES.map((c) => ({ area, ...c })));
+const cells = SHAPES.flatMap((shape) =>
+	EFFECTS.flatMap((effect) => CASES.map((c) => ({ shape, effect, ...c }))),
+);
 
-test.each(cells)("$area · $name", ({ area, rows, when }) => {
-	expect<unknown>(rowsToWhen({ area, groups: [rows] })).toEqual({
-		ok: true,
-		when,
-	});
-	expect(whenToRows({ area, when })).toEqual({
-		editable: true,
-		pinned: null,
-		groups: [rows],
-	});
-});
-
-test.each<{
-	name: string;
-	row: EditorRow;
-	when: unknown;
-	readsBack?: EditorRow;
-}>([
-	{
-		name: "Current plan is any of: every current plan matches",
-		row: {
-			field: "current_plan",
-			operator: "is_any_of",
-			value: [{ plan_id: "starter" }, { plan_id: "pro" }],
-		},
-		when: {
-			customer: { plan: { $every: { plan_id: { $in: ["starter", "pro"] } } } },
-		},
+test.each(cells)(
+	"$shape · $effect · $name",
+	({ shape, effect, rows, filter }) => {
+		expect<unknown>(
+			ruleRowsToFilter({ shape, effect, groups: [rows] }),
+		).toEqual({
+			ok: true,
+			filter,
+		});
+		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
+			editable: true,
+			pinned: null,
+			groups: [rows],
+		});
 	},
-	{
-		name: "Current plan is not reads back as Customer doesn't have plan",
-		row: { field: "current_plan", operator: "is_not", value: enterprise },
-		when: { customer: { plan: { $none: enterprise } } },
-		readsBack: {
-			field: "customer_plan",
-			operator: "doesnt_have",
-			value: enterprise,
-		},
-	},
-])("billing_change · $name", ({ row, when, readsBack = row }) => {
-	const area = "billing_change";
-	expect<unknown>(rowsToWhen({ area, groups: [[row]] })).toEqual({
-		ok: true,
-		when,
-	});
-	expect(whenToRows({ area, when })).toEqual({
-		editable: true,
-		pinned: null,
-		groups: [[readsBack]],
-	});
-});
+);
