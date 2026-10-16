@@ -1,14 +1,15 @@
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 
-/** The plans and features a computed catalog update writes, renames on both sides. */
+/** The plans and features a computed catalog update writes or states, renames on both sides. */
 export const updateCatalogPlanToEditedIds = ({
 	updateCatalogPlan,
 }: {
 	updateCatalogPlan: UpdateCatalogPlan;
 }) => ({
 	planIds: [
+		// A stated plan counts even when its row is unchanged: mappings, licenses and links still write.
 		...updateCatalogPlan.upsertProducts
-			.filter(({ row, unlink }) => row.op !== "none" || unlink)
+			.filter(({ row }) => row.source === "direct" || row.op !== "none")
 			.map(({ row }) => row.planId),
 		...updateCatalogPlan.renamePlans.flatMap(({ planId, toId }) => [
 			planId,

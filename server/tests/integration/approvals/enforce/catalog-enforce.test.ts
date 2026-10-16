@@ -192,7 +192,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalog enforce 4: variants, license parents and internal-id renames are judged on the plans they write")}`,
+	`${chalk.yellowBright("catalog enforce 4: variants, license parents, mappings and internal-id renames are judged on the plans they write")}`,
 	async () => {
 		const suffix = Date.now();
 		const allowedPlan = `approvals_variant_base_${suffix}`;
@@ -218,6 +218,18 @@ test.concurrent(
 		});
 
 		try {
+			// A stated plan is edited even when only its RevenueCat mapping changes.
+			expectPermissionDenied({
+				res: await postRaw({
+					client,
+					path: "/catalogV2.update",
+					body: {
+						plans: [{ plan_id: source.id, processors: { revenuecat: null } }],
+					},
+				}),
+				violations: [{ field: "plan_id" }],
+			});
+
 			// Renaming another plan onto the allowed id still edits that other plan.
 			expectPermissionDenied({
 				res: await postRaw({
