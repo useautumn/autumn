@@ -8,7 +8,18 @@ import {
 	customers,
 	prices,
 } from "@autumn/shared";
-import { and, eq, exists, gt, inArray, min, ne, or, sql } from "drizzle-orm";
+import {
+	and,
+	eq,
+	exists,
+	gt,
+	inArray,
+	isNull,
+	min,
+	ne,
+	or,
+	sql,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 /** The oldest customer bounds how far back the Stripe sweep must reach. */
@@ -58,8 +69,9 @@ export const getStripeLinkedCustomerIds = async ({
 };
 
 /** Customers holding an active plan with a recurring price or paid seats but no
- * Stripe subscription or schedule — verify reports these as unbilled. Prices
- * are not checked for amount here; verify decides whether the plan is paid. */
+ * Stripe subscription, schedule or pending checkout — verify reports these as
+ * unbilled. Prices are not checked for amount here; verify decides whether the
+ * plan is paid. */
 export const getUnlinkedPaidPlanCustomerIds = async ({
 	db,
 	internalCustomerIds,
@@ -104,6 +116,7 @@ export const getUnlinkedPaidPlanCustomerIds = async ({
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,
 				sql`coalesce(cardinality(${customerProducts.scheduled_ids}), 0) = 0`,
+				isNull(customerProducts.stripe_checkout_session_id),
 				or(hasRecurringPrice, hasPaidSeats),
 			),
 		);

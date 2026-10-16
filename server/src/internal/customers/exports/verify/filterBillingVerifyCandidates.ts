@@ -12,7 +12,8 @@ import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
 /** A customer with no Stripe subscription, no Stripe-linked plan, no paid plan
  * missing its subscription and no shared Stripe id has nothing to verify, so
- * it is never loaded. */
+ * it is never loaded. A paid plan attached without billing may have no Stripe
+ * customer at all, so that check runs over every customer. */
 export const filterBillingVerifyCandidates = async ({
 	ctx,
 	scalars,
@@ -46,14 +47,19 @@ export const filterBillingVerifyCandidates = async ({
 		query: getSharedStripeCustomerIds,
 	});
 
-	const internalCustomerIds = onStripe.map((scalar) => scalar.internal_id);
 	const [
 		linkedCustomerIds,
 		unlinkedPaidPlanCustomerIds,
 		sharedStripeCustomerIds,
 	] = await Promise.all([
-		readLinkedCustomerIds({ db, internalCustomerIds }),
-		readUnlinkedPaidPlanCustomerIds({ db, internalCustomerIds }),
+		readLinkedCustomerIds({
+			db,
+			internalCustomerIds: onStripe.map((scalar) => scalar.internal_id),
+		}),
+		readUnlinkedPaidPlanCustomerIds({
+			db,
+			internalCustomerIds: scalars.map((scalar) => scalar.internal_id),
+		}),
 		readSharedStripeCustomerIds({
 			db,
 			orgId: ctx.org.id,
@@ -64,12 +70,13 @@ export const filterBillingVerifyCandidates = async ({
 		}),
 	]);
 
-	const candidates = onStripe.filter((scalar) => {
-		const stripeCustomerId = scalar.processor?.id ?? "";
+	const candidates = scalars.filter((scalar) => {
+		if (unlinkedPaidPlanCustomerIds.has(scalar.internal_id)) return true;
+		const stripeCustomerId = scalar.processor?.id;
+		if (!stripeCustomerId) return false;
 		return (
 			sweptSubscriptions.has(stripeCustomerId) ||
 			linkedCustomerIds.has(scalar.internal_id) ||
-			unlinkedPaidPlanCustomerIds.has(scalar.internal_id) ||
 			sharedStripeCustomerIds.has(stripeCustomerId)
 		);
 	});

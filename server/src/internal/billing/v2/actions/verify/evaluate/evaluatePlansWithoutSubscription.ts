@@ -26,9 +26,12 @@ const billsRecurringOnStripe = (customerProduct: FullCusProduct) => {
 };
 
 /** Plans that bill outside a Stripe subscription by design: a license seat bills
- * on its pool's subscription, and a reverting or no-card trial is Autumn's own. */
+ * on its pool's subscription, and a reverting or no-card trial is Autumn's own.
+ * A plan enabled before its Stripe checkout completes gets its subscription on
+ * completion, and is expired if the checkout is abandoned. */
 const isBilledWithoutSubscription = (customerProduct: FullCusProduct) =>
 	notNullish(customerProduct.customer_license_link_id) ||
+	notNullish(customerProduct.stripe_checkout_session_id) ||
 	isCustomerProductRevertingTrial(customerProduct) ||
 	isCustomerProductAutumnManagedTrial(customerProduct);
 
