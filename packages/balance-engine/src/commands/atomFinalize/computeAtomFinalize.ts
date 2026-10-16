@@ -2,6 +2,7 @@ import type { DeductionDecision } from "../../deduction/types/deductionDecision.
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerLock } from "../../models/subject/rows/workerLock.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
+import { findOpenLockById } from "../../utils/subjectStateUtils/openLockIndex.js";
 import { computeFinalizeDecision } from "../finalize/computeFinalize.js";
 import { computeTrackDecision } from "../track/computeTrack.js";
 import {
@@ -22,7 +23,8 @@ const settlesHeldLock = ({
 	command: AtomFinalizeCommand;
 	lock: WorkerLock;
 }): boolean =>
-	fullSubject.open_locks.some((openLock) => openLock.id === lock.id) &&
+	findOpenLockById({ openLocks: fullSubject.open_locks, id: lock.id }) !==
+		null &&
 	lock.customer_id === command.identity.customerId &&
 	lock.entity_id === command.identity.entityId &&
 	lock.feature_id === command.featureId &&
