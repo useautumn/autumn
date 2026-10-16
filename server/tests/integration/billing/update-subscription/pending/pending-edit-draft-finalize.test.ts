@@ -22,6 +22,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntilAsserted } from "@tests/utils/genUtils";
 import { WEBHOOK_SETTLE_TIMEOUT_MS } from "@tests/utils/pollableCustomerExpect";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -101,9 +102,11 @@ test.concurrent(
 			(customerProduct) => customerProduct.status === CusProductStatus.Active,
 		);
 		expect(activeRows.map(({ id }) => id)).toEqual([replacement?.id ?? ""]);
-		expect(
-			await MetadataService.get({ db: ctx.db, id: original.metadata_id ?? "" }),
-		).toBeFalsy();
+		await pollUntilAsserted({
+			fetch: () =>
+				MetadataService.get({ db: ctx.db, id: original.metadata_id ?? "" }),
+			assert: (metadata) => expect(metadata).toBeFalsy(),
+		});
 		expectCustomerFeatureCorrect({
 			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 			featureId: TestFeature.Messages,
