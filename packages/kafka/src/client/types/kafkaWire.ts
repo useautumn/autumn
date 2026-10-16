@@ -200,6 +200,8 @@ export type ConsumerConfig = {
 	sessionTimeout?: number;
 	/** How long a member may take to give back revoked partitions before the group evicts it. */
 	rebalanceTimeout?: number;
+	/** Turns on librdkafka statistics; an idle consumer then reports a fetch whenever its leaders answered one. */
+	statisticsIntervalMs?: number;
 	retry?: {
 		/** False ends the consumer after a failed batch instead of rewinding to the last commit. */
 		restartOnFailure?: (error: Error) => Promise<boolean>;

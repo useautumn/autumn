@@ -36,6 +36,8 @@ const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	rebalanceTimeoutMs: 60000,
 	sessionTimeoutMs: 30000,
 };
+/** How often an idle job's lag clock is reset by its leaders answering fetches. */
+const FETCH_LIVENESS_INTERVAL_MS = 1_000;
 
 /** Runs one job over the balance log with a consumer group of its own. Everything Kafka lives here, none of it in a job. */
 export function createStreamConsumer({
@@ -62,14 +64,16 @@ export function createStreamConsumer({
 	streamConsumer: StreamConsumer;
 }): RunningStreamConsumer {
 	const groupId = `${config.groupIdPrefix}-${streamConsumer.name}`;
-	const consumer = ctx.kafka.consumer(
-		createConsumerGroupConfig({
+	const consumer = ctx.kafka.consumer({
+		...createConsumerGroupConfig({
 			groupId,
 			timings: config.timings ?? CONSUMER_TIMINGS,
 			// No co-partitioning to keep: the broker's uniform dealing spreads a job's partitions evenly.
 			remoteAssignor: "uniform",
 		}),
-	);
+		// An idle job hears its fetches answered from statistics; without them it would read as stalled.
+		statisticsIntervalMs: FETCH_LIVENESS_INTERVAL_MS,
+	});
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
 	const progress = createProgressTracker();

@@ -37,6 +37,7 @@ function createFakeNative() {
 	const seekOutcomes: (NativeKafkaError | null)[] = [];
 	const commits: NativeTopicPartitionOffset[][] = [];
 	const committed = new Map<string, number>();
+	const watermark = { highOffset: 100 };
 	let rebalance: NativeRebalanceCallback | undefined;
 	let consumeWaiter: (() => void) | undefined;
 
@@ -159,7 +160,10 @@ function createFakeNative() {
 				})),
 			);
 		},
-		getWatermarkOffsets: () => ({ highOffset: 100, lowOffset: 0 }),
+		getWatermarkOffsets: () => ({
+			highOffset: watermark.highOffset,
+			lowOffset: 0,
+		}),
 		on(event, listener) {
 			listeners.set(event, [...(listeners.get(event) ?? []), listener]);
 		},
@@ -184,6 +188,8 @@ function createFakeNative() {
 		seekOutcomes,
 		commits,
 		committed,
+		watermark,
+		emit,
 	};
 }
 
@@ -625,6 +631,272 @@ describe("librdkafka consumer runner", () => {
 			{ topic, partition: 1, offset: 5 },
 			{ topic, partition: 1, offset: 9 },
 		]);
+		await consumer.disconnect();
+	});
+
+	// After a leader move librdkafka caches -1 from the failed fetch response; kafkajs never reported one.
+	test("a watermark librdkafka lost to a failed fetch never reads below what was delivered", async () => {
+		const { fake, consumer } = createRunner();
+		fake.watermark.highOffset = -1;
+		const watermarks: string[] = [];
+		consumer.on(consumer.events.END_BATCH_PROCESS, (event) =>
+			watermarks.push(
+				`${event.payload.batchSize}:${event.payload.highWatermark}`,
+			),
+		);
+		fake.chunks.push(
+			[
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+				{ kind: "message", partition: 0, offset: 7 },
+				{ kind: "message", partition: 0, offset: 8 },
+			],
+			[{ kind: "eof", partition: 1, offset: 12 }],
+		);
+		const seen: string[] = [];
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch }) => {
+				seen.push(batch.highWatermark);
+			},
+		});
+		await until(() => watermarks.length >= 2);
+		expect(seen).toEqual(["9"]);
+		expect(watermarks).toEqual(["2:9", "0:12"]);
+		await consumer.disconnect();
+	});
+
+	test("a cached watermark past the delivered position is reported as it is", async () => {
+		const { fake, consumer } = createRunner();
+		fake.watermark.highOffset = 500;
+		const seen: string[] = [];
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 7 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch }) => {
+				seen.push(batch.highWatermark);
+			},
+		});
+		await until(() => seen.length > 0);
+		expect(seen).toEqual(["500"]);
+		await consumer.disconnect();
+	});
+
+	test("a consumer restarted after giving up joins on a new native client and closes the old one", async () => {
+		const first = createFakeNative();
+		const second = createFakeNative();
+		const natives = [first, second];
+		let created = 0;
+		const consumer = createLibrdkafkaConsumer({
+			ctx: {
+				createNative: (config) => {
+					const fake = natives[created++];
+					if (!fake) throw new Error("no more natives");
+					return fake.factory(config);
+				},
+				nativeClientConfig: {},
+				log: createKafkaLog({
+					clientId: "t",
+					sink: {
+						error: () => {},
+						warn: () => {},
+						info: () => {},
+						debug: () => {},
+					},
+				}),
+			},
+			config: { groupId: "g", retry: { initialRetryTime: 1 } },
+		});
+		const crashes: boolean[] = [];
+		consumer.on(consumer.events.CRASH, (event) =>
+			crashes.push(event.payload.restart),
+		);
+		const joins: string[] = [];
+		consumer.on(consumer.events.GROUP_JOIN, (event) =>
+			joins.push((event.payload.memberAssignment[topic] ?? []).join(",")),
+		);
+		first.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{
+				kind: "error",
+				error: Object.assign(new Error("Local: Fatal error"), {
+					code: -150,
+					isFatal: true,
+				}),
+			},
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => crashes.length > 0);
+		expect(crashes).toEqual([false]);
+
+		second.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => joins.includes("0,1"));
+		expect(created).toBe(2);
+		expect(first.calls).toContain("disconnect");
+		expect(second.calls).toContain(`subscribe:${topic}`);
+		expect(second.calls).not.toContain("disconnect");
+		await consumer.disconnect();
+		expect(second.calls.at(-1)).toBe("disconnect");
+	});
+
+	test("a closing client's revocation never reaches the runner that replaced it", async () => {
+		const first = createFakeNative();
+		const second = createFakeNative();
+		const natives = [first, second];
+		let created = 0;
+		const consumer = createLibrdkafkaConsumer({
+			ctx: {
+				createNative: (config) =>
+					(natives[created++] as typeof first).factory(config),
+				nativeClientConfig: {},
+				log: createKafkaLog({
+					clientId: "t",
+					sink: {
+						error: () => {},
+						warn: () => {},
+						info: () => {},
+						debug: () => {},
+					},
+				}),
+			},
+			config: {
+				groupId: "g",
+				retry: { initialRetryTime: 1, restartOnFailure: async () => false },
+			},
+		});
+		const joins: string[] = [];
+		consumer.on(consumer.events.GROUP_JOIN, (event) =>
+			joins.push((event.payload.memberAssignment[topic] ?? []).join(",")),
+		);
+		first.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 1 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async () => {
+				throw new Error("handler failed");
+			},
+		});
+		await until(() => first.calls.length > 0 && joins.length > 0);
+		await Bun.sleep(30);
+		second.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => joins.length >= 2);
+		// The old client's late revocation of partition 0, after the new client was handed it.
+		first.native.unsubscribe();
+		first.native.consume(1, () => {});
+		await Bun.sleep(20);
+		expect(joins.at(-1)).toBe("0");
+		await consumer.disconnect();
+	});
+
+	// Herald reads a stall from fetches going quiet; an empty poll every 5ms is no news from a broker.
+	test("an empty or failed poll is never reported as a fetch", async () => {
+		const { fake, consumer } = createRunner();
+		const fetches: number[] = [];
+		consumer.on(consumer.events.FETCH, (event) =>
+			fetches.push(event.payload.numberOfBatches),
+		);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 3 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fetches.length > 0);
+		const transportFailure = Object.assign(
+			new Error("Local: Broker transport failure"),
+			{
+				code: -195,
+			},
+		);
+		fake.chunks.push([], [{ kind: "error", error: transportFailure }], [], []);
+		await until(() => fake.chunks.length === 0);
+		await Bun.sleep(30);
+		expect(fetches).toEqual([1]);
+		await consumer.disconnect();
+	});
+
+	function statistics({
+		fetches,
+		rxidleMicros = 100_000,
+		fetchState = "active",
+	}: {
+		fetches: number;
+		rxidleMicros?: number;
+		fetchState?: string;
+	}): { message: string } {
+		return {
+			message: JSON.stringify({
+				brokers: {
+					"b1:9092/1": {
+						nodeid: 1,
+						rxidle: rxidleMicros,
+						req: { Fetch: fetches },
+					},
+				},
+				topics: {
+					[topic]: {
+						partitions: {
+							"0": { partition: 0, leader: 1, fetch_state: fetchState },
+							"-1": { partition: -1, leader: -1, fetch_state: "none" },
+						},
+					},
+				},
+			}),
+		};
+	}
+
+	test("an idle consumer reports a fetch when statistics show its leaders answering fetches", async () => {
+		const { fake, consumer } = createRunner({
+			config: { statisticsIntervalMs: 1_000 },
+		});
+		const fetches: number[] = [];
+		consumer.on(consumer.events.FETCH, (event) =>
+			fetches.push(event.payload.numberOfBatches),
+		);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "eof", partition: 0, offset: 5 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fetches.length === 1);
+
+		fake.emit("event.stats", statistics({ fetches: 10 }));
+		expect(fetches).toHaveLength(1);
+		fake.emit("event.stats", statistics({ fetches: 12 }));
+		expect(fetches).toEqual([1, 0]);
+		// A stalled broker: no new fetch went out, so none came back.
+		fake.emit("event.stats", statistics({ fetches: 12 }));
+		// A fetch that ended in a socket timeout, long after the last receive.
+		fake.emit(
+			"event.stats",
+			statistics({ fetches: 13, rxidleMicros: 30_000_000 }),
+		);
+		fake.emit(
+			"event.stats",
+			statistics({ fetches: 14, fetchState: "offset-query" }),
+		);
+		expect(fetches).toEqual([1, 0]);
 		await consumer.disconnect();
 	});
 });

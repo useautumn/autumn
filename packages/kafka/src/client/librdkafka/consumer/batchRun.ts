@@ -40,25 +40,29 @@ export function kafkaMessageOf(message: NativeMessage): KafkaMessage {
 	};
 }
 
+/** librdkafka caches the watermark of its latest fetch response, and a failed one (a leader move) caches -1.
+ *  What was delivered still proves the log reaches `floor`, so the watermark never reads below it. */
 export function highWatermarkOf({
 	scope,
 	topic,
 	partition,
+	floor,
 }: {
 	scope: ConsumerRunnerScope;
 	topic: string;
 	partition: number;
+	floor: number;
 }): string {
 	try {
 		const high = scope.state.native?.getWatermarkOffsets(
 			topic,
 			partition,
 		).highOffset;
-		if (typeof high === "number" && high >= 0) return String(high);
+		if (typeof high === "number" && high >= floor) return String(high);
 	} catch {
-		// The cached watermark is advisory; a batch without one is still a batch.
+		// The cached watermark is advisory; the delivered position stands in for it.
 	}
-	return "-1";
+	return String(floor);
 }
 
 function uncommittedOffsetsOf({
@@ -206,7 +210,12 @@ export function createBatchRun({
 		batch: {
 			topic,
 			partition,
-			highWatermark: highWatermarkOf({ scope, topic, partition }),
+			highWatermark: highWatermarkOf({
+				scope,
+				topic,
+				partition,
+				floor: Number(lastOffset()) + 1,
+			}),
 			messages: converted,
 			isEmpty,
 			firstOffset,

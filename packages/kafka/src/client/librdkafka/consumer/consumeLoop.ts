@@ -349,7 +349,12 @@ async function deliverPartition({
 			payload: {
 				topic,
 				partition,
-				highWatermark: highWatermarkOf({ scope, topic, partition }),
+				highWatermark: highWatermarkOf({
+					scope,
+					topic,
+					partition,
+					floor: item.offset,
+				}),
 				batchSize: 0,
 				lastOffset: String(item.offset - 1),
 			},
@@ -422,6 +427,14 @@ async function readCommitted({
 	return done.promise;
 }
 
+/** kafkajs disconnected a consumer it would not restart, so a restart joined on a new client; a native client
+ *  that raised a fatal error is dead for good, and reusing it would leave the consumer up but owning nothing. */
+function giveUp({ scope }: { scope: ConsumerRunnerScope }): void {
+	scope.state.running = false;
+	scope.state.restartPending = null;
+	scope.state.gaveUp = true;
+}
+
 async function restartFromCommits({
 	scope,
 	native,
@@ -435,6 +448,8 @@ async function restartFromCommits({
 	terminal: boolean;
 }): Promise<boolean> {
 	const restart = await decideRestart({ scope, cause, terminal });
+	// Settled before the crash is heard, so an owner restarting from its listener finds the loop over.
+	if (!restart) giveUp({ scope });
 	emitConsumerEvent({
 		scope,
 		type: "consumer.crash",
@@ -464,7 +479,7 @@ async function restartFromCommits({
 
 /** kafkajs reported a fetch only once one was answered. Until every assigned partition has had a record or
  *  its end back, "latest" may still resolve past a record produced now, and a tail would never see it. */
-function everyPartitionFetched({
+export function everyPartitionFetched({
 	scope,
 }: {
 	scope: ConsumerRunnerScope;
@@ -526,13 +541,13 @@ export async function runConsumeLoop({
 				await Bun.sleep(100);
 			}
 		}
-		const idle =
-			partitions.length === 0 &&
-			(!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT);
-		if (idle) await Bun.sleep(IDLE_POLL_MS);
+		const answered =
+			!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT;
+		if (answered && partitions.length === 0) await Bun.sleep(IDLE_POLL_MS);
 		for (const { topic, partition } of partitions)
 			state.fetched.add(partitionKeyOf({ topic, partition }));
-		if (everyPartitionFetched({ scope }))
+		// An empty or failed poll says nothing of the brokers; reporting it would hide a stalled fetch.
+		if (answered && partitions.length > 0 && everyPartitionFetched({ scope }))
 			emitConsumerEvent({
 				scope,
 				type: "consumer.fetch",
@@ -542,14 +557,6 @@ export async function runConsumeLoop({
 			await deliverConcurrently({ scope, native, partitions });
 		const pendingRestart = state.restartPending;
 		if (!pendingRestart || !state.running) continue;
-		const restarted = await restartFromCommits({
-			scope,
-			native,
-			...pendingRestart,
-		});
-		if (!restarted) {
-			state.running = false;
-			state.restartPending = null;
-		}
+		await restartFromCommits({ scope, native, ...pendingRestart });
 	}
 }
