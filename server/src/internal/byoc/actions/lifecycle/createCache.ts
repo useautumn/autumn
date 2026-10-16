@@ -20,7 +20,7 @@ import {
 	generateAtomToken,
 } from "../../utils/atomTokenUtils.js";
 import {
-	atomLimitReached,
+	atomCreateRefused,
 	atomNames,
 	atomNotFound,
 	atomStackName,
@@ -29,11 +29,11 @@ import {
 	cacheDeploymentToMachine,
 	cacheLockKey,
 	cacheOwner,
-	MAX_ATOMS_PER_ENV,
 	resourcesToMachine,
 } from "../../utils/byocCacheUtils.js";
 import { toCacheStages } from "../../utils/cacheStageUtils.js";
 import { nextFreeAtomId } from "../../utils/nextFreeAtomId.js";
+import { readAtomAccess } from "./readAtomAccess.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 import { withAtomLock } from "./withAtomLock.js";
@@ -174,7 +174,7 @@ export const createCache = ({
 			atomId: params.atom_id,
 			fn: (existing) => renewCacheSetup({ ctx, params, existing }),
 		});
-	// Each new Atom takes the next id free of the env's others, so two creates at once would take the same one.
+	// Each new Atom takes the next id free of the env's others and counts against its limit, so two creates at once would race on both.
 	return withLock({
 		lockKey: cacheLockKey({ ctx }),
 		ttlMs: CACHE_LOCK_TTL_MS,
@@ -192,11 +192,12 @@ const startNewCache = async ({
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> => {
 	const { org, env } = ctx;
-	const [active, removing] = await Promise.all([
+	const [active, removing, access] = await Promise.all([
 		cacheDeploymentRepo.findActive({ ctx }),
 		cacheDeploymentRepo.findRemoving({ ctx }),
+		readAtomAccess({ ctx }),
 	]);
-	if (active.length >= MAX_ATOMS_PER_ENV) throw atomLimitReached();
+	if (!access.canCreate) throw atomCreateRefused({ access });
 	// Every Atom the env has keeps its stack, as do groups that outlived theirs; a new one is named apart from all of them.
 	const atomId = await nextFreeAtomId({
 		owner: cacheOwner({ org, env }),

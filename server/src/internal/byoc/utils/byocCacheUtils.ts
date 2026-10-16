@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { toDeploymentGroupName } from "@autumn/alien";
+import type { AtomAccess } from "@autumn/billing";
 import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
+	type ApiAtomAccess,
 	type ApiByocCache,
 	type AppEnv,
 	type ByocCacheDeployment,
@@ -214,9 +216,6 @@ export const cacheNotFailed = () =>
 		statusCode: 409,
 	});
 
-/** How many Atoms an env runs at once. Each Atom grants against its own copy, so a customer served by several can be over-granted until a push lands. */
-export const MAX_ATOMS_PER_ENV = 3;
-
 /** With an id, one change per Atom at a time; without, one new Atom per env at a time, since each takes the next free id. */
 export const cacheLockKey = ({
 	ctx,
@@ -244,13 +243,32 @@ export const atomNotFound = ({ atomId }: { atomId: string }) =>
 		statusCode: 404,
 	});
 
-export const atomLimitReached = () =>
-	new RecaseError({
-		message: `This environment already runs ${MAX_ATOMS_PER_ENV} Atoms. Delete one to create another.`,
-		code: ErrCode.InvalidRequest,
-		statusCode: 409,
-	});
+/** Why a new Atom is refused, in the words the org sees. */
+export const atomCreateRefused = ({ access }: { access: AtomAccess }) =>
+	access.reason === "not_on_plan"
+		? new RecaseError({
+				message:
+					"Atom isn't included in your plan. Contact hey@useautumn.com to enable it.",
+				code: ErrCode.FeatureLimitReached,
+				statusCode: 403,
+			})
+		: new RecaseError({
+				message: `This environment already runs ${access.limit} Atoms. Delete one to create another.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 409,
+			});
 
+export const atomAccessToApi = ({
+	access,
+}: {
+	access: AtomAccess;
+}): ApiAtomAccess => ({
+	included: access.included,
+	limit: access.limit,
+	used: access.used,
+	can_create: access.canCreate,
+	reason: access.reason,
+});
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
 	org,

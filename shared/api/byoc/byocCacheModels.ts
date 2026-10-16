@@ -208,6 +208,21 @@ export const RetryByocCacheParamsSchema = AtomIdParamsSchema;
 
 export const FinishByocCacheSetupParamsSchema = AtomIdParamsSchema;
 
+export const ApiAtomAccessSchema = z
+	.object({
+		included: z.boolean().describe("Whether Atoms are on your plan."),
+		limit: z
+			.number()
+			.describe("How many Atoms the environment can run at once."),
+		used: z.number().describe("How many Atoms the environment runs now."),
+		can_create: z.boolean().describe("Whether you can create another Atom."),
+		reason: z
+			.enum(["not_on_plan", "limit_reached"])
+			.nullable()
+			.describe("Why you can't create another Atom; null when you can."),
+	})
+	.describe("What your plan lets this environment do with Atoms.");
+
 export const ListByocAtomsParamsSchema = z.object({});
 
 export const ListByocAtomsResponseSchema = z.object({
@@ -223,9 +238,7 @@ export const ListByocAtomsResponseSchema = z.object({
 		.describe(
 			"What Autumn adds after `-` to the name you pick for the next Atom.",
 		),
-	max_atoms: z
-		.number()
-		.describe("How many Atoms the environment can run at once."),
+	access: ApiAtomAccessSchema,
 });
 
 export type ApiByocCache = z.infer<typeof ApiByocCacheSchema>;
@@ -237,3 +250,4 @@ export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
 export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;
 export type ByocAtomIdParams = z.infer<typeof AtomIdParamsSchema>;
 export type ListByocAtomsResponse = z.infer<typeof ListByocAtomsResponseSchema>;
+export type ApiAtomAccess = z.infer<typeof ApiAtomAccessSchema>;
