@@ -22,6 +22,8 @@ import {
 import { CalendarXIcon, InfinityIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -32,13 +34,12 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { RolloverConfigForm } from "@/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm";
 import { checkRolloverConfigValid } from "@/views/products/plan/utils/rolloverUtils";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { EntityScopeSelector } from "./EntityScopeSelector";
+import { useBalanceWrite } from "./useBalanceWrite";
 
 const RESET_INTERVAL_LABELS: Record<string, string> = {
 	[ResetInterval.Minute]: "Minute",
@@ -56,11 +57,10 @@ export function BalanceCreateSheet() {
 	const { customer, refetch } = useCusQuery();
 	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
-	const axiosInstance = useAxiosInstance();
+	const balanceWrite = useBalanceWrite({ onSuccess: refetch });
 
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
 
-	const [isCreating, setIsCreating] = useState(false);
 	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
 		() => entityId ?? undefined,
 	);
@@ -176,16 +176,15 @@ export function BalanceCreateSheet() {
 			params.next_reset_at = nextResetAt;
 		}
 
-		setIsCreating(true);
 		try {
-			await axiosInstance.post("/v1/balances.create", params);
-			await refetch();
+			await balanceWrite.mutateAsync({
+				path: "/v1/balances.create",
+				body: params,
+			});
 			closeSheet();
 			toast.success("Balance created");
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create balance"));
-		} finally {
-			setIsCreating(false);
+			toastWriteError({ error, fallback: "Failed to create balance" });
 		}
 	};
 
@@ -212,6 +211,7 @@ export function BalanceCreateSheet() {
 						value={featureId || null}
 						onSelect={handleSelectFeature}
 					/>
+					<PermissionDenial section="feature" className="px-0" />
 				</SheetSection>
 
 				{selectedFeature && (
@@ -258,6 +258,10 @@ export function BalanceCreateSheet() {
 											Unlimited
 										</IconCheckbox>
 									</div>
+									<PermissionDenial section="grant" className="px-0" />
+									{(!isMetered || unlimited) && (
+										<PermissionDenial section="reset" className="px-0" />
+									)}
 								</div>
 							)}
 
@@ -303,6 +307,7 @@ export function BalanceCreateSheet() {
 											One-off
 										</IconCheckbox>
 									</div>
+									<PermissionDenial section="reset" className="px-0" />
 								</div>
 							)}
 
@@ -327,6 +332,7 @@ export function BalanceCreateSheet() {
 										withTime
 										use24Hour
 									/>
+									<PermissionDenial section="expires" className="px-0" />
 								</div>
 							)}
 
@@ -343,12 +349,15 @@ export function BalanceCreateSheet() {
 
 				<div className="flex-1" />
 
+				<div className="px-4">
+					<PermissionDenial section="summary" />
+				</div>
 				<SheetFooter>
 					<Button
 						variant="secondary"
 						className="w-full"
 						onClick={closeSheet}
-						disabled={isCreating}
+						disabled={balanceWrite.isPending}
 					>
 						Cancel
 					</Button>
@@ -356,7 +365,7 @@ export function BalanceCreateSheet() {
 						variant="primary"
 						className="w-full"
 						onClick={() => handleCreate()}
-						isLoading={isCreating}
+						isLoading={balanceWrite.isPending}
 						disabled={!featureId}
 						metaShortcut="enter"
 					>

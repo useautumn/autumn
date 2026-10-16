@@ -30,13 +30,15 @@ import { Decimal } from "decimal.js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { getCustomerBalancePlanName } from "../table/customer-balance/customerBalanceUtils";
@@ -48,6 +50,7 @@ import {
 	type BalanceEditFormInstance,
 	useBalanceEditForm,
 } from "./useBalanceEditForm";
+import { useBalanceWrite } from "./useBalanceWrite";
 
 /* ─── Outer Shell ─── */
 
@@ -188,8 +191,8 @@ function UnlimitedBalanceForm({
 	const { customer, refetch } = useCusQuery();
 	const { closeSheet: closeBalanceSheet } = useCustomerBalanceSheetStore();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const axiosInstance = useAxiosInstance();
-	const [loading, setLoading] = useState(false);
+	const balanceWrite = useBalanceWrite();
+	const canUpdate = useCanDo("balances.update");
 
 	const initialUsage = cusEntsToUnlimitedUsage({
 		cusEnts: [selectedCusEnt],
@@ -213,25 +216,26 @@ function UnlimitedBalanceForm({
 			toast.error("Please enter a valid usage");
 			return;
 		}
-		setLoading(true);
 		try {
-			await axiosInstance.post("/v1/balances/update", {
-				customer_id: customer.id || customer.internal_id,
-				feature_id: featureId,
-				customer_entitlement_id: selectedCusEnt.id,
-				entity_id: entityId ?? undefined,
-				usage: usageChanged ? usage : undefined,
-				next_reset_at: nextResetAtChanged
-					? (nextResetAt ?? undefined)
-					: undefined,
+			await balanceWrite.mutateAsync({
+				path: "/v1/balances/update",
+				body: {
+					customer_id: customer.id || customer.internal_id,
+					feature_id: featureId,
+					customer_entitlement_id: selectedCusEnt.id,
+					entity_id: entityId ?? undefined,
+					usage: usageChanged ? usage : undefined,
+					next_reset_at: nextResetAtChanged
+						? (nextResetAt ?? undefined)
+						: undefined,
+				},
 			});
 			toast.success("Updated successfully");
 			closeBalanceSheet();
 			closeSheet();
 			refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update"));
-			setLoading(false);
+			toastWriteError({ error, fallback: "Failed to update" });
 		}
 	};
 
@@ -261,6 +265,7 @@ function UnlimitedBalanceForm({
 							setUsage(value === "" ? null : Number(value));
 						}}
 					/>
+					<PermissionDenial section="grant" className="px-0 pt-0" />
 					<div className="flex flex-col shrink-0 w-full">
 						<div className="text-form-label block mb-1">Next Reset</div>
 						<DateInputUnix
@@ -274,12 +279,14 @@ function UnlimitedBalanceForm({
 				</div>
 			</SheetSection>
 
-			<div className="px-4 pb-4">
+			<div className="flex flex-col gap-3 px-4 pb-4">
+				<PermissionDenial section="feature" className="px-0 pt-0" />
+				<PermissionDenial section="summary" />
 				<Button
 					variant="primary"
 					className="w-full"
-					isLoading={loading}
-					disabled={!isDirty}
+					isLoading={balanceWrite.isPending}
+					disabled={!isDirty || !canUpdate}
 					onClick={handleSave}
 				>
 					Update
@@ -343,6 +350,8 @@ function BalanceEditForm({
 					selectedCusEnt={selectedCusEnt}
 					cusPrice={cusPrice}
 				/>
+				<PermissionDenial section="grant" className="px-0" />
+				<PermissionDenial section="expires" className="px-0" />
 			</SheetSection>
 
 			<SubmitButton
@@ -782,8 +791,8 @@ function SubmitButton({
 	const { refetch } = useCusQuery();
 	const { closeSheet: closeBalanceSheet } = useCustomerBalanceSheetStore();
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const axiosInstance = useAxiosInstance();
-	const [loading, setLoading] = useState(false);
+	const balanceWrite = useBalanceWrite();
+	const canUpdate = useCanDo("balances.update");
 
 	const isDirty = useStore(form.store, (s) => s.isDirty);
 
@@ -817,7 +826,6 @@ function SubmitButton({
 			}
 		}
 
-		setLoading(true);
 		try {
 			// Queue balance update
 			if (hasBalanceChanges({ form })) {
@@ -831,15 +839,18 @@ function SubmitButton({
 						parseFloat(String(values.balance)) - form.rolloverBalance;
 
 					promises.push(
-						axiosInstance.post("/v1/balances/update", {
-							customer_id: customer.id || customer.internal_id,
-							feature_id: featureId,
-							current_balance: targetBalance,
-							included_grant: grantedBalanceInput ?? undefined,
-							customer_entitlement_id: selectedCusEnt.id,
-							entity_id: entityId ?? undefined,
-							next_reset_at: values.nextResetAt ?? undefined,
-							expires_at: values.expiresAt ?? undefined,
+						balanceWrite.mutateAsync({
+							path: "/v1/balances/update",
+							body: {
+								customer_id: customer.id || customer.internal_id,
+								feature_id: featureId,
+								current_balance: targetBalance,
+								included_grant: grantedBalanceInput ?? undefined,
+								customer_entitlement_id: selectedCusEnt.id,
+								entity_id: entityId ?? undefined,
+								next_reset_at: values.nextResetAt ?? undefined,
+								expires_at: values.expiresAt ?? undefined,
+							},
 						}),
 					);
 				} else {
@@ -855,13 +866,16 @@ function SubmitButton({
 						: undefined;
 
 					promises.push(
-						axiosInstance.post("/v1/balances/update", {
-							customer_id: customer.id || customer.internal_id,
-							feature_id: featureId,
-							add_to_balance: addAmount,
-							included_grant: grantedBalanceInput,
-							customer_entitlement_id: selectedCusEnt.id,
-							entity_id: entityId ?? undefined,
+						balanceWrite.mutateAsync({
+							path: "/v1/balances/update",
+							body: {
+								customer_id: customer.id || customer.internal_id,
+								feature_id: featureId,
+								add_to_balance: addAmount,
+								included_grant: grantedBalanceInput,
+								customer_entitlement_id: selectedCusEnt.id,
+								entity_id: entityId ?? undefined,
+							},
 						}),
 					);
 				}
@@ -872,18 +886,19 @@ function SubmitButton({
 			handleClose();
 			refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update"));
-			setLoading(false);
+			toastWriteError({ error, fallback: "Failed to update" });
 		}
 	};
 
 	return (
-		<div className="px-4 pb-4">
+		<div className="flex flex-col gap-3 px-4 pb-4">
+			<PermissionDenial section="feature" className="px-0 pt-0" />
+			<PermissionDenial section="summary" />
 			<Button
 				variant="primary"
 				className="w-full"
-				isLoading={loading}
-				disabled={!isDirty}
+				isLoading={balanceWrite.isPending}
+				disabled={!isDirty || !canUpdate}
 				onClick={handleSave}
 			>
 				Update

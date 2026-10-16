@@ -3,6 +3,8 @@ import { useMemo } from "react";
 import { CancelAdvancedSection } from "@/components/forms/cancel-subscription/components/CancelAdvancedSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { UncancelFooter } from "@/components/forms/uncancel-subscription/components/UncancelFooter";
 import { UncancelPreviewSection } from "@/components/forms/uncancel-subscription/components/UncancelPreviewSection";
 import {
@@ -22,7 +24,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-function SheetContent() {
+function UncancelContent() {
 	const { formContext, formValues } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
@@ -57,12 +59,23 @@ function SheetContent() {
 					</div>
 				)}
 
+				<PermissionDenial section="plan" />
 				{isCancelMode && <RefundBehaviorSection />}
+				<PermissionDenial section="options" />
 				{isCancelMode && <CancelAdvancedSection />}
 				{isCancelMode ? <CancelPreviewSection /> : <UncancelPreviewSection />}
 				<UncancelFooter />
 			</SheetBody>
 		</LayoutGroup>
+	);
+}
+
+function SheetContent() {
+	const { previewQuery } = useUpdateSubscriptionFormContext();
+	return (
+		<PermissionDenialProvider preview={previewQuery.data}>
+			<UncancelContent />
+		</PermissionDenialProvider>
 	);
 }
 

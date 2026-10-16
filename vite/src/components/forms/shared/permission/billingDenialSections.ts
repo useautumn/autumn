@@ -1,9 +1,9 @@
 import type { PermissionDenial } from "./permissionSchemas";
 
-/** Where a billing sheet renders a violation, by its field's root; unmapped fields go to "summary". */
-export type PermissionSection = "plan" | "options" | "summary";
+/** Where a sheet renders a violation, by its field's root; unmapped fields go to "summary". */
+export type PermissionSections = Record<string, string>;
 
-const BILLING_DENIAL_SECTIONS: Record<string, PermissionSection> = {
+export const BILLING_DENIAL_SECTIONS: PermissionSections = {
 	incoming: "plan",
 	outgoing: "plan",
 	entity: "plan",
@@ -24,11 +24,12 @@ const fieldRoot = ({ field }: { field: string }) =>
 export const violationsInSection = ({
 	denial,
 	section,
+	sections = BILLING_DENIAL_SECTIONS,
 }: {
 	denial: PermissionDenial;
-	section: PermissionSection;
+	section: string;
+	sections?: PermissionSections;
 }) =>
 	denial.violations.filter(
-		({ field }) =>
-			(BILLING_DENIAL_SECTIONS[fieldRoot({ field })] ?? "summary") === section,
+		({ field }) => (sections[fieldRoot({ field })] ?? "summary") === section,
 	);
