@@ -15,6 +15,15 @@ export type ActionAreaOption = {
 
 const ACTION_KEYS = Object.keys(ACTIONS) as ApprovalAction[];
 
+// Not rule-controlled yet: the validator rejects them, they use organisation:write.
+const DEFERRED_ACTIONS: ApprovalAction[] = [
+	"members.invite",
+	"members.change_role",
+];
+
+export const isDeferredAction = (action: ApprovalAction) =>
+	DEFERRED_ACTIONS.includes(action);
+
 // The board words who-only captions per area, or per action where the area also has conditions.
 const WHO_ONLY_NOUNS: Partial<Record<ApprovalAction | ApprovalArea, string>> = {
 	"customers.create": "customer creation",
@@ -22,7 +31,6 @@ const WHO_ONLY_NOUNS: Partial<Record<ApprovalAction | ApprovalArea, string>> = {
 	catalog: "plan and feature edit",
 	api_keys: "API key creation",
 	migrations: "migration",
-	members: "invite and role change",
 };
 
 export const ruleArea = ({ actions }: { actions: ApprovalAction[] }) =>
@@ -35,14 +43,16 @@ export const actionAreas = ({
 	actions: ApprovalAction[];
 }): ActionAreaOption[] => {
 	const picked = ruleArea({ actions });
-	return (Object.keys(APPROVAL_AREAS) as ApprovalArea[]).map((area) => ({
-		area,
-		label: APPROVAL_AREAS[area],
-		actions: ACTION_KEYS.filter((action) => ACTIONS[action].area === area).map(
-			(action) => ({ value: action, label: ACTIONS[action].label }),
-		),
-		locked: picked !== null && picked !== area,
-	}));
+	return (Object.keys(APPROVAL_AREAS) as ApprovalArea[])
+		.map((area) => ({
+			area,
+			label: APPROVAL_AREAS[area],
+			actions: ACTION_KEYS.filter(
+				(action) => ACTIONS[action].area === area && !isDeferredAction(action),
+			).map((action) => ({ value: action, label: ACTIONS[action].label })),
+			locked: picked !== null && picked !== area,
+		}))
+		.filter((option) => option.actions.length > 0);
 };
 
 export const toggleAction = ({
