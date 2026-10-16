@@ -17,7 +17,8 @@ const poolIdsOf = (shares: Iterable<PoolShare>) =>
  * An additive pool is unlimited while any unlimited grant shares it; granted is
  * only ever the sum of its limited grants. When the last unlimited grant leaves,
  * the pool flips back to limited and the usage it ran up is forgiven: balance
- * returns to granted, as a reset would leave it.
+ * returns to granted, as a reset would leave it. A pool holding competing shares
+ * (its feature switched to max / min) is the competing totals' to settle.
  */
 export const applyUnlimitedSharePoolTotals = ({
 	computeContext,
@@ -32,7 +33,16 @@ export const applyUnlimitedSharePoolTotals = ({
 		sharesAfterPlan({ sharesBefore, plan, isShare: isUnlimitedShare }),
 	);
 
+	const competingPoolIds = poolIdsOf(
+		sharesAfterPlan({
+			sharesBefore: computeContext.competingContributionsBySourceId,
+			plan,
+			isShare: (contribution) => contribution.competes ?? false,
+		}),
+	);
+
 	for (const poolId of new Set([...poolIdsBefore, ...poolIdsAfter])) {
+		if (competingPoolIds.has(poolId)) continue;
 		const pooledCustomerEntitlement =
 			computeContext.pooledCustomerEntitlementByPoolId.get(poolId);
 		if (!pooledCustomerEntitlement) continue;

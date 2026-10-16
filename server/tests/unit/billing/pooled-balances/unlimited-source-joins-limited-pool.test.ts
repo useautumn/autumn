@@ -340,6 +340,68 @@ describe("unlimited grant leaves a limited pool", () => {
 	});
 });
 
+describe("feature switched from sum to max", () => {
+	test("an unlimited share converting to a competing one keeps the pool unlimited", () => {
+		const grantedLimited = products.createFull({
+			id: "limited_granted",
+			prices: [],
+			entitlements: [paidPlan.pooledEntitlement],
+		});
+		const customerLevel = ({
+			product,
+			rowId,
+		}: {
+			product: typeof grantedLimited;
+			rowId: string;
+		}): FullCusProduct => ({
+			...entityRow({ product, entity: entityA, rowId }),
+			internal_entity_id: null,
+			entity_id: null,
+			subscription_ids: [],
+			customer_prices: [],
+		});
+		const limited = customerLevel({
+			product: grantedLimited,
+			rowId: "cp_limited",
+		});
+		const fullCustomer = customerWithPools([
+			limited,
+			customerLevel({ product: monthlyUnlimited, rowId: "cp_unlimited" }),
+		]);
+		const pool = onlyLivePool(fullCustomer);
+		if (!pool) throw new Error("pool missing");
+		expect(pool.unlimited).toBe(true);
+		pool.balance = -500;
+
+		const incoming = customerLevel({
+			product: grantedLimited,
+			rowId: "cp_limited_new",
+		});
+		for (const { entitlement } of [
+			...fullCustomer.customer_products,
+			incoming,
+		].flatMap((customerProduct) => customerProduct.customer_entitlements)) {
+			entitlement.feature = {
+				...entitlement.feature,
+				config: { ...entitlement.feature.config, combine: "max" },
+			};
+		}
+		pool.entitlement.feature = {
+			...pool.entitlement.feature,
+			config: { ...pool.entitlement.feature.config, combine: "max" },
+		};
+
+		transition({ fullCustomer, incoming: [incoming] });
+
+		expect(
+			contributionOf({ fullCustomer, rowId: "cp_unlimited" })?.competes,
+		).toBe(true);
+		const after = onlyLivePool(fullCustomer);
+		expect(after?.pooled_balance?.id).toBe(pool.pooled_balance?.id);
+		expect(after?.unlimited).toBe(true);
+	});
+});
+
 describe("unchanged pooling", () => {
 	test("additive limited grants still sum with no unlimited involved", () => {
 		const grantedPlanProduct = products.createFull({
