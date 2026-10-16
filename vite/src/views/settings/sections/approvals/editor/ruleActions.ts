@@ -1,0 +1,104 @@
+import {
+	ACTIONS,
+	APPROVAL_AREAS,
+	type ApprovalAction,
+	type ApprovalArea,
+	type ApprovalFilterKey,
+} from "@autumn/shared";
+
+export type ActionAreaOption = {
+	area: ApprovalArea;
+	label: string;
+	actions: { value: ApprovalAction; label: string }[];
+	locked: boolean;
+};
+
+const ACTION_KEYS = Object.keys(ACTIONS) as ApprovalAction[];
+
+// Not rule-controlled yet: S3's validator rejects them and they stay on organisation:write.
+const DEFERRED_ACTIONS: ApprovalAction[] = [
+	"members.invite",
+	"members.change_role",
+];
+
+export const isDeferredAction = (action: ApprovalAction) =>
+	DEFERRED_ACTIONS.includes(action);
+
+// Display only: the picker shows Plans and Features under one Catalog heading.
+const AREA_GROUPS: Partial<Record<ApprovalArea, string>> = {
+	plans: "Catalog",
+	features: "Catalog",
+};
+
+// The board words who-only captions per area, or per action where the area also has conditions.
+const WHO_ONLY_NOUNS: Partial<Record<ApprovalAction | ApprovalArea, string>> = {
+	"customers.get_or_create": "customer creation",
+	"rewards.create": "reward creation",
+	api_keys: "API key creation",
+	migrations: "migration",
+};
+
+export const areaLabel = (area: ApprovalArea) => {
+	const group = AREA_GROUPS[area];
+	return group ? `${group} · ${APPROVAL_AREAS[area]}` : APPROVAL_AREAS[area];
+};
+
+export const ruleArea = ({ actions }: { actions: ApprovalAction[] }) =>
+	actions.length > 0 ? ACTIONS[actions[0]].area : null;
+
+/** The areas for the Actions picker; once an action is picked, the other areas lock. */
+export const actionAreas = ({
+	actions,
+}: {
+	actions: ApprovalAction[];
+}): ActionAreaOption[] => {
+	const picked = ruleArea({ actions });
+	return (Object.keys(APPROVAL_AREAS) as ApprovalArea[])
+		.map((area) => ({
+			area,
+			label: areaLabel(area),
+			actions: ACTION_KEYS.filter(
+				(action) => ACTIONS[action].area === area && !isDeferredAction(action),
+			).map((action) => ({ value: action, label: ACTIONS[action].label })),
+			locked: picked !== null && picked !== area,
+		}))
+		.filter((option) => option.actions.length > 0);
+};
+
+export const toggleAction = ({
+	actions,
+	action,
+}: {
+	actions: ApprovalAction[];
+	action: ApprovalAction;
+}) => {
+	if (actions.includes(action)) return actions.filter((a) => a !== action);
+	const picked = ruleArea({ actions });
+	if (picked !== null && picked !== ACTIONS[action].area) return actions;
+	return ACTION_KEYS.filter((a) => a === action || actions.includes(a));
+};
+
+/** The filter shape these actions share, or null when they have none to share. */
+export const ruleFilterKey = ({
+	actions,
+}: {
+	actions: ApprovalAction[];
+}): ApprovalFilterKey | null => {
+	const keys = new Set<ApprovalFilterKey | null>(
+		actions.map((action) => ACTIONS[action].filter),
+	);
+	const [key] = keys;
+	return keys.size === 1 && key ? key : null;
+};
+
+export const whoOnlyCaption = ({ actions }: { actions: ApprovalAction[] }) => {
+	const area = ruleArea({ actions });
+	if (!area || ruleFilterKey({ actions })) return null;
+	const noun =
+		(actions.length === 1 && WHO_ONLY_NOUNS[actions[0]]) ||
+		WHO_ONLY_NOUNS[area];
+	if (noun) {
+		return `No conditions for this area yet. The rule applies to every ${noun}.`;
+	}
+	return "These actions share no conditions, so the rule applies to every request for them.";
+};

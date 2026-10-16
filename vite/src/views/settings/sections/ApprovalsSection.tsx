@@ -5,21 +5,30 @@ import { useEnv } from "@/utils/envUtils";
 import { useCurrentMembership } from "@/views/main-sidebar/org-dropdown/hooks/useCurrentMembership";
 import { SettingsSection } from "../SettingsSection";
 import { ApprovalRulesList } from "./approvals/ApprovalRulesList";
+import { ApprovalRuleSheet } from "./approvals/editor/ApprovalRuleSheet";
+import { DeleteRuleDialog } from "./approvals/editor/DeleteRuleDialog";
+import { useRuleDialogs } from "./approvals/editor/useRuleDialogs";
 
 export const ApprovalsSection = () => {
 	const { rules, isLoading, error } = useApprovalRulesQuery();
 	const env = useEnv();
 	const { isAdmin } = useCurrentMembership();
+	const dialogs = useRuleDialogs();
 
 	return (
 		<SettingsSection
 			title="Approvals"
 			description="Who can or can't make billing changes, and when."
 			actions={
-				// The rule editor sheet lands in U3b.
-				<Button variant="primary" size="sm" disabled>
-					New rule
-				</Button>
+				isAdmin && (
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => dialogs.openEditor({ rule: null })}
+					>
+						New rule
+					</Button>
+				)
 			}
 		>
 			{isLoading ? (
@@ -29,9 +38,27 @@ export const ApprovalsSection = () => {
 					rules={rules}
 					error={error}
 					isSandbox={env === AppEnv.Sandbox}
-					canEdit={isAdmin}
+					rowActions={
+						isAdmin
+							? {
+									onEdit: (rule) => dialogs.openEditor({ rule }),
+									onDelete: (rule) => dialogs.openDelete({ rule }),
+								}
+							: null
+					}
 				/>
 			)}
+			<ApprovalRuleSheet
+				key={dialogs.nonce}
+				rule={dialogs.rule}
+				open={dialogs.dialog === "editor"}
+				onOpenChange={dialogs.setOpen}
+			/>
+			<DeleteRuleDialog
+				rule={dialogs.rule}
+				open={dialogs.dialog === "delete"}
+				onOpenChange={dialogs.setOpen}
+			/>
 		</SettingsSection>
 	);
 };

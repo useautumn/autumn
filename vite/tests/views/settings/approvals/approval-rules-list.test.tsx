@@ -6,9 +6,11 @@
 
 import { describe, expect, test } from "bun:test";
 import type { ApprovalRule } from "@autumn/shared";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApprovalRuleRow } from "@/views/settings/sections/approvals/ApprovalRuleRow";
 import { ApprovalRulesList } from "@/views/settings/sections/approvals/ApprovalRulesList";
+import { RuleRowMenu } from "@/views/settings/sections/approvals/RuleRowMenu";
 
 const renderList = ({
 	error = null,
@@ -22,7 +24,7 @@ const renderList = ({
 			rules={[]}
 			error={error}
 			isSandbox={isSandbox}
-			canEdit={true}
+			rowActions={null}
 		/>,
 	);
 
@@ -44,9 +46,11 @@ const rule: ApprovalRule = {
 
 const renderRow = ({
 	canToggle,
+	menu = null,
 	editor = rule.updated_by.name,
 }: {
 	canToggle: boolean;
+	menu?: ReactNode;
 	editor?: string;
 }) =>
 	renderToStaticMarkup(
@@ -59,6 +63,7 @@ const renderRow = ({
 					enabled={true}
 					canToggle={canToggle}
 					onToggle={() => {}}
+					menu={menu}
 				/>
 			</tbody>
 		</table>,
@@ -105,5 +110,18 @@ describe("approval rule row", () => {
 	test("a member who isn't owner or admin sees the switch disabled", () => {
 		expect(renderRow({ canToggle: false })).toContain("data-disabled");
 		expect(renderRow({ canToggle: true })).not.toContain("data-disabled");
+	});
+
+	test("editors get the row menu", () => {
+		const menu = (
+			<RuleRowMenu
+				rule={rule}
+				actions={{ onEdit: () => {}, onDelete: () => {} }}
+			/>
+		);
+		expect(renderRow({ canToggle: true, menu })).toContain(
+			'aria-label="No billing actions"',
+		);
+		expect(renderRow({ canToggle: false })).not.toContain("actions");
 	});
 });

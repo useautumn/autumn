@@ -6,6 +6,7 @@ import { useToggleApprovalRule } from "@/hooks/queries/useApprovalRulesMutations
 import { SettingsTable } from "../../SettingsTable";
 import { ApprovalRuleRow } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
+import { type RuleRowActions, RuleRowMenu } from "./RuleRowMenu";
 import { useApprovalRuleRows } from "./useApprovalRuleRows";
 
 const COLUMNS = [
@@ -16,10 +17,11 @@ const COLUMNS = [
 
 export const ApprovalRulesTable = ({
 	rules,
-	canEdit,
+	rowActions,
 }: {
 	rules: ApprovalRule[];
-	canEdit: boolean;
+	/** Null for anyone who can't edit rules: no menus, switches disabled. */
+	rowActions: RuleRowActions | null;
 }) => {
 	const [filter, setFilter] = useState("");
 	const rows = useApprovalRuleRows({ rules, filter });
@@ -58,8 +60,11 @@ export const ApprovalRulesTable = ({
 							parts={parts}
 							order={order}
 							enabled={enabledOf(rule)}
-							canToggle={canEdit && !toggle.isPending}
+							canToggle={rowActions !== null && !toggle.isPending}
 							onToggle={(enabled) => toggle.mutate({ id: rule.id, enabled })}
+							menu={
+								rowActions && <RuleRowMenu rule={rule} actions={rowActions} />
+							}
 						/>
 					))}
 				</SettingsTable>

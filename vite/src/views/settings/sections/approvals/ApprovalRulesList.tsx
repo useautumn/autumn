@@ -1,6 +1,7 @@
 import type { ApprovalRule } from "@autumn/shared";
 import { InfoIcon } from "@phosphor-icons/react";
 import { ApprovalRulesBody } from "./ApprovalRulesBody";
+import type { RuleRowActions } from "./RuleRowMenu";
 
 const NOTES = [
 	"The most specific matching rule decides: a member beats their role, a role beats Everyone. At the same level, the rule lower in the list wins.",
@@ -12,12 +13,12 @@ export const ApprovalRulesList = ({
 	rules,
 	error,
 	isSandbox,
-	canEdit,
+	rowActions,
 }: {
 	rules: ApprovalRule[];
 	error: unknown;
 	isSandbox: boolean;
-	canEdit: boolean;
+	rowActions: RuleRowActions | null;
 }) => (
 	<div className="flex flex-col gap-6">
 		{isSandbox && (
@@ -25,7 +26,7 @@ export const ApprovalRulesList = ({
 				These are your live rules. Sandbox is never restricted.
 			</p>
 		)}
-		<ApprovalRulesBody rules={rules} error={error} canEdit={canEdit} />
+		<ApprovalRulesBody rules={rules} error={error} rowActions={rowActions} />
 		<ul className="flex flex-col gap-1.5 text-subtle text-xs">
 			{NOTES.map((note) => (
 				<li key={note} className="flex items-start gap-1.5">

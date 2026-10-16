@@ -1,6 +1,7 @@
 import type { ApprovalRule } from "@autumn/shared";
 import { Switch, TableCell, TableRow } from "@autumn/ui";
 import { format } from "date-fns";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { SentencePart } from "./buildRuleSentence";
 import { RuleSentencePart } from "./RuleSentencePart";
@@ -12,6 +13,7 @@ export const ApprovalRuleRow = ({
 	enabled,
 	canToggle,
 	onToggle,
+	menu,
 }: {
 	rule: ApprovalRule;
 	parts: SentencePart[];
@@ -20,6 +22,7 @@ export const ApprovalRuleRow = ({
 	enabled: boolean;
 	canToggle: boolean;
 	onToggle: (enabled: boolean) => void;
+	menu: ReactNode;
 }) => (
 	<TableRow className="hover:bg-transparent">
 		<TableCell className="pl-4 align-top py-4 text-subtle tabular-nums">
@@ -48,6 +51,6 @@ export const ApprovalRuleRow = ({
 				onCheckedChange={onToggle}
 			/>
 		</TableCell>
-		<TableCell />
+		<TableCell className="pr-2">{menu}</TableCell>
 	</TableRow>
 );
