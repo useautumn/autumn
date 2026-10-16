@@ -6,7 +6,9 @@
  *  1. the Atom settles the lock it took and answers before its hand-in reaches Autumn: the API is never asked;
  *  2. the Atom settles, its reply is late, its hand-in lands before the API's resend: the resend is 400 Lock not found;
  *  3. the Atom settles, its reply is late, the API's resend lands first: the hand-in lands only its seq;
- *  4. a lock the API took: the Atom forwards the finalize, and the SDK takes that reply without asking the API again.
+ *  4. a lock the API took: the Atom leaves the finalize to the SDK, which sends it to the API once, under its key;
+ *  5. a replica that cannot take the finalize (leaving the ring, before its hand-ins land) refuses it unforwarded: the
+ *     SDK sends it to the API, which waits for the lock's hand-in and settles it there.
  */
 
 import { expect, test } from "bun:test";
@@ -363,7 +365,7 @@ test.skipIf(!replicaSetRunsHere)(
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("sdk-finalize-edge4: a lock the API took is finalized through the Atom's forward, never resent to the API")}`,
+	`${chalk.yellowBright("sdk-finalize-edge4: a lock the API took is refused unforwarded by the Atom and settled by the SDK's one resend to the API")}`,
 	async () => {
 		const customerId = "sdk-finalize-edge4";
 		const lockId = `${customerId}-lock`;
@@ -388,11 +390,81 @@ test.skipIf(!replicaSetRunsHere)(
 			});
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
-			expect(api.seen.map(({ path }) => path)).toEqual(["/v1/balances.check"]);
-			expect(edge.seen.map(({ path }) => path)).toEqual([
-				"/v1/balances.finalize",
+			const [edgeFinalize] = edge.seen;
+			expect(edgeFinalize).toMatchObject({
+				path: "/v1/balances.finalize",
+				status: 503,
+			});
+			expect(edgeFinalize?.key).toBeString();
+			expect(api.seen.slice(1)).toEqual([
+				{
+					path: "/v1/balances.finalize",
+					status: 200,
+					key: edgeFinalize?.key ?? null,
+				},
 			]);
 			await expectAutumnLockState({ customerId, openLockIds: [] });
+			expect(await postgresRemaining({ customerId })).toBe(
+				INCLUDED_MESSAGES - CONFIRMED,
+			);
+		} finally {
+			edge.stop();
+			api.stop();
+		}
+	},
+	120_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("sdk-finalize-edge5: a leaving replica's finalize falls back to the API, which settles it once the lock is handed in")}`,
+	async () => {
+		const customerId = "sdk-finalize-edge5";
+		const lockId = `${customerId}-lock`;
+		const { atom } = await initMessagesCustomer({
+			customerId,
+			atom: replicaSet,
+		});
+		const set = replicaSet();
+		const edge = startTap({
+			targetUrl: atom.endpointUrl,
+			headers: { "x-atom-token": atom.token },
+		});
+		const api = startTap({ targetUrl: apiBaseUrl() });
+		const sdk = sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId });
+		try {
+			set.holdHandIns();
+			await lockThroughSdk({ sdk, customerId, lockId });
+			// Leaving with no peer to own the customer; the drain waits on the held hand-in.
+			const stopped = set.stop(0);
+			await pollUntilAsserted({
+				fetch: () =>
+					checkOnAtom({
+						atom,
+						secretKey: defaultCtx.orgSecretKey,
+						customerId,
+						featureId: TestFeature.Messages,
+					}),
+				assert: (reply) => expect(reply.forwarded).toBe("owner_unavailable"),
+			});
+
+			const finalizing = finalizeThroughSdk({ sdk, lockId });
+			await timeout(300);
+			await set.releaseHandIns();
+			const finalized = await finalizing;
+			await stopped;
+
+			expect(finalized).toEqual({ status: 200, reply: { success: true } });
+			expect(
+				edge.seen.map(({ path, status }) => [path, status]),
+			).toContainEqual(["/v1/balances.finalize", 503]);
+			expect(api.seen.map(({ path, status }) => [path, status])).toEqual([
+				["/v1/balances.finalize", 200],
+			]);
+			await expectAutumnLockState({
+				customerId,
+				openLockIds: [],
+				atomSeqs: [1],
+			});
 			expect(await postgresRemaining({ customerId })).toBe(
 				INCLUDED_MESSAGES - CONFIRMED,
 			);

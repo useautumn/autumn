@@ -24,11 +24,7 @@ export function createAtomApp({ ctx }: { ctx: AtomHttpContext }) {
 	// Before the request line: under load, a line per refused check would cost what refusing saves.
 	app.use("/v1/balances.check", admissionMiddleware({ ctx }));
 	app.use("/v1/track", admissionMiddleware({ ctx }));
-	// A finalize the API cannot settle before its lock's hand-in lands: its caller retries the Atom instead.
-	app.use(
-		"/v1/balances.finalize",
-		admissionMiddleware({ ctx, retriedAtAtom: true }),
-	);
+	app.use("/v1/balances.finalize", admissionMiddleware({ ctx }));
 	app.use(requestLogMiddleware({ ctx, handleError }), requestBodyMiddleware);
 	app.get("/health", receiveHealth({ ctx }));
 	if (ctx.multiTenant)
