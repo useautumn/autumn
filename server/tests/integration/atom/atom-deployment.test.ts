@@ -5,7 +5,8 @@
  *  1. a track through the API reaches the Atom: its check answers off the new balance;
  *  2. the same for an entity: its check answers off the entity's own balance, and a second entity's is untouched;
  *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
- *     creating again with its atom_id returns the same Atom, and a new one past the env's cap is refused;
+ *     creating again with its atom_id returns the same Atom; new ones get ids of their own up to the env's cap, past which
+ *     a create is refused, and a get naming no Atom refuses to pick one;
  *     byoc.delete_atom forgets it and the token stops working;
  *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
  *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) and pulls the entity,
@@ -201,7 +202,7 @@ test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
 );
 
 test.skipIf(hostedAtom)(
-	`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → past the cap is refused → delete → gone")}`,
+	`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → up to the cap, then refused → delete → gone")}`,
 	async () => {
 		const atom = await ensureAtomDeployment({ autumn });
 		const anyCheck = {
@@ -241,9 +242,20 @@ test.skipIf(hostedAtom)(
 			atoms: [{ id: fetched.cache.id }],
 			max_atoms: MAX_ATOMS_PER_ENV,
 		});
+		const others: { id: string }[] = [];
+		for (let count = 1; count < MAX_ATOMS_PER_ENV; count++)
+			others.push(await autumn.post("/byoc.create_atom", {}));
+		expect(
+			new Set([fetched.cache.id, ...others.map(({ id }) => id)]).size,
+		).toBe(MAX_ATOMS_PER_ENV);
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: `already runs ${MAX_ATOMS_PER_ENV} Atom`,
+			errMessage: "more than one Atom",
+			func: () => autumn.post("/byoc.get_atom", {}),
+		});
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: `already runs ${MAX_ATOMS_PER_ENV} Atoms`,
 			func: () => autumn.post("/byoc.create_atom", {}),
 		});
 
@@ -258,6 +270,7 @@ test.skipIf(hostedAtom)(
 			intervalMs: 250,
 		});
 	},
+	30_000,
 );
 
 test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's, and its org's id and slug")}`, async () => {

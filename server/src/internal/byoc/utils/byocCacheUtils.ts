@@ -214,8 +214,8 @@ export const cacheNotFailed = () =>
 		statusCode: 409,
 	});
 
-/** How many Atoms an env runs at once. Two Atoms can each grant one customer's whole balance until a push lands, so one until that's settled. */
-export const MAX_ATOMS_PER_ENV = 1;
+/** How many Atoms an env runs at once. Each Atom grants against its own copy, so a customer served by several can be over-granted until a push lands. */
+export const MAX_ATOMS_PER_ENV = 3;
 
 /** With an id, one change per Atom at a time; without, one new Atom per env at a time, since each takes the next free id. */
 export const cacheLockKey = ({
