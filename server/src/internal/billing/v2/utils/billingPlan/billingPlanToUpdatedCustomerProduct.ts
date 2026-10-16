@@ -1,4 +1,5 @@
-import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 
 export const billingPlanToUpdatedCustomerProduct = ({
 	autumnBillingPlan,

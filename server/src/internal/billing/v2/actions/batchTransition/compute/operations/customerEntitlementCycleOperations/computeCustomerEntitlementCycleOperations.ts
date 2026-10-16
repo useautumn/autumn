@@ -40,13 +40,11 @@ export const computeCustomerEntitlementCycleOperations = ({
 		}
 
 		const key = `${resetCycleAnchor}:${nextResetAt}`;
-		const operation: CustomerEntitlementCycleOperation = operations.get(
-			key,
-		) ?? {
-			entitlementIds: [],
-			resetCycleAnchor,
-			nextResetAt,
-		};
+		const operation: CustomerEntitlementCycleOperation = operations.get(key) ?? {
+				entitlementIds: [],
+				resetCycleAnchor,
+				nextResetAt,
+			};
 		operation.entitlementIds.push(entitlement.id);
 		operations.set(key, operation);
 	}

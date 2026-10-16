@@ -43,7 +43,9 @@ export const computeAttachPreviewBillingPlan = async ({
 
 	const [tax, invoiceCredits] = await Promise.all([
 		taxPromise,
-		Promise.resolve(computeAttachInvoiceCreditPreview({ ctx, billingContext })),
+		Promise.resolve(
+			computeAttachInvoiceCreditPreview({ ctx, billingContext }),
+		),
 	]);
 
 	return { tax, invoiceCredits };

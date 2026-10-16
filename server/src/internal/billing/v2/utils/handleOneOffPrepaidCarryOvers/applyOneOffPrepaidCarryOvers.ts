@@ -32,8 +32,7 @@ export const applyOneOffPrepaidCarryOvers = ({
 		fullCustomer,
 	});
 
-	const newSlotByFeatureId =
-		oneOffPrepaidCusEntsByFeatureId(newCustomerProduct);
+	const newSlotByFeatureId = oneOffPrepaidCusEntsByFeatureId(newCustomerProduct);
 
 	const mergedEntitlementIds = new Set<string>();
 	const remainingCustomerEntitlements: InsertCustomerEntitlement[] = [];

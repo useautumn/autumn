@@ -1,4 +1,4 @@
-import type { FullCusProduct, FullCustomer } from "@autumn/shared";
+import { type FullCusProduct, type FullCustomer } from "@autumn/shared";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/applyExistingRollovers";

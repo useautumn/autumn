@@ -1,6 +1,10 @@
 import type { BillingContext, FullCusProduct } from "@autumn/shared";
 import { buildTransitionPoints } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildTransitionPoints";
-import { isFutureTimestamp, normalizeMs, timestampsEqual } from "./timeUtils";
+import {
+	isFutureTimestamp,
+	normalizeMs,
+	timestampsEqual,
+} from "./timeUtils";
 
 const getFutureTrialEndsAt = ({
 	billingContext,

@@ -1,8 +1,8 @@
-import type {
-	FullCusEntWithFullCusProduct,
-	FullCusProduct,
-	FullCustomerEntitlement,
-	FullCustomerPrice,
+import {
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type FullCustomerPrice,
 } from "@autumn/shared";
 import { cusEntToCusPrice } from "@shared/utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 

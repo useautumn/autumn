@@ -22,7 +22,8 @@ export const executeCustomerEntitlementCycleOperations = async ({
 					executeBatch: ({ db, batchSize }) =>
 						alignCustomerEntitlementCyclesBatch({
 							db,
-							customerLicenseLinkId: batchTransition.customerLicenseLinkId,
+							customerLicenseLinkId:
+								batchTransition.customerLicenseLinkId,
 							operation,
 							batchSize,
 						}),
