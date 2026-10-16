@@ -64,10 +64,12 @@ export const ApiKeysPage = () => {
 
 	return (
 		<div className="h-fit max-h-full">
-			<CreateApiKeySheet
-				open={createDialogOpen}
-				onOpenChange={setCreateDialogOpen}
-			/>
+			{canCreateKey && (
+				<CreateApiKeySheet
+					open={createDialogOpen}
+					onOpenChange={setCreateDialogOpen}
+				/>
+			)}
 			{hasRows ? (
 				<>
 					<Table.Toolbar>
