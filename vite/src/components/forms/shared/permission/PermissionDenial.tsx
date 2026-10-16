@@ -19,7 +19,7 @@ export function PermissionDenial({ section }: { section: PermissionSection }) {
 		(violation) => (
 			<p
 				key={violation.field}
-				className="flex items-center gap-1.5 text-xs text-destructive"
+				className="flex items-center gap-1.5 text-xs text-destructive dark:text-red-400"
 			>
 				<ProhibitIcon className="size-3.5 shrink-0" />
 				{formatViolation({ violation })}
