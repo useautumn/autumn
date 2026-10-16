@@ -157,8 +157,11 @@ export const AtomDetailsSkeleton = () => (
 			<DetailCell label="Machine">
 				<Skeleton className="h-4 w-24" />
 			</DetailCell>
-			<DetailCell label="Network" hasDivider className="col-span-2">
+			<DetailCell label="Network" hasDivider>
 				<Skeleton className="h-4 w-16" />
+			</DetailCell>
+			<DetailCell label="Storage" hasDivider>
+				<Skeleton className="h-4 w-24" />
 			</DetailCell>
 		</div>
 	</div>
@@ -246,8 +249,11 @@ export const AtomDetails = ({
 				<DetailCell label="Machine">
 					{machine ? atomMachineSpecs(machine) : NO_VALUE}
 				</DetailCell>
-				<DetailCell label="Network" hasDivider className="col-span-2">
+				<DetailCell label="Network" hasDivider>
 					<span className="shrink-0 font-medium">{network.label}</span>
+				</DetailCell>
+				<DetailCell label="Storage" hasDivider>
+					{cache.volume_size_gib} GiB per replica
 				</DetailCell>
 			</div>
 		</div>
