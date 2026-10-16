@@ -1,8 +1,13 @@
-import type { FullCustomer } from "@autumn/shared";
-import { useQueryClient } from "@tanstack/react-query";
+import { type FullCustomer, notNullish } from "@autumn/shared";
+import { type Query, useQueryClient } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+
+const byNewestData = (a: Query, b: Query) =>
+	(b.state.dataUpdatedAt || 0) - (a.state.dataUpdatedAt || 0);
 
 export const useCachedCustomer = (customerId: string | undefined) => {
 	const queryClient = useQueryClient();
+	const buildKey = useQueryKeyFactory();
 
 	const getCachedCustomer = (): FullCustomer | null => {
 		if (!customerId) return null;
@@ -14,11 +19,7 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 		});
 
 		// Sort by most recently updated first to get the freshest data
-		const sortedQueries = fullCustomersQueries.sort((a, b) => {
-			const aTime = a.state.dataUpdatedAt || 0;
-			const bTime = b.state.dataUpdatedAt || 0;
-			return bTime - aTime;
-		});
+		const sortedQueries = fullCustomersQueries.sort(byNewestData);
 
 		for (const query of sortedQueries) {
 			// Only use data that's not stale and has been successfully fetched
@@ -43,5 +44,29 @@ export const useCachedCustomer = (customerId: string | undefined) => {
 		return null;
 	};
 
-	return { getCachedCustomer };
+	const getLastFetchedCustomer = (): FullCustomer | null => {
+		if (!customerId) return null;
+
+		const scope = buildKey([]);
+		const isInScope = (query: Query) =>
+			scope.every(
+				(part, index) => query.queryKey.at(index - scope.length) === part,
+			);
+
+		return (
+			queryClient
+				.getQueryCache()
+				.findAll({ queryKey: ["customer", customerId] })
+				.filter(isInScope)
+				.sort(byNewestData)
+				.map(
+					(query) =>
+						(query.state.data as { customer?: FullCustomer } | undefined)
+							?.customer,
+				)
+				.find(notNullish) ?? null
+		);
+	};
+
+	return { getCachedCustomer, getLastFetchedCustomer };
 };

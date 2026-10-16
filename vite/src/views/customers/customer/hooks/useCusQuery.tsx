@@ -1,16 +1,7 @@
-import type {
-	FullCusProduct,
-	FullCustomer,
-	FullCustomerSchedule,
-} from "@autumn/shared";
-import {
-	keepPreviousData,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
+import type { FullCusProduct, FullCustomerSchedule } from "@autumn/shared";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
@@ -38,23 +29,16 @@ export const useCusQuery = ({
 	schedule: fetchSchedule = false,
 }: UseCusQueryOptions = {}) => {
 	const { customer_id } = useParams();
-	const buildKey = useQueryKeyFactory();
 	const customerQueryOptions = useCustomerQueryOptions();
-	const { getCachedCustomer } = useCachedCustomer(customer_id);
+	const { getCachedCustomer, getLastFetchedCustomer } =
+		useCachedCustomer(customer_id);
 	const { entityId } = useEntity();
 
-	const queryClient = useQueryClient();
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
-
-	const baseKey = buildKey(["customer", customer_id, null]);
-	const cachedData = queryClient.getQueryData<{ customer?: FullCustomer }>(
-		baseKey,
-	);
-	const currentCustomer = cachedData?.customer ?? cachedCustomer;
 
 	const entityAlreadyLoaded =
 		!entityId ||
-		(currentCustomer as FullCustomer)?.customer_products?.some(
+		cachedCustomer?.customer_products?.some(
 			(cp: FullCusProduct) =>
 				cp.entity_id === entityId || cp.internal_entity_id === entityId,
 		);
@@ -93,7 +77,7 @@ export const useCusQuery = ({
 	const { products, isLoading: productsLoading } = useProductsQuery();
 	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 
-	const customer = data?.customer || cachedCustomer;
+	const customer = data?.customer ?? getLastFetchedCustomer() ?? cachedCustomer;
 
 	// Merge schedule(s) onto the customer object in-memory so downstream consumers
 	// (which historically read `customer.schedule` and `entity.schedule`) keep
