@@ -5,6 +5,8 @@ import type {
 } from "@autumn/shared";
 import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkRouteApproval } from "@/internal/approvals/enforce/checkRouteApproval";
+import { createInvoicePreviewToFacts } from "@/internal/approvals/facts/invoices/createInvoicePreviewToFacts";
 import { computeInvoiceLines } from "./compute/computeInvoiceLines";
 import { evaluateStripeInvoicePlan } from "./evaluate/evaluateStripeInvoicePlan";
 import { executeStripeInvoicePlan } from "./execute/executeStripeInvoicePlan";
@@ -49,7 +51,18 @@ export const createInvoice = async ({
 
 	if (preview) return { invoice: null, preview: stripePlan.preview };
 
-	// 4. Execute
+	// 4. Approvals: judged on the total the preview just computed
+	await checkRouteApproval({
+		ctx,
+		action: "invoices.create",
+		buildFacts: async () =>
+			createInvoicePreviewToFacts({
+				fullCustomer: invoiceContext.fullCustomer,
+				preview: stripePlan.preview,
+			}),
+	});
+
+	// 5. Execute
 	const { invoice, issueDateMs, dueDateMs } = await executeStripeInvoicePlan({
 		ctx,
 		invoiceContext,
