@@ -22,9 +22,10 @@ export const setSubject = async ({
 		onStored: (stored) => {
 			// The pushed subject's own part is the last: false when a newer read of it is already held.
 			if (!stored.at(-1)) return;
-			const { customerId } = subject.state.identity;
+			const { customerId, entityId } = subject.state.identity;
 			trimmed = ctx.journal.reconcile({
 				customerId,
+				entityId,
 				atomSeqs: subject.state.customer.atom_seqs ?? null,
 			});
 			ctx.openLocks.settle({

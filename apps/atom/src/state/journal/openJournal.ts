@@ -15,6 +15,7 @@ import {
 } from "../repos/journalKeys.js";
 import { openWrittenFile } from "../writer/openWrittenFile.js";
 import { createGroupCommit } from "./createGroupCommit.js";
+import { seenSeqOf } from "./seenSeqOf.js";
 import type {
 	HandedEntry,
 	Journal,
@@ -25,6 +26,10 @@ import type {
 
 /** Every customer with nothing owed shares it, so a view memoised on it stays valid. */
 const NOTHING_OWED: readonly JournalEntry[] = Object.freeze([]);
+
+/** The entity whose rows an entry moves beside the customer's; none for a finalize Autumn decides. */
+const movedEntityIdOf = ({ command }: JournalEntry): string | null =>
+	command.type === "undecidedFinalize" ? null : command.identity.entityId;
 
 /** Past any of these, a customer's send_event checks go to the API until Autumn catches up. */
 export const MAX_OWED_PER_CUSTOMER = 20_000;
@@ -332,38 +337,39 @@ export const openJournal = ({
 
 	function reconcile({
 		customerId,
+		entityId = null,
 		atomSeqs,
 	}: {
 		customerId: string;
+		entityId?: string | null;
 		atomSeqs: Record<string, Record<string, number>> | null;
 	}): Promise<void> {
 		const entries = owed({ customerId });
-		// How far Autumn has seen each writer's seqs for the customer, whatever atom id it holds them under.
 		const seen = new Map(
 			[...new Set(entries.map((entry) => entry.writerId))].map((writer) => [
 				writer,
-				Object.values(atomSeqs ?? {}).find(
-					(writerSeqs) => writer in writerSeqs,
-				)?.[writer] ?? 0,
+				seenSeqOf({ atomSeqs, writerId: writer }),
 			]),
 		);
 		const isSeen = (entry: JournalEntry) =>
-			entry.seq <= (seen.get(entry.writerId) ?? 0);
+			entry.seq <= (seen.get(entry.writerId) ?? 0) &&
+			[null, entityId].includes(movedEntityIdOf(entry));
 		const unseen = entries.filter((entry) => !isSeen(entry));
 		if (unseen.length === entries.length) return Promise.resolve();
 		for (const entry of entries) if (isSeen(entry)) releaseUnsent(entry);
 		oldestUnsent({ customerId });
 		setOwed({ customerId, entries: unseen });
-		return Promise.all(
-			[...seen]
-				.filter(([, seq]) => seq > 0)
-				.map(([writer, seq]) =>
-					file.write(
-						"deleteJournalEntriesUpTo",
-						`${customerId}\u0000${writer}\u0000${seq}`,
-					),
-				),
-		).then(() => {});
+		return file
+			.write(
+				"deleteJournalEntries",
+				entries
+					.filter(isSeen)
+					.map(
+						({ writerId, seq }) => `${customerId}\u0000${writerId}\u0000${seq}`,
+					)
+					.join("\u0000"),
+			)
+			.then(() => {});
 	}
 
 	function forget({ customerId }: { customerId: string }): Promise<void> {

@@ -62,12 +62,16 @@ export type Journal = {
 	/** The customer's send_event goes to the API: it owes too many, its oldest unsent is too old, or its thread holds too many unsent. */
 	isBackedUp(params: { customerId: string }): boolean;
 	/**
-	 * After a push is stored: every entry at or below the seq its customer row holds for that entry's writer leaves the
-	 * journal. `atomSeqs` is that row's, by atom id then writer id; a writer id is unique, so any atom id may hold it.
-	 * They leave what is owed at once; the promise settles once the file's deletes have committed.
+	 * After a push of the customer or of `entityId` is stored: every entry of the pushed state at or below the seq its
+	 * customer row holds for that entry's writer leaves the journal. An entity's entry leaves on its entity's push alone,
+	 * since the customer's copy can show it applied before the entity's does. `atomSeqs` is that row's, by atom id then
+	 * writer id; a writer id is unique, so any atom id may hold it. They leave what is owed at once; the promise settles
+	 * once the file's deletes have committed.
 	 */
 	reconcile(params: {
 		customerId: string;
+		/** The entity pushed; absent on the customer's own push. */
+		entityId?: string | null;
 		atomSeqs: Record<string, Record<string, number>> | null;
 	}): Promise<void>;
 	/** The customer is gone from Autumn: nothing it owes can ever apply. */

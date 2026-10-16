@@ -21,6 +21,8 @@ export type ReplicaHealth = "down" | "starting" | "ready";
 export type PushLanding = {
 	path: string;
 	customerId: string | null;
+	/** The entity a subject push is for, read from its body; null for the customer's own copy or a catalog push. */
+	entityId: string | null;
 	replica: number;
 	status: number;
 	at: number;
@@ -72,6 +74,11 @@ export type ReplicaSet = TestAtom & {
 	heldHandIns(): number;
 	/** Herald's pushes are taken but reach no replica until released, as a slow link delays them. */
 	holdPushes(): void;
+	/** Only the subject pushes for one copy (an entity's, or the customer's own with null) are held; the rest reach the replicas. */
+	holdSubjectPushes(params: {
+		customerId: string;
+		entityId: string | null;
+	}): void;
 	/** The held pushes reach the replicas one at a time, in the order herald sent them. */
 	releasePushes(): Promise<void>;
 	/** Back to `size` running replicas, every link healed and the balancer spreading requests. */

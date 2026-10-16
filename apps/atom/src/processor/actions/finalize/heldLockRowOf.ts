@@ -6,7 +6,11 @@ import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import { isDeletedSubject } from "../../../state/types/storedSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
 import { freshestCatalog } from "../readCurrentSubject/freshestCatalog.js";
-import { replayOwed } from "../readCurrentSubject/replayOwed.js";
+import { entityCopyReader } from "../readCurrentSubject/readCurrentSubject.js";
+import {
+	NO_ENTITY_PARTS,
+	replayOwed,
+} from "../readCurrentSubject/replayOwed.js";
 
 const takesLock = ({ command }: JournalEntry, lockId: string): boolean =>
 	command.type === "track" && command.lock?.lockId === lockId;
@@ -23,13 +27,12 @@ const replayLockRows = ({
 }): void => {
 	const customer = ctx.sqliteStore.readSubject({ customerId, entityId: null });
 	if (!customer || isDeletedSubject(customer)) return;
+	const shared = ctx.catalogStore.read();
 	replayOwed({
 		owed,
-		state: customer.state,
-		catalog: freshestCatalog({
-			stored: customer,
-			shared: ctx.catalogStore.read(),
-		}),
+		parts: { customer: customer.state, entities: NO_ENTITY_PARTS },
+		catalog: freshestCatalog({ stored: customer, shared }),
+		entityCopyOf: entityCopyReader({ ctx, customer, shared }),
 		onApplied: (mutation) => {
 			const row = findLockInsertInMutation({ mutation });
 			const { command: track } = mutation;

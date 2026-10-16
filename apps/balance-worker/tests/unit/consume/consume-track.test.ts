@@ -226,6 +226,25 @@ describe("consumeTrack", () => {
 		expect(keys.released).toEqual([storageKey]);
 	});
 
+	test("an Atom's entity track refused for good lands its seq on the customer, whose row holds it, even with the entity gone", async () => {
+		const { ctx, decided } = createFixture({
+			refuses: (command) => command.identity.entityId !== null,
+		});
+		const atomCommand = parseTrackCommand({
+			input: {
+				...sourced({ commandId: "c1", requestId: "r1" }),
+				identity: { ...testIdentity, entityId: "ent_gone" },
+			},
+		});
+		const queued = await consumeTrack({ ctx, command: atomCommand });
+
+		expect(queued).not.toBeNull();
+		expect(decided[1]).toMatchObject({
+			...seqOnly(atomCommand),
+			identity: { ...testIdentity, entityId: null },
+		});
+	});
+
 	test("an Atom's keyless track carries no idempotency and claims nothing; one under its caller's key still claims", async () => {
 		const { ctx, decided, keys } = createFixture();
 		const keyless = parseTrackCommand({

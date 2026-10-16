@@ -235,9 +235,9 @@ test("5.13 + 5.16 a miss is forwarded while its pull is in flight; a check the A
 	expect(await atom.forwardOf()).toBe("customer_not_stored");
 	expect(atom.calls).toHaveLength(1);
 
-	expect(await atom.forwardOf({ send_event: true, entity_id: "ent_42" })).toBe(
-		"send_event",
-	);
+	expect(
+		await atom.forwardOf({ with_preview: true, entity_id: "ent_42" }),
+	).toBe("with_preview");
 	expect(atom.counted).toEqual({ subjectMisses: 2, subjectPulls: 1 });
 
 	await atom.calls[0]?.answer(

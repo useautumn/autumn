@@ -77,7 +77,10 @@ const storeFor = ({
 const isRefusal = (cause: unknown): boolean =>
 	classifyQueuedFailure({ cause }) === "refused";
 
-/** An Atom's command that will never deduct still lands its seq, so the Atom can clear it from its journal. */
+/**
+ * An Atom's command that will never deduct still lands its seq, so the Atom can clear it from its journal. The seq is the
+ * customer row's, so it lands there even when the entity the track named is gone.
+ */
 async function landAtomSeqOnly({
 	ctx,
 	command,
@@ -86,8 +89,12 @@ async function landAtomSeqOnly({
 	command: TrackCommand;
 }): Promise<QueuedCommand | null> {
 	if (!command.source) return null;
+	const onCustomer = {
+		...command,
+		identity: { ...command.identity, entityId: null },
+	};
 	const decided = await ctx.processor.decideTrack({
-		command: trackOfNothing({ command }),
+		command: trackOfNothing({ command: onCustomer }),
 	});
 	return { decided };
 }

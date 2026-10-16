@@ -20,23 +20,10 @@ const forwardedRequests: [ForwardReason, CheckRequest][] = [
 		checkRequestFor({ params: { feature_id: undefined, product_id: "pro" } }),
 	],
 	[
-		"send_event",
-		checkRequestFor({ params: { send_event: true, entity_id: "seat_1" } }),
-	],
-	[
 		"lock_version",
 		checkRequestFor({
 			params: { lock: { enabled: true, lock_id: "lock_1" } },
 			apiVersion: new ApiVersionClass(ApiVersion.V2_5),
-		}),
-	],
-	[
-		"lock",
-		checkRequestFor({
-			params: {
-				lock: { enabled: true, lock_id: "lock_1" },
-				entity_id: "seat_1",
-			},
 		}),
 	],
 	["with_preview", checkRequestFor({ params: { with_preview: true } })],
@@ -99,6 +86,26 @@ describe("which checks Atom answers itself", () => {
 
 		expect(checkForwardReason({ request })).toBeNull();
 		expect(checkRequestToAnswerableCheck({ request }).customerId).toBe("cus_1");
+	});
+
+	test("an entity's send_event is Atom's", () => {
+		const request = checkRequestFor({
+			params: { send_event: true, entity_id: "seat_1" },
+		});
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request }).entityId).toBe("seat_1");
+	});
+
+	test("an entity's lock at 2.6 is Atom's, and carries the lock it asked for", () => {
+		const lock = { enabled: true as const, lock_id: "lock_1" };
+		const request = checkRequestFor({ params: { lock, entity_id: "seat_1" } });
+
+		expect(checkForwardReason({ request })).toBeNull();
+		expect(checkRequestToAnswerableCheck({ request })).toMatchObject({
+			entityId: "seat_1",
+			lock,
+		});
 	});
 
 	test("a check on an entity is Atom's too", () => {

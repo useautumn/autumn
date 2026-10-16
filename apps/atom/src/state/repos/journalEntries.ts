@@ -118,23 +118,26 @@ export const readJournalWriterId = ({
 	return row.writerId;
 };
 
-export const deleteJournalEntriesUpTo = ({
+/** The payload names each entry as `customerId\0writerId\0seq`, NUL-separated. */
+export const deleteJournalEntries = ({
 	ctx,
 	payload,
 }: {
 	ctx: JournalContext;
 	payload: string;
 }): string => {
-	const [customerId, writerId, seq] = payload.split("\u0000");
-	ctx.sqliteDb
-		.query(
-			"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq <= $seq",
-		)
-		.run({
-			customerId: customerId as string,
-			writerId: writerId as string,
-			seq: Number(seq),
-		});
+	const fields = payload.split("\u0000");
+	const deleteEntry = ctx.sqliteDb.query(
+		"DELETE FROM journal_entries WHERE customer_id = $customerId AND writer_id = $writerId AND seq = $seq",
+	);
+	ctx.sqliteDb.transaction(() => {
+		for (let at = 0; at < fields.length; at += 3)
+			deleteEntry.run({
+				customerId: fields[at] as string,
+				writerId: fields[at + 1] as string,
+				seq: Number(fields[at + 2]),
+			});
+	})();
 	return "";
 };
 

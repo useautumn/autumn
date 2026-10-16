@@ -544,9 +544,10 @@ describe("a push that only acknowledges this Atom's own deductions keeps the cac
 		subjectStateToFullSubject({
 			state: replay.replayOwed({
 				owed: journal.owed({ customerId: "cus_1" }),
-				state,
+				parts: { customer: state, entities: new Map() },
 				catalog,
-			}),
+				entityCopyOf: () => null,
+			}).customer,
 			catalog,
 		});
 

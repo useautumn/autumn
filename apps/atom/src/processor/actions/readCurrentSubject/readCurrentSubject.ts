@@ -2,7 +2,6 @@ import {
 	type Catalog,
 	mergeCatalogs,
 	mergeSubjectStates,
-	type SubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
 import {
@@ -23,7 +22,12 @@ import {
 	foldAcrossPush,
 } from "./foldAcrossPush.js";
 import { freshestCatalog } from "./freshestCatalog.js";
-import { replayOwed } from "./replayOwed.js";
+import {
+	NO_ENTITY_PARTS,
+	replayOwed,
+	type SubjectPart,
+	type SubjectParts,
+} from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The API answers, and the subject is pulled beside it so a later check can be answered here. */
@@ -135,6 +139,7 @@ const viewFoldRebuilt: Record<RebuildReason, number> = {
 	trim: 0,
 	catalog: 0,
 	state: 0,
+	entity: 0,
 };
 let rebuiltWarnedAt = Number.NEGATIVE_INFINITY;
 
@@ -148,6 +153,7 @@ export const readViewFoldThreadStats = () => ({
 	viewFoldRebuiltTrim: viewFoldRebuilt.trim,
 	viewFoldRebuiltCatalog: viewFoldRebuilt.catalog,
 	viewFoldRebuiltState: viewFoldRebuilt.state,
+	viewFoldRebuiltEntity: viewFoldRebuilt.entity,
 });
 
 const loggedValueOf = (
@@ -278,12 +284,17 @@ export const readCurrentSubject = ({
 		carriedBase ??
 		(isSameCopy && isAppendedTo({ owed, fold: joined })
 			? {
-					state: joined.customerState,
+					parts: joined.parts,
 					applied: joined.applied,
 					fullSubject: entity ? null : joined.current.fullSubject,
 				}
-			: { state: customer.state, applied: 0, fullSubject: null });
-	const { current, customerState } = joinSubject({
+			: {
+					parts: { customer: customer.state, entities: NO_ENTITY_PARTS },
+					applied: 0,
+					fullSubject: null,
+				});
+	const { current, parts } = joinSubject({
+		ctx,
 		customer,
 		entity,
 		shared,
@@ -297,7 +308,7 @@ export const readCurrentSubject = ({
 		shared,
 		owed,
 		applied: owed.length,
-		customerState,
+		parts,
 		current,
 	};
 	subjectJoinCache.set(target, fold);
@@ -326,7 +337,31 @@ const joinedCatalogOf = ({
 	});
 };
 
+/** An entity's live copy beside the customer's, as an owed entry of that entity is replayed on; null when none is held. */
+export const entityCopyReader =
+	({
+		ctx,
+		customer,
+		shared,
+	}: {
+		ctx: SlotProcessorContext;
+		customer: StoredSubject;
+		shared: SharedCatalog | null;
+	}) =>
+	(entityId: string): SubjectPart | null => {
+		const row = ctx.sqliteStore.readSubject({
+			customerId: customer.state.identity.customerId,
+			entityId,
+		});
+		if (!row || isDeletedSubject(row)) return null;
+		return {
+			state: row.state,
+			catalog: joinedCatalogOf({ customer, entity: row, shared }),
+		};
+	};
+
 const joinSubject = ({
+	ctx,
 	customer,
 	entity,
 	shared,
@@ -335,6 +370,7 @@ const joinSubject = ({
 	catalog,
 	entityId,
 }: {
+	ctx: SlotProcessorContext;
 	customer: StoredSubject;
 	entity: StoredSubject | null;
 	shared: SharedCatalog | null;
@@ -342,24 +378,28 @@ const joinSubject = ({
 	base: ReplayBase;
 	catalog: Catalog;
 	entityId: string | null;
-}): { current: CurrentSubject; customerState: SubjectState } => {
-	// Only a customer's own deductions are owed, and they move only the customer's own rows.
+}): { current: CurrentSubject; parts: SubjectParts } => {
 	const unapplied = owed.slice(base.applied);
-	const customerState =
+	const parts =
 		unapplied.length === 0
-			? base.state
+			? base.parts
 			: replayOwed({
 					owed: unapplied,
-					state: base.state,
+					parts: base.parts,
 					catalog,
+					entityCopyOf: entityCopyReader({ ctx, customer, shared }),
 					fullSubject: base.fullSubject,
 				});
+	const entityState =
+		entity && entityId
+			? (parts.entities.get(entityId)?.state ?? entity.state)
+			: null;
 
 	const current: CurrentSubject = {
 		fullSubject: subjectStateToFullSubject({
 			state: mergeSubjectStates({
-				customer: customerState,
-				entity: entity?.state ?? null,
+				customer: parts.customer,
+				entity: entityState,
 			}),
 			catalog,
 			entityId,
@@ -372,5 +412,5 @@ const joinSubject = ({
 		}),
 		org: customer.org,
 	};
-	return { current, customerState };
+	return { current, parts };
 };

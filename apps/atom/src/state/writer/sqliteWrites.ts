@@ -3,7 +3,7 @@ import { openJournalDatabase } from "../journal/openJournalDatabase.js";
 import { openSlotDatabase } from "../openSlotDatabase.js";
 import {
 	deleteCustomerJournalEntries,
-	deleteJournalEntriesUpTo,
+	deleteJournalEntries,
 	insertJournalEntries,
 } from "../repos/journalEntries.js";
 import {
@@ -19,7 +19,7 @@ import {
 /** Every statement that writes a slot or journal file: each takes the serialized batch and answers with a string. */
 export const SQLITE_WRITES = {
 	insertJournalEntries,
-	deleteJournalEntriesUpTo,
+	deleteJournalEntries,
 	deleteCustomerJournalEntries,
 	upsertSubjects,
 	deleteCustomersWrittenBefore,

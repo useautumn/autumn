@@ -55,14 +55,35 @@ const forwardToReplica = async ({
 	}
 };
 
+/** The subject a subjects.set body is for, from `state.identity`; null for any other body. */
+const pushedIdentityOf = ({
+	body,
+}: {
+	body: ArrayBuffer;
+}): { customerId: string; entityId: string | null } | null => {
+	try {
+		const identity = JSON.parse(new TextDecoder().decode(body))?.state
+			?.identity;
+		if (typeof identity?.customerId !== "string") return null;
+		return {
+			customerId: identity.customerId,
+			entityId: identity.entityId ?? null,
+		};
+	} catch {
+		return null;
+	}
+};
+
 const recordPush = ({
 	state,
 	request,
+	body,
 	replica,
 	status,
 }: {
 	state: BalancerState;
 	request: Request;
+	body: ArrayBuffer;
 	replica: Replica;
 	status: number;
 }): void => {
@@ -71,6 +92,7 @@ const recordPush = ({
 	state.pushes.push({
 		path: pathname,
 		customerId: request.headers.get(ATOM_CUSTOMER_ID_HEADER),
+		entityId: pushedIdentityOf({ body })?.entityId ?? null,
 		replica: replica.index,
 		status,
 		at: Date.now(),
@@ -96,7 +118,7 @@ export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 		const replica = pickReplica({ ctx, state });
 		if (!replica) return unreachable({ message: "No replica is running" });
 		const response = await forwardToReplica({ request, body, replica });
-		recordPush({ state, request, replica, status: response.status });
+		recordPush({ state, request, body, replica, status: response.status });
 		return response;
 	}
 
@@ -105,7 +127,7 @@ export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 		const body = await request.arrayBuffer();
 		const send = () => sendToReplica({ request, body });
 		return PUSH_PATHS.has(new URL(request.url).pathname)
-			? pushGate.pass({ send })
+			? pushGate.pass({ send, body })
 			: send();
 	}
 
@@ -118,6 +140,20 @@ export const createReplicaBalancer = ({ ctx }: { ctx: ReplicaSetContext }) => {
 		},
 		pushes: () => [...state.pushes],
 		pushGate,
+		/** Holds only the subject pushes for this customer's `entityId` (null: the customer's own copy). */
+		holdSubjectPushes: ({
+			customerId,
+			entityId,
+		}: {
+			customerId: string;
+			entityId: string | null;
+		}) =>
+			pushGate.shut((body) => {
+				const identity = pushedIdentityOf({ body });
+				return (
+					identity?.customerId === customerId && identity.entityId === entityId
+				);
+			}),
 		stop: () => server.stop(true),
 	};
 };

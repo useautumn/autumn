@@ -18,13 +18,20 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { TrackCommand } from "@autumn/balance-engine";
+import {
+	createSubjectState,
+	type TrackCommand,
+	type WorkerEntity,
+} from "@autumn/balance-engine";
 import {
 	type CommandPipeline,
 	createCommandPipeline,
 	STARTING_BALANCE,
 } from "../../fixtures/commandPipeline.js";
-import { testOccurredAt } from "../../fixtures/mutations.js";
+import {
+	createCustomerEntitlement,
+	testOccurredAt,
+} from "../../fixtures/mutations.js";
 import {
 	atomFinalizeOf,
 	lockingTrackOf,
@@ -372,4 +379,85 @@ describe("an Atom's queued finalize", () => {
 				atomSeqs: { atom_1: { w_1: 2 } },
 			});
 		}));
+});
+
+describe("an Atom's undecided finalize of an entity's lock", () => {
+	const entity: WorkerEntity = {
+		id: "ent_42",
+		internal_id: "ent_internal_42",
+		internal_customer_id: "cus_internal_1",
+		feature_id: "seats",
+	};
+	const ENTITY_BALANCE = 50;
+	const entityState = createSubjectState({
+		identity: {
+			orgId: "org_1",
+			env: "sandbox",
+			customerId,
+			entityId: entity.id,
+		},
+		customerEntitlements: [
+			{
+				...createCustomerEntitlement({
+					id: "messages_ent_42",
+					balance: ENTITY_BALANCE,
+				}),
+				customer_product_id: null,
+				internal_entity_id: entity.internal_id,
+			},
+		],
+		entity,
+	});
+	const entityLockTrack: TrackCommand = {
+		...lockTrack,
+		identity: { ...lockTrack.identity, entityId: entity.id },
+	};
+	const balancesOf = ({ pipeline }: { pipeline: CommandPipeline }) => {
+		const state = pipeline.readState({
+			customerId,
+			entityId: entity.id,
+		});
+		return Object.fromEntries(
+			(state?.customerEntitlements ?? []).map(({ id, balance }) => [
+				id,
+				balance,
+			]),
+		);
+	};
+
+	test("is decided on the lock's entity, as the API's finalize is: the lock closes, its units come back, the seq lands", () =>
+		withPipeline(
+			async (pipeline) => {
+				await pipeline.consumeBatch({ commands: [entityLockTrack] });
+				await pipeline.drain();
+				expect(pipeline.storedLockIds()).toEqual(["L1"]);
+				const held = balancesOf({ pipeline });
+
+				await pipeline.consumeBatch({
+					commands: [
+						atomFinalizeOf({
+							customerId,
+							lockId: "L1",
+							seq: 2,
+							featureId: null,
+						}),
+					],
+					firstOffset: 1,
+				});
+				await pipeline.drain();
+
+				expect(Object.values(held).reduce((sum, b) => sum + (b ?? 0), 0)).toBe(
+					STARTING_BALANCE + ENTITY_BALANCE - 10,
+				);
+				expect(readCustomer({ pipeline })).toMatchObject({
+					openLocks: [],
+					atomSeqs: { atom_1: { w_1: 2 } },
+				});
+				expect(balancesOf({ pipeline })).toEqual({
+					messages_monthly: STARTING_BALANCE,
+					messages_ent_42: ENTITY_BALANCE,
+				});
+			},
+			{ states: [entityState] },
+		));
 });
