@@ -10,8 +10,21 @@ package directly.
 bun run --cwd packages/librdkafka build
 ```
 
-Compiles once per patched sources, platform and arch (~15 min cold: librdkafka statically links its own
-OpenSSL, zstd and curl) into `~/.cache/autumn-librdkafka/<key>.node`, then restores it in a second.
+Compiles once per build key (~15 min cold: librdkafka statically links its own OpenSSL, zstd and curl)
+into `~/.cache/autumn-librdkafka/<key>.node`, then restores it in a second. The key hashes the patched
+sources, platform, arch, glibc and C++ compiler (`bun run --cwd packages/librdkafka native:key`), so an addon
+built on one base image never loads on another.
+
+Where the cache lives:
+
+- **Deploy image** (`build.yml`): the `autumn-librdkafka` BuildKit cache mount in `docker/Dockerfile`, kept
+  between runs by the Blacksmith builder's sticky disk.
+- **CI** (`librdkafka.yml`): `actions/cache` keyed on the build key. Its `image` job builds the deploy image on
+  the same Blacksmith builder, so a patch change compiles in its PR and the deploy after merge restores it.
+- **Capy machines**: `scripts/setup/capy-init.sh` builds it, and the machine snapshot keeps the cache.
+
+`bun run --cwd packages/librdkafka probe:addon` (`PROBE_BROKERS`, default `127.0.0.1:9092`) loads the addon,
+creates a topic and sends one record idempotently.
 Importing the package never needs the addon; the first producer, consumer or admin does, and says so.
 Needs a C/C++ toolchain, Python 3 and Perl (macOS: Xcode command line tools).
 

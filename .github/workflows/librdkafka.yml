@@ -5,12 +5,14 @@ on:
     paths:
       - "packages/librdkafka/**"
       - "patches/@confluentinc%2Fkafka-javascript@*.patch"
+      - "docker/Dockerfile"
       - ".github/workflows/librdkafka.yml"
   push:
     branches: [dev]
     paths:
       - "packages/librdkafka/**"
       - "patches/@confluentinc%2Fkafka-javascript@*.patch"
+      - "docker/Dockerfile"
       - ".github/workflows/librdkafka.yml"
 
 permissions:
@@ -38,11 +40,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # The build key hashes the patched sources and this runner's glibc and compiler.
+      - name: Name the addon build
+        id: native-key
+        run: echo "key=$(bun run --silent --cwd packages/librdkafka native:key)" >> "$GITHUB_OUTPUT"
+
       - name: Restore the compiled addon
         uses: actions/cache@v4
         with:
           path: ~/.cache/autumn-librdkafka
-          key: librdkafka-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('patches/@confluentinc%2Fkafka-javascript@*.patch', 'packages/librdkafka/src/native/**') }}
+          key: librdkafka-${{ runner.os }}-${{ runner.arch }}-${{ steps.native-key.outputs.key }}
 
       - name: Build the addon
         run: bun run --cwd packages/librdkafka build
@@ -55,3 +62,51 @@ jobs:
 
       - name: Type check
         run: bun -F @autumn/librdkafka ts
+
+  image:
+    name: Build the deploy image and probe the addon in it
+    # Same runner class and Blacksmith builder as build.yml, so a compile here warms the deploy's cache mount.
+    runs-on: blacksmith-16vcpu-ubuntu-2404
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@v1
+
+      - name: Start a Kafka broker
+        run: docker run -d --name kafka --network host apache/kafka:3.9.1
+
+      - name: Build the image
+        shell: bash
+        run: |
+          started=$(date +%s)
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --progress=plain \
+            --load \
+            --tag autumn:librdkafka-probe \
+            -f docker/Dockerfile \
+            . 2>&1 | tee /tmp/image-build.log
+          seconds=$(( $(date +%s) - started ))
+          outcome=$(grep -oE "native addon (current|restored|built) in [0-9.]+s" /tmp/image-build.log || echo "native stage layer cached")
+          echo "Image built in ${seconds}s; ${outcome}." | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Wait for the broker
+        run: |
+          for _ in $(seq 60); do
+            docker exec kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server 127.0.0.1:9092 --list >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          docker logs kafka
+          exit 1
+
+      - name: Create a topic and send idempotently from the image
+        shell: bash
+        run: |
+          docker run --rm --network host -w /app/packages/librdkafka autumn:librdkafka-probe \
+            bun scripts/probeAddon.ts | tee -a "$GITHUB_STEP_SUMMARY"

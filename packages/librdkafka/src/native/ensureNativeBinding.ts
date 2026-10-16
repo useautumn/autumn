@@ -14,6 +14,7 @@ import { availableParallelism, homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { nativeBuildKeyOf } from "./nativeBuildKey.js";
 import { CONFLUENT_PACKAGE, NATIVE_BINARY_FILE } from "./nativePackage.js";
+import { nativeToolchainOf } from "./nativeToolchain.js";
 
 export type NativeBindingOutcome = "current" | "restored" | "built";
 
@@ -155,14 +156,20 @@ async function compile({ paths }: { paths: NativeBuildPaths }): Promise<void> {
 	rmSync(paths.scratch, { recursive: true, force: true });
 }
 
+/** The key this machine's build of the installed patched sources is cached under. */
+export function nativeBuildKey(): string {
+	return nativeBuildKeyOf({
+		sources: readSources({ packageDir: resolvePackageDir() }),
+		platform: process.platform,
+		arch: process.arch,
+		toolchain: nativeToolchainOf(),
+	});
+}
+
 /** Puts a native build of the patched sources where `bindings` looks, compiling only on a cache miss. */
 export async function ensureNativeBinding(): Promise<NativeBindingOutcome> {
 	const packageDir = resolvePackageDir();
-	const key = nativeBuildKeyOf({
-		sources: readSources({ packageDir }),
-		platform: process.platform,
-		arch: process.arch,
-	});
+	const key = nativeBuildKey();
 	const paths = pathsOf({ key, packageDir });
 	if (existsSync(paths.installed) && existsSync(paths.marker)) {
 		if (readFileSync(paths.marker, "utf8") === key) return "current";

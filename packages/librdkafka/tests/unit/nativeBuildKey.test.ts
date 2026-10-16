@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { nativeBuildKeyOf } from "../../src/native/nativeBuildKey.js";
 
-const linux = { platform: "linux", arch: "x64" };
+const linux = {
+	platform: "linux",
+	arch: "x64",
+	toolchain: "glibc 2.41; c++ (Debian 14.2.0-19) 14.2.0",
+};
 
 describe("nativeBuildKeyOf", () => {
 	test("does not depend on the order the sources were read in", () => {
@@ -29,7 +33,18 @@ describe("nativeBuildKeyOf", () => {
 	test("an arm64 build never stands in for an x64 one", () => {
 		const sources = new Map([["src/a.cc", "a"]]);
 		expect(nativeBuildKeyOf({ sources, ...linux })).not.toBe(
-			nativeBuildKeyOf({ sources, platform: "linux", arch: "arm64" }),
+			nativeBuildKeyOf({ sources, ...linux, arch: "arm64" }),
+		);
+	});
+
+	test("an addon built against a newer glibc never stands in for an older one", () => {
+		const sources = new Map([["src/a.cc", "a"]]);
+		expect(nativeBuildKeyOf({ sources, ...linux })).not.toBe(
+			nativeBuildKeyOf({
+				sources,
+				...linux,
+				toolchain: "glibc 2.39; c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+			}),
 		);
 	});
 });
