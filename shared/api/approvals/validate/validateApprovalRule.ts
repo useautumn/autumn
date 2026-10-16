@@ -7,6 +7,7 @@ import { findBareArrayFilters } from "./findBareArrayFilters";
 import { findCustomOnIncomingPlans } from "./findCustomOnIncomingPlans";
 import { findEmptyGroups } from "./findEmptyGroups";
 import { findPatternMatchersOnIds } from "./findPatternMatchersOnIds";
+import { findUnruledActions } from "./findUnruledActions";
 import { listWhenEntries } from "./listWhenEntries";
 import type { ApprovalRuleIssue } from "./types";
 
@@ -40,6 +41,7 @@ export const validateApprovalRule = (
 		...findEmptyGroups({ entries }),
 		...findCustomOnIncomingPlans({ entries }),
 		...checkFeatureChosen({ actions, when }),
+		...findUnruledActions({ actions }),
 	];
 
 	return issues.length > 0
