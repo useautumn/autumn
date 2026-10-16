@@ -22,6 +22,7 @@ export const setupStripeSubscriptionScope = ({
 			customerProducts: fullCustomer.customer_products,
 			stripeSubscriptionId,
 			stripeScheduleId,
+			unlinkedPlans: "all",
 		});
 	const linkedStripeSubscriptionIds = customerProductsToStripeSubscriptionIds({
 		customerProducts: fullCustomer.customer_products.filter(({ status }) =>
