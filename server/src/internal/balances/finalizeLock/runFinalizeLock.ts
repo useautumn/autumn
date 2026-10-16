@@ -1,4 +1,4 @@
-import type { FinalizeLockParamsV1 } from "@autumn/shared";
+import { type FinalizeLockParamsV1, RecaseError } from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
@@ -22,22 +22,15 @@ const isLegacyFinalizeWithoutCustomer = ({
 	params: FinalizeLockParamsV1;
 }): boolean => !params.customer_id;
 
-/** The worker's row for the lock; with `waitForHandIn`, a worker customer's lock an Atom may not have handed in yet is waited for. */
-const findWorkerLock = async ({
-	ctx,
-	params,
-	waitForHandIn,
-}: RunFinalizeLockArgs & { waitForHandIn: boolean }) => {
-	const customerId = isLegacyFinalizeWithoutCustomer({ params })
-		? undefined
-		: params.customer_id;
-	const lock = await getBalanceLock({
-		ctx,
-		lockId: params.lock_id,
-		customerId,
-	});
-	if (lock || !waitForHandIn || !customerId) return lock;
-	if (!isBalanceWorkerRolloutEnabled({ ctx, customerId })) return null;
+/** What every lookup answers for a lock_id it doesn't know: no worker row, and no Redis receipt. */
+export const isLockNotFoundError = (error: unknown): boolean =>
+	error instanceof RecaseError && error.message.includes("Lock not found");
+
+/** A worker customer's lock an Atom answered may not be handed in yet: its row, once it lands, or null. */
+const handedInLockOf = async ({ ctx, params }: RunFinalizeLockArgs) => {
+	const customerId = params.customer_id;
+	if (!customerId || !isBalanceWorkerRolloutEnabled({ ctx, customerId }))
+		return null;
 	return waitForHandedInLock({ ctx, lockId: params.lock_id, customerId });
 };
 
@@ -47,10 +40,23 @@ export const finalizeWhereTheLockLives = async ({
 	params,
 	waitForHandIn = false,
 }: RunFinalizeLockArgs & { waitForHandIn?: boolean }) => {
-	const workerLock = await findWorkerLock({ ctx, params, waitForHandIn });
-	return workerLock
-		? runBalanceWorkerFinalize({ ctx, params, lock: workerLock })
-		: runFinalizeLockInner({ ctx, params });
+	const workerLock = await getBalanceLock({
+		ctx,
+		lockId: params.lock_id,
+		customerId: isLegacyFinalizeWithoutCustomer({ params })
+			? undefined
+			: params.customer_id,
+	});
+	if (workerLock)
+		return runBalanceWorkerFinalize({ ctx, params, lock: workerLock });
+	try {
+		return await runFinalizeLockInner({ ctx, params });
+	} catch (error) {
+		if (!waitForHandIn || !isLockNotFoundError(error)) throw error;
+		const handedIn = await handedInLockOf({ ctx, params });
+		if (!handedIn) throw error;
+		return runBalanceWorkerFinalize({ ctx, params, lock: handedIn });
+	}
 };
 
 export const runFinalizeLock = async (args: RunFinalizeLockArgs) =>
