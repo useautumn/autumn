@@ -52,32 +52,22 @@ export const relinkPendingPayment = async ({
 
 	// The deferred plan still inserts the replaced row; the payment webhook must promote the replacement.
 	const data = pendingMetadata.data as DeferredAutumnBillingPlanData;
-	const autumnBillingPlan = data.billingPlan.autumn;
+	const { autumn } = data.billingPlan;
+	autumn.insertCustomerProducts = autumn.insertCustomerProducts?.map(
+		(planned) =>
+			planned.id === customerProduct.id
+				? {
+						...replacement,
+						status: planned.status,
+						created_at: customerProduct.created_at,
+						subscription_ids: planned.subscription_ids,
+						scheduled_ids: planned.scheduled_ids,
+					}
+				: planned,
+	);
 	await MetadataService.update({
 		db: ctx.db,
 		id: metadataId,
-		updates: {
-			data: {
-				...data,
-				billingPlan: {
-					...data.billingPlan,
-					autumn: {
-						...autumnBillingPlan,
-						insertCustomerProducts:
-							autumnBillingPlan.insertCustomerProducts?.map((planned) =>
-								planned.id === customerProduct.id
-									? {
-											...replacement,
-											status: planned.status,
-											created_at: customerProduct.created_at,
-											subscription_ids: planned.subscription_ids,
-											scheduled_ids: planned.scheduled_ids,
-										}
-									: planned,
-							),
-					},
-				},
-			},
-		},
+		updates: { data },
 	});
 };

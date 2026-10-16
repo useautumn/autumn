@@ -6,14 +6,20 @@ import { CusService } from "@/internal/customers/CusService";
 export const matchesTarget = ({
 	customerProduct,
 	productId,
+	entityId,
 	customerProductId,
 	subscriptionId,
 }: {
 	customerProduct: FullCusProduct;
 	productId?: string;
+	entityId?: string;
 	customerProductId?: string;
 	subscriptionId?: string;
 }) => {
+	const entityMatches = entityId
+		? customerProduct.entity_id === entityId
+		: !customerProduct.internal_entity_id;
+	if (!entityMatches) return false;
 	if (customerProductId) return customerProduct.id === customerProductId;
 	if (subscriptionId) {
 		return (
@@ -47,19 +53,13 @@ export const findPendingCustomerProduct = async ({
 		entityId,
 	});
 
-	return fullCustomer.customer_products.find((customerProduct) => {
-		const entityMatches = entityId
-			? customerProduct.entity_id === entityId
-			: !customerProduct.internal_entity_id;
-
-		return (
-			entityMatches &&
-			matchesTarget({
-				customerProduct,
-				productId,
-				customerProductId,
-				subscriptionId,
-			})
-		);
-	});
+	return fullCustomer.customer_products.find((customerProduct) =>
+		matchesTarget({
+			customerProduct,
+			productId,
+			entityId,
+			customerProductId,
+			subscriptionId,
+		}),
+	);
 };

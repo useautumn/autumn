@@ -32,14 +32,12 @@ export const findUnpaidLongLivedCustomerProduct = async ({
 
 	const customerProduct = fullCustomer.customer_products.find(
 		(candidate) =>
-			(entityId
-				? candidate.entity_id === entityId
-				: !candidate.internal_entity_id) &&
 			Boolean(candidate.stripe_checkout_session_id) &&
 			!candidate.subscription_ids?.length &&
 			matchesTarget({
 				customerProduct: candidate,
 				productId,
+				entityId,
 				customerProductId,
 				subscriptionId,
 			}),
