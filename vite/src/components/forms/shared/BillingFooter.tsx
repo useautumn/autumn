@@ -25,7 +25,7 @@ export function BillingFooter({
 	layout,
 	isReady = true,
 	reveal = false,
-	invoiceAction,
+	stageAction,
 	children,
 }: {
 	layout: BillingFooterLayout;
@@ -33,8 +33,8 @@ export function BillingFooter({
 	isReady?: boolean;
 	/** Wait, then fade in, rather than rendering immediately. */
 	reveal?: boolean;
-	/** Opens the invoice stage, which previews and locks on its own, so a denial here leaves it enabled. */
-	invoiceAction?: ReactNode;
+	/** Switches to another path (invoice stage, cancel mode) that previews and locks on its own, so a denial leaves it enabled. */
+	stageAction?: ReactNode;
 	children: ReactNode;
 }) {
 	const [showFooter, setShowFooter] = useState(false);
@@ -53,7 +53,7 @@ export function BillingFooter({
 
 	const actions = (
 		<>
-			{invoiceAction}
+			{stageAction}
 			<fieldset disabled={permission?.locksSubmit} className="contents">
 				{children}
 			</fieldset>

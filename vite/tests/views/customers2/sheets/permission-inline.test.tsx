@@ -255,7 +255,7 @@ describe("billing footer", () => {
 			children: (
 				<BillingFooter
 					layout="stacked"
-					invoiceAction={<button type="button">Send an invoice</button>}
+					stageAction={<button type="button">Send an invoice</button>}
 				>
 					<button type="button">Attach</button>
 				</BillingFooter>
