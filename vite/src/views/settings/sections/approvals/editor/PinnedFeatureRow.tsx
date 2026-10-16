@@ -34,7 +34,12 @@ export const PinnedFeatureRow = ({
 			<Select
 				value={row.operator}
 				onValueChange={(operator) =>
-					onChange({ ...row, operator: operator as RuleRow["operator"] })
+					onChange(
+						fitOperatorToValues({
+							row: { ...row, operator: operator as RuleRow["operator"] },
+							operators: EDITOR_FIELDS.balance_create.feature,
+						}),
+					)
 				}
 				items={OPERATORS}
 			>

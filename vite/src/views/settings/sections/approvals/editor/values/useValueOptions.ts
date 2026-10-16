@@ -31,36 +31,32 @@ export type OptionSource =
 	| "catalog_plan"
 	| "reward";
 
-export const OPTION_SOURCES = [
-	...Object.keys(ENUM_VALUES),
-	"feature",
-	"catalog_plan",
-	"reward",
-] as OptionSource[];
-
 const toOption = ({ id, name }: { id: string; name?: string | null }) => ({
 	value: id,
 	label: name || id,
 });
 
-/** Choices for an id field: fixed enums, or the org's features, plans or rewards. */
-export const useValueOptions = ({
-	source,
-}: {
-	source: OptionSource;
-}): ChipOption[] => {
-	const { features } = useFeaturesQuery();
-	const { products } = useProductsQuery();
-	const { rewards } = useRewardsQuery();
+const enumOptions = (values: string[]) =>
+	values.map((value) => ({ value, label: enumLabel(value) }));
 
-	if (source === "feature") return features.map(toOption);
-	if (source === "reward") return rewards.map(toOption);
-	if (source === "catalog_plan") {
-		const latest = new Map(products.map((plan) => [plan.id, plan]));
-		return [...latest.values()].map(toOption);
-	}
-	return ENUM_VALUES[source].map((value) => ({
-		value,
-		label: enumLabel(value),
-	}));
+const useFeatureOptions = () => useFeaturesQuery().features.map(toOption);
+const useRewardOptions = () => useRewardsQuery().rewards.map(toOption);
+const usePlanOptions = () => {
+	const { products } = useProductsQuery();
+	return [...new Map(products.map((plan) => [plan.id, plan])).values()].map(
+		toOption,
+	);
+};
+
+/** Each source's options hook; fixed enums fetch nothing. */
+export const OPTION_HOOKS: Record<OptionSource, () => ChipOption[]> = {
+	...(Object.fromEntries(
+		Object.entries(ENUM_VALUES).map(([source, values]) => [
+			source,
+			() => enumOptions(values),
+		]),
+	) as Record<keyof typeof ENUM_VALUES, () => ChipOption[]>),
+	feature: useFeatureOptions,
+	reward: useRewardOptions,
+	catalog_plan: usePlanOptions,
 };
