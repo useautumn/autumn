@@ -1,7 +1,9 @@
-import type {
-	BillingContext,
-	FullCusProduct,
-	MultiAttachBillingContext,
+import {
+	type BillingContext,
+	cusProductToEnts,
+	cusProductToPrices,
+	type FullCusProduct,
+	type MultiAttachBillingContext,
 } from "@autumn/shared";
 
 const isMultiAttachContext = (
@@ -9,7 +11,10 @@ const isMultiAttachContext = (
 ): billingContext is MultiAttachBillingContext =>
 	"productContexts" in billingContext;
 
-/** Whether this plan itself carries customizations; a multi-attach's `isCustom` spans every plan. */
+/**
+ * Whether this plan itself carries customizations. A multi-attach's `isCustom` spans every plan,
+ * and the same plan can repeat across entities, so match the plan's own custom price and entitlement ids.
+ */
 export const planIsCustomized = ({
 	billingContext,
 	customerProduct,
@@ -22,13 +27,14 @@ export const planIsCustomized = ({
 		return Boolean(billingContext.isCustom);
 	}
 
-	const productContext = billingContext.productContexts.find(
-		({ fullProduct }) =>
-			fullProduct.internal_id === customerProduct.internal_product_id,
+	const customIds = new Set(
+		billingContext.productContexts.flatMap(({ customPrices, customEnts }) => [
+			...customPrices.map(({ id }) => id),
+			...customEnts.map(({ id }) => id),
+		]),
 	);
-	return Boolean(
-		productContext &&
-			(productContext.customPrices.length > 0 ||
-				productContext.customEnts.length > 0),
-	);
+	return [
+		...cusProductToPrices({ cusProduct: customerProduct }),
+		...cusProductToEnts({ cusProduct: customerProduct }),
+	].some(({ id }) => customIds.has(id));
 };

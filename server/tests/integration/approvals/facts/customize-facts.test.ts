@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
-import type { AttachParamsV1Input } from "@autumn/shared";
+import { ApiVersion, type AttachParamsV1Input } from "@autumn/shared";
 import { expectFactsMatchPreview } from "@tests/integration/approvals/utils/expectFactsMatchPreview";
 import { permissionFactsClient } from "@tests/integration/approvals/utils/permissionFactsClient";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
@@ -122,5 +123,46 @@ test.concurrent(
 				expect.objectContaining({ plan_id: addon.id, customized: true }),
 			]),
 		);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("customize facts 4: the same plan on two entities reads customized only where it is")}`,
+	async () => {
+		const customerId = "approvals-facts-customize-multi-entity";
+		const addon = products.recurringAddOn({
+			id: "addon",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [addon] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [],
+		});
+
+		const { _permission_facts: facts } = await permissionFactsClient({
+			version: ApiVersion.V2_2,
+		}).billing.previewMultiAttach({
+			customer_id: customerId,
+			plans: [
+				{ plan_id: addon.id, entity_id: entities[0].id },
+				{
+					plan_id: addon.id,
+					entity_id: entities[1].id,
+					customize: { price: itemsV2.monthlyPrice({ amount: 30 }) },
+				},
+			],
+		});
+
+		expect(
+			facts.incoming
+				.map(({ customized }: { customized: boolean }) => customized)
+				.sort(),
+		).toEqual([false, true]);
 	},
 );
