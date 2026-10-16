@@ -162,7 +162,8 @@ const authorizeSlackApprovalClicker = async ({
 		};
 	}
 
-	return { allowed: true };
+	// The clicker is who the approval rules are checked against, on the fresh previews and the writes.
+	return { allowed: true, actingUserId: callerAuth.userId };
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -370,6 +371,9 @@ export const handleApprovalActionWithDeps = async ({
 		const result = await deps.resolveApproval({
 			approval: claimed,
 			providerUserId,
+			actingUserId: authorization?.allowed
+				? authorization.actingUserId
+				: undefined,
 		});
 		if ("drifted" in result) {
 			// Nothing executed; the row is back in pending with fresh previews —
