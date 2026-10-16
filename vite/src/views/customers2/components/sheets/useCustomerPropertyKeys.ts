@@ -1,14 +1,10 @@
 import { LATEST_VERSION } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import type { CustomerPropertySuggestions } from "@/components/billing-controls/UsageLimitConditionRows";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { fetchEventsList } from "@/views/customers/customer/analytics/api/fetchEventsList";
-
-export type CustomerPropertySuggestions = {
-	propertyKeys: string[];
-	valuesByKey: Record<string, string[]>;
-};
 
 const MAX_EVENTS_TO_SCAN = 1000;
 
