@@ -12,3 +12,17 @@ export const ApiCusReferralSchema = z.object({
 });
 
 export type ApiCusReferralResponse = z.infer<typeof ApiCusReferralSchema>;
+
+export const ApiCusReferredBySchema = z.object({
+	program_id: z.string(),
+	referrer: z.object({
+		id: z.string(),
+		name: z.string().nullish(),
+		email: z.string().nullish(),
+	}),
+	reward_applied: z.boolean(),
+	created_at: z.number(),
+});
+
+export type ApiCusReferredBy = z.infer<typeof ApiCusReferredBySchema>;
+

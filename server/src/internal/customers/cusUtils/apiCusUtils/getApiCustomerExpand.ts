@@ -12,6 +12,7 @@ import { getCusBillingDetailsRes } from "../cusResponseUtils/getCusBillingDetail
 import { getCusInvoicePreviews } from "../cusResponseUtils/getCusInvoicePreviews.js";
 import { getCusPaymentMethodRes } from "../cusResponseUtils/getCusPaymentMethodRes.js";
 import { getCusReferrals } from "../cusResponseUtils/getCusReferrals.js";
+import { getCusReferredBy } from "../cusResponseUtils/getCusReferredBy.js";
 import { getCusRewards } from "../cusResponseUtils/getCusRewards.js";
 import { getCusTrialsUsed } from "../cusResponseUtils/getCusTrialsUsed.js";
 import type { ApiCustomerExpandResult } from "./getApiCustomerExpandV2.js";
@@ -62,6 +63,7 @@ export const getApiCustomerExpand = async ({
 	const [
 		rewards,
 		referrals,
+		referredBy,
 		paymentMethod,
 		trialsUsed,
 		autoTopupsWithLimits,
@@ -78,6 +80,11 @@ export const getApiCustomerExpand = async ({
 			expand: cusExpand,
 		}),
 		getCusReferrals({
+			db,
+			fullCus,
+			expand: cusExpand,
+		}),
+		getCusReferredBy({
 			db,
 			fullCus,
 			expand: cusExpand,
@@ -117,6 +124,7 @@ export const getApiCustomerExpand = async ({
 		rewards: rewards ?? undefined,
 		invoice_previews: invoicePreviews ?? undefined,
 		referrals: referrals ?? undefined,
+		referred_by: referredBy ?? undefined,
 		payment_method: paymentMethod ?? undefined,
 		billing_details: billingDetails,
 		billing_controls_override: autoTopupsWithLimits
