@@ -26,17 +26,23 @@ export function UncancelFooter() {
 	};
 
 	return (
-		<BillingFooter layout="split" isReady={isReady} reveal>
-			<BillingFooterButton>
-				<Button
-					variant={isCancelMode ? "secondary" : "destructive"}
-					className="w-full"
-					onClick={isCancelMode ? handleGoBack : handleCancelImmediatelyClick}
-					disabled={isPending}
-				>
-					{isCancelMode ? "Go Back" : "Cancel Immediately"}
-				</Button>
-			</BillingFooterButton>
+		<BillingFooter
+			layout="split"
+			isReady={isReady}
+			reveal
+			stageAction={
+				<BillingFooterButton>
+					<Button
+						variant={isCancelMode ? "secondary" : "destructive"}
+						className="w-full"
+						onClick={isCancelMode ? handleGoBack : handleCancelImmediatelyClick}
+						disabled={isPending}
+					>
+						{isCancelMode ? "Go Back" : "Cancel Immediately"}
+					</Button>
+				</BillingFooterButton>
+			}
+		>
 			<BillingFooterButton>
 				<Button
 					variant={isCancelMode ? "destructive" : "primary"}
