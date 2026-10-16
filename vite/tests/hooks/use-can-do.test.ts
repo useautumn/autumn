@@ -36,16 +36,24 @@ const { AttachProductSheetTrigger } = await import(
 
 type CanDo = { can: boolean; reason: "rule" | "scope" | "exempt" | "none" };
 
-describe("canDoAllows", () => {
+describe("canDoAllows trusts can, never the coarse scope", () => {
 	test.each([
-		[{ can: true, reason: "rule" }, true],
-		[{ can: true, reason: "scope" }, true],
-		[{ can: false, reason: "rule" }, false],
-		[{ can: false, reason: "scope" }, false],
-		[{ can: false, reason: "exempt" }, true],
-		[{ can: false, reason: "none" }, true],
-		[undefined, true],
-	] as const)("%p → %p", (response, expected) => {
+		[
+			"enforced: a rule lets a member without billing:write",
+			{ can: true, reason: "rule" },
+			true,
+		],
+		["scope allows", { can: true, reason: "scope" }, true],
+		[
+			"enforced: a rule covers the member but doesn't allow",
+			{ can: false, reason: "rule" },
+			false,
+		],
+		["scope denies", { can: false, reason: "scope" }, false],
+		["exempt", { can: false, reason: "exempt" }, true],
+		["no rule and no scope decision", { can: false, reason: "none" }, true],
+		["not answered", undefined, true],
+	] as const)("%s", (_name, response, expected) => {
 		expect(canDoAllows({ response })).toBe(expected);
 	});
 });
@@ -83,6 +91,7 @@ const renderTrigger = ({
 	);
 };
 
+// Enforced orgs only: a rule grants the action past the coarse scope.
 const allowed: CanDo = { can: true, reason: "rule" };
 const denied: CanDo = { can: false, reason: "scope" };
 
