@@ -1,4 +1,8 @@
-import type { KafkaProducerFactory, KafkaRequestTiming } from "@autumn/kafka";
+import type {
+	KafkaProducerFactory,
+	KafkaProducerStatistics,
+	KafkaRequestTiming,
+} from "@autumn/kafka";
 import type { ProducerThreadInit } from "./producerThreadMessages.js";
 
 export type ThreadedProducersConfig = Pick<
@@ -27,3 +31,4 @@ export type ThreadedProducers = KafkaProducerFactory & {
 };
 
 export type RequestListener = (timing: KafkaRequestTiming) => void;
+export type StatisticsListener = (statistics: KafkaProducerStatistics) => void;

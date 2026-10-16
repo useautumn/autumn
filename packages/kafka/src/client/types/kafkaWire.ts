@@ -248,9 +248,32 @@ export type KafkaRequestTiming = {
 	pendingMs: number;
 };
 
+/** One broker's traffic over a producer's statistics window, from librdkafka's counters. */
+export type KafkaBrokerStatistics = {
+	broker: string;
+	nodeId: number;
+	requests: number;
+	responses: number;
+	timeouts: number;
+	/** Null when no request returned in the window. */
+	rttP50Ms: number | null;
+	rttP99Ms: number | null;
+	/** Queued in the client, not yet sent; a gauge at the window's end. */
+	outbufCount: number;
+	/** Sent and awaiting a response; a gauge at the window's end. */
+	waitRespCount: number;
+	/** Requests were outstanding at both ends of the window and none was answered in it. */
+	stalled: boolean;
+};
+
+/** The brokers one producer had traffic with, or requests outstanding to, over one statistics window. */
+export type KafkaProducerStatistics = { brokers: KafkaBrokerStatistics[] };
+
 export type Producer = {
 	/** Called once per broker per statistics window; absent on test doubles. */
 	onRequestTimings?(listener: (timing: KafkaRequestTiming) => void): void;
+	/** Called once per statistics window; absent on test doubles. */
+	onStatistics?(listener: (statistics: KafkaProducerStatistics) => void): void;
 	connect(): Promise<void>;
 	disconnect(): Promise<void>;
 	send(record: ProducerRecord): Promise<RecordMetadata[]>;
