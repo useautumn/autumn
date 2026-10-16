@@ -6,7 +6,13 @@ import {
 	DEFAULT_BYOC_CACHE_MACHINE,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { Button, GroupedTabButton, Input, SearchableSelect } from "@autumn/ui";
+import {
+	Button,
+	GroupedTabButton,
+	InfoTooltip,
+	Input,
+	SearchableSelect,
+} from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { LabelTag } from "@/components/general/LabelTag";
@@ -36,8 +42,8 @@ const PROVIDER_OPTIONS = [
 	},
 ];
 
-/** The picked size and storage priced as one month, split into compute and storage. */
-const AtomMonthlyCostLine = ({
+/** What the picked size and storage cost a month, and what the setup creates, behind the estimate's info icon. */
+const AtomEstimateDetails = ({
 	machine,
 	volumeSizeGib,
 }: {
@@ -49,17 +55,52 @@ const AtomMonthlyCostLine = ({
 		volumeSizeGib,
 	});
 	return (
-		<p className="flex flex-wrap gap-x-2 pt-1.5 text-base leading-5">
-			<span className="font-medium text-foreground">
-				{atomMachineLabel(machine)} + {volumeSizeGib} GiB storage ≈ {total} /
-				month
-			</span>
-			<span>
-				({compute} compute + {storage} storage)
-			</span>
-		</p>
+		<div className="flex max-w-72 flex-col gap-1.5">
+			<p>
+				{compute} compute + {storage} storage = {total} a month, both replicas
+				included.
+			</p>
+			<p>Billed directly by AWS at us-east-1 list prices.</p>
+			<p>
+				Created in your AWS account: {BYOC_CACHE_REPLICAS} EC2 instances,{" "}
+				{BYOC_CACHE_REPLICAS} EBS volumes ({volumeSizeGib} GB gp3 each) and 1
+				SQS queue.
+			</p>
+		</div>
 	);
 };
+
+/** The footer's estimate: the month's total, its details behind an info icon. */
+const AtomMonthlyEstimate = ({
+	machine,
+	volumeSizeGib,
+}: {
+	machine: ByocCacheMachine;
+	volumeSizeGib: number;
+}) => (
+	<span className="flex items-center gap-1.5 pr-1.5 text-sm text-foreground tabular-nums">
+		{atomMonthlyCost({ machine, volumeSizeGib }).total}/mo est.
+		<InfoTooltip side="top" align="end">
+			<AtomEstimateDetails machine={machine} volumeSizeGib={volumeSizeGib} />
+		</InfoTooltip>
+	</span>
+);
+
+/** The picked configuration in one muted line, e.g. `Medium · 50 GiB · 2 replicas`. */
+const atomSetupSummary = ({
+	machine,
+	volumeSizeGib,
+}: {
+	machine: ByocCacheMachine;
+	volumeSizeGib: number | null;
+}) =>
+	[
+		atomMachineLabel(machine),
+		volumeSizeGib !== null && `${volumeSizeGib} GiB`,
+		`${BYOC_CACHE_REPLICAS} replicas`,
+	]
+		.filter(Boolean)
+		.join(" · ");
 
 /** Step 1: the Atom's name, its cloud and region, its size and its storage. */
 export const AtomCloudSection = ({
@@ -80,37 +121,28 @@ export const AtomCloudSection = ({
 
 	return (
 		<AtomSetupSection
-			note={
-				<>
-					<p>
-						Runs {BYOC_CACHE_REPLICAS} replicas for high availability. Prices
-						are estimates at AWS list price (us-east-1), billed by AWS to your
-						account.
-					</p>
-					{volumeSize.gib !== null && (
-						<>
-							<p>
-								Created in your AWS account: {BYOC_CACHE_REPLICAS} × EC2
-								instance · {BYOC_CACHE_REPLICAS} × EBS volume ({volumeSize.gib}{" "}
-								GB gp3) · 1 × SQS queue
-							</p>
-							<AtomMonthlyCostLine
-								machine={machine}
-								volumeSizeGib={volumeSize.gib}
-							/>
-						</>
-					)}
-				</>
+			status={
+				<span className="text-sm text-tertiary-foreground">
+					{atomSetupSummary({ machine, volumeSizeGib: volumeSize.gib })}
+				</span>
 			}
 			actions={
-				<Button
-					variant="primary"
-					onClick={onContinue}
-					disabled={volumeSize.gib === null}
-				>
-					Continue
-					<ArrowRightIcon className="size-3.5" />
-				</Button>
+				<>
+					{volumeSize.gib !== null && (
+						<AtomMonthlyEstimate
+							machine={machine}
+							volumeSizeGib={volumeSize.gib}
+						/>
+					)}
+					<Button
+						variant="primary"
+						onClick={onContinue}
+						disabled={volumeSize.gib === null}
+					>
+						Continue
+						<ArrowRightIcon className="size-3.5" />
+					</Button>
+				</>
 			}
 		>
 			<AtomFieldRow label="Name" isMuted>
