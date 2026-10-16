@@ -57,6 +57,9 @@ export const ATOM_MACHINE_CAPACITY: Record<
 	},
 };
 
+export const ATOM_ACTIVE_CUSTOMERS_NOTE =
+	"Customers checking or tracking at the same time. Your total customers isn't capped.";
+
 export const ATOM_CAPACITY_FOOTNOTE =
 	"Measured on our benchmarks; † estimated. Capacity varies with workload.";
 

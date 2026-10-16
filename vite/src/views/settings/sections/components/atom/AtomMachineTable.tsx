@@ -3,12 +3,13 @@ import {
 	type ByocCacheMachine,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { RadioGroup, RadioGroupItem } from "@autumn/ui";
+import { InfoTooltip, RadioGroup, RadioGroupItem } from "@autumn/ui";
 import { useId } from "react";
 import { LabelTag } from "@/components/general/LabelTag";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
 import {
+	ATOM_ACTIVE_CUSTOMERS_NOTE,
 	ATOM_CAPACITY_FOOTNOTE,
 	atomActiveCustomersLabel,
 	atomChecksPerSecondLabel,
@@ -62,7 +63,10 @@ export const AtomMachineTable = ({
 			>
 				<span>Size</span>
 				<span title="Across both replicas">Checks/s</span>
-				<span title="Held by each replica">Active customers</span>
+				<span className="inline-flex items-center justify-end gap-1">
+					Active customers
+					<InfoTooltip>{ATOM_ACTIVE_CUSTOMERS_NOTE}</InfoTooltip>
+				</span>
 				<span>CPU · RAM</span>
 				<span>Machines</span>
 				<span>Est. / month</span>
