@@ -374,6 +374,43 @@ describe("a push of one state trims only that state's entries, and each view rep
 		expect(await remainingOn({ processor, entityId: null })).toBe(95);
 	});
 
+	test("an entity's lock is still replayed on the entity's rows once the customer's copy holds it open", async () => {
+		const { ctx, processor, journal } = await openWithEntities({
+			customerBalance: 100,
+			entityBalance: 50,
+		});
+		await checkResponseOf({
+			processor,
+			request: onEntity({
+				params: {
+					required_balance: 30,
+					lock: { enabled: true, lock_id: "lock_1" },
+				},
+			}),
+		});
+		const row = ctx.openLocks.lockOf({
+			customerId: "cus_1",
+			lockId: "lock_1",
+		})?.row;
+		if (!row) throw new Error("the lock's row was not held");
+
+		// The customer's copy holds the lock open and seq 1; the entity's push has not landed.
+		const customer = storedSubjectWith({ balance: 100, readAt: 2000 });
+		await pushSeen({
+			processor,
+			subject: {
+				...customer,
+				state: { ...customer.state, openLocks: [row] },
+			},
+			writerId: journal.writerId,
+			seq: 1,
+		});
+
+		// The entity's own 20 left, beside the customer's 100.
+		expect(await remainingOn({ processor })).toBe(120);
+		expect(await remainingOn({ processor, entityId: null })).toBe(100);
+	});
+
 	test("after a restart the entity's entry is still owed, so its view deducts it until the entity's push", async () => {
 		const folder = createSlotFolder();
 		cleanups.push(folder.remove);

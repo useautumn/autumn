@@ -57,6 +57,26 @@ const isBehind = ({
 	entry.seq >
 	seenSeqOf({ atomSeqs: state.customer.atom_seqs, writerId: entry.writerId });
 
+/** The customer's copy already took or settled the lock: its row is rewound so the entity's rows can still be decided. */
+const withLockBefore = ({
+	customer,
+	command,
+}: {
+	customer: SubjectState;
+	command: TrackCommand | FinalizeCommand;
+}): SubjectState => {
+	if (command.type === "track")
+		return command.lock
+			? {
+					...customer,
+					openLocks: customer.openLocks.filter(
+						({ lock_id }) => lock_id !== command.lock?.lockId,
+					),
+				}
+			: customer;
+	return { ...customer, openLocks: [...customer.openLocks, command.lock] };
+};
+
 /**
  * Each owed command applied as the worker applies it: on the customer's rows and its entity's as one, split back as
  * they are stored. Each state keeps only what its own push has not shown applied, so a customer copy pushed past an
@@ -98,7 +118,12 @@ export const replayOwed = ({
 			entity !== null && isBehind({ state: entity.state, entry });
 		if (!movesCustomer && !movesEntity) continue;
 
-		const state = mergeSubjectStates({ customer, entity: entity?.state });
+		const state = mergeSubjectStates({
+			customer: movesCustomer
+				? customer
+				: withLockBefore({ customer, command }),
+			entity: entity?.state,
+		});
 		const fullSubject =
 			state === parts.customer && customerFullSubject
 				? customerFullSubject
