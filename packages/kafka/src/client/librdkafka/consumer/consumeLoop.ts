@@ -6,6 +6,7 @@ import {
 	highWatermarkOf,
 } from "./batchRun.js";
 import { emitConsumerEvent, emitGroupChange } from "./consumerEvents.js";
+import { requestRestart } from "./requestRestart.js";
 import { KafkaConsumerLeaseLostError } from "./runnerErrors.js";
 import type {
 	NativeConsumer,
@@ -22,6 +23,34 @@ export const MAX_RECORDS_PER_CONSUME = 500;
 /** The wait after a poll that found nothing: the most a record or a rebalance waits to be served. */
 export const IDLE_POLL_MS = 5;
 const OFFSET_BEGINNING = -2;
+const COMMITTED_TIMEOUT_MS = 10_000;
+/** A native seek answers within its 10ms wait; one that never does must not stop the consumer for good. */
+const SEEK_SETTLE_TIMEOUT_MS = 5_000;
+const MAX_COMMITTED_BACKOFF_MS = 5_000;
+
+/** A wait inside the loop that `stop` cuts short, so a stopping consumer never sits out a backoff or an idle pause. */
+export function sleepUnlessStopped({
+	scope,
+	ms,
+}: {
+	scope: ConsumerRunnerScope;
+	ms: number;
+}): Promise<void> {
+	const signal = scope.state.wake.signal;
+	if (signal.aborted) return Promise.resolve();
+	const slept = Promise.withResolvers<void>();
+	function wake(): void {
+		clearTimeout(timer);
+		slept.resolve();
+	}
+	function elapse(): void {
+		signal.removeEventListener("abort", wake);
+		slept.resolve();
+	}
+	const timer = setTimeout(elapse, ms);
+	signal.addEventListener("abort", wake, { once: true });
+	return slept.promise;
+}
 
 type PartitionItem =
 	| { kind: "message"; message: NativeMessage }
@@ -44,8 +73,11 @@ async function consumeChunk({
 }): Promise<{
 	partitions: FetchedPartition[];
 	error: NativeKafkaError | null;
+	dispatchedEpochs: Map<string, number>;
 }> {
 	const byKey = new Map<string, FetchedPartition>();
+	// A record popped by this poll was fetched under the seeks made before it, not those made while it ran.
+	const dispatchedEpochs = new Map(scope.state.seekEpoch);
 	function itemsOf({
 		topic,
 		partition,
@@ -59,7 +91,7 @@ async function consumeChunk({
 			fetched = {
 				topic,
 				partition,
-				seekEpoch: scope.state.seekEpoch.get(key) ?? 0,
+				seekEpoch: dispatchedEpochs.get(key) ?? 0,
 				items: [],
 			};
 			byKey.set(key, fetched);
@@ -81,6 +113,7 @@ async function consumeChunk({
 	function consumed(error: NativeKafkaError | null): void {
 		done.resolve(error ?? null);
 	}
+	scope.state.lastPollAt = performance.now();
 	try {
 		native.consume(MAX_RECORDS_PER_CONSUME, consumed);
 	} catch (cause) {
@@ -88,7 +121,70 @@ async function consumeChunk({
 	}
 	const error = await done.promise;
 	scope.state.collector = null;
-	return { partitions: [...byKey.values()], error };
+	return { partitions: [...byKey.values()], error, dispatchedEpochs };
+}
+
+/** A seek made while a poll ran races it: what the poll returned for that partition may be from either side
+ *  of the seek, so all of it is dropped and the seek asked for again, now that no poll holds records. */
+function reseekRacedPartitions({
+	scope,
+	native,
+	partitions,
+	dispatchedEpochs,
+}: {
+	scope: ConsumerRunnerScope;
+	native: NativeConsumer;
+	partitions: FetchedPartition[];
+	dispatchedEpochs: Map<string, number>;
+}): FetchedPartition[] {
+	const { state } = scope;
+	const kept: FetchedPartition[] = [];
+	for (const fetched of partitions) {
+		const key = partitionKeyOf(fetched);
+		const target = state.seekTargets.get(key);
+		const raced =
+			(state.seekEpoch.get(key) ?? 0) !== (dispatchedEpochs.get(key) ?? 0);
+		if (!raced) {
+			kept.push(fetched);
+			continue;
+		}
+		if (
+			target !== undefined &&
+			state.assigned.has(key) &&
+			!state.assigning.has(key)
+		)
+			seekNative({ scope, native, ...fetched, offset: target });
+	}
+	return kept;
+}
+
+/** librdkafka sets a seek's barrier only when its pool thread runs it; until then a poll can still return
+ *  records from before the seek, so no poll starts while a seek is on its way. */
+export async function settleSeeks({
+	scope,
+}: {
+	scope: ConsumerRunnerScope;
+}): Promise<void> {
+	const { inflightSeeks } = scope.state;
+	const deadline = performance.now() + SEEK_SETTLE_TIMEOUT_MS;
+	while (inflightSeeks.size > 0) {
+		const remainingMs = deadline - performance.now();
+		if (remainingMs <= 0) {
+			scope.log(
+				"warn",
+				"Kafka consumer seeks went unanswered; polling anyway",
+				{
+					seeks: inflightSeeks.size,
+				},
+			);
+			inflightSeeks.clear();
+			return;
+		}
+		await Promise.race([
+			Promise.all([...inflightSeeks]),
+			Bun.sleep(remainingMs),
+		]);
+	}
 }
 
 /** What a failed batch leaves behind: kafkajs rewound the partition to its last resolved record. */
@@ -125,19 +221,39 @@ export function seekNative({
 	partition: number;
 	offset: number;
 }): void {
+	const { state } = scope;
 	const key = partitionKeyOf({ topic, partition });
-	const epoch = (scope.state.seekEpoch.get(key) ?? 0) + 1;
-	scope.state.seekEpoch.set(key, epoch);
-	scope.state.skippedFrom.delete(key);
-	scope.state.deliveredNext.delete(key);
+	const epoch = (state.seekEpoch.get(key) ?? 0) + 1;
+	state.seekEpoch.set(key, epoch);
+	state.seekTargets.set(key, offset);
+	state.skippedFrom.delete(key);
+	state.deliveredNext.delete(key);
+	const settled = Promise.withResolvers<void>();
+	state.inflightSeeks.add(settled.promise);
+	function finish(): void {
+		state.inflightSeeks.delete(settled.promise);
+		settled.resolve();
+	}
 	function sought(error: NativeKafkaError | null | undefined): void {
-		if (!error) return;
+		try {
+			reportSeek({ error });
+		} finally {
+			finish();
+		}
+	}
+	function reportSeek({
+		error,
+	}: {
+		error: NativeKafkaError | null | undefined;
+	}): void {
+		// A timed-out seek has set its barrier and is still applied; only the wait for it ended.
+		if (!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT) return;
 		// A pause or resume right after the seek supersedes it and librdkafka drops it; ask again.
 		if (
 			error.code === LIBRDKAFKA_ERROR_CODES.ERR__OUTDATED &&
-			scope.state.seekEpoch.get(key) === epoch &&
-			scope.state.assigned.has(key) &&
-			scope.state.native === native
+			state.seekEpoch.get(key) === epoch &&
+			state.assigned.has(key) &&
+			state.native === native
 		) {
 			seekNative({ scope, native, topic, partition, offset });
 			return;
@@ -149,29 +265,16 @@ export function seekNative({
 			error: String(error),
 		});
 	}
-	native.seek({ topic, partition, offset }, 0, sought);
+	try {
+		native.seek({ topic, partition, offset }, 0, sought);
+	} catch (cause) {
+		finish();
+		throw cause;
+	}
 }
 
 function isLeaseLoss(cause: unknown): boolean {
 	return cause instanceof KafkaConsumerLeaseLostError;
-}
-
-/** A failed handler ends the batch and every other in flight; kafkajs then rejoined from the last commit. */
-function crash({
-	scope,
-	cause,
-}: {
-	scope: ConsumerRunnerScope;
-	cause: unknown;
-}): void {
-	const { state } = scope;
-	if (state.restartPending) return;
-	state.restartPending = {
-		cause: cause instanceof Error ? cause : new Error(String(cause)),
-		terminal: false,
-	};
-	for (const key of state.assigned.keys())
-		state.generation.set(key, (state.generation.get(key) ?? 0) + 1);
 }
 
 async function runBatch({
@@ -229,7 +332,7 @@ async function runBatch({
 			await batch.payload.commitOffsetsIfNecessary();
 	} catch (cause) {
 		if (!isLeaseLoss(cause) && !batch.payload.isStale())
-			crash({ scope, cause });
+			requestRestart({ scope, cause });
 	}
 	emitConsumerEvent({
 		scope,
@@ -406,25 +509,55 @@ async function decideRestart({
 }
 
 /** Committed offsets for the partitions, or none when the coordinator will not say: the rewind is best effort. */
-async function readCommitted({
+type CommittedOffset = { topic: string; partition: number; offset: number };
+
+function readCommittedOnce({
 	native,
 	partitions,
 }: {
 	native: NativeConsumer;
 	partitions: { topic: string; partition: number }[];
-}): Promise<{ topic: string; partition: number; offset: number }[]> {
-	const done =
-		Promise.withResolvers<
-			{ topic: string; partition: number; offset: number }[]
-		>();
+}): Promise<CommittedOffset[]> {
+	const done = Promise.withResolvers<CommittedOffset[]>();
 	function read(
 		error: NativeKafkaError | null,
-		offsets: { topic: string; partition: number; offset: number }[],
+		offsets: CommittedOffset[],
 	): void {
-		done.resolve(error ? [] : offsets);
+		if (error) done.reject(error);
+		else done.resolve(offsets);
 	}
-	native.committed(partitions, 10_000, read);
+	native.committed(partitions, COMMITTED_TIMEOUT_MS, read);
 	return done.promise;
+}
+
+/** The rewind is what keeps a failed batch's records; resuming without it would skip them, so it waits. */
+async function readCommitted({
+	scope,
+	native,
+	partitions,
+}: {
+	scope: ConsumerRunnerScope;
+	native: NativeConsumer;
+	partitions: { topic: string; partition: number }[];
+}): Promise<CommittedOffset[] | null> {
+	let backoffMs = scope.config.retry?.initialRetryTime ?? 300;
+	while (scope.state.running && scope.state.native === native) {
+		try {
+			return await readCommittedOnce({ native, partitions });
+		} catch (cause) {
+			scope.log(
+				"warn",
+				"Kafka consumer could not read committed offsets; retrying",
+				{
+					error: String(cause),
+					retryInMs: backoffMs,
+				},
+			);
+			await sleepUnlessStopped({ scope, ms: backoffMs });
+			backoffMs = Math.min(backoffMs * 2, MAX_COMMITTED_BACKOFF_MS);
+		}
+	}
+	return null;
 }
 
 /** kafkajs disconnected a consumer it would not restart, so a restart joined on a new client; a native client
@@ -456,10 +589,14 @@ async function restartFromCommits({
 		payload: { groupId: scope.config.groupId, error: cause, restart },
 	});
 	if (!restart) return false;
-	await Bun.sleep(scope.config.retry?.initialRetryTime ?? 300);
+	await sleepUnlessStopped({
+		scope,
+		ms: scope.config.retry?.initialRetryTime ?? 300,
+	});
 	const partitions = [...scope.state.assigned.values()];
 	if (partitions.length > 0) {
-		const committed = await readCommitted({ native, partitions });
+		const committed = await readCommitted({ scope, native, partitions });
+		if (!committed) return true;
 		for (const { topic, partition, offset } of committed) {
 			if (offset >= 0) seekNative({ scope, native, topic, partition, offset });
 			else if (scope.state.fromBeginning)
@@ -525,7 +662,10 @@ export async function runConsumeLoop({
 }): Promise<void> {
 	const { state } = scope;
 	while (state.running) {
-		const { partitions, error } = await consumeChunk({ scope, native });
+		await settleSeeks({ scope });
+		const polled = await consumeChunk({ scope, native });
+		const { error } = polled;
+		const partitions = reseekRacedPartitions({ scope, native, ...polled });
 		if (error && error.code !== LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT) {
 			if (isTerminalConsumeError(error))
 				failTerminally({ scope, cause: error });
@@ -538,12 +678,13 @@ export async function runConsumeLoop({
 						error: error.message,
 					},
 				);
-				await Bun.sleep(100);
+				await sleepUnlessStopped({ scope, ms: 100 });
 			}
 		}
 		const answered =
 			!error || error.code === LIBRDKAFKA_ERROR_CODES.ERR__TIMED_OUT;
-		if (answered && partitions.length === 0) await Bun.sleep(IDLE_POLL_MS);
+		if (answered && partitions.length === 0)
+			await sleepUnlessStopped({ scope, ms: IDLE_POLL_MS });
 		for (const { topic, partition } of partitions)
 			state.fetched.add(partitionKeyOf({ topic, partition }));
 		// An empty or failed poll says nothing of the brokers; reporting it would hide a stalled fetch.
@@ -557,6 +698,12 @@ export async function runConsumeLoop({
 			await deliverConcurrently({ scope, native, partitions });
 		const pendingRestart = state.restartPending;
 		if (!pendingRestart || !state.running) continue;
-		await restartFromCommits({ scope, native, ...pendingRestart });
+		// An evicted member's partitions are revoked by the next poll; rewinding first would replay what it lost.
+		if (pendingRestart.pollFirst) {
+			pendingRestart.pollFirst = false;
+			continue;
+		}
+		const { cause, terminal } = pendingRestart;
+		await restartFromCommits({ scope, native, cause, terminal });
 	}
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveDatabaseUrl } from "../database.js";
 import { createKafkaAuthEnv } from "../kafkaAuth.js";
+import { createKafkaGroupProtocolEnv } from "../kafkaGroupProtocol.js";
 import { isStagingEnv } from "../staging.js";
 import {
 	BALANCE_WORKER_CATALOG_MAX_BYTES,
@@ -130,6 +131,7 @@ export function createBalanceWorkerEnv(
 	return {
 		...env,
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "BALANCE_WORKER" }),
+		...createKafkaGroupProtocolEnv({ runtimeEnv }),
 		AWS_REGION: runtimeEnv.AWS_REGION?.trim() || undefined,
 		BALANCE_WORKER_DEPLOYMENT: deployment,
 		/** Staging alone honours a load test's cold-start request. */

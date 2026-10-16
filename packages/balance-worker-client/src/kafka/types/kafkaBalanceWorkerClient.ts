@@ -21,6 +21,8 @@ export type BalanceWorkerKafkaConfig = {
 	brokers: string[];
 	authMode: "none" | "scram" | "plain";
 	sasl?: KafkaSaslCredentials;
+	/** KIP-848 (`consumer`) unless the cluster cannot. */
+	groupProtocol?: "consumer" | "classic";
 };
 
 type LogMethod = (payload: object | string, message?: string) => void;

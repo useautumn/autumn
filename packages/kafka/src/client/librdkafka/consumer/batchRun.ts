@@ -4,6 +4,8 @@ import type {
 	OffsetsByTopicPartition,
 } from "../../types/kafkaWire.js";
 import { type NativeDone, settleNative } from "../settleNative.js";
+import { DEFAULT_MAX_POLL_INTERVAL_MS } from "./nativeConsumerConfig.js";
+import { requestRestart } from "./requestRestart.js";
 import { KafkaConsumerLeaseLostError } from "./runnerErrors.js";
 import type { NativeMessage } from "./types/nativeConsumer.js";
 import {
@@ -108,6 +110,18 @@ export async function commitTopicOffsets({
 		);
 }
 
+/** Past this share of max.poll.interval.ms without a poll, a batch treats its lease as gone. */
+const POLL_DEADLINE_SHARE = 0.9;
+
+function isPollOverdue({ scope }: { scope: ConsumerRunnerScope }): boolean {
+	const intervalMs =
+		scope.config.rebalanceTimeout ?? DEFAULT_MAX_POLL_INTERVAL_MS;
+	return (
+		performance.now() - scope.state.lastPollAt >
+		intervalMs * POLL_DEADLINE_SHARE
+	);
+}
+
 export type BatchRun = {
 	payload: EachBatchPayload;
 	/** The highest offset the handler resolved, or null. */
@@ -138,9 +152,11 @@ export function createBatchRun({
 	for (const message of messages) converted.push(kafkaMessageOf(message));
 	let lastResolved: bigint | null = null;
 
+	/** A seek or a lost lease ends the batch, as kafkajs's batch went stale on a seek or a failed heartbeat. */
 	function isStale(): boolean {
 		return (
 			(state.generation.get(key) ?? 0) !== generation ||
+			(state.seekEpoch.get(key) ?? 0) !== seekEpoch ||
 			!state.assigned.has(key)
 		);
 	}
@@ -156,7 +172,15 @@ export function createBatchRun({
 		if (!isStale()) state.resolved.set(key, String(resolved + 1n));
 	}
 
+	/** librdkafka heartbeats on its own, but a member that stops polling is evicted all the same; a batch that
+	 *  outlives the poll interval has lost its lease, and the rewind to the last commit keeps its records. */
 	async function heartbeat(): Promise<void> {
+		if (isPollOverdue({ scope }))
+			requestRestart({
+				scope,
+				cause: new KafkaConsumerLeaseLostError({ topic, partition }),
+				pollFirst: true,
+			});
 		if (isStale()) throw new KafkaConsumerLeaseLostError({ topic, partition });
 	}
 

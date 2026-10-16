@@ -60,7 +60,12 @@ export function createKafka(config: KafkaClientConfig): Kafka {
 
 	function consumer(consumerConfig: ConsumerConfig): Consumer {
 		return createLibrdkafkaConsumer({
-			ctx: { createNative: createNativeConsumer, nativeClientConfig, log },
+			ctx: {
+				createNative: createNativeConsumer,
+				nativeClientConfig,
+				log,
+				groupProtocol: config.groupProtocol,
+			},
 			config: consumerConfig,
 		});
 	}

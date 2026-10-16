@@ -1,4 +1,5 @@
 import type {
+	GroupProtocol,
 	KafkaRequestTiming,
 	Producer,
 	ProducerConfig,
@@ -30,6 +31,8 @@ export type KafkaClientConfig = KafkaTransportConfig & {
 	requestTimeout: number;
 	retry: { retries: number; initialRetryTime: number; maxRetryTime: number };
 	logSink?: KafkaLogSink;
+	/** The protocol of every group this client joins that does not name its own; KIP-848 (`consumer`) by default. */
+	groupProtocol?: GroupProtocol;
 };
 
 export type KafkaTransaction = Pick<

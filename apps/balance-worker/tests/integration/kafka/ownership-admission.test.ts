@@ -22,6 +22,7 @@ import {
 	type Kafka,
 	meteringIdentityToPartition,
 	type PartitionOwner,
+	parseMeteringRecord,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
@@ -515,13 +516,18 @@ describe("Partition handoff under load", () => {
 			})();
 			return stopped;
 		}
+		/** A crash as callers see it: open connections cut mid-request, then the worker goes. */
+		async function abort(): Promise<void> {
+			await listener.stop(true);
+			await stop();
+		}
 		function ownedPartitions(): number[] {
 			return partitions
 				.partitions()
 				.filter(({ status }) => status === "ready")
 				.map(({ partition }) => partition);
 		}
-		return { name, endpoint, partitions, stop, ownedPartitions };
+		return { name, endpoint, partitions, stop, abort, ownedPartitions };
 	}
 
 	/** One customer per partition, initialized on the log so any worker can rebuild it. */
@@ -1022,4 +1028,312 @@ describe("Partition handoff under load", () => {
 			await admin.disconnect();
 		}
 	}, 120_000);
+	// Seeded: FUZZ_SEED picks the schedule, FUZZ_STEPS its length.
+	test("a random schedule of joins, leaves and cut connections under a track hammer: every 200 lands exactly once and no command twice", async () => {
+		let seed = Number(process.env.FUZZ_SEED ?? 1) >>> 0;
+		function random(): number {
+			seed = (seed + 0x6d2b79f5) >>> 0;
+			let t = seed;
+			t = Math.imul(t ^ (t >>> 15), t | 1);
+			t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		}
+		const id = crypto.randomUUID();
+		const topic = `handoff-fuzz-${id}`;
+		const owners = `${topic}-owners`;
+		const kafka = createTestKafka({ clientId: id, brokers });
+		const admin = kafka.admin();
+		await admin.connect();
+		await admin.createTopics({
+			topics: [
+				{ topic, numPartitions: partitionCount, replicationFactor: 1 },
+				{
+					topic: owners,
+					numPartitions: partitionCount,
+					replicationFactor: 1,
+					configEntries: [{ name: "cleanup.policy", value: "compact" }],
+				},
+			],
+		});
+		const startBalance = 1_000_000;
+		const customers = new Map<number, ReturnType<typeof createSubjectState>>();
+		for (let index = 0; customers.size < partitionCount; index++) {
+			const identity = {
+				orgId: "org_1",
+				env: "sandbox",
+				customerId: `cus_${index}`,
+				entityId: null,
+			} as const;
+			const partition = meteringIdentityToPartition({
+				identity,
+				partitionCount,
+			});
+			if (customers.has(partition)) continue;
+			customers.set(
+				partition,
+				createSubjectState({
+					identity,
+					customerEntitlements: [
+						createCustomerEntitlement({
+							id: "balance",
+							featureId: "messages",
+							balance: startBalance,
+						}),
+					],
+				}),
+			);
+		}
+		const seedProducer = kafka.producer();
+		await seedProducer.connect();
+		for (const [partition, state] of customers)
+			await seedProducer.send({
+				topic,
+				messages: [
+					{
+						partition,
+						...serializeMeteringRecord({
+							record: createInitializeMutation({
+								state,
+								commandId: `init_${partition}`,
+							}),
+						}),
+					},
+				],
+			});
+		await seedProducer.disconnect();
+
+		const events: string[] = [];
+		const errors: unknown[] = [];
+		const outcomes: {
+			partition: number;
+			commandId: string;
+			outcome: string;
+			at: number;
+		}[] = [];
+		const routing = createOwnershipConsumer({
+			ctx: { kafka },
+			config: { topic: owners },
+		});
+		const client = createBalanceWorkerClient({
+			ctx: { owners: routing },
+			config: { partitionCount, timeoutMs: 1_000, routeRefreshTimeoutMs: 200 },
+		});
+		async function trackOnce(partition: number): Promise<void> {
+			const state = customers.get(partition);
+			if (!state) throw new Error(`No customer on partition ${partition}`);
+			const commandId = crypto.randomUUID();
+			const command = parseTrackCommand({
+				input: {
+					schemaVersion: 1,
+					type: "track",
+					org: {
+						config: {
+							reverse_deduction_order: false,
+							block_overdue_entitlements: false,
+							include_past_due: true,
+						},
+					},
+					commandId,
+					requestId: commandId,
+					identity: state.identity,
+					featureId: "messages",
+					internalFeatureId: "feat_messages",
+					value: 1,
+					overageBehavior: "reject",
+					properties: null,
+					usageEvent: { name: "messages", idempotencyKey: null, id: null },
+					occurredAt: Date.now(),
+				},
+			});
+			let outcome = "200";
+			try {
+				await client.track({ command });
+			} catch (cause) {
+				outcome =
+					cause instanceof BalanceWorkerClientError
+						? `${cause.code}:${cause.outcome}${cause.workerCode ? `:${cause.workerCode}` : ""}`
+						: `THROW:${String(cause)}`;
+			}
+			outcomes.push({ partition, commandId, outcome, at: performance.now() });
+		}
+		let hammering = true;
+		const inflight = new Set<Promise<void>>();
+		let hammers: Promise<void>[] = [];
+		const workerContext = { kafka, admin, id, topic, owners, events, errors };
+		const live: LiveWorker[] = [];
+		let named = 0;
+		async function join(): Promise<void> {
+			const worker = await startWorker({
+				name: `W${named++}`,
+				...workerContext,
+			});
+			live.push(worker);
+		}
+		const schedule: string[] = [];
+		const startedAt = performance.now();
+		function stamp(): string {
+			return ((performance.now() - startedAt) / 1000).toFixed(1);
+		}
+		try {
+			await join();
+			await waitFor(() => live[0]?.ownedPartitions().length === partitionCount);
+			await routing.start();
+			hammers = [...customers.keys()].map(async (partition) => {
+				while (hammering) {
+					const request = trackOnce(partition);
+					inflight.add(request);
+					void request.finally(() => inflight.delete(request));
+					await Bun.sleep(50);
+				}
+			});
+			const steps = Number(process.env.FUZZ_STEPS ?? 3);
+			for (let step = 0; step < steps; step++) {
+				await Bun.sleep(1_000 + Math.floor(random() * 3_000));
+				const roll = random();
+				if (live.length < 2 || (roll < 0.4 && live.length < 3)) {
+					await join();
+					schedule.push(`${stamp()}s join W${named - 1}`);
+					continue;
+				}
+				const victim = live.splice(Math.floor(random() * live.length), 1)[0];
+				if (!victim) continue;
+				const abrupt = roll >= 0.7;
+				schedule.push(`${stamp()}s ${abrupt ? "cut" : "leave"} ${victim.name}`);
+				if (abrupt) await victim.abort();
+				else await victim.stop();
+			}
+			const faultsClearedAt = performance.now();
+			function settled(): boolean {
+				return (
+					live.reduce(
+						(owned, worker) => owned + worker.ownedPartitions().length,
+						0,
+					) === partitionCount
+				);
+			}
+			await waitFor(settled);
+			const ownedAt = performance.now();
+			await Bun.sleep(2_000);
+			hammering = false;
+			await Promise.all(hammers);
+			await Promise.allSettled([...inflight]);
+			await Bun.sleep(1_500);
+
+			// The log, read committed from the beginning: what was deducted, and how often.
+			const deducted = new Map<string, number>();
+			const ends = await admin.fetchTopicOffsets(topic);
+			const reader = kafka.consumer({
+				groupId: `${id}-reconcile`,
+				readUncommitted: false,
+			});
+			const reached = new Map<number, bigint>();
+			await reader.connect();
+			await reader.subscribe({ topics: [topic], fromBeginning: true });
+			await reader.run({
+				eachBatch: async ({ batch, resolveOffset }) => {
+					for (const message of batch.messages) {
+						const record = parseMeteringRecord(message) as unknown as {
+							command?: { type?: string; commandId?: string };
+						};
+						const commandId = record.command?.commandId;
+						if (record.command?.type === "track" && commandId)
+							deducted.set(commandId, (deducted.get(commandId) ?? 0) + 1);
+						resolveOffset(message.offset);
+						reached.set(batch.partition, BigInt(message.offset) + 1n);
+					}
+				},
+			});
+			for (let attempt = 0; attempt < 600; attempt++) {
+				if (
+					ends.every(
+						({ partition, high }) =>
+							BigInt(high) === 0n ||
+							(reached.get(partition) ?? 0n) >= BigInt(high) - 1n,
+					)
+				)
+					break;
+				await Bun.sleep(50);
+			}
+			await reader.disconnect();
+
+			const byOutcome: Record<string, number> = {};
+			for (const { outcome } of outcomes)
+				byOutcome[outcome] = (byOutcome[outcome] ?? 0) + 1;
+			const lastFailure = outcomes
+				.filter(({ outcome }) => outcome !== "200")
+				.reduce((latest, { at }) => Math.max(latest, at), faultsClearedAt);
+			console.info(
+				JSON.stringify({
+					seed: Number(process.env.FUZZ_SEED ?? 1),
+					schedule,
+					failureSeconds: [
+						...new Set(
+							outcomes
+								.filter(({ outcome }) => outcome !== "200")
+								.map(
+									({ at, partition }) =>
+										`p${partition}@${Math.floor((at - startedAt) / 1000)}`,
+								),
+						),
+					],
+					total: outcomes.length,
+					byOutcome,
+					ownedAfterMs: Math.round(ownedAt - faultsClearedAt),
+					failuresClearedAfterMs: Math.round(lastFailure - faultsClearedAt),
+					logTracks: [...deducted.values()].reduce(
+						(sum, count) => sum + count,
+						0,
+					),
+				}),
+			);
+
+			const twice = [...deducted].filter(([, count]) => count > 1);
+			expect(twice).toEqual([]);
+			const lost = outcomes.filter(
+				({ outcome, commandId }) =>
+					outcome === "200" && deducted.get(commandId) !== 1,
+			);
+			expect(lost).toEqual([]);
+			// A request that failed as not submitted never reached the log.
+			const phantom = outcomes.filter(
+				({ outcome, commandId }) =>
+					outcome.includes(":not_submitted") && deducted.has(commandId),
+			);
+			expect(phantom).toEqual([]);
+			for (const [partition, state] of customers) {
+				const reply = await client.readSubjectState({
+					command: parseReadSubjectStateCommand({
+						input: {
+							schemaVersion: 1,
+							type: "readSubjectState",
+							requestId: crypto.randomUUID(),
+							identity: state.identity,
+							occurredAt: Date.now(),
+							org: {
+								config: {
+									reverse_deduction_order: false,
+									block_overdue_entitlements: false,
+									include_past_due: true,
+								},
+							},
+						},
+					}),
+				});
+				const inLog = outcomes.filter(
+					({ partition: of, commandId }) =>
+						of === partition && deducted.has(commandId),
+				).length;
+				expect(reply.state.customerEntitlements[0]?.balance).toBe(
+					startBalance - inLog,
+				);
+			}
+		} finally {
+			hammering = false;
+			await Promise.allSettled(hammers);
+			for (const worker of live) await worker.stop();
+			await routing.stop();
+			await admin.deleteTopics({ topics: [topic, owners] });
+			await admin.disconnect();
+		}
+	}, 180_000);
 });

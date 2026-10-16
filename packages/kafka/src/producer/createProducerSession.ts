@@ -41,7 +41,12 @@ export function createProducerSession({
 		return state.initialized && !state.closed && !state.terminal;
 	}
 
-	async function connectProducer(): Promise<void> {
+	function connectProducer(): Promise<void> {
+		state.connectAttempt = attemptConnect();
+		return state.connectAttempt;
+	}
+
+	async function attemptConnect(): Promise<void> {
 		try {
 			await ctx.producer.connect();
 			state.connected = true;
@@ -49,6 +54,19 @@ export function createProducerSession({
 			state.terminal = true;
 			throw cause;
 		}
+	}
+
+	/** A connect still running or one that failed after the client came up (a transactional init timing out)
+	 *  leaves a native client; it is closed once the attempt settles, never left to outlive the session. */
+	async function settleConnectAttempt(): Promise<boolean> {
+		const attempt = state.connectAttempt;
+		if (!attempt) return false;
+		try {
+			await attempt;
+		} catch {
+			// The attempt's failure was its caller's; only the client it may have left matters here.
+		}
+		return true;
 	}
 
 	/** A transactional producer connects in `fence()`: librdkafka bumps the epoch on connect, and only startup may fence. */
@@ -100,7 +118,7 @@ export function createProducerSession({
 	} = {}): Promise<void> {
 		state.closed = true;
 		if (waitForTransactions) await state.transactions;
-		if (state.connected) await ctx.producer.disconnect();
+		if (await settleConnectAttempt()) await ctx.producer.disconnect();
 	}
 
 	return { connect, fence, transaction, send, isUsable, disconnect, mode };

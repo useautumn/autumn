@@ -13,5 +13,6 @@ export function readBalanceWorkerKafkaConfig({
 		brokers: env.KAFKA_BROKERS,
 		authMode: env.KAFKA_AUTH_MODE,
 		sasl: env.KAFKA_SASL,
+		groupProtocol: env.KAFKA_GROUP_PROTOCOL,
 	};
 }

@@ -1,4 +1,4 @@
-import { isKafkaProtocolError } from "../client/kafkaErrorClassification.js";
+import { isKafkaRefusalOfUnwritten } from "../client/kafkaErrorClassification.js";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -20,9 +20,11 @@ export const OWNER_EPOCH_HEADER = "ownerEpoch";
  * readers to judge by.
  *
  * A broker refusal (a protocol error on the produce response) means nothing
- * was appended. Any other failure, a timeout or a lost connection after the
- * retries, leaves the batch's fate unknown, which the caller treats exactly
- * like an unknown transaction commit.
+ * was appended, unless librdkafka gave up on it as possibly persisted (a
+ * request timeout, too few replicas after the append). That and any other
+ * failure, a timeout or a lost connection after the retries, leaves the
+ * batch's fate unknown, which the caller treats exactly like an unknown
+ * transaction commit.
  */
 export async function sendIdempotentBatch({
 	sender,
@@ -65,7 +67,7 @@ export async function sendIdempotentBatch({
 			acks: -1,
 		});
 	} catch (cause) {
-		if (isKafkaProtocolError({ cause })) {
+		if (isKafkaRefusalOfUnwritten({ cause })) {
 			throw new KafkaBatchNotCommittedError({ cause });
 		}
 		throw new KafkaTransactionStateUnknownError({
@@ -73,5 +75,18 @@ export async function sendIdempotentBatch({
 			cause,
 		});
 	}
-	return { baseOffset: metadataToBaseOffset({ metadata, topic, partition }) };
+	const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
+	const lastOffset = metadata[0]?.lastOffset;
+	// Written, but not as one run: another writer's records landed between ours, so no position is ours to infer.
+	if (
+		lastOffset !== undefined &&
+		BigInt(lastOffset) - baseOffset + 1n !== BigInt(messages.length)
+	)
+		throw new KafkaTransactionStateUnknownError({
+			failureStage: "commit",
+			cause: new Error(
+				`Kafka batch of ${messages.length} records spans ${baseOffset}..${lastOffset} on ${topic}[${partition}]`,
+			),
+		});
+	return { baseOffset };
 }

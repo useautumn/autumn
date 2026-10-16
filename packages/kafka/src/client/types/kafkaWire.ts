@@ -39,6 +39,8 @@ export type RecordMetadata = {
 	partition: number;
 	errorCode: number;
 	baseOffset?: string;
+	/** The highest offset this send wrote to the partition, when the client reports each record's. */
+	lastOffset?: string;
 	offset?: string;
 	timestamp?: string;
 	logAppendTime?: string;
@@ -240,9 +242,9 @@ export type Transaction = {
 export type KafkaRequestTiming = {
 	apiName: string;
 	broker: string;
-	/** Sent to response, the window's average. */
+	/** Sent to response, the window's p99. */
 	durationMs: number;
-	/** Queued in the client before it was sent, the window's average. */
+	/** Queued in the client before it was sent, the window's p99. */
 	pendingMs: number;
 };
 

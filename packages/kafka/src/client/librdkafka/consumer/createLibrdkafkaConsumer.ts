@@ -6,6 +6,7 @@ import type {
 	ConsumerEventName,
 	ConsumerRunConfig,
 	ConsumerSubscribeTopics,
+	GroupProtocol,
 	OffsetsByTopicPartition,
 	TopicPartitionOffset,
 } from "../../types/kafkaWire.js";
@@ -19,6 +20,7 @@ import {
 	IDLE_POLL_MS,
 	runConsumeLoop,
 	seekNative,
+	settleSeeks,
 } from "./consumeLoop.js";
 import { emitConsumerEvent } from "./consumerEvents.js";
 import { createFetchLiveness } from "./fetchLiveness.js";
@@ -44,6 +46,8 @@ import {
 const LEAVE_TIMEOUT_MS = 5_000;
 /** How long a restart waits for a given-up client to close before abandoning it. */
 const RETIRE_TIMEOUT_MS = 10_000;
+/** How long `stop` waits for the consume loop to notice it; past this it leaves the group and closes without it. */
+export const STOP_LOOP_TIMEOUT_MS = 10_000;
 /** A poll never waits natively: a blocking one holds a native pool thread, and idle consumers starve every commit. */
 const CONSUME_POLL_MS = 0;
 
@@ -88,6 +92,8 @@ export function createLibrdkafkaConsumer({
 		createNative: NativeConsumerFactory;
 		nativeClientConfig: Record<string, unknown>;
 		log: KafkaLog;
+		/** The client's protocol, for a group that does not name its own. */
+		groupProtocol?: GroupProtocol;
 	};
 	config: ConsumerConfig;
 }): Consumer {
@@ -99,9 +105,13 @@ export function createLibrdkafkaConsumer({
 		running: false,
 		leaving: false,
 		loop: null,
+		wake: new AbortController(),
 		assigned: new Map(),
 		generation: new Map(),
 		seekEpoch: new Map(),
+		seekTargets: new Map(),
+		inflightSeeks: new Set(),
+		lastPollAt: performance.now(),
 		paused: new Set(),
 		skippedFrom: new Map(),
 		pendingSeeks: new Map(),
@@ -142,7 +152,10 @@ export function createLibrdkafkaConsumer({
 		native = ctx.createNative({
 			global: {
 				...ctx.nativeClientConfig,
-				...nativeConsumerConfigOf({ config }),
+				...nativeConsumerConfigOf({
+					config,
+					defaultProtocol: ctx.groupProtocol,
+				}),
 				rebalance_cb: onRebalance,
 				event_cb: true,
 			},
@@ -268,6 +281,7 @@ export function createLibrdkafkaConsumer({
 		if (state.running) throw new Error("Kafka consumer is already running");
 		state.run = runConfig;
 		state.running = true;
+		state.wake = new AbortController();
 		state.loop = runLoop(native);
 	}
 
@@ -288,11 +302,14 @@ export function createLibrdkafkaConsumer({
 		state.native = null;
 		state.gaveUp = false;
 		state.topics = [];
+		await settleSeeks({ scope });
 		if (native) await closeNative(native);
 		state.restartPending = null;
 		for (const key of state.assigned.keys())
 			state.generation.set(key, (state.generation.get(key) ?? 0) + 1);
+		state.inflightSeeks.clear();
 		for (const partitionState of [
+			state.seekTargets,
 			state.assigned,
 			state.paused,
 			state.skippedFrom,
@@ -338,6 +355,7 @@ export function createLibrdkafkaConsumer({
 		const key = partitionKeyOf({ topic, partition });
 		if (state.assigning.has(key) || !state.assigned.has(key)) {
 			state.pendingSeeks.set(key, Number(offset));
+			state.seekTargets.set(key, Number(offset));
 			state.seekEpoch.set(key, (state.seekEpoch.get(key) ?? 0) + 1);
 			return;
 		}
@@ -401,12 +419,56 @@ export function createLibrdkafkaConsumer({
 		}
 	}
 
+	/** A loop parked on something that never answers must not hold the process: the group is left and the client closed regardless. */
+	async function awaitLoop(): Promise<void> {
+		const loop = state.loop;
+		if (!loop) return;
+		async function loopEnded(): Promise<"ended"> {
+			await loop;
+			return "ended";
+		}
+		if (
+			(await raceTimeout({ work: loopEnded(), ms: STOP_LOOP_TIMEOUT_MS })) ===
+			"ended"
+		)
+			return;
+		log(
+			"error",
+			"Kafka consumer loop did not stop; leaving the group without it",
+			{
+				timeoutMs: STOP_LOOP_TIMEOUT_MS,
+				pollAgoMs: Math.round(performance.now() - state.lastPollAt),
+				inflightSeeks: state.inflightSeeks.size,
+				restartPending: state.restartPending !== null,
+			},
+		);
+	}
+
+	/** Leaving serves the revocation through polls; one that never answers must not hold the stop past its bound. */
+	async function leaveGroupWithin({
+		native,
+	}: {
+		native: NativeConsumer;
+	}): Promise<void> {
+		async function left(): Promise<"left"> {
+			await leaveGroup(native);
+			return "left";
+		}
+		const bound = LEAVE_TIMEOUT_MS + STOP_LOOP_TIMEOUT_MS;
+		if ((await raceTimeout({ work: left(), ms: bound })) === "left") return;
+		log("error", "Kafka consumer did not finish leaving; closing without it", {
+			timeoutMs: bound,
+		});
+	}
+
 	async function stop(): Promise<void> {
 		state.running = false;
-		await state.loop;
+		state.wake.abort();
+		await awaitLoop();
 		state.loop = null;
 		const native = state.native;
-		if (native && !state.leaving && !state.gaveUp) await leaveGroup(native);
+		if (native && !state.leaving && !state.gaveUp)
+			await leaveGroupWithin({ native });
 	}
 
 	async function disconnect(): Promise<void> {
@@ -416,6 +478,8 @@ export function createLibrdkafkaConsumer({
 		state.topics = [];
 		state.assigned.clear();
 		if (!native) return;
+		// A seek runs on a native pool thread against the client the close frees.
+		await settleSeeks({ scope });
 		function disconnectNative(done: NativeDone): void {
 			native?.disconnect(done);
 		}
@@ -452,4 +516,23 @@ export function createLibrdkafkaConsumer({
 	}
 	registerNativeConsumer({ consumer, readNative });
 	return consumer;
+}
+
+/** The bound's timer is cleared once the work wins: a pending one would hold a stopping process open for its full length. */
+async function raceTimeout<T>({
+	work,
+	ms,
+}: {
+	work: Promise<T>;
+	ms: number;
+}): Promise<T | "timed out"> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	function timeOut(resolve: (value: "timed out") => void): void {
+		timer = setTimeout(resolve, ms, "timed out");
+	}
+	try {
+		return await Promise.race([work, new Promise<"timed out">(timeOut)]);
+	} finally {
+		clearTimeout(timer);
+	}
 }

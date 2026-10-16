@@ -15,6 +15,9 @@ export {
 export {
 	InvalidKafkaOffsetError,
 	KafkaBatchNotCommittedError,
+	KafkaDeliveryReportOverdueError,
+	KafkaPartialDeliveryError,
+	KafkaPartitionOffsetsUnansweredError,
 	KafkaTopicPartitionsUnavailableError,
 	KafkaTransactionStateUnknownError,
 } from "./client/kafkaErrors.js";

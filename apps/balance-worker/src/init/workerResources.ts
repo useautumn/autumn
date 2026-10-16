@@ -94,6 +94,7 @@ export async function openWorkerResources({
 				sasl: env.KAFKA_SASL,
 			}),
 			limits: WORKER_KAFKA_CLIENT_LIMITS,
+			groupProtocol: env.KAFKA_GROUP_PROTOCOL,
 		}),
 	);
 	const admin = kafka.admin();

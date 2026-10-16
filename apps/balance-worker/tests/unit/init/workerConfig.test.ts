@@ -44,7 +44,7 @@ describe("Kafka balance worker config", () => {
 		});
 	});
 
-	test("speaks KIP-848 with the broker's range assignor, so partition n of every topic lands on one worker", () => {
+	test("asks for the broker's range assignor, so partition n of every topic lands on one worker; the protocol is the client's", () => {
 		expect(
 			createWorkerConsumerConfig({
 				groupId: "balance-worker-staging",
@@ -52,7 +52,6 @@ describe("Kafka balance worker config", () => {
 			}),
 		).toEqual({
 			groupId: "balance-worker-staging",
-			groupProtocol: "consumer",
 			remoteAssignor: "range",
 			readUncommitted: false,
 			allowAutoTopicCreation: false,

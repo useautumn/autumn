@@ -1,4 +1,5 @@
 import type { KafkaJS } from "@autumn/librdkafka";
+import { KafkaPartitionOffsetsUnansweredError } from "../../kafkaErrors.js";
 import type {
 	Admin,
 	ITopicConfig,
@@ -14,6 +15,8 @@ const READ_COMMITTED = 1 as KafkaJS.IsolationLevel;
 type PartitionOffset = { partition: number; offset: string };
 const LEADER_WAIT_MS = 30_000;
 const LEADER_POLL_MS = 50;
+/** How often a ListOffsets that left partitions unanswered is asked again before it is reported. */
+const LIST_OFFSETS_ATTEMPTS = 6;
 
 function topicMetadataOf(topic: KafkaJS.ITopicMetadata): ITopicMetadata {
 	const partitions: ITopicMetadata["partitions"] = [];
@@ -42,6 +45,12 @@ export function createLibrdkafkaAdmin({
 		log: KafkaLog;
 	};
 }): Admin {
+	const retryBackoffMs = Number(
+		ctx.nativeClientConfig["retry.backoff.ms"] ?? 100,
+	);
+	const retryBackoffMaxMs = Number(
+		ctx.nativeClientConfig["retry.backoff.max.ms"] ?? 1_000,
+	);
 	const admin = ctx.kafka.admin({
 		...ctx.nativeClientConfig,
 		kafkaJS: { logger: ctx.log.shim },
@@ -121,19 +130,36 @@ export function createLibrdkafkaAdmin({
 		return { topics: described };
 	}
 
+	/**
+	 * Confluent's admin drops each partition's ListOffsets error and reports its offset as -1, which is what a
+	 * partition whose leader just moved answers. kafkajs refreshed the leaders and asked again; so does this.
+	 */
 	async function fetchTopicOffsets(topic: string) {
-		const offsets = await admin.fetchTopicOffsets(topic, {
-			isolationLevel: READ_COMMITTED,
-		});
-		const described: {
-			partition: number;
-			offset: string;
-			high: string;
-			low: string;
-		}[] = [];
-		for (const { partition, offset, high, low } of offsets)
-			described.push({ partition, offset, high, low });
-		return described;
+		let backoffMs = retryBackoffMs;
+		for (let attempt = 1; ; attempt++) {
+			const offsets = await admin.fetchTopicOffsets(topic, {
+				isolationLevel: READ_COMMITTED,
+			});
+			const unanswered: number[] = [];
+			const described: {
+				partition: number;
+				offset: string;
+				high: string;
+				low: string;
+			}[] = [];
+			for (const { partition, offset, high, low } of offsets) {
+				if (Number(high) < 0 || Number(low) < 0) unanswered.push(partition);
+				described.push({ partition, offset, high, low });
+			}
+			if (unanswered.length === 0) return described;
+			if (attempt >= LIST_OFFSETS_ATTEMPTS)
+				throw new KafkaPartitionOffsetsUnansweredError({
+					topic,
+					partitions: unanswered,
+				});
+			await Bun.sleep(backoffMs);
+			backoffMs = Math.min(backoffMs * 2, retryBackoffMaxMs);
+		}
 	}
 
 	async function fetchTopicOffsetsByTimestamp(

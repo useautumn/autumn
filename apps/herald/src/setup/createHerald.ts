@@ -87,6 +87,7 @@ export function createHerald({
 				initialRetryTimeMs: 100,
 				maxRetryTimeMs: 1000,
 			},
+			groupProtocol: env.KAFKA_GROUP_PROTOCOL,
 		}),
 	);
 	const admin = kafka.admin();

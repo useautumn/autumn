@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createLibrdkafkaConsumer } from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
+
+import { createConsumerGroupConfig } from "../../src/client/createConsumerGroupConfig.js";
+import {
+	createLibrdkafkaConsumer,
+	STOP_LOOP_TIMEOUT_MS,
+} from "../../src/client/librdkafka/consumer/createLibrdkafkaConsumer.js";
+
 import type {
 	NativeConsumer,
 	NativeKafkaError,
@@ -12,6 +18,7 @@ import { createKafkaLog } from "../../src/client/librdkafka/kafkaLog.js";
 import {
 	type ConsumerConfig,
 	type EachBatchPayload,
+	type GroupProtocol,
 	KafkaConsumerLeaseLostError,
 } from "../../src/kafka.js";
 
@@ -38,6 +45,8 @@ function createFakeNative() {
 	const commits: NativeTopicPartitionOffset[][] = [];
 	const committed = new Map<string, number>();
 	const watermark = { highOffset: 100 };
+	const committedOutcomes: (NativeKafkaError | null)[] = [];
+	const gate: { held?: Promise<void>; seek?: Promise<void> } = {};
 	let rebalance: NativeRebalanceCallback | undefined;
 	let consumeWaiter: (() => void) | undefined;
 
@@ -100,6 +109,12 @@ function createFakeNative() {
 		},
 		setDefaultIsTimeoutOnlyForFirstMessage() {},
 		consume(_count, done) {
+			const held = gate.held;
+			if (held) {
+				gate.held = undefined;
+				void held.then(() => done(play(), []));
+				return;
+			}
 			if (chunks.length > 0) {
 				const error = play();
 				queueMicrotask(() => done(error, []));
@@ -136,6 +151,14 @@ function createFakeNative() {
 		seek(position, _timeout, done) {
 			seeks.push(position);
 			const outcome = seekOutcomes.shift() ?? null;
+			const held = gate.seek;
+			if (held) {
+				void held.then(() => {
+					calls.push("seeked");
+					done(outcome);
+				});
+				return;
+			}
 			queueMicrotask(() => done(outcome));
 		},
 		pause(partitions) {
@@ -151,6 +174,11 @@ function createFakeNative() {
 			done(null);
 		},
 		committed(partitions, _timeout, done) {
+			const failure = committedOutcomes.shift();
+			if (failure) {
+				done(failure, []);
+				return;
+			}
 			done(
 				null,
 				partitions.map(({ topic, partition }) => ({
@@ -190,6 +218,8 @@ function createFakeNative() {
 		committed,
 		watermark,
 		emit,
+		committedOutcomes,
+		gate,
 	};
 }
 
@@ -898,5 +928,281 @@ describe("librdkafka consumer runner", () => {
 		);
 		expect(fetches).toEqual([1, 0]);
 		await consumer.disconnect();
+	});
+
+	// A poll in flight may hold records from before a seek made meanwhile; delivering them would skip the seek.
+	test("records a poll returns after a seek made while it ran are dropped and the seek asked for again", async () => {
+		const { fake, consumer } = createRunner();
+		const delivered: string[] = [];
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch }) => {
+				delivered.push(...batch.messages.map((m) => m.offset));
+			},
+		});
+		await until(() => fake.assignments.length > 0);
+		const release = Promise.withResolvers<void>();
+		fake.gate.held = release.promise;
+		await until(() => fake.gate.held === undefined);
+		consumer.seek({ topic, partition: 0, offset: "0" });
+		fake.chunks.push([{ kind: "message", partition: 0, offset: 100 }]);
+		release.resolve();
+		await until(() => fake.seeks.length >= 2);
+		fake.chunks.push([{ kind: "message", partition: 0, offset: 0 }]);
+		await until(() => delivered.length > 0);
+		expect(delivered).toEqual(["0"]);
+		expect(fake.seeks).toEqual([
+			{ topic, partition: 0, offset: 0 },
+			{ topic, partition: 0, offset: 0 },
+		]);
+		await consumer.disconnect();
+	});
+
+	test("a batch whose partition was sought while it ran is stale, so nothing it resolves is committed", async () => {
+		const { fake, consumer } = createRunner();
+		let stale: boolean | undefined;
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 5 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatchAutoResolve: false,
+			eachBatch: async (payload) => {
+				consumer.seek({ topic, partition: 0, offset: "100" });
+				payload.resolveOffset("5");
+				stale = payload.isStale();
+				await payload.commitOffsetsIfNecessary();
+			},
+		});
+		await until(() => stale !== undefined);
+		expect(stale).toBe(true);
+		expect(fake.commits).toEqual([]);
+		await consumer.disconnect();
+	});
+
+	test("a restart waits for the committed offsets instead of resuming past the failed batch", async () => {
+		const { fake, consumer, events } = createRunner();
+		fake.committed.set("0", 7);
+		fake.committedOutcomes.push(
+			Object.assign(new Error("Local: Timed out"), { code: -185 }),
+		);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 7 },
+		]);
+		let failures = 0;
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async () => {
+				failures += 1;
+				if (failures === 1) throw new Error("handler failed");
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		await until(() => fake.seeks.length > 0);
+		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 7 });
+		await consumer.disconnect();
+	});
+
+	// librdkafka evicts a member that stops polling for max.poll.interval.ms, heartbeats or not.
+	test("a heartbeat past the poll interval reports the lease lost and the consumer rewinds to its commit", async () => {
+		const { fake, consumer, events } = createRunner({
+			config: { rebalanceTimeout: 60 },
+		});
+		fake.committed.set("0", 3);
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 3 },
+		]);
+		let heartbeatError: unknown;
+		let calls = 0;
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ heartbeat }) => {
+				calls += 1;
+				if (calls > 1) return;
+				await heartbeat();
+				await Bun.sleep(80);
+				try {
+					await heartbeat();
+				} catch (cause) {
+					heartbeatError = cause;
+				}
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		expect(heartbeatError).toBeInstanceOf(KafkaConsumerLeaseLostError);
+		await until(() => fake.seeks.length > 0);
+		expect(fake.seeks[0]).toEqual({ topic, partition: 0, offset: 3 });
+		await consumer.disconnect();
+	});
+
+	// A seek runs on a native pool thread; freeing the client under it is a use-after-free.
+	test("disconnect waits for a seek still running natively before closing the client", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.assignments.length > 0);
+		const seekDone = Promise.withResolvers<void>();
+		fake.gate.seek = seekDone.promise;
+		consumer.seek({ topic, partition: 0, offset: "4" });
+		const closing = consumer.disconnect();
+		await Bun.sleep(30);
+		expect(fake.calls).not.toContain("disconnect");
+		seekDone.resolve();
+		await closing;
+		expect(fake.calls.indexOf("seeked")).toBeLessThan(
+			fake.calls.indexOf("disconnect"),
+		);
+	});
+});
+
+describe("group protocol", () => {
+	async function nativeGroupConfigOf({
+		groupProtocol,
+		config,
+	}: {
+		groupProtocol?: GroupProtocol;
+		config: ConsumerConfig;
+	}): Promise<Record<string, unknown>> {
+		const fake = createFakeNative();
+		let global: Record<string, unknown> = {};
+		const consumer = createLibrdkafkaConsumer({
+			ctx: {
+				createNative: (native) => {
+					global = native.global;
+					return fake.factory(native);
+				},
+				nativeClientConfig: {},
+				log: createKafkaLog({
+					clientId: "t",
+					sink: {
+						error: () => {},
+						warn: () => {},
+						info: () => {},
+						debug: () => {},
+					},
+				}),
+				groupProtocol,
+			},
+			config,
+		});
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.disconnect();
+		return global;
+	}
+	const groupConfig = createConsumerGroupConfig({
+		groupId: "g",
+		timings: {
+			fetchMaxWaitTimeMs: 250,
+			heartbeatIntervalMs: 3_000,
+			rebalanceTimeoutMs: 60_000,
+			sessionTimeoutMs: 30_000,
+		},
+		remoteAssignor: "range",
+	});
+
+	test("a group speaks KIP-848 with the broker's assignor unless its client says otherwise", async () => {
+		const global = await nativeGroupConfigOf({ config: groupConfig });
+		expect(global["group.protocol"]).toBe("consumer");
+		expect(global["group.remote.assignor"]).toBe("range");
+		expect(global["partition.assignment.strategy"]).toBeUndefined();
+	});
+
+	test("a classic client's groups join the classic way, dealt by librdkafka's own range", async () => {
+		const global = await nativeGroupConfigOf({
+			groupProtocol: "classic",
+			config: groupConfig,
+		});
+		expect(global["group.protocol"]).toBe("classic");
+		expect(global["partition.assignment.strategy"]).toBe("range");
+		expect(global["session.timeout.ms"]).toBe(30_000);
+		expect(global["group.remote.assignor"]).toBeUndefined();
+	});
+
+	test("a consumer that names its own protocol keeps it", async () => {
+		const global = await nativeGroupConfigOf({
+			groupProtocol: "classic",
+			config: { ...groupConfig, groupProtocol: "consumer" },
+		});
+		expect(global["group.protocol"]).toBe("consumer");
+	});
+	// A stopping worker sat out the loop's waits; a SIGTERM must not wait for a restart's backoff to run out.
+	test("stop wakes the loop from a restart backoff instead of waiting it out", async () => {
+		const { fake, consumer, events } = createRunner({
+			config: { retry: { initialRetryTime: 60_000 } },
+		});
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			{ kind: "message", partition: 0, offset: 9 },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async () => {
+				throw new Error("handler failed");
+			},
+		});
+		await until(() => events.includes("crash:true"));
+		const startedAt = performance.now();
+		await consumer.disconnect();
+		expect(performance.now() - startedAt).toBeLessThan(1_000);
+		expect(fake.calls).toContain("disconnect");
+	});
+
+	// Seen in soak: SIGTERM'd workers whose consume loop never noticed the stop held the process and the group for minutes.
+	test(
+		"stop leaves the group and closes the client even when the loop never answers",
+		async () => {
+			const { fake, consumer, logs } = createRunner();
+			fake.chunks.push([
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			]);
+			await consumer.connect();
+			await consumer.subscribe({ topics: [topic], fromBeginning: true });
+			await consumer.run({ eachBatch: async () => {} });
+			await until(() => fake.assignments.length > 0);
+			fake.gate.held = new Promise<void>(() => {});
+			await until(() => fake.gate.held === undefined);
+			const startedAt = performance.now();
+			await consumer.disconnect();
+			const tookMs = performance.now() - startedAt;
+			expect(tookMs).toBeGreaterThanOrEqual(STOP_LOOP_TIMEOUT_MS - 50);
+			expect(tookMs).toBeLessThan(STOP_LOOP_TIMEOUT_MS + 6_000);
+			expect(fake.calls).toContain("unsubscribe");
+			expect(fake.calls.at(-1)).toBe("disconnect");
+			expect(logs.some((line) => line.includes("loop did not stop"))).toBe(
+				true,
+			);
+		},
+		{ timeout: STOP_LOOP_TIMEOUT_MS + 10_000 },
+	);
+	// A stop's bound must not outlive it: a pending timer kept every stopping worker alive for the full bound.
+	test("a stopped consumer leaves nothing that holds the process open", async () => {
+		const child = Bun.spawn(
+			[
+				"bun",
+				new URL("./fixtures/consumerStopExits.ts", import.meta.url).pathname,
+			],
+			{ stdout: "pipe", stderr: "inherit" },
+		);
+		const output = await new Response(child.stdout).text();
+		const stoppedAt = Number(/stopped (\d+)/.exec(output)?.[1]);
+		await child.exited;
+		expect(child.exitCode).toBe(0);
+		expect(Date.now() - stoppedAt).toBeLessThan(2_000);
 	});
 });

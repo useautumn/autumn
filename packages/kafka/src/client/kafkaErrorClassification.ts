@@ -67,6 +67,27 @@ export function isKafkaProtocolError({
 	return false;
 }
 
+/** Broker codes librdkafka fails a record with once its retries run out while marking it possibly persisted:
+ *  the leader may have appended it before the answer was lost or refused. */
+const POSSIBLY_PERSISTED_TYPES: ReadonlySet<string> = new Set([
+	"REQUEST_TIMED_OUT",
+	"NOT_ENOUGH_REPLICAS_AFTER_APPEND",
+	"OUT_OF_ORDER_SEQUENCE_NUMBER",
+	"DUPLICATE_SEQUENCE_NUMBER",
+]);
+
+/** A broker refusal that proves the records were not appended: no error in the chain leaves them possibly written. */
+export function isKafkaRefusalOfUnwritten({
+	cause,
+}: {
+	cause: unknown;
+}): boolean {
+	return (
+		isKafkaProtocolError({ cause }) &&
+		!isKafkaProtocolError({ cause, types: POSSIBLY_PERSISTED_TYPES })
+	);
+}
+
 export function hasKafkaErrorCode({
 	cause,
 	codes,

@@ -20,12 +20,20 @@ export type ConsumerRunnerState = {
 	/** Set while leaving the group: group changes are no longer the caller's business. */
 	leaving: boolean;
 	loop: Promise<void> | null;
+	/** Aborted by `stop`: the loop's waits end at once instead of running out their time. */
+	wake: AbortController;
 	/** "topic\0partition" → partition, for everything currently assigned. */
 	assigned: Map<string, { topic: string; partition: number }>;
 	/** Bumped on revoke and on crash: a batch from an older generation is stale and its heartbeat throws. */
 	generation: Map<string, number>;
 	/** Bumped on every seek: records fetched before it are dropped. */
 	seekEpoch: Map<string, number>;
+	/** Where each partition's latest seek pointed, to ask again when a poll raced it. */
+	seekTargets: Map<string, number>;
+	/** Native seeks not yet answered; no poll starts until they are. */
+	inflightSeeks: Set<Promise<void>>;
+	/** When the runner last polled; librdkafka leaves the group once max.poll.interval.ms passes without one. */
+	lastPollAt: number;
 	paused: Set<string>;
 	/** One past the last record handed to the handler since the partition's last seek or assignment. */
 	deliveredNext: Map<string, number>;
@@ -43,7 +51,12 @@ export type ConsumerRunnerState = {
 	/** The loop ended on a failure it would not restart from; the next subscribe builds a fresh native client. */
 	gaveUp: boolean;
 	/** A failure the loop acts on after the batches in flight: rewind and rejoin, or end when terminal. */
-	restartPending: { cause: Error; terminal: boolean } | null;
+	restartPending: {
+		cause: Error;
+		terminal: boolean;
+		/** Poll once before rewinding, so librdkafka serves the eviction it already acted on. */
+		pollFirst?: boolean;
+	} | null;
 	/** Where the native consumer's records and partition ends go during one `consume()`. */
 	collector: {
 		onData(message: NativeMessage): void;
