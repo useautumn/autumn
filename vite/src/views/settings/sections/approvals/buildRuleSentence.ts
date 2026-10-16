@@ -11,6 +11,7 @@ export type RuleLabels = {
 	plan: (planId: string) => string;
 	feature: (featureId: string) => { name: string; unit: string };
 	money: (amount: number) => string;
+	reward: (rewardId: string) => string;
 };
 
 export type RuleCondition = { field: string; operator: string; value: string };
@@ -44,7 +45,9 @@ type Field =
 			/** Keys the field reads from a nested object; the first holds the matcher. */
 			nested?: string[];
 	  }
-	| { kind: "each" };
+	| { kind: "each" }
+	| { kind: "within" }
+	| { kind: "plans" };
 
 const OPERATORS: Record<string, string> = {
 	$eq: "is",
@@ -87,6 +90,56 @@ const match = (format: Format, nested?: string[]): Field => ({
 });
 const each: Field = { kind: "each" };
 
+/** The customer's plans, by quantifier: the operator the editor's Customer has plan / Current plan rows read as. */
+const PLAN_QUANTIFIERS: Record<string, string> = {
+	$some: "has plan",
+	$none: "doesn't have plan",
+	$every: "current plan is",
+};
+
+/** `{ plan_id, version? }` or `{ plan_id: { $in } }` as plan names; any broader shape is null, so it reads as Custom condition. */
+const planNames = ({ filter, ctx }: { filter: unknown; ctx: Ctx }) => {
+	if (!isFilter(filter)) return null;
+	const { plan_id: planId, version, ...rest } = filter;
+	if (Object.keys(rest).length > 0) return null;
+	if (typeof planId === "string") {
+		const name = ctx.labels.plan(planId);
+		if (version === undefined) return name;
+		return typeof version === "number" ? `${name} v${version}` : null;
+	}
+	const isInOnly =
+		isFilter(planId) &&
+		Object.keys(planId).join() === "$in" &&
+		Array.isArray(planId.$in);
+	if (!isInOnly || version !== undefined) return null;
+	return (planId.$in as unknown[])
+		.map((id) => ctx.labels.plan(String(id)))
+		.join(", ");
+};
+
+const planConditions = ({
+	label,
+	value,
+	ctx,
+}: {
+	label: string;
+	value: unknown;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	const [entry, ...others] = isFilter(value) ? Object.entries(value) : [];
+	const operator = entry && PLAN_QUANTIFIERS[entry[0]];
+	if (!operator || others.length > 0) return [CUSTOM];
+	const [quantifier, inner] = entry;
+	if (
+		quantifier === "$none" &&
+		isFilter(inner) &&
+		Object.keys(inner).length === 0
+	)
+		return [{ field: label, operator: "has no plans", value: "" }];
+	const names = planNames({ filter: inner, ctx });
+	return names ? [{ field: label, operator, value: names }] : [CUSTOM];
+};
+
 /** How each `when` field's value reads; its label comes from S3's `WHEN_FIELD_LABELS`. */
 const FIELDS: Record<string, Field> = {
 	paid: match(yesNo),
@@ -105,6 +158,11 @@ const FIELDS: Record<string, Field> = {
 	cancel_action: match(timing),
 	plan_schedule: match(timing),
 	refund: match(money, ["amount"]),
+	total: match(money),
+	reward_id: match(({ value, ctx }) => ctx.labels.reward(String(value))),
+	customer: { kind: "within" },
+	customer_id: match(({ value }) => String(value)),
+	plan: { kind: "plans" },
 	feature_id: match(({ value, ctx }) => ctx.labels.feature(String(value)).name),
 	included_grant: match(({ value, ctx }) =>
 		[value, ctx.labels.feature(String(ctx.parent.feature_id)).unit]
@@ -152,6 +210,15 @@ const fieldConditions = ({
 	const field = FIELDS[key];
 	const path = ctx.path ? `${ctx.path}.${key}` : key;
 	if (!field) return [CUSTOM];
+	if (field.kind === "within") {
+		if (!isFilter(value)) return [CUSTOM];
+		return filterConditions({ filter: value, ctx: { ...ctx, path } });
+	}
+	if (field.kind === "plans") {
+		// Labelled by its object ("Customer"); the quantifier carries "has plan".
+		const label = ctx.fieldLabels[ctx.path];
+		return label ? planConditions({ label, value, ctx }) : [CUSTOM];
+	}
 	if (field.kind === "each") {
 		// Only `$every` is worded: "Incoming plan is Pro" must mean every incoming plan.
 		const isEvery = isFilter(value) && Object.keys(value).join() === "$every";

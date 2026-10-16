@@ -27,6 +27,10 @@ mock.module("@/views/customers2/customer/components/CreateEntity", () => ({
 mock.module("@/views/admin/hooks/useAdmin", () => ({
 	useAdmin: () => ({ isAdmin: false }),
 }));
+// Gating reads the session, which has no server snapshot under renderToStaticMarkup.
+mock.module("@/hooks/queries/useCanDo", () => ({
+	useCanDo: () => true,
+}));
 
 const { renderToStaticMarkup } = await import("react-dom/server");
 const { MemoryRouter } = await import("react-router");
