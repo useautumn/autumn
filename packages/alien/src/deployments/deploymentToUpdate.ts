@@ -11,6 +11,7 @@ const UpdateOperationSchema = z.object({
 		"failed",
 		"superseded",
 	]),
+	reasons: z.array(z.string()).nullish(),
 	requestedAt: z.string(),
 	completedAt: z.string().nullish(),
 	actionRequired: z.string().nullish(),

@@ -189,14 +189,18 @@ const UPDATE_STATUSES: Record<
 	failed: "failed",
 };
 
-/** alien's current update in the API's words; a failure carries alien's reason. */
+/** A release or redeploy never changes compute, so only a configuration update can be a storage grow. */
+const isConfigurationUpdate = (update: AlienUpdateOperation) =>
+	(update.reasons ?? []).every((reason) => reason === "configuration");
+
+/** alien's current configuration update in the API's words; a failure carries alien's reason. */
 const alienDeploymentToUpdate = ({
 	deployment,
 }: {
 	deployment: AlienDeployment;
 }): ApiAtomUpdate | null => {
 	const update = deploymentToUpdate({ deployment });
-	if (!update) return null;
+	if (!update || !isConfigurationUpdate(update)) return null;
 	const status = UPDATE_STATUSES[update.status];
 	return {
 		status,

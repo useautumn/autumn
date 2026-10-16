@@ -489,6 +489,21 @@ describe("an Atom's latest update on alien", () => {
 		});
 	});
 
+	test("a release or redeploy is not a grow, so it reads as no update", async () => {
+		const update = (reasons: string[]) =>
+			findWith(
+				withUpdate({
+					id: "duop_1",
+					status: "applying",
+					reasons,
+					requestedAt: "2026-10-16T12:00:00Z",
+				}),
+			);
+		expect((await update(["release"]))?.update).toBeNull();
+		expect((await update(["configuration", "redeploy"]))?.update).toBeNull();
+		expect((await update(["configuration"]))?.update?.status).toBe("applying");
+	});
+
 	test("no update state reads as no update", async () => {
 		expect((await findWith(deploymentIn("running")))?.update).toBeNull();
 	});
