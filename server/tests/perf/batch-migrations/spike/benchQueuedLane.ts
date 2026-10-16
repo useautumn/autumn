@@ -98,12 +98,12 @@ const DELETE_BATCH_SIZE = 10_000;
 const deleteSeededRows = async ({
 	ctx,
 	orgId,
-	prefixes,
+	internalCustomerPrefix,
 	withCustomers,
 }: {
 	ctx: AutumnContext;
 	orgId: string;
-	prefixes: BenchPlanItemPrefixes;
+	internalCustomerPrefix: string;
 	withCustomers: boolean;
 }) => {
 	let after = "";
@@ -111,7 +111,7 @@ const deleteSeededRows = async ({
 		const rows: Array<{ internal_id: string }> = await ctx.db.execute(sql`
 			SELECT internal_id FROM customers
 			WHERE org_id = ${orgId} AND env = ${ctx.env}
-				AND internal_id LIKE ${`${prefixes.internalCustomer}%`}
+				AND internal_id LIKE ${`${internalCustomerPrefix}%`}
 				AND internal_id > ${after}
 			ORDER BY internal_id
 			LIMIT ${DELETE_BATCH_SIZE}
@@ -156,6 +156,12 @@ const dropBenchOrg = async ({
 	);
 	if (org?.slug !== BENCH_ORG_SLUG)
 		throw new Error("Only the synthetic bench org can be dropped");
+	await deleteSeededRows({
+		ctx,
+		orgId,
+		internalCustomerPrefix: "",
+		withCustomers: true,
+	});
 	await ctx.db.execute(sql`DELETE FROM customer_lsns WHERE org_id = ${orgId}`);
 	await ctx.db.execute(
 		sql`DELETE FROM subject_snapshots WHERE org_id = ${orgId}`,
@@ -300,7 +306,8 @@ const nextPageCustomerIds = async ({
 }): Promise<string[]> => {
 	const rows: Array<{ id: string }> = await ctx.db.execute(sql`
 		SELECT id FROM customers
-		WHERE internal_id LIKE ${`${prefixes.internalCustomer}%`}
+		WHERE org_id = ${ctx.org.id} AND env = ${ctx.env}
+			AND internal_id LIKE ${`${prefixes.internalCustomer}%`}
 			AND internal_id COLLATE "C" > ${afterInternalId ?? ""} COLLATE "C"
 		ORDER BY internal_id COLLATE "C"
 		LIMIT ${pageSize}
@@ -336,29 +343,37 @@ const verifyScenario = async ({
 	const [row]: Array<Record<string, string>> = await ctx.db.execute(sql`
 		WITH tracked AS (
 			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, applied int, unknown int)
+		), bench AS (
+			SELECT internal_id FROM customers
+			WHERE org_id = ${ctx.org.id} AND env = ${ctx.env}
+				AND internal_id LIKE ${`${prefixes.internalCustomer}%`}
+		), bench_ce AS (
+			SELECT ce.id, ce.customer_id, ce.customer_product_id, ce.entitlement_id, ce.balance
+			FROM customer_entitlements ce
+			WHERE ce.internal_customer_id IN (SELECT internal_id FROM bench)
+		), ces AS (
+			SELECT * FROM bench_ce WHERE id LIKE ${`${prefixes.entitlement}%`}
 		)
 		SELECT
-			(SELECT count(*) FROM customer_products WHERE id LIKE ${`${prefixes.customerProduct}%`}) AS holders,
-			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${prefixes.entitlement}%`}) AS rows,
-			(SELECT count(*) FROM customer_entitlements WHERE id LIKE ${`${prefixes.entitlement}%`}
-				AND entitlement_id = ${toEntitlementId ?? ""}) AS repointed,
+			(SELECT count(*) FROM customer_products cp
+				WHERE cp.internal_customer_id IN (SELECT internal_id FROM bench)
+					AND cp.id LIKE ${`${prefixes.customerProduct}%`}) AS holders,
+			(SELECT count(*) FROM ces) AS rows,
+			(SELECT count(*) FROM ces WHERE entitlement_id = ${toEntitlementId ?? ""}) AS repointed,
 			(SELECT count(*) FROM (
-				SELECT customer_product_id FROM customer_entitlements
+				SELECT customer_product_id FROM bench_ce
 				WHERE customer_product_id LIKE ${`${prefixes.customerProduct}%`}
 				GROUP BY customer_product_id HAVING count(*) > 1
 			) AS d) AS duplicate_grants,
-			(SELECT count(*) FROM customer_entitlements ce
-				LEFT JOIN tracked t ON t.customer_id = ce.customer_id
-				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}
-					AND (ce.balance > (${expectedBase})::numeric - coalesce(t.applied, 0)
-						OR ce.balance < (${expectedBase})::numeric - coalesce(t.applied, 0) - coalesce(t.unknown, 0))) AS wrong_balance,
-			(SELECT count(*) FROM customer_entitlements ce
-				JOIN tracked t ON t.customer_id = ce.customer_id
-				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}
-					AND ce.balance IS DISTINCT FROM (${expectedBase})::numeric - t.applied) AS tracked_off_by_unknown,
-			(SELECT coalesce(sum((${expectedBase})::numeric - t.applied - ce.balance), 0) FROM customer_entitlements ce
-				JOIN tracked t ON t.customer_id = ce.customer_id
-				WHERE ce.id LIKE ${`${prefixes.entitlement}%`}) AS unknown_tracks_that_landed,
+			(SELECT count(*) FROM ces
+				LEFT JOIN tracked t ON t.customer_id = ces.customer_id
+				WHERE ces.balance > (${expectedBase})::numeric - coalesce(t.applied, 0)
+					OR ces.balance < (${expectedBase})::numeric - coalesce(t.applied, 0) - coalesce(t.unknown, 0)) AS wrong_balance,
+			(SELECT count(*) FROM ces
+				JOIN tracked t ON t.customer_id = ces.customer_id
+				WHERE ces.balance IS DISTINCT FROM (${expectedBase})::numeric - t.applied) AS tracked_off_by_unknown,
+			(SELECT coalesce(sum((${expectedBase})::numeric - t.applied - ces.balance), 0) FROM ces
+				JOIN tracked t ON t.customer_id = ces.customer_id) AS unknown_tracks_that_landed,
 			(SELECT count(*) FROM tracked) AS tracked_customers
 	`);
 	const counts = Object.fromEntries(
@@ -396,10 +411,15 @@ const verifyUnrelated = async ({
 	const [row]: Array<Record<string, string>> = await ctx.db.execute(sql`
 		WITH tracked AS (
 			SELECT * FROM jsonb_to_recordset(${tracked}::jsonb) AS t(customer_id text, count int, unknown int)
+		), bench AS (
+			SELECT internal_id FROM customers
+			WHERE org_id = ${ctx.org.id} AND env = ${ctx.env}
+				AND internal_id LIKE ${`${UNRELATED_PREFIXES.internalCustomer}%`}
 		)
 		SELECT count(*) AS wrong FROM customer_entitlements ce
 		JOIN tracked t ON t.customer_id = ce.customer_id
-		WHERE ce.id LIKE ${`${UNRELATED_PREFIXES.entitlement}%`}
+		WHERE ce.internal_customer_id IN (SELECT internal_id FROM bench)
+			AND ce.id LIKE ${`${UNRELATED_PREFIXES.entitlement}%`}
 			AND (ce.balance > (${UNRELATED_BALANCE})::numeric - t.count
 				OR ce.balance < (${UNRELATED_BALANCE})::numeric - t.count - t.unknown)
 	`);
@@ -446,13 +466,13 @@ const main = async () => {
 	await deleteSeededRows({
 		ctx,
 		orgId: org.id,
-		prefixes: scenario.prefixes,
+		internalCustomerPrefix: scenario.prefixes.internalCustomer,
 		withCustomers: options.cleanup,
 	});
 	await deleteSeededRows({
 		ctx,
 		orgId: org.id,
-		prefixes: UNRELATED_PREFIXES,
+		internalCustomerPrefix: UNRELATED_PREFIXES.internalCustomer,
 		withCustomers: options.cleanup,
 	});
 	console.log(`lane: cleanup ${Date.now() - cleanupStartedAt}ms`);
@@ -869,13 +889,13 @@ const main = async () => {
 		await deleteSeededRows({
 			ctx,
 			orgId: org.id,
-			prefixes: scenario.prefixes,
+			internalCustomerPrefix: scenario.prefixes.internalCustomer,
 			withCustomers: false,
 		});
 		await deleteSeededRows({
 			ctx,
 			orgId: org.id,
-			prefixes: UNRELATED_PREFIXES,
+			internalCustomerPrefix: UNRELATED_PREFIXES.internalCustomer,
 			withCustomers: false,
 		});
 	}
