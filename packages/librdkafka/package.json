@@ -13,6 +13,8 @@
 	},
 	"scripts": {
 		"build": "bun scripts/buildNative.ts",
+		"native:key": "bun scripts/printNativeBuildKey.ts",
+		"probe:addon": "bun scripts/probeAddon.ts",
 		"patch:regenerate": "bun scripts/regeneratePatch.ts",
 		"test": "bun test --config ./bunfig.toml tests/unit",
 		"test:unit": "bun test --config ./bunfig.toml tests/unit",
