@@ -1,8 +1,9 @@
+import { BYOC_CACHE_REPLICAS } from "@autumn/shared";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { AtomStorageGrowth } from "./atomStorageGrowth";
 
-const STEPS = ["requested", "growing", "complete"] as const;
+const STEPS = ["requested", "growing"] as const;
 
 const stepLabel = ({
 	step,
@@ -12,12 +13,10 @@ const stepLabel = ({
 	growth: Exclude<AtomStorageGrowth, { phase: "failed" }>;
 }) => {
 	if (step === "requested") return "Requested";
-	if (step === "growing")
-		return `Growing volumes (${growth.grownReplicas}/2 replicas)`;
-	return "Complete";
+	return `Growing volumes (${growth.grownReplicas}/${BYOC_CACHE_REPLICAS} replicas)`;
 };
 
-/** A grow to the target size as three steps, the current one lit, or why it failed. */
+/** A running grow as its steps, the current one lit, or why it failed. */
 export const AtomStorageGrowProgress = ({
 	growth,
 }: {
@@ -42,7 +41,6 @@ export const AtomStorageGrowProgress = ({
 								index > current && "text-subtle",
 								index < current && "text-tertiary-foreground",
 								index === current && "font-medium text-foreground",
-								step === "complete" && index === current && "text-green-500",
 							)}
 						>
 							{stepLabel({ step, growth })}

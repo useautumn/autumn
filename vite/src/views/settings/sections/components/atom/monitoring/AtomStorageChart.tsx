@@ -24,7 +24,6 @@ import { formatPercent } from "./atomMetricsFormat";
 import {
 	atomEvictionBuckets,
 	atomEvictionsTotal,
-	atomReplicaLines,
 	atomVolumeUsage,
 	EVICTION_BUCKETS,
 	formatEvictionCount,
@@ -93,22 +92,7 @@ const StorageSummary = ({
 	);
 };
 
-/** What the card measures, and each replica's own reading. */
-const StorageInfo = ({ volumes }: { volumes: AtomVolume[] }) => (
-	<div className="flex max-w-72 flex-col gap-1.5">
-		<p>
-			Disk used on the fullest replica. Above{" "}
-			{formatPercent(ATOM_DISK_EVICTION_SHARE)}, Atom evicts cached customers;
-			their next checks go to the API until they are cached again.
-		</p>
-		<p>Evictions count events across both replicas, not unique customers.</p>
-		<p>
-			{volumes.length > 0
-				? atomReplicaLines(volumes).join(" · ")
-				: "Readings come from the Atom's health reports in Axiom, so they are unavailable on a local dev stack and until the Atom first reports."}
-		</p>
-	</div>
-);
+const STORAGE_INFO = `Disk used on the fullest replica. Above ${formatPercent(ATOM_DISK_EVICTION_SHARE)}, the Atom evicts customers, and their checks go to the API until they're re-cached.`;
 
 /** Disk used against the 80% line, and above the same time axis the evictions it set off, per bucket. */
 const StoragePlots = ({
@@ -198,20 +182,25 @@ const StoragePlots = ({
 	);
 };
 
-/** Toasts the grow's end once, when the card sees it finish or fail. */
-const useGrowthToasts = (growth: AtomStorageGrowth | null) => {
-	const previous = useRef(growth?.phase);
+/** Toasts the grow's end once: why it failed, or grown once alien or the replicas say so. */
+const useGrowthToasts = ({
+	growth,
+	isGrown,
+	targetGib,
+}: {
+	growth: AtomStorageGrowth | null;
+	isGrown: boolean;
+	targetGib: number | undefined;
+}) => {
+	const wasGrowing = useRef(false);
 	useEffect(() => {
-		const wasGrowing =
-			previous.current === "requested" || previous.current === "growing";
-		previous.current = growth?.phase;
-		if (!growth || !wasGrowing) return;
-		if (growth.phase === "complete")
-			toast.success(`Storage grown to ${growth.targetGib} GiB per replica`);
-		if (growth.phase === "failed")
-			toast.error(
-				growth.error ?? `Growing storage to ${growth.targetGib} GiB failed`,
-			);
+		const hadGrowth = wasGrowing.current;
+		wasGrowing.current = isAtomStorageGrowing(growth);
+		if (!hadGrowth || wasGrowing.current) return;
+		if (growth?.phase === "failed")
+			toast.error(growth.error ?? `Growing storage to ${targetGib} GiB failed`);
+		else if (isGrown)
+			toast.success(`Storage grown to ${targetGib} GiB per replica`);
 	}, [growth?.phase]);
 };
 
@@ -240,18 +229,21 @@ export const AtomStorageChart = ({
 			targetGib: cache.volume_size_gib,
 			volumes,
 			update,
-			now: Date.now(),
 		});
 	const isGrowing = isAtomStorageGrowing(growth);
 	useEffect(() => setPolling(isGrowing), [isGrowing]);
-	useGrowthToasts(growth);
+	useGrowthToasts({
+		growth,
+		isGrown: update?.status === "succeeded" || volumes.length > 0,
+		targetGib: cache?.volume_size_gib,
+	});
 	const hasDisk = Boolean(chartData?.rows.some((row) => row.disk !== null));
 
 	return (
 		<>
 			<MonitoringChartCard
 				title="Storage"
-				info={<StorageInfo volumes={volumes} />}
+				info={STORAGE_INFO}
 				description={
 					cache
 						? isGrowing
@@ -272,7 +264,9 @@ export const AtomStorageChart = ({
 						</Button>
 					)
 				}
-				notice={growth && <AtomStorageGrowProgress growth={growth} />}
+				notice={
+					growth && hasDisk && <AtomStorageGrowProgress growth={growth} />
+				}
 				summary={
 					<StorageSummary
 						volumes={volumes}
