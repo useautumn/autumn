@@ -33,7 +33,8 @@ const RECORDS_PER_SLICE = 500;
 const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	fetchMaxWaitTimeMs: 250,
 	heartbeatIntervalMs: 3000,
-	rebalanceTimeoutMs: 60000,
+	// librdkafka's max.poll.interval.ms, at its default: every partition's slices from one poll land inside it, or all rewind.
+	rebalanceTimeoutMs: 300_000,
 	sessionTimeoutMs: 30000,
 };
 /** How often an idle job's lag clock is reset by its leaders answering fetches. */
