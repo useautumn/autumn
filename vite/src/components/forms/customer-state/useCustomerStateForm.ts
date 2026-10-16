@@ -29,7 +29,7 @@ export function useCustomerStateForm({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
-		carryOverUsages: false,
+		carryOverUsages: true,
 		carryOverUsageFeatureIds: [],
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
 		trialEdited: false,

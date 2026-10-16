@@ -243,7 +243,7 @@ export function CreateScheduleAdvancedSection() {
 				balances: [
 					{
 						id: "usageResets",
-						visible: !carryOverUsages,
+						visible: rules.carryOverUsages.visible && !carryOverUsages,
 						summary: staysAs("Usage resets"),
 					},
 					{
