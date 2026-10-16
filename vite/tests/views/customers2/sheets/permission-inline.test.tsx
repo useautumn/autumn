@@ -1,5 +1,5 @@
 /**
- * Contract (PRD §3, decisions 7 and 14): an enforced deny on a billing preview
+ * Contract (E2 #5105): an enforced deny on a billing preview
  * disables submit and puts each matched condition on its field; a shadow-mode
  * deny, an allow or no `permission` leaves the sheet as it is. A 403
  * `permission_denied` reads its rule from `details` and never locks the retry.
@@ -13,7 +13,7 @@ await restoreQueryClientContext();
 
 mock.module("@/hooks/queries/useRolesQuery", () => ({
 	useRolesQuery: () => ({
-		roles: [{ id: "finance", name: "Finance" }],
+		roles: [{ id: "rol_finance", name: "Finance" }],
 		isLoading: false,
 		error: null,
 	}),
@@ -48,28 +48,25 @@ const denial: Denial = {
 		{
 			field: "incoming[0].plan_id",
 			label: "Plan",
-			operator: "is",
 			limit: "Enterprise",
 			actual: "Enterprise",
 		},
 		{
 			field: "billing_cycle_anchor",
 			label: "Billing cycle anchor",
-			operator: "is",
 			limit: "custom",
 			actual: "custom",
 		},
 		{
 			field: "entity",
 			label: "Entity",
-			operator: "is",
 			limit: "seats",
 			actual: "seats",
 		},
 		{ field: "paid", label: "Charges customer", limit: true, actual: true },
 	],
 	decided_by: { level: "role", rule_id: "apr_1", rule_name: "Sales trials" },
-	allowed_roles: ["finance"],
+	allowed_roles: ["rol_finance"],
 };
 
 const enforcedDeny = {
@@ -82,7 +79,15 @@ const shadowDeny = {
 };
 const allowed = {
 	total: 99,
-	permission: { verdict: "allow", enforced: true, decided_by: null },
+	permission: {
+		verdict: "allow",
+		enforced: true,
+		decided_by: {
+			level: "role",
+			rule_id: "apr_2",
+			rule_name: "Finance trials",
+		},
+	},
 };
 const noRule = { total: 99 };
 
@@ -93,7 +98,6 @@ const forbidden = (data: object) => ({
 const permissionDenied = forbidden({
 	code: "permission_denied",
 	message: denial.message,
-	env: "live",
 	details: {
 		violations: denial.violations,
 		decided_by: denial.decided_by,
@@ -155,24 +159,6 @@ describe("resolvePermissionDenial", () => {
 		expect(resolved?.denial.message).toBe(denial.message);
 		expect(resolved?.denial.violations).toHaveLength(4);
 	});
-
-	test("a numeric limit still parses", () => {
-		const preview = {
-			permission: {
-				...enforcedDeny.permission,
-				violations: [
-					{
-						field: "total",
-						label: "Total",
-						operator: "≥",
-						limit: 500,
-						actual: 900,
-					},
-				],
-			},
-		};
-		expect(resolvePermissionDenial({ preview, error: null })).not.toBeNull();
-	});
 });
 
 describe("violations on their fields", () => {
@@ -187,19 +173,23 @@ describe("violations on their fields", () => {
 	});
 
 	test.each([
-		["a matched block condition", denial.violations[0], "Plan is Enterprise"],
+		["a matched value", denial.violations[0], "Plan: Enterprise"],
 		[
-			"a condition the request went past",
-			{
-				field: "total",
-				label: "Total",
-				operator: "≥",
-				limit: 500,
-				actual: 900,
-			},
+			"a comparison",
+			{ field: "total", label: "Total", limit: "≥ 500", actual: "900" },
 			"Total ≥ 500 (this request: 900)",
 		],
-		["no operator", denial.violations[3], "Charges customer: yes"],
+		[
+			"a list the request matched",
+			{
+				field: "incoming[0].plan_id",
+				label: "Plan",
+				limit: "pro or team",
+				actual: "pro",
+			},
+			"Plan: pro or team (this request: pro)",
+		],
+		["a boolean", denial.violations[3], "Charges customer: yes"],
 	])("formats %s", (_name, violation, expected) => {
 		expect(formatViolation({ violation })).toBe(expected);
 	});
@@ -272,7 +262,7 @@ describe("billing footer", () => {
 			preview: enforcedDeny,
 			children: <PermissionDenial section="options" />,
 		});
-		expect(html).toContain("Billing cycle anchor is custom");
-		expect(html).not.toContain("Plan is Enterprise");
+		expect(html).toContain("Billing cycle anchor: custom");
+		expect(html).not.toContain("Plan: Enterprise");
 	});
 });
