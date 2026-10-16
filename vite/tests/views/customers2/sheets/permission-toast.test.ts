@@ -17,7 +17,6 @@ const permissionDenied = {
 		status: 403,
 		data: {
 			code: "permission_denied",
-			env: "live",
 			message: "Sales can grant up to 50 credits.",
 			details: {
 				violations: [],

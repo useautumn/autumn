@@ -13,7 +13,7 @@ await restoreQueryClientContext();
 
 mock.module("@/hooks/queries/useRolesQuery", () => ({
 	useRolesQuery: () => ({
-		roles: [{ id: "finance", name: "Finance" }],
+		roles: [{ id: "rol_finance", name: "Finance" }],
 		isLoading: false,
 		error: null,
 	}),
@@ -42,9 +42,8 @@ const denial: Denial = {
 		{
 			field: "included_grant",
 			label: "Amount",
-			operator: "≤",
-			limit: 50,
-			actual: 200,
+			limit: "≤ 50",
+			actual: "200",
 		},
 		{
 			field: "feature_id",
@@ -55,7 +54,7 @@ const denial: Denial = {
 		{ field: "customer.id", label: "Customer", limit: "acme", actual: "x" },
 	],
 	decided_by: { level: "role", rule_id: "apr_1", rule_name: "Sales grants" },
-	allowed_roles: ["finance"],
+	allowed_roles: ["rol_finance"],
 };
 
 const permissionDenied = {
@@ -64,7 +63,6 @@ const permissionDenied = {
 		status: 403,
 		data: {
 			code: "permission_denied",
-			env: "live",
 			message: denial.message,
 			details: {
 				violations: denial.violations,
