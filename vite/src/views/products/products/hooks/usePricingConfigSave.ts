@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
@@ -25,6 +26,7 @@ export const usePricingConfigSave = ({
 		isCountsLoading,
 		refetch: refetchProducts,
 	} = useProductsQuery();
+	const { refetch: refetchFeatures } = useFeaturesQuery();
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [confirmOpen, setConfirmOpen] = useState(false);
@@ -97,7 +99,7 @@ export const usePricingConfigSave = ({
 
 			await executeSave({ config });
 			toast.success("Changes saved successfully");
-			await refetchProducts();
+			await Promise.all([refetchProducts(), refetchFeatures()]);
 
 			if (!org?.onboarded) {
 				await axiosInstance.patch("/v1/organization", { onboarded: true });
@@ -119,7 +121,7 @@ export const usePricingConfigSave = ({
 		try {
 			await executeSave({ config: pendingConfig });
 			toast.success("Changes saved successfully");
-			await refetchProducts();
+			await Promise.all([refetchProducts(), refetchFeatures()]);
 
 			if (!org?.onboarded) {
 				await axiosInstance.patch("/v1/organization", { onboarded: true });

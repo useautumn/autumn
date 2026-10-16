@@ -6,6 +6,7 @@ import type {
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 import { applyCompetingPoolTotals } from "./competing/applyCompetingPoolTotals";
 import type { PooledBalanceComputeContext } from "./types/pooledBalanceComputeTypes";
+import { applyUnlimitedSharePoolTotals } from "./unlimitedShares/applyUnlimitedSharePoolTotals";
 import { addToExpirePoolBalanceCandidates } from "./utils/pooledBalancePlanUtils";
 
 const contributionValuesMatch = ({
@@ -123,6 +124,7 @@ export const finalizePooledBalanceTransitionPlan = ({
 		),
 	};
 	applyCompetingPoolTotals({ computeContext, plan: finalizedPlan });
+	applyUnlimitedSharePoolTotals({ computeContext, plan: finalizedPlan });
 	finalizedPlan.updatePoolBalances = finalizedPlan.updatePoolBalances.filter(
 		(update) =>
 			update.balanceDelta !== 0 ||

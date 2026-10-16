@@ -1,7 +1,9 @@
 import {
 	customerProductHasActiveStatus,
 	type FullCusProduct,
+	type FullCustomerEntitlement,
 	isPooledBalanceSourceCustomerEntitlement,
+	pooledBalanceToPooledBalanceIdentity,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementCompetes } from "../competing/customerEntitlementCompetes";
@@ -11,6 +13,11 @@ import {
 	addPaidCustomerProductToPool,
 	isPaidSubscriptionPoolHost,
 } from "../utils/subscriptionPoolHost";
+import {
+	addLimitedSourceToPool,
+	findUnlimitedShareHost,
+	isLimitedAdditiveSource,
+} from "../utils/unlimitedPoolShare";
 import { computePooledBalanceContributionAmounts } from "./computePooledBalanceContributionAmounts";
 import { computePooledBalanceLifecycle } from "./computePooledBalanceLifecycle";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
@@ -33,6 +40,43 @@ const customerProductToPoolSources = ({
 			isPooledBalanceSourceCustomerEntitlement({ customerEntitlement });
 		return pooled ? [{ customerEntitlement, competes }] : [];
 	});
+
+/** The pool a source opens or joins on its own terms: its interval, reset mode and subscription. */
+const sourcePooledBalanceIdentity = ({
+	computeContext,
+	customerEntitlement,
+	customerProduct,
+	stripeSubscriptionId,
+	customerCreatedAt,
+	competes,
+	now,
+}: {
+	computeContext: PooledBalanceComputeContext;
+	customerEntitlement: FullCustomerEntitlement;
+	customerProduct: FullCusProduct;
+	stripeSubscriptionId?: string;
+	customerCreatedAt: number;
+	competes: boolean;
+	now: number;
+}) => {
+	const lifecycle = computePooledBalanceLifecycle({
+		computeContext,
+		customerEntitlement,
+		customerProduct,
+		stripeSubscriptionId,
+		customerCreatedAt,
+		competes,
+		now,
+	});
+	return {
+		identity: initCustomerEntitlementPooledIdentity({
+			customerEntitlement,
+			lifecycle,
+			competes,
+		}),
+		nextResetAt: lifecycle.nextResetAt,
+	};
+};
 
 export const applyIncomingPooledBalanceSources = ({
 	ctx,
@@ -57,21 +101,31 @@ export const applyIncomingPooledBalanceSources = ({
 		customerEntitlement: contributionCustomerEntitlement,
 		competes,
 	} of customerProductToPoolSources({ customerProduct })) {
-		const lifecycle = computePooledBalanceLifecycle({
-			computeContext,
-			customerEntitlement: contributionCustomerEntitlement,
-			customerProduct,
-			stripeSubscriptionId,
-			customerCreatedAt,
-			competes,
-			now,
-		});
-
-		const identity = initCustomerEntitlementPooledIdentity({
-			customerEntitlement: contributionCustomerEntitlement,
-			lifecycle,
-			competes,
-		});
+		// An unlimited additive grant rides a limited pool on that pool's identity and cycle.
+		const unlimitedShareHost = competes
+			? undefined
+			: findUnlimitedShareHost({
+					computeContext,
+					customerEntitlement: contributionCustomerEntitlement,
+					customerProduct,
+					stripeSubscriptionId,
+				});
+		const { identity, nextResetAt } = unlimitedShareHost
+			? {
+					identity: pooledBalanceToPooledBalanceIdentity({
+						pooledBalance: unlimitedShareHost.pooled_balance,
+					}),
+					nextResetAt: unlimitedShareHost.next_reset_at ?? null,
+				}
+			: sourcePooledBalanceIdentity({
+					computeContext,
+					customerEntitlement: contributionCustomerEntitlement,
+					customerProduct,
+					stripeSubscriptionId,
+					customerCreatedAt,
+					competes,
+					now,
+				});
 
 		const contributionAmounts = computePooledBalanceContributionAmounts({
 			contributionCustomerEntitlement,
@@ -85,8 +139,9 @@ export const applyIncomingPooledBalanceSources = ({
 			customerProduct,
 			identity,
 			contributionAmounts,
-			nextResetAt: lifecycle.nextResetAt,
+			nextResetAt,
 			competes,
+			unlimitedShareHost,
 			now,
 		});
 		if (isPaidSubscriptionPoolHost({ customerProduct })) {
@@ -97,6 +152,18 @@ export const applyIncomingPooledBalanceSources = ({
 				customerProductId: customerProduct.id,
 			});
 		}
+		if (
+			isLimitedAdditiveSource({
+				customerEntitlement: contributionCustomerEntitlement,
+				competes,
+			})
+		) {
+			addLimitedSourceToPool({
+				computeContext,
+				poolId: pooledCustomerEntitlement.pooled_balance.id,
+				customerEntitlementId: contributionCustomerEntitlement.id,
+			});
+		}
 
 		const contribution = initPooledBalanceContribution({
 			pooledCustomerEntitlement,
@@ -104,6 +171,7 @@ export const applyIncomingPooledBalanceSources = ({
 			customerProduct,
 			contributionAmounts,
 			competes,
+			unlimitedShare: unlimitedShareHost !== undefined,
 			now,
 		});
 

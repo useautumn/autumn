@@ -26,8 +26,10 @@ export const AtomVerifySection = ({
 	isFinishing: boolean;
 }) => {
 	const isConnected = isAtomConnected(cache);
-	const { checks } = useAtomChecksQuery({ enabled: isConnected });
-	const hasChecks = checks.length > 0;
+	const { firstCheckSeenAt, checks } = useAtomChecksQuery({
+		enabled: isConnected,
+	});
+	const hasChecks = firstCheckSeenAt !== null;
 	const connectionChip = isConnected
 		? ATOM_CONNECTED_CHIP
 		: ATOM_CONNECTING_CHIP;
@@ -76,6 +78,7 @@ export const AtomVerifySection = ({
 			<AtomFirstChecks
 				endpointUrl={cache.endpoint_url}
 				isConnected={isConnected}
+				firstCheckSeenAt={firstCheckSeenAt}
 				checks={checks}
 			/>
 		</AtomSetupSection>
