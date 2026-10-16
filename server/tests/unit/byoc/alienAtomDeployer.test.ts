@@ -20,6 +20,22 @@ import {
 
 const org = { id: "org_1", slug: "acme" } as Organization;
 
+/** Each size's machine and the Atom container that must run on it. */
+const SIZE_CONTAINERS = [
+	["t4g.micro", { cpu: 1, memory: "0.625Gi" }],
+	["t4g.small", { cpu: 1, memory: "1.375Gi" }],
+	["c8g.large", { cpu: 1, memory: "2.75Gi" }],
+	["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
+	["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
+	["c8g.4xlarge", { cpu: 15, memory: "24Gi" }],
+] as const;
+
+const sizeOn = ({ instanceType }: { instanceType: string }) => {
+	const machine = findByocCacheMachineByInstanceType({ instanceType });
+	if (!machine) throw new Error(`No size runs on ${instanceType}`);
+	return machine;
+};
+
 /** An alien client that only records what a setup was started with. */
 const recordingAlienClient = () => {
 	const started: Parameters<AlienClient["startSetup"]>[0][] = [];
@@ -100,20 +116,12 @@ describe("starting an Atom on alien", () => {
 		});
 	});
 
-	test.each([
-		["t4g.micro", { cpu: 1, memory: "0.625Gi" }],
-		["t4g.small", { cpu: 1, memory: "1.375Gi" }],
-		["c8g.large", { cpu: 1, memory: "2.75Gi" }],
-		["c8g.xlarge", { cpu: 3, memory: "6Gi" }],
-		["c8g.2xlarge", { cpu: 7, memory: "12Gi" }],
-		["c8g.4xlarge", { cpu: 15, memory: "24Gi" }],
-	])(
+	test.each(SIZE_CONTAINERS)(
 		"a %s size pins one machine per replica and sizes the Atom container to fit it",
 		async (instanceType, container) => {
 			const { alienClient, started } = recordingAlienClient();
 			const deployer = createAlienAtomDeployer({ alienClient });
-			const machine = findByocCacheMachineByInstanceType({ instanceType });
-			if (!machine) throw new Error(`No size runs on ${instanceType}`);
+			const machine = sizeOn({ instanceType });
 
 			await deployer.start({
 				names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
@@ -324,5 +332,74 @@ describe("finding an Atom on alien", () => {
 		expect(
 			await deployer.find({ deploymentGroupId: "dg_1", deploymentId: "dep_1" }),
 		).toBeNull();
+	});
+});
+
+describe("resizing an Atom on alien", () => {
+	/** An alien client running one deployment that records each compute update. */
+	const resizingAlienClient = () => {
+		const updates: Parameters<AlienClient["updateDeploymentCompute"]>[0][] = [];
+		const alienClient: AlienClient = {
+			...recordingAlienClient().alienClient,
+			findDeployment: async () => deploymentIn("running"),
+			updateDeploymentCompute: async (params) => {
+				updates.push(params);
+			},
+		};
+		return { alienClient, updates };
+	};
+
+	test.each(SIZE_CONTAINERS)(
+		"a resize to %s moves the pool and resizes the Atom container with it",
+		async (instanceType, container) => {
+			const { alienClient, updates } = resizingAlienClient();
+			const deployer = createAlienAtomDeployer({ alienClient });
+
+			await deployer.resize({
+				deploymentGroupId: "dg_1",
+				machine: sizeOn({ instanceType }),
+			});
+
+			expect(updates).toHaveLength(1);
+			expect(updates[0]?.pools).toEqual({
+				stateful: { machine: instanceType, machines: 2 },
+			});
+			expect(updates[0]?.containers).toEqual({ atom: container });
+		},
+	);
+
+	test("a resize sends the same container size a fresh Atom of that size starts with", async () => {
+		const { alienClient: startClient, started } = recordingAlienClient();
+		const { alienClient: resizeClient, updates } = resizingAlienClient();
+		const machine = sizeOn({ instanceType: "c8g.2xlarge" });
+
+		await createAlienAtomDeployer({ alienClient: startClient }).start({
+			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
+			auth: { mode: "deployed", tokenHash: "hash_1" },
+			machine,
+			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+		});
+		await createAlienAtomDeployer({ alienClient: resizeClient }).resize({
+			deploymentGroupId: "dg_1",
+			machine,
+		});
+
+		expect(updates[0]?.pools).toEqual(started[0]?.pools);
+		expect(updates[0]?.containers).toEqual(started[0]?.containers);
+	});
+
+	test("a group with no deployment refuses the resize and changes nothing", async () => {
+		const { alienClient, updates } = resizingAlienClient();
+		const deployer = createAlienAtomDeployer({
+			alienClient: { ...alienClient, findDeployment: async () => null },
+		});
+
+		await expect(
+			deployer.resize({
+				deploymentGroupId: "dg_1",
+				machine: sizeOn({ instanceType: "c8g.large" }),
+			}),
+		).rejects.toThrow();
+		expect(updates).toHaveLength(0);
 	});
 });

@@ -5,7 +5,7 @@ import {
 	renameDeploymentGroup,
 } from "../deploymentGroups/deploymentGroups.js";
 import { AlienDeploymentSchema } from "../deployments/deploymentSchemas.js";
-import { fixedPoolsToCompute } from "../deployments/fixedPoolsToCompute.js";
+import { toComputeSettings } from "../deployments/toComputeSettings.js";
 import type { AlienApi, AlienContext } from "../types/alienApi.js";
 import type {
 	AlienContainerResources,
@@ -114,7 +114,7 @@ const startHostedSetup = async ({
 						allowedSetupMethods: ["cloudformation"],
 						stackSettings: {
 							defaults: {
-								compute: { ...fixedPoolsToCompute({ pools }), containers },
+								compute: toComputeSettings({ pools, containers }),
 								...(network && { network }),
 							},
 						},

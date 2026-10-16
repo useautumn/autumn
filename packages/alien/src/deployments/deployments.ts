@@ -3,7 +3,11 @@ import { alienRequest } from "../common/alienRequest.js";
 import { isAlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
 import type { AlienApi } from "../types/alienApi.js";
-import type { AlienDeployment, AlienFixedPools } from "../types/alienClient.js";
+import type {
+	AlienContainerResources,
+	AlienDeployment,
+	AlienFixedPools,
+} from "../types/alienClient.js";
 import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
@@ -13,7 +17,7 @@ import {
 	AlienDeploymentListSchema,
 	AlienDeploymentSchema,
 } from "./deploymentSchemas.js";
-import { fixedPoolsToCompute } from "./fixedPoolsToCompute.js";
+import { toComputeSettings } from "./toComputeSettings.js";
 
 /** The local manager filters by `deploymentGroupId`; the hosted API by `deploymentGroup`, scoped to a project. */
 const deploymentsQuery = ({
@@ -157,10 +161,12 @@ export const updateDeploymentCompute = async ({
 	ctx,
 	deployment,
 	pools,
+	containers,
 }: {
 	ctx: { api: AlienApi };
 	deployment: AlienDeployment;
 	pools: AlienFixedPools;
+	containers: AlienContainerResources;
 }): Promise<void> => {
 	if (ctx.api.config.kind === "local") return;
 	await alienRequest({
@@ -171,7 +177,7 @@ export const updateDeploymentCompute = async ({
 			deploymentId: deployment.id,
 			action: "/compute",
 		}),
-		body: { compute: fixedPoolsToCompute({ pools }) },
+		body: { compute: toComputeSettings({ pools, containers }) },
 		schema: z.unknown(),
 	});
 };

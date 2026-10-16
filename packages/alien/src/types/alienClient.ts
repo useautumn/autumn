@@ -98,10 +98,11 @@ export type AlienClient = {
 	}): Promise<AlienDeployment | null>;
 	/** Resumes a failed deployment from where it stopped. */
 	retryDeployment(params: { deployment: AlienDeployment }): Promise<void>;
-	/** alien replaces a pool's machines; a pool's volumes follow its containers. */
+	/** alien replaces a pool's machines and runs each container at its selected allocation; a pool's volumes follow its containers. */
 	updateDeploymentCompute(params: {
 		deployment: AlienDeployment;
 		pools: AlienFixedPools;
+		containers: AlienContainerResources;
 	}): Promise<void>;
 	deleteDeployment(params: { deployment: AlienDeployment }): Promise<void>;
 	revokeSetupLinksOnceDeleted(params: {
