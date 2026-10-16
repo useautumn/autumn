@@ -1,0 +1,43 @@
+import {
+	findFeatureById,
+	getFeatureName,
+	type Membership,
+} from "@autumn/shared";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
+import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
+import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
+import type { RuleLabels } from "./buildRuleSentence";
+import { useApprovalsCatalog } from "./useApprovalsCatalog";
+
+/** Resolves the ids a rule stores to the names the list shows, falling back to the id. */
+export const useApprovalRuleLabels = (): RuleLabels => {
+	const { org } = useOrg();
+	const { products, features } = useApprovalsCatalog();
+	const { memberships } = useMemberships();
+	const { roles } = useRolesQuery();
+
+	return {
+		member: (userId) => {
+			const member = memberships.find(
+				({ user }: Membership) => user.id === userId,
+			);
+			return member?.user.name || member?.user.email || userId;
+		},
+		role: (roleId) => roles.find((role) => role.id === roleId)?.name ?? roleId,
+		plan: (planId) =>
+			products.find((product) => product.id === planId)?.name ?? planId,
+		feature: (featureId) => {
+			const feature = findFeatureById({ features, featureId });
+			return {
+				name: feature?.name ?? featureId,
+				unit: getFeatureName({ feature, plural: true }),
+			};
+		},
+		money: (amount) =>
+			formatAmountWithCurrencyPrecision({
+				amount,
+				currency: org?.default_currency,
+			}),
+	};
+};
