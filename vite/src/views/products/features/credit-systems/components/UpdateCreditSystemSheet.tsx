@@ -3,11 +3,13 @@ import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { getBackendErr } from "@/utils/genUtils";
 import { useSheetBrowserBack } from "../../hooks/useSheetBrowserBack";
 import { featureToCatalogFeatureParams } from "../../utils/buildFeatureMutationParams";
@@ -37,6 +39,7 @@ function UpdateCreditSystemForm({
 	onSuccess?: (oldId: string, newId: string) => void;
 }) {
 	const { mutateAsync: updateCatalog } = useUpdateCatalogMutation();
+	const canUpdate = useCanDo(APPROVAL_OPENERS.updateFeature);
 
 	const form = useCreditSystemForm({
 		feature: creditSystem,
@@ -108,6 +111,7 @@ function UpdateCreditSystemForm({
 					}
 					metaShortcut="enter"
 					isLoading={isSubmitting}
+					disabled={!canUpdate}
 				>
 					Update credit system
 				</ShortcutButton>
