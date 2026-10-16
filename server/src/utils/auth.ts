@@ -32,6 +32,7 @@ import { getAgentIdOAuthConfigs } from "@/external/agentId/agentIdOAuthConfig.js
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { deleteMarketingContacts } from "@/external/resend/deleteMarketingContacts.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { dropMemberFromRules } from "@/internal/approvals/actions/dropMemberFromRules.js";
 import { getOAuthValidAudiences } from "@/internal/auth/oauth/oauthResourceAudiences.js";
 import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
 import { getTrustedSsoOrigins } from "@/internal/auth/sso/ssoTrustedOrigins.js";
@@ -336,6 +337,8 @@ const options = {
 		organization({
 			ac: ac as AccessControl,
 			roles,
+			// Lets better-auth's invite and member-role endpoints accept custom roles.
+			dynamicAccessControl: { enabled: true },
 			creatorRole: "owner",
 			async sendInvitationEmail(data: {
 				id: string;
@@ -378,6 +381,13 @@ const options = {
 					user: User;
 				}) => {
 					await afterOrgCreated({ org: organization, user });
+				},
+				afterRemoveMember: async ({ member, organization }) => {
+					await dropMemberFromRules({
+						db,
+						orgId: organization.id,
+						userId: member.userId,
+					});
 				},
 			},
 		}),

@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { checkScopes, Scopes } from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
+import { fakeMemberRoleDb } from "@tests/utils/fakeMemberRoleDb.js";
 
 const state = { member: null as null | { role: string } };
-const db = {
-	query: { member: { findFirst: async () => state.member } },
-} as never;
+const db = fakeMemberRoleDb({ getMember: () => state.member }) as never;
 
 const resolve = () =>
 	getScopesForUserInOrg({ db, userId: "u1", organizationId: "org_master" });
