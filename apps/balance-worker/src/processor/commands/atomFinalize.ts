@@ -29,7 +29,7 @@ export async function decideAtomFinalize({
 	lock: WorkerLock | null;
 }): Promise<DecidedMutation<never>> {
 	// Every outcome shares the journal entry's fingerprint, so a resend is a duplicate whichever way the first one went.
-	const journalEntry = atomFinalizeToTrackOfNothing({ command });
+	const journalEntry = atomFinalizeToTrackOfNothing({ command, lock });
 	return withResidentSubject({
 		customerKey: meteringIdentityToPartitionKey({ identity: command.identity }),
 		ensure: () => ensureSubjectCurrent({ scope, command: journalEntry }),

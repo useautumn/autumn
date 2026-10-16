@@ -17,9 +17,10 @@ export const atomFinalizeCommandSchema = mutatingCommandSchema
 		type: z.literal("atomFinalize"),
 		org: commandOrgSchema,
 		lockId: nonEmptyStringSchema,
-		featureId: nonEmptyStringSchema,
-		/** The feature's catalog internal id, as a track carries it. */
-		internalFeatureId: nonEmptyStringSchema,
+		/** Null when the Atom journaled the finalize undecided: Autumn's own row names the feature, and its overage behaviour governs. */
+		featureId: nonEmptyStringSchema.nullable(),
+		/** The feature's catalog internal id, as a track carries it; null with `featureId`. */
+		internalFeatureId: nonEmptyStringSchema.nullable(),
 		/** 0 releases the lock, null confirms it at what it took. */
 		finalValue: finiteNumberSchema.nullable(),
 		/** Overrides the lock's own properties on whatever the finalize deducts. */

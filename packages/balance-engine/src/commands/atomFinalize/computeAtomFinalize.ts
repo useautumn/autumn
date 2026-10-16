@@ -12,6 +12,18 @@ import { atomFinalizeToFinalize } from "./atomFinalizeToFinalize.js";
 import { atomFinalizeToTrackOfNothing } from "./atomFinalizeToTrackOfNothing.js";
 import type { AtomFinalizeCommand } from "./types/atomFinalizeCommand.js";
 
+/** An undecided finalize named no entity or feature, so the row's are its own; a decided one must name the row's. */
+const namesHeldLock = ({
+	command,
+	lock,
+}: {
+	command: AtomFinalizeCommand;
+	lock: WorkerLock;
+}): boolean =>
+	command.featureId === null ||
+	(lock.entity_id === command.identity.entityId &&
+		lock.feature_id === command.featureId);
+
 /** Settled only when the lock is still open, is the one the Atom named, and this journal entry has not landed before. */
 const settlesHeldLock = ({
 	fullSubject,
@@ -24,8 +36,7 @@ const settlesHeldLock = ({
 }): boolean =>
 	fullSubject.open_locks.some((openLock) => openLock.id === lock.id) &&
 	lock.customer_id === command.identity.customerId &&
-	lock.entity_id === command.identity.entityId &&
-	lock.feature_id === command.featureId &&
+	namesHeldLock({ command, lock }) &&
 	!isLandedSeq({ source: command.source, customer: fullSubject.customer });
 
 /** Settles Autumn's own row for the lock the Atom named, its seq landing in the same mutation; otherwise only the seq lands. */
@@ -42,7 +53,7 @@ export const computeAtomFinalizeDecision = ({
 	if (!lock || !settlesHeldLock({ fullSubject, command, lock }))
 		return computeTrackDecision({
 			fullSubject,
-			command: atomFinalizeToTrackOfNothing({ command }),
+			command: atomFinalizeToTrackOfNothing({ command, lock }),
 		});
 	const { mutation, outcome } = computeFinalizeDecision({
 		fullSubject,

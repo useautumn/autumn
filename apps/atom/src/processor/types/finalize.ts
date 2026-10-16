@@ -16,9 +16,19 @@ export type FinalizeRequest = {
 export type AnswerableFinalize = {
 	customerId: string;
 	lockId: string;
-	/** 0 releases the lock, null confirms it at what it took, any other value settles it there. */
+	/** 0 releases the lock, null confirms it at what it took. */
 	finalValue: number | null;
 	properties: FinalizeCommand["properties"];
+};
+
+/**
+ * A finalize journaled as the caller sent it, for Autumn to decide behind the lock it names: the Atom read neither the
+ * lock nor the subject, so it names no entity or feature, and its view moves nothing until Autumn's push.
+ */
+export type UndecidedFinalizeCommand = AnswerableFinalize & {
+	type: "undecidedFinalize";
+	requestId: string;
+	occurredAt: number;
 };
 
 /** What the API answers a finalize with. */
