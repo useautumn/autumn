@@ -6,7 +6,8 @@ export type LockFeature = { featureId: string; internalFeatureId: string };
 
 /**
  * The lock's feature: as the Atom named it when it decided, else as Autumn's own row names it; null when neither does.
- * A row read back without its feature's internal id (its feature row gone) can settle nothing: the record is retried.
+ * A row read back without its feature's internal id (its feature row gone) can settle nothing: refused, and the lock's
+ * expiry settles it as any unsettled lock.
  */
 export const lockFeatureOf = ({
 	command,

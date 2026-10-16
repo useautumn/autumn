@@ -13,15 +13,12 @@
  *  the lock pending in the same batch, or stored in an earlier one → settled, the seq lands;
  *  a confirm above what the row's own overage allows → rejected and logged, the lock stays open, the seq lands;
  *  a lock Autumn holds no row for → refused and logged, nothing lands;
- *  a row read back without its feature (its feature row gone) → the record fails and is redelivered, never settled another way.
+ *  a row read back without its feature (its feature row gone) → refused and logged at error level, the lock left to its
+ *  expiry, and the partition's next command applies.
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	LockFeatureNotLoadedError,
-	type TrackCommand,
-	type WorkerLock,
-} from "@autumn/balance-engine";
+import type { TrackCommand } from "@autumn/balance-engine";
 import {
 	type CommandPipeline,
 	createCommandPipeline,
@@ -31,6 +28,7 @@ import { testOccurredAt } from "../../fixtures/mutations.js";
 import {
 	atomFinalizeOf,
 	lockingTrackOf,
+	trackOf,
 } from "../../fixtures/queuedCommands.js";
 
 const customerId = "cus_1";
@@ -52,8 +50,9 @@ const readCustomer = ({ pipeline }: { pipeline: CommandPipeline }) => {
 
 const withPipeline = async (
 	run: (pipeline: CommandPipeline) => Promise<void>,
+	options: Parameters<typeof createCommandPipeline>[0] = {},
 ) => {
-	const pipeline = createCommandPipeline();
+	const pipeline = createCommandPipeline(options);
 	try {
 		await run(pipeline);
 	} finally {
@@ -312,31 +311,45 @@ describe("an Atom's queued finalize", () => {
 			});
 		}));
 
-	test("undecided, for a row read back without its feature's internal id, the record fails loudly and is redelivered", () =>
-		withPipeline(async (pipeline) => {
-			await pipeline.consumeBatch({ commands: [lockTrack] });
-			await pipeline.drain();
-			const row = await pipeline.processor.readLockRows({
-				keys: [{ orgId: "org_1", env: "sandbox", lockId: "L1" }],
-			});
+	test("undecided, for a row read back without its feature's internal id, it is refused and logged at error level, and the partition moves on", () =>
+		withPipeline(
+			async (pipeline) => {
+				await pipeline.consumeBatch({ commands: [lockTrack] });
+				await pipeline.drain();
+				await pipeline.consumeBatch({
+					commands: [
+						atomFinalizeOf({
+							customerId,
+							lockId: "L1",
+							seq: 2,
+							featureId: null,
+						}),
+						trackOf({
+							customerId: "cus_2",
+							commandId: "track_after",
+							value: 3,
+						}),
+					],
+					firstOffset: 1,
+				});
+				await pipeline.drain();
 
-			const decided = pipeline.processor.decideAtomFinalize({
-				command: atomFinalizeOf({
-					customerId,
-					lockId: "L1",
-					seq: 2,
-					featureId: null,
-				}),
-				lock: { ...(row[0] as WorkerLock), internal_feature_id: null },
-			});
-
-			await expect(decided).rejects.toBeInstanceOf(LockFeatureNotLoadedError);
-			expect(readCustomer({ pipeline })).toEqual({
-				balance: STARTING_BALANCE - 10,
-				openLocks: ["L1"],
-				atomSeqs: { atom_1: { w_1: 1 } },
-			});
-		}));
+				expect(pipeline.parked).toEqual([]);
+				expect(pipeline.logs).toEqual([
+					"error:Queued atomFinalize refused: the lock's feature row is gone",
+				]);
+				expect(readCustomer({ pipeline })).toEqual({
+					balance: STARTING_BALANCE - 10,
+					openLocks: ["L1"],
+					atomSeqs: { atom_1: { w_1: 1 } },
+				});
+				expect(
+					pipeline.readState({ customerId: "cus_2" })?.customerEntitlements[0]
+						?.balance,
+				).toBe(STARTING_BALANCE - 3);
+			},
+			{ featureRowsGone: ["messages"] },
+		));
 
 	test("naming a lock Autumn holds under another feature, it settles nothing: the lock stays open and its seq lands", () =>
 		withPipeline(async (pipeline) => {

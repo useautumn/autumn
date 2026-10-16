@@ -54,8 +54,11 @@ export const createCommandPipeline = ({
 	unknownAppendAt,
 	heldAppend,
 	heldApply,
+	featureRowsGone = [],
 	states = [],
 }: {
+	/** Feature ids whose rows are gone: a lock read back on one carries no internal id, as the features join finds none. */
+	featureRowsGone?: string[];
 	/** Subjects resident beside the default customers. */
 	states?: SubjectState[];
 	/** The nth commit (0-based) the broker refuses outright. */
@@ -168,9 +171,11 @@ export const createCommandPipeline = ({
 						lockReads.push(keys.map(({ lockId }) => lockId));
 						return keys.flatMap(({ lockId }) => {
 							const row = storedLocks.get(lockId);
-							return row
-								? [{ ...row, internal_feature_id: "feat_messages" }]
-								: [];
+							if (!row) return [];
+							const gone = featureRowsGone.includes(row.feature_id);
+							return [
+								{ ...row, internal_feature_id: gone ? null : "feat_messages" },
+							];
 						});
 					},
 				},
@@ -207,6 +212,7 @@ export const createCommandPipeline = ({
 				logger: {
 					info: (...args: unknown[]) => logs.push(`info:${args[0]}`),
 					warn: (...args: unknown[]) => logs.push(`warn:${args[0]}`),
+					error: (...args: unknown[]) => logs.push(`error:${args[0]}`),
 				},
 				markUnavailable: (failure) => {
 					parked.push(failure);

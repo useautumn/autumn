@@ -10,7 +10,7 @@ export type CommandConsumerContext = {
 	/** How far the partition's commands are decided, from Postgres; null before the bookmark exists. */
 	readCommandNextOffset(position: { partition: number }): bigint | null;
 	idempotencyKeys: IdempotencyKeyStore;
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 	/** Parks the partition behind a command whose batch the broker refused: withdrawn from the
 	 *  consumer at once, restarted from the store and log later. Absent, the failure is thrown. */
 	markUnavailable?(failure: { partition: number; cause: unknown }): void;
