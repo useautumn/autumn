@@ -69,6 +69,9 @@ export interface BillingContextOverride {
 	 */
 	skipBillingFetching?: boolean;
 
+	/** The unpaid invoice of a pending plan this attach replaces: its lines don't count as billed. */
+	replacedPendingStripeInvoiceId?: string;
+
 	/**
 	 * Skips the external-PSP guard (`handleExternalPSPErrors`) and the
 	 * "paid current product but no Stripe sub linked" guard. Used by callers

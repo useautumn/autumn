@@ -14,6 +14,7 @@ import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/p
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 import { isPlanEnabledOnFinalize } from "@/internal/billing/v2/utils/billingContext/isPlanEnabledOnFinalize";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { MetadataService } from "@/internal/metadata/MetadataService";
 
 /** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
 export const previewPendingReattach = async ({
@@ -73,10 +74,19 @@ export const previewPendingReattach = async ({
 			}
 		: reattachParams;
 
+	const pendingMetadata = customerProduct.metadata_id
+		? await MetadataService.get({ db: ctx.db, id: customerProduct.metadata_id })
+		: undefined;
+	const contextOverride = {
+		replacedPendingStripeInvoiceId:
+			pendingMetadata?.stripe_invoice_id ?? undefined,
+	};
+
 	const replacementPreview = await billingActions.attach({
 		ctx,
 		params: attachParams,
 		preview: true,
+		contextOverride,
 	});
 
 	const replacementProduct =
@@ -98,5 +108,11 @@ export const previewPendingReattach = async ({
 				replacementPreview.billingContext?.featureQuantities ?? [],
 		});
 
-	return { attachParams, longLivedCheckout, replacementPreview, rebills };
+	return {
+		attachParams,
+		contextOverride,
+		longLivedCheckout,
+		replacementPreview,
+		rebills,
+	};
 };

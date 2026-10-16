@@ -326,6 +326,7 @@ export const setupAttachBillingContext = async ({
 			fullCustomer,
 			stripeSubscription,
 			outgoingCusProductIds,
+			excludeStripeInvoiceId: contextOverride.replacedPendingStripeInvoiceId,
 		});
 
 	const customerLicenseBillingContext =

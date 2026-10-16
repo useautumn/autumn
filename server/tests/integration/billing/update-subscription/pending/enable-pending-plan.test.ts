@@ -10,7 +10,10 @@ import {
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
-import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration";
+import {
+	calculateProratedDiff,
+	calculateResetBillingCycleNowTotal,
+} from "@tests/integration/billing/utils/proration";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -509,7 +512,15 @@ test.concurrent(
 			oldAmount: 20,
 			newAmount: 50,
 		});
-		expect(proratedPreview.total).toBeLessThan(resetTotal);
+		expect(proratedPreview.total).toBeCloseTo(
+			await calculateProratedDiff({
+				customerId,
+				advancedTo,
+				oldAmount: 20,
+				newAmount: 50,
+			}),
+			0,
+		);
 
 		const reset = { ...enable, billing_cycle_anchor: "now" as const };
 		const resetPreview = await autumnV2_2.subscriptions.previewUpdate(reset);
