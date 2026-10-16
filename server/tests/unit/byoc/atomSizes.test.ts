@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import {
-	BYOC_CACHE_DISK_GB,
 	BYOC_CACHE_MACHINES,
 	BYOC_CACHE_REPLICAS,
-	byocCacheMachineMonthlyUsd,
+	byocCacheMonthlyUsd,
+	byocCacheStorageMonthlyUsd,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 } from "@autumn/shared";
 import alienStack from "../../../../packages/alien/stacks/byoc/alien.json";
 
@@ -99,28 +100,41 @@ describe("Atom sizes", () => {
 		expect(atomResource.replicas).toBe(BYOC_CACHE_REPLICAS);
 	});
 
-	test("the stack gives each replica the data disk the price counts", () => {
+	test("the stack's default data disk is the size an Atom gets when it picks none", () => {
 		expect(atomResource.persistentStorage).toEqual({
 			mountPath: "/data",
-			size: `${BYOC_CACHE_DISK_GB}Gi`,
+			size: `${DEFAULT_BYOC_CACHE_VOLUME_GIB}Gi`,
 		});
 	});
 
-	test("monthly estimates are both replicas' machine and 20 GB disk at us-east-1 list price", () => {
-		expect(
-			Object.fromEntries(
-				BYOC_CACHE_MACHINES.map((machine) => [
-					machine.instanceType,
-					byocCacheMachineMonthlyUsd(machine),
-				]),
-			),
-		).toEqual({
+	const monthlyEstimates = ({ volumeSizeGib }: { volumeSizeGib: number }) =>
+		Object.fromEntries(
+			BYOC_CACHE_MACHINES.map((machine) => [
+				machine.instanceType,
+				byocCacheMonthlyUsd({ machine, volumeSizeGib }),
+			]),
+		);
+
+	test("monthly estimates are both replicas' machine and 20 GiB disk at us-east-1 list price", () => {
+		expect(monthlyEstimates({ volumeSizeGib: 20 })).toEqual({
 			"t4g.micro": 15,
 			"t4g.small": 28,
 			"c8g.large": 120,
 			"c8g.xlarge": 236,
 			"c8g.2xlarge": 469,
 			"c8g.4xlarge": 935,
+		});
+	});
+
+	test("a bigger disk adds both replicas' gp3 volumes to every machine's estimate", () => {
+		expect(byocCacheStorageMonthlyUsd({ volumeSizeGib: 50 })).toBe(8);
+		expect(monthlyEstimates({ volumeSizeGib: 50 })).toEqual({
+			"t4g.micro": 20,
+			"t4g.small": 33,
+			"c8g.large": 124,
+			"c8g.xlarge": 241,
+			"c8g.2xlarge": 474,
+			"c8g.4xlarge": 940,
 		});
 	});
 });

@@ -37,6 +37,8 @@ export const atomDeployments = pgTable(
 		/** The token's SHA-256, which the Atom holds and calls Autumn with; null only on a backfilled row until its first refresh. */
 		token_hash: text("token_hash"),
 		region: text("region"),
+		/** Each replica's data volume in GiB: the size its setup asked for, then the size its deployment selects. It only grows. */
+		volume_size_gib: integer("volume_size_gib").notNull().default(20),
 		network: jsonb("network").$type<ByocCacheNetwork>(),
 		/** The stack's full name in the org's cloud; null on rows made before it could be chosen. */
 		stack_name: text("stack_name"),

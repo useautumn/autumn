@@ -757,6 +757,13 @@
 			"when": 1792137537740,
 			"tag": "0107_atom_deployments_many_per_env",
 			"breakpoints": true
+		},
+		{
+			"idx": 108,
+			"version": "7",
+			"when": 1792154273780,
+			"tag": "0108_atom_deployments_volume_size",
+			"breakpoints": true
 		}
 	]
 }

@@ -3,7 +3,10 @@ import { AppEnv } from "../../models/genModels/genEnums";
 import {
 	BYOC_CACHE_MACHINES,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	findByocCacheMachine,
+	MAX_BYOC_CACHE_VOLUME_GIB,
+	MIN_BYOC_CACHE_VOLUME_GIB,
 } from "../../models/orgModels/byocCacheMachines";
 import { BYOC_CACHE_AWS_REGIONS } from "../../models/orgModels/byocCacheRegions";
 import {
@@ -86,6 +89,9 @@ export const ApiByocCacheSchema = z.object({
 		.string()
 		.nullable()
 		.describe("The cloud region Atom runs in, or the one its setup asked for."),
+	volume_size_gib: z
+		.number()
+		.describe("Each replica's data volume in GiB. It can only grow."),
 	network: ByocCacheNetworkSchema.nullable(),
 	stages: ByocCacheStagesSchema,
 	error: z
@@ -136,6 +142,18 @@ const AtomIdParamsSchema = z.object({
 
 const ByocAtomNameSchema = z.string().trim().min(1).max(64);
 
+const ByocVolumeSizeGibSchema = z
+	.number()
+	.int("Use a whole number of GiB")
+	.min(
+		MIN_BYOC_CACHE_VOLUME_GIB,
+		`Use at least ${MIN_BYOC_CACHE_VOLUME_GIB} GiB`,
+	)
+	.max(
+		MAX_BYOC_CACHE_VOLUME_GIB,
+		`Use at most ${MAX_BYOC_CACHE_VOLUME_GIB} GiB`,
+	);
+
 export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 	.extend({
 		atom_id: z
@@ -151,6 +169,9 @@ export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 			"The AWS region to set Atom up in.",
 		),
 		network: ByocCacheNetworkSchema.optional(),
+		volume_size_gib: ByocVolumeSizeGibSchema.optional().describe(
+			`Each replica's data volume in GiB; defaults to ${DEFAULT_BYOC_CACHE_VOLUME_GIB}. It can grow later, never shrink.`,
+		),
 		stack_name: ByocStackNameSchema.optional().describe(
 			"Names the stack in your cloud; Autumn adds a short suffix unique to this env. Defaults to `atom-<org>-<env>`.",
 		),
@@ -163,6 +184,12 @@ export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 export const ResizeByocCacheParamsSchema = ByocCacheResourcesSchema.extend(
 	AtomIdParamsSchema.shape,
 ).refine(isOfferedMachine, offeredMachineError);
+
+export const IncreaseByocCacheStorageParamsSchema = AtomIdParamsSchema.extend({
+	volume_size_gib: ByocVolumeSizeGibSchema.describe(
+		"Each replica's new data volume in GiB. It must be larger than the current one; the same size changes nothing.",
+	),
+});
 
 export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 	setup_url: z
@@ -248,6 +275,9 @@ export type CreateByocCacheResponse = z.infer<
 export type GetByocCacheResponse = z.infer<typeof GetByocCacheResponseSchema>;
 export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
 export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;
+export type IncreaseByocCacheStorageParams = z.infer<
+	typeof IncreaseByocCacheStorageParamsSchema
+>;
 export type ByocAtomIdParams = z.infer<typeof AtomIdParamsSchema>;
 export type ListByocAtomsResponse = z.infer<typeof ListByocAtomsResponseSchema>;
 export type ApiAtomLimits = z.infer<typeof ApiAtomLimitsSchema>;
