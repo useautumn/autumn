@@ -228,7 +228,8 @@ async function downloadPrebuilt({
 	if (nativeLibcOf() !== "glibc" || process.arch !== "x64") return false;
 	const response = await fetchPrebuilt({ key }).catch(() => undefined);
 	if (!response) return false;
-	const download = `${paths.cached}.${process.pid}.download`;
+	// require only loads it as an addon when the name ends in .node.
+	const download = `${paths.cached}.${process.pid}.download.node`;
 	mkdirSync(dirname(paths.cached), { recursive: true });
 	await Bun.write(download, response);
 	if (!loadsHere({ addon: download })) {
