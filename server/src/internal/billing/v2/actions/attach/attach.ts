@@ -8,6 +8,8 @@ import {
 import { ms } from "@shared/utils/common/unixUtils";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/check/checkBillingApproval";
+import type { BillingRoute } from "@/internal/approvals/check/types/billingRoute";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachComputeErrors";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
@@ -47,6 +49,8 @@ export async function attach({
 	preview = false,
 	skipAutumnCheckout = false,
 	longLivedCheckout: existingLongLivedCheckout,
+	approvalRoute = "billing.attach",
+	approvalGatesWrite = false,
 
 	contextOverride,
 }: {
@@ -56,6 +60,10 @@ export async function attach({
 	skipAutumnCheckout?: boolean;
 	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
 	longLivedCheckout?: BillingContext["longLivedCheckout"];
+	/** Re-attaching a pending plan is the member's update, so it's judged as one. */
+	approvalRoute?: Extract<BillingRoute, "billing.attach" | "billing.update">;
+	/** This preview stands in for a write, so the check judges it as one. */
+	approvalGatesWrite?: boolean;
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -129,16 +137,28 @@ export async function attach({
 		preview,
 	});
 
-	if (preview) {
-		const previewBillingPlan = await computeAttachPreviewBillingPlan({
-			ctx,
-			billingContext,
-			autumnBillingPlan,
-		});
+	// Approvals: the one check, shared by the preview and the write
+	const previewBillingPlan = preview
+		? await computeAttachPreviewBillingPlan({
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+			})
+		: undefined;
+	const approval = await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan: { ...billingPlan, preview: previewBillingPlan },
+		route: approvalRoute,
+		preview,
+		gatesWrite: approvalGatesWrite,
+	});
 
+	if (preview) {
 		return {
 			billingContext,
 			billingPlan: { ...billingPlan, preview: previewBillingPlan },
+			approval,
 		};
 	}
 

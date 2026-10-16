@@ -66,6 +66,7 @@ export const updatePendingCustomerProduct = async ({
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
 		params: attachParams,
+		approvalRoute: "billing.update",
 		longLivedCheckout: longLivedCheckout && {
 			id: longLivedCheckout.id,
 			expiresAt: longLivedCheckout.expires_at,
