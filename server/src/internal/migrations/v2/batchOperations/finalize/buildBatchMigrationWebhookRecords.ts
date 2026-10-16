@@ -44,7 +44,10 @@ export const buildBatchMigrationWebhookRecords = ({
 	});
 
 	const records: MigrationWebhookRecord[] = [];
-	for (const customer of pageResult.succeeded) {
+	for (const customer of [
+		...pageResult.succeeded,
+		...(pageResult.failed ?? []),
+	]) {
 		const byEntity = entriesByCustomer.get(customer.internalId);
 		if (!byEntity) continue;
 

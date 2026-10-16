@@ -50,6 +50,7 @@ export const applyReplacePatches = async ({
 	const serializedRows = JSON.stringify(
 		rows.map((row) => ({
 			id: row.customerEntitlementId,
+			from_entitlement_id: row.entitlementId,
 			reset_cycle_anchor: row.resetCycleAnchor,
 			next_reset_at: row.nextResetAt,
 		})),
@@ -63,6 +64,7 @@ export const applyReplacePatches = async ({
 			SELECT *
 			FROM JSONB_TO_RECORDSET(${serializedRows}::jsonb) AS r(
 				id text,
+				from_entitlement_id text,
 				reset_cycle_anchor numeric,
 				next_reset_at numeric
 			)
@@ -81,6 +83,7 @@ export const applyReplacePatches = async ({
 		INNER JOIN customer_products AS cp
 			ON ${operationScopeSql({ scope })}
 		WHERE target.id = patched.id
+			AND target.entitlement_id = patched.from_entitlement_id
 			AND cp.id = target.customer_product_id
 			AND ${rowIsUnpaidSql({
 				customerProductId: sql`cp.id`,

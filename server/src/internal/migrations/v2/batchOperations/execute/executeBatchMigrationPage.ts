@@ -1,14 +1,24 @@
 import { MigrationItemRunSkipReason } from "@autumn/shared";
 import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { addCustomerEntitlementsForPage } from "../actions/addCustomerEntitlementsForPage/addCustomerEntitlementsForPage.js";
 import { listScopedInternalCustomerIds } from "../actions/listScopedInternalCustomerIds/listScopedInternalCustomerIds.js";
-import { removeCustomerEntitlementsForPage } from "../actions/removeCustomerEntitlementsForPage/removeCustomerEntitlementsForPage.js";
-import { replaceCustomerEntitlementsForPage } from "../actions/replaceCustomerEntitlementsForPage/replaceCustomerEntitlementsForPage.js";
-import { repointCustomerProductsForPage } from "../actions/repointCustomerProductsForPage/repointCustomerProductsForPage.js";
-import { runLicenseEntitlementOp } from "../actions/runLicenseEntitlementOp.js";
-import type { BatchMigrationExecutionPlan } from "../types/index.js";
+import { createWorkerPageGate } from "../actions/throughWorker/createWorkerPageGate.js";
+import type {
+	BatchMigrationExecutionPatch,
+	BatchMigrationExecutionPlan,
+} from "../types/index.js";
 import { markPageItemRuns } from "./claim/index.js";
+import { runPatchAdds } from "./patchPhases/runPatchAdds.js";
+import { runPatchLicenseOps } from "./patchPhases/runPatchLicenseOps.js";
+import { runPatchRemoves } from "./patchPhases/runPatchRemoves.js";
+import { runPatchReplaces } from "./patchPhases/runPatchReplaces.js";
+import { runPatchRepoint } from "./patchPhases/runPatchRepoint.js";
+import type {
+	PatchPhaseArgs,
+	PatchPhaseResult,
+} from "./patchPhases/types/patchPhase.js";
+import { evictSqlWrittenWorkerCustomers } from "./routing/evictSqlWrittenWorkerCustomers.js";
+import { splitPageByRouting } from "./routing/splitPageByRouting.js";
 import type {
 	BatchMigrationInsertedItem,
 	BatchMigrationPageCustomer,
@@ -16,11 +26,7 @@ import type {
 	BatchMigrationRemovedItem,
 	BatchMigrationRepointedProduct,
 } from "./types/batchMigrationExecutionTypes.js";
-import {
-	BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
-	BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
-} from "./utils/batchMigrationExecutionConstants.js";
-import { mapWithConcurrency } from "./utils/mapWithConcurrency.js";
+import { BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS } from "./utils/batchMigrationExecutionConstants.js";
 import {
 	type BatchMigrationPagePhases,
 	timePhase,
@@ -45,6 +51,7 @@ export const executeBatchMigrationPage = async ({
 	plan,
 	customers,
 	phases,
+	signal,
 }: {
 	ctx: AutumnContext;
 	migrationInternalId: string;
@@ -52,188 +59,93 @@ export const executeBatchMigrationPage = async ({
 	plan: BatchMigrationExecutionPlan;
 	customers: BatchMigrationPageCustomer[];
 	phases?: BatchMigrationPagePhases;
+	signal: AbortSignal;
 }): Promise<BatchMigrationPageResult> => {
 	if (customers.length === 0)
 		return {
 			succeeded: [],
 			skipped: [],
+			failed: [],
 			skipReasons: {},
 			insertedItems: [],
 			removedItems: [],
 			repointedProducts: [],
+			workerCurrentInternalIds: [],
 		};
 
 	const pageInternalIds = customers.map((customer) => customer.internalId);
 	const now = Date.now();
+	const { worker: workerCustomers } = splitPageByRouting({ ctx, customers });
+	const workerIds = new Set(
+		workerCustomers.map(({ internalId }) => internalId),
+	);
+	const workerGate = createWorkerPageGate({ signal });
 	const insertedItems: BatchMigrationInsertedItem[] = [];
 	const removedItems: BatchMigrationRemovedItem[] = [];
 	const repointedProducts: BatchMigrationRepointedProduct[] = [];
 	// Customers a patch cannot serve (e.g. no usable reset anchor) drop
 	// from succeeded into skipped — the per-customer lane's territory.
 	const excludedIds = new Set<string>();
-	const repointedIds = new Set<string>();
+	const changedIds = new Set<string>();
+	const failReasons: Record<string, string> = {};
+	const failedIds = new Set<string>();
+	const sqlWrittenWorkerIds = new Set<string>();
+
+	const merge = (result: PatchPhaseResult) => {
+		insertedItems.push(...result.insertedItems);
+		removedItems.push(...result.removedItems);
+		repointedProducts.push(...result.repointedProducts);
+		for (const id of result.changedInternalCustomerIds) changedIds.add(id);
+		for (const id of result.excludedInternalCustomerIds) excludedIds.add(id);
+		for (const [id, reason] of Object.entries(result.failureReasons)) {
+			failedIds.add(id);
+			failReasons[id] = reason;
+		}
+		for (const id of result.sqlWrittenWorkerCustomerIds)
+			sqlWrittenWorkerIds.add(id);
+	};
+	const runPhase = async (phase: Promise<PatchPhaseResult>) => {
+		const result = await phase;
+		merge(result);
+		await evictSqlWrittenWorkerCustomers({
+			ctx,
+			workerCustomers,
+			sqlWrittenInternalCustomerIds: result.sqlWrittenWorkerCustomerIds,
+		});
+	};
+	const phaseArgs = ({
+		patch,
+		leaveOut = new Set(),
+	}: {
+		patch: BatchMigrationExecutionPatch;
+		leaveOut?: Set<string>;
+	}): PatchPhaseArgs => ({
+		ctx,
+		migrationRunId,
+		patch,
+		now,
+		phases,
+		sqlInternalCustomerIds: pageInternalIds.filter(
+			(id) => !workerIds.has(id) && !leaveOut.has(id),
+		),
+		workerCustomers: workerCustomers.filter(
+			({ internalId }) =>
+				!failedIds.has(internalId) && !leaveOut.has(internalId),
+		),
+		workerGate,
+	});
 
 	for (const patch of plan.patches) {
-		// Op types stay ordered (removes, then replaces, then adds) but ops
-		// WITHIN a type run concurrently: each op owns one feature, and
-		// different features touch disjoint customer_entitlements rows.
-		// Results merge in op order so output stays deterministic.
-
 		// Removes run first: an add landing before its sibling remove would be
 		// dropped again by a filter matching the same feature.
-		const removeResults = await mapWithConcurrency({
-			items: patch.removeEntitlementOps,
-			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
-			run: (remove) =>
-				removeCustomerEntitlementsForPage({
-					db: ctx.db,
-					features: ctx.features,
-					scope: patch.scope,
-					internalCustomerIds: pageInternalIds,
-					fromProduct: patch.fromProduct,
-					remove,
-					phases,
-				}),
-		});
-		for (const [index, remove] of patch.removeEntitlementOps.entries()) {
-			const result = removeResults[index];
-			removedItems.push(...result.removedItems);
-			ctx.logger.debug("batch-migration: remove operation", {
-				data: {
-					opIndex: patch.opIndex,
-					planId: patch.fromProduct.id,
-					featureId: remove.from.feature_id,
-					candidateCount: result.candidateCount,
-					affected: result.affected,
-				},
-			});
-		}
-
+		await runPhase(runPatchRemoves(phaseArgs({ patch })));
 		// Replaces run before adds so the add dedup sees post-replace definitions.
-		const replaceResults = await mapWithConcurrency({
-			items: patch.replaceEntitlementOps,
-			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
-			run: (replace) =>
-				replaceCustomerEntitlementsForPage({
-					db: ctx.db,
-					features: ctx.features,
-					scope: patch.scope,
-					internalCustomerIds: pageInternalIds,
-					fromProduct: patch.fromProduct,
-					replace,
-					now,
-					phases,
-				}),
-		});
-		for (const [index, replace] of patch.replaceEntitlementOps.entries()) {
-			const result = replaceResults[index];
-			for (const id of result.excludedInternalCustomerIds) {
-				excludedIds.add(id);
-			}
-			insertedItems.push(...result.insertedItems);
-			removedItems.push(...result.removedItems);
-			ctx.logger.debug("batch-migration: replace operation", {
-				data: {
-					opIndex: patch.opIndex,
-					planId: patch.fromProduct.id,
-					fromFeatureId: replace.from.feature_id,
-					featureId: replace.entitlement.feature.id,
-					candidateCount: result.candidateCount,
-					affected: result.affected,
-					excluded: result.excludedInternalCustomerIds.length,
-				},
-			});
-		}
-
-		const addResults = await mapWithConcurrency({
-			items: patch.addEntitlementOps,
-			concurrency: BATCH_MIGRATION_FEATURE_OP_CONCURRENCY,
-			run: (add) =>
-				addCustomerEntitlementsForPage({
-					db: ctx.db,
-					scope: patch.scope,
-					internalCustomerIds: pageInternalIds,
-					fromProduct: patch.fromProduct,
-					add,
-					now,
-					phases,
-				}),
-		});
-		for (const [index, add] of patch.addEntitlementOps.entries()) {
-			const result = addResults[index];
-			for (const id of result.excludedInternalCustomerIds) {
-				excludedIds.add(id);
-			}
-			insertedItems.push(...result.insertedItems);
-			ctx.logger.debug("batch-migration: add operation", {
-				data: {
-					opIndex: patch.opIndex,
-					planId: patch.fromProduct.id,
-					featureId: add.entitlement.feature.id,
-					candidateCount: result.candidateCount,
-					affected: result.affected,
-					excluded: result.excludedInternalCustomerIds.length,
-				},
-			});
-		}
-
-		// License ops stay sequential: two ops can target the same
-		// licensePlanId pool, so their rows are not disjoint.
-		for (const operation of patch.licenseEntitlementOps) {
-			const result = await runLicenseEntitlementOp({
-				db: ctx.db,
-				features: ctx.features,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds,
-				operation,
-				now,
-				phases,
-			});
-			for (const id of result.excludedInternalCustomerIds) {
-				excludedIds.add(id);
-			}
-			for (const id of result.changedInternalCustomerIds) {
-				repointedIds.add(id);
-			}
-			insertedItems.push(...result.insertedItems);
-			removedItems.push(...result.removedItems);
-			ctx.logger.debug("batch-migration: license operation", {
-				data: {
-					opIndex: patch.opIndex,
-					licensePlanId: operation.licensePlanId,
-					operation: operation.type,
-					inserted: result.insertedItems.length,
-					removed: result.removedItems.length,
-					excluded: result.excludedInternalCustomerIds.length,
-				},
-			});
-		}
-
-		if (patch.repointCustomerProduct) {
-			const rows = await repointCustomerProductsForPage({
-				db: ctx.db,
-				scope: patch.scope,
-				internalCustomerIds: pageInternalIds.filter(
-					(id) => !excludedIds.has(id),
-				),
-				toInternalProductId: patch.repointCustomerProduct.toInternalProductId,
-			});
-			for (const row of rows) {
-				repointedIds.add(row.internalCustomerId);
-				repointedProducts.push({
-					...row,
-					fromProduct: patch.fromProduct,
-					toProduct: patch.toProduct ?? patch.fromProduct,
-				});
-			}
-			ctx.logger.debug("batch-migration: repoint customer products", {
-				data: {
-					opIndex: patch.opIndex,
-					planId: patch.fromProduct.id,
-					affected: rows.length,
-				},
-			});
-		}
+		await runPhase(runPatchReplaces(phaseArgs({ patch })));
+		await runPhase(runPatchAdds(phaseArgs({ patch })));
+		await runPhase(runPatchLicenseOps(phaseArgs({ patch })));
+		await runPhase(
+			runPatchRepoint(phaseArgs({ patch, leaveOut: excludedIds })),
+		);
 	}
 
 	// A repointed pool or a dropped row is a real change even with nothing
@@ -241,10 +153,13 @@ export const executeBatchMigrationPage = async ({
 	const succeeded = new Set([
 		...insertedItems.map((item) => item.internalCustomerId),
 		...removedItems.map((item) => item.internalCustomerId),
-		...repointedIds,
+		...changedIds,
 	]);
 	for (const id of excludedIds) succeeded.delete(id);
-	const skippedIds = pageInternalIds.filter((id) => !succeeded.has(id));
+	for (const id of failedIds) succeeded.delete(id);
+	const skippedIds = pageInternalIds.filter(
+		(id) => !succeeded.has(id) && !failedIds.has(id),
+	);
 	const skipReasons = await resolveSkipReasons({
 		ctx,
 		plan,
@@ -272,6 +187,7 @@ export const executeBatchMigrationPage = async ({
 						succeededInternalCustomerIds: [...succeeded],
 						noUpdatesNeededInternalCustomerIds: noUpdatesNeededIds,
 						ineligibleInternalCustomerIds: ineligibleIds,
+						failedInternalCustomerIds: [...failedIds],
 					}),
 				BATCH_MIGRATION_PAGE_STATEMENT_TIMEOUT_MS,
 				{ forceCustomPlan: true },
@@ -283,12 +199,19 @@ export const executeBatchMigrationPage = async ({
 			succeeded.has(customer.internalId),
 		),
 		skipped: customers.filter(
-			(customer) => !succeeded.has(customer.internalId),
+			(customer) =>
+				!succeeded.has(customer.internalId) &&
+				!failedIds.has(customer.internalId),
 		),
+		failed: customers.filter((customer) => failedIds.has(customer.internalId)),
+		failReasons,
 		skipReasons,
 		insertedItems,
 		removedItems,
 		repointedProducts,
+		workerCurrentInternalIds: [...workerIds].filter(
+			(id) => !sqlWrittenWorkerIds.has(id),
+		),
 	};
 };
 

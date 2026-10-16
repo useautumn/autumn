@@ -129,6 +129,7 @@ const main = async () => {
 					plan,
 					customers: page.customers,
 					phases,
+					signal: new AbortController().signal,
 				});
 				insertTimes.push(phases.insert ?? 0);
 			},

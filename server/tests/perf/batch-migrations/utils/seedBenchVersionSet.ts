@@ -8,7 +8,7 @@
  * NOTHING, so a partial run can be re-driven.
  */
 
-import { CusProductStatus } from "@autumn/shared";
+import { BillingVersion, CusProductStatus } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { BenchVersionSetCatalog } from "./benchVersionSetCatalog.js";
@@ -108,7 +108,7 @@ const seedChunk = async ({
 	await db.execute(sql`
 		INSERT INTO customer_products (
 			id, internal_customer_id, internal_product_id, created_at, status,
-			starts_at, is_custom, product_id, customer_id, options
+			starts_at, is_custom, product_id, customer_id, options, billing_version
 		)
 		SELECT
 			${BENCH_VERSET_CUSTOMER_PRODUCT_PREFIX} || i,
@@ -120,7 +120,8 @@ const seedChunk = async ({
 			false,
 			${catalog.planId},
 			${BENCH_VERSET_CUSTOMER_ID_PREFIX} || i,
-			'{}'::jsonb[]
+			'{}'::jsonb[],
+			${BillingVersion.V1}
 		FROM ${series}
 		ON CONFLICT DO NOTHING
 	`);
@@ -208,7 +209,7 @@ const seedChunk = async ({
 		INSERT INTO customer_products (
 			id, internal_customer_id, internal_product_id, created_at, status,
 			starts_at, is_custom, product_id, customer_id,
-			customer_license_link_id, internal_entity_id, options
+			customer_license_link_id, internal_entity_id, options, billing_version
 		)
 		SELECT
 			${BENCH_VERSET_ASSIGNMENT_PREFIX} || i || '_' || lic.key || '_' || s,
@@ -222,7 +223,8 @@ const seedChunk = async ({
 			${BENCH_VERSET_CUSTOMER_ID_PREFIX} || i,
 			${BENCH_VERSET_LICENSE_LINK_PREFIX} || i || '_' || lic.key,
 			${BENCH_VERSET_ENTITY_PREFIX} || i || '_' || lic.key || '_' || s,
-			'{}'::jsonb[]
+			'{}'::jsonb[],
+			${BillingVersion.V1}
 		FROM ${series}
 		CROSS JOIN ${licenseDefs}
 		CROSS JOIN ${seats}

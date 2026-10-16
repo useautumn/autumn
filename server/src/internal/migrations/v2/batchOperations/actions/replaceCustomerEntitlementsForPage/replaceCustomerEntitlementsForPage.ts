@@ -37,7 +37,7 @@ export type ReplaceCustomerEntitlementsForPageResult = {
 	removedItems: BatchMigrationRemovedItem[];
 };
 
-const toInsertedItem = ({
+export const toInsertedItem = ({
 	row,
 	planId,
 	replace,

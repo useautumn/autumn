@@ -314,7 +314,9 @@ const main = async () => {
 	const messages = ctx.features.find(
 		(feature) => feature.id === TestFeature.Messages,
 	);
-	const words = ctx.features.find((feature) => feature.id === TestFeature.Words);
+	const words = ctx.features.find(
+		(feature) => feature.id === TestFeature.Words,
+	);
 	if (!messages || !words) throw new Error("bench: messages/words missing");
 
 	const cleanupStarted = Date.now();
@@ -395,7 +397,9 @@ const main = async () => {
 			});
 		}
 	} else {
-		console.log("probe: no leftover bench-plan-replace rows — skip 5k leftover EXPLAIN");
+		console.log(
+			"probe: no leftover bench-plan-replace rows — skip 5k leftover EXPLAIN",
+		);
 	}
 
 	const toEntitlement = {
@@ -596,9 +600,7 @@ const main = async () => {
 				const deleteStarted = Date.now();
 				const ids = await deleteCustomerEntitlementRows({
 					db: tx as unknown as DrizzleCli,
-					customerEntitlementIds: removeCandidates.map(
-						(row) => row.customerEntitlementId,
-					),
+					rows: removeCandidates,
 					scope,
 				});
 				deleteMs = Date.now() - deleteStarted;
@@ -620,9 +622,7 @@ const main = async () => {
 				const mixedStarted = Date.now();
 				await deleteCustomerEntitlementRows({
 					db: tx as unknown as DrizzleCli,
-					customerEntitlementIds: removeCandidates.map(
-						(row) => row.customerEntitlementId,
-					),
+					rows: removeCandidates,
 					scope,
 				});
 				await mapWithConcurrency({

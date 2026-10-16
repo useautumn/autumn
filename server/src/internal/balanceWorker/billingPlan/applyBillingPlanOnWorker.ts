@@ -3,10 +3,9 @@ import {
 	type BillingPlanOp,
 	parseApplyBillingPlanRequest,
 } from "@autumn/balance-engine";
-import {
-	type ApplyBillingPlanReply,
-	type BalanceWorkerClient,
-	BalanceWorkerClientError,
+import type {
+	ApplyBillingPlanReply,
+	BalanceWorkerClient,
 } from "@autumn/balance-worker-client";
 import {
 	type AutumnBillingPlan,
@@ -21,23 +20,14 @@ import type { AutumnBillingPlanResult } from "@/internal/billing/v2/execute/exec
 import { generateId } from "@/utils/genUtils.js";
 import { autumnBillingPlanToCatalogRows } from "./autumnBillingPlanToCatalogRows.js";
 import { autumnBillingPlanToPlanOps } from "./planOps/autumnBillingPlanToPlanOps.js";
+import {
+	isDuplicateCommand,
+	isStaleSubject,
+	isUnknownOutcome,
+} from "./planSendErrors.js";
 import { billingPlanToWorkerEntityIds } from "./routing/billingPlanToWorkerEntityIds.js";
 
 type PlanClient = Pick<BalanceWorkerClient, "applyBillingPlan">;
-
-/** The worker may have applied it: a timeout after the send. */
-const isUnknownOutcome = (cause: unknown): boolean =>
-	cause instanceof BalanceWorkerClientError && cause.outcome === "unknown";
-
-/** The worker's copy was behind Postgres; it dropped it and wrote nothing. */
-const isStaleSubject = (cause: unknown): boolean =>
-	cause instanceof BalanceWorkerClientError &&
-	cause.workerCode === "STALE_SUBJECT";
-
-/** The worker already holds this command: an earlier send of it landed. */
-const isDuplicateCommand = (cause: unknown): boolean =>
-	cause instanceof BalanceWorkerClientError &&
-	cause.workerCode === "DUPLICATE_COMMAND";
 
 /** Sent under the given id: the same id is deduplicated by the worker, a new id is a new command. */
 const sendPlan = async ({
