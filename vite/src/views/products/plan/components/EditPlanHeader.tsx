@@ -17,11 +17,13 @@ import { PlusIcon } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { AdminHover } from "@/components/general/AdminHover";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useIsCusPlanEditor,
@@ -100,7 +102,11 @@ export const EditPlanHeader = () => {
 		!!vercelAllowedIds?.length &&
 		vercelAllowedIds.includes(product.id);
 
-	const canMigrate = pastVersionsWithCustomers.length > 0 && !isCusPlanEditor;
+	const canCreateMigration = useCanDo(APPROVAL_OPENERS.createMigration);
+	const canMigrate =
+		canCreateMigration &&
+		pastVersionsWithCustomers.length > 0 &&
+		!isCusPlanEditor;
 
 	const getProductAdminHover = () => {
 		return [

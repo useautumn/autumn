@@ -23,11 +23,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -257,6 +259,15 @@ export function InvoiceDetailSheet({
 		return result;
 	}, [lineItems, features, products, invoice?.product_ids]);
 
+	const canDoVoid = useCanDo(APPROVAL_OPENERS.voidInvoice);
+	const canDoPay = useCanDo(APPROVAL_OPENERS.markInvoicePaid);
+	const canDoFinalize = useCanDo(APPROVAL_OPENERS.finalizeInvoice);
+	const canDoReissue = useCanDo(APPROVAL_OPENERS.reissueInvoice);
+	const canDoCreditNote = useCanDo(APPROVAL_OPENERS.issueCreditNote);
+	const canDoEditPaymentMethods = useCanDo(
+		APPROVAL_OPENERS.editInvoicePaymentMethods,
+	);
+
 	if (!invoice) return null;
 
 	const itemCount = productGroups.reduce(
@@ -299,6 +310,7 @@ export function InvoiceDetailSheet({
 		(metadataLoading || Boolean(invoiceMetadata.autumn_reissued_to));
 	// Open is voided, paid is credited, draft is parked; each is then replaced.
 	const canReissue =
+		canDoReissue &&
 		invoiceIsStripe &&
 		!metadataLoading &&
 		!isVercelInvoice &&
@@ -307,6 +319,7 @@ export function InvoiceDetailSheet({
 			invoice.status === InvoiceStatus.Draft ||
 			(invoice.status === InvoiceStatus.Paid && !isFullyRefunded));
 	const canIssueCreditNote =
+		canDoCreditNote &&
 		invoiceIsStripe &&
 		!metadataLoading &&
 		!isVercelInvoice &&
@@ -314,6 +327,7 @@ export function InvoiceDetailSheet({
 		(invoice.status === InvoiceStatus.Open ||
 			invoice.status === InvoiceStatus.Paid);
 	const canEditPaymentMethods =
+		canDoEditPaymentMethods &&
 		invoiceIsStripe &&
 		!metadataLoading &&
 		!metadataError &&
@@ -369,6 +383,7 @@ export function InvoiceDetailSheet({
 	const openUrl = (url: string) => window.open(url, "_blank", "noopener");
 
 	const canFinalize =
+		canDoFinalize &&
 		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Draft &&
 		!isReissuedDraft;
@@ -380,7 +395,7 @@ export function InvoiceDetailSheet({
 				isLoading: finalizeInvoice.isPending,
 			}
 		: undefined;
-	const canMarkPaid = canVoid;
+	const canMarkPaid = canVoid && canDoPay;
 	const markPaidAction: InvoiceSheetAction | undefined = canMarkPaid
 		? {
 				label: "Mark as paid",
@@ -448,7 +463,7 @@ export function InvoiceDetailSheet({
 			disabled: !canRefund,
 		});
 	}
-	if (canVoid) {
+	if (canVoid && canDoVoid) {
 		menuActions.push({
 			label: "Void invoice",
 			icon: <ProhibitIcon size={16} />,

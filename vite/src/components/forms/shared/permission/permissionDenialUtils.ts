@@ -99,7 +99,7 @@ const denialFromPreview = ({ preview }: { preview: unknown }) => {
 	return parsed.data.permission;
 };
 
-const denialFromError = ({ error }: { error: unknown }) => {
+export const denialFromError = ({ error }: { error: unknown }) => {
 	const parsed = PermissionDeniedErrorSchema.safeParse(error);
 	return parsed.success ? parsed.data.response.data : null;
 };
@@ -125,6 +125,13 @@ export const resolvePermissionDenial = ({
 	if (submitDenial) return { denial: submitDenial, locksSubmit: false };
 
 	return null;
+};
+
+export const CREDIT_NOTE_WRITE_KEY = ["credit-note-write"] as const;
+
+/** The credit note sheet's one field a refund limit can fail on. */
+export const CREDIT_NOTE_DENIAL_SECTIONS: PermissionSections = {
+	refund: "amount",
 };
 
 const fieldRoot = ({ field }: { field: string }) =>

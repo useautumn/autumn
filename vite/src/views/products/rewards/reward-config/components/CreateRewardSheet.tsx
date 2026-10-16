@@ -9,10 +9,12 @@ import {
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useRewardStore } from "@/hooks/stores/useRewardStore";
@@ -36,6 +38,7 @@ export function CreateRewardSheet({
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
 }: CreateRewardSheetProps = {}) {
+	const canCreate = useCanDo(APPROVAL_OPENERS.createReward);
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useRewardsQuery();
 	const { features } = useFeaturesQuery();
@@ -148,6 +151,8 @@ export function CreateRewardSheet({
 	const handleCancel = () => {
 		setOpen(false);
 	};
+
+	if (!canCreate) return null;
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>

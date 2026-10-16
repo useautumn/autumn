@@ -21,6 +21,10 @@ import { ReceiptXIcon } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionLock } from "@/components/forms/shared/permission/PermissionLock";
+import { CREDIT_NOTE_WRITE_KEY } from "@/components/forms/shared/permission/permissionDenialUtils";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import {
 	SheetBody,
 	SheetFooter,
@@ -165,6 +169,8 @@ function CreditNoteForm({
 	});
 
 	const issue = useMutation({
+		mutationKey: CREDIT_NOTE_WRITE_KEY,
+		gcTime: 0,
 		mutationFn: async () => {
 			const { data } = await axiosInstance.post<{
 				credit_note: ApiCreditNote;
@@ -184,9 +190,8 @@ function CreditNoteForm({
 				}),
 			]);
 		},
-		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to issue credit note"));
-		},
+		onError: (error) =>
+			toastWriteError({ error, fallback: "Failed to issue credit note" }),
 	});
 
 	const money = (value: number) =>
@@ -249,6 +254,7 @@ function CreditNoteForm({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 						/>
+						<PermissionDenial section="amount" className="px-0" />
 					</Field>
 				) : (
 					<Field
@@ -400,30 +406,32 @@ function CreditNoteForm({
 				</SheetSection>
 			)}
 
-			<SheetFooter className="sticky bottom-0 mt-auto border-t bg-card pt-4 dark:border-[#1F1F1F] dark:bg-[#141414]">
-				<Button
-					variant="secondary"
-					className="w-full"
-					onClick={() =>
-						setSheet({ type: "invoice-detail", data: invoiceDetailData })
-					}
-					disabled={issue.isPending}
-				>
-					Back
-				</Button>
-				<Button
-					variant="primary"
-					className="w-full"
-					onClick={() => issue.mutate()}
-					isLoading={issue.isPending}
-					disabled={!previewReady || Boolean(previewErrorText)}
-				>
-					<ReceiptXIcon size={16} />
-					{previewReady && preview
-						? `Issue credit note ${money(preview.total)}`
-						: "Issue credit note"}
-				</Button>
-			</SheetFooter>
+			<PermissionLock>
+				<SheetFooter className="sticky bottom-0 mt-auto border-t bg-card pt-4 dark:border-[#1F1F1F] dark:bg-[#141414]">
+					<Button
+						variant="secondary"
+						className="w-full"
+						onClick={() =>
+							setSheet({ type: "invoice-detail", data: invoiceDetailData })
+						}
+						disabled={issue.isPending}
+					>
+						Back
+					</Button>
+					<Button
+						variant="primary"
+						className="w-full"
+						onClick={() => issue.mutate()}
+						isLoading={issue.isPending}
+						disabled={!previewReady || Boolean(previewErrorText)}
+					>
+						<ReceiptXIcon size={16} />
+						{previewReady && preview
+							? `Issue credit note ${money(preview.total)}`
+							: "Issue credit note"}
+					</Button>
+				</SheetFooter>
+			</PermissionLock>
 		</SheetBody>
 	);
 }

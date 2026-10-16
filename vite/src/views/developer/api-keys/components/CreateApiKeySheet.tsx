@@ -168,6 +168,7 @@ export const CreateApiKeySheet = ({
 									value={scopes}
 									onChange={setScopes}
 									availableScopes={callerScopes}
+									unrestrictedHint="Limit this key to specific scopes. Leave unchecked to give it the same access you have."
 									disabled={loading}
 								/>
 							</div>

@@ -16,11 +16,14 @@ import { useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 
 export function CustomerListCreateButton() {
+	const canCreate = useCanDo(APPROVAL_OPENERS.createCustomer);
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -80,6 +83,8 @@ export function CustomerListCreateButton() {
 		},
 		{ enableOnFormTags: false },
 	);
+
+	if (!canCreate) return null;
 
 	return (
 		<Dialog

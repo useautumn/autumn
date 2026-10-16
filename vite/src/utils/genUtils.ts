@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { AxiosError } from "axios";
 import type { NavigateFunction } from "react-router-dom";
 import { ZodError } from "zod/v3";
+import { denialFromError } from "@/components/forms/shared/permission/permissionDenialUtils";
 import {
 	sandboxBasePath,
 	stripSandboxPrefix,
@@ -25,6 +26,8 @@ export const getBackendErr = (
 		return error.errors.map((err) => err.message).join(", ");
 	}
 	if (error instanceof AxiosError && error.response?.data) {
+		const denial = denialFromError({ error });
+		if (denial) return `${denial.decided_by.rule_name}: ${denial.message}`;
 		const data = error.response.data as { message: string; code: string };
 		if (data.message && data.code) {
 			return data.message;
