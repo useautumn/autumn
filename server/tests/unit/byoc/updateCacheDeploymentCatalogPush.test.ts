@@ -59,6 +59,7 @@ const atomIn = ({
 	encrypted_token: "encrypted",
 	token_hash: null,
 	region: null,
+	volume_size_gib: 20,
 	network: null,
 	stack_name: null,
 	stages: toCacheStages({ doneStages: [], status }),

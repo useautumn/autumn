@@ -7,6 +7,7 @@ import {
 	deploymentToErrorMessage,
 	deploymentToPoolMachine,
 	deploymentToPublicEndpointUrl,
+	deploymentToVolumeSizeGib,
 	hasDeploymentFailed,
 	isDeploymentAwaitingTeardown,
 	isDeploymentDeleted,
@@ -21,7 +22,10 @@ import {
 	ByocCacheStatus,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { cacheNotRunning } from "../utils/byocCacheUtils.js";
+import {
+	cacheNotRunning,
+	cacheStorageCannotShrink,
+} from "../utils/byocCacheUtils.js";
 import {
 	alienDeploymentToDoneStages,
 	alienDeploymentToRemovedStages,
@@ -50,15 +54,18 @@ const machineToAtomPools = ({
 	[ATOM_POOL]: { machine: machine.instanceType, machines: BYOC_CACHE_REPLICAS },
 });
 
-/** The Atom container's share of its machine; the release's resource ranges must hold every size's. */
+/** The Atom container's share of its machine, and each replica's volume; the release's resource ranges must hold every size's. */
 const machineToAtomContainers = ({
 	machine,
+	volumeSizeGib,
 }: {
 	machine: ByocCacheMachine;
+	volumeSizeGib: number;
 }): AlienContainerResources => ({
 	[ATOM_RESOURCE_ID]: {
 		cpu: machine.container.cpu,
 		memory: `${machine.container.memory}Gi`,
+		volumeSizeGib,
 	},
 });
 
@@ -122,6 +129,7 @@ const startAlienAtom = ({
 	names,
 	auth,
 	machine,
+	volumeSizeGib,
 	region,
 	network = null,
 }: {
@@ -129,6 +137,7 @@ const startAlienAtom = ({
 	names: AtomNames;
 	auth: AtomAuth;
 	machine: ByocCacheMachine;
+	volumeSizeGib: number;
 	region: string;
 	network?: ByocCacheNetwork | null;
 }): Promise<AtomSetup> =>
@@ -136,7 +145,7 @@ const startAlienAtom = ({
 		...names,
 		region,
 		pools: machineToAtomPools({ machine }),
-		containers: machineToAtomContainers({ machine }),
+		containers: machineToAtomContainers({ machine, volumeSizeGib }),
 		network: cacheNetworkToAlienNetwork({ network }),
 		environmentVariables: [
 			...atomAuthToVariables({ auth }),
@@ -231,6 +240,38 @@ const resizeAlienAtom = async ({
 	});
 };
 
+/** alien fills unsent container fields with release defaults, so the grow resends the Atom's whole compute. */
+const growAlienAtomVolume = async ({
+	ctx,
+	deploymentGroupId,
+	machine,
+	volumeSizeGib,
+}: {
+	ctx: AlienContext;
+	deploymentGroupId: string;
+	machine: ByocCacheMachine;
+	volumeSizeGib: number;
+}): Promise<void> => {
+	const deployment = await ctx.alienClient.findDeployment({
+		deploymentGroupId,
+	});
+	if (!deployment) throw cacheNotRunning();
+	const selectedGib = deploymentToVolumeSizeGib({
+		deployment,
+		resourceId: ATOM_RESOURCE_ID,
+	});
+	if (selectedGib !== null && volumeSizeGib < selectedGib)
+		throw cacheStorageCannotShrink({
+			currentGib: selectedGib,
+			requestedGib: volumeSizeGib,
+		});
+	await ctx.alienClient.updateDeploymentCompute({
+		deployment,
+		pools: machineToAtomPools({ machine }),
+		containers: machineToAtomContainers({ machine, volumeSizeGib }),
+	});
+};
+
 const retryAlienAtom = async ({
 	ctx,
 	deploymentGroupId,
@@ -271,6 +312,7 @@ export const createAlienAtomDeployer = ({
 			(await ctx.alienClient.findDeploymentGroup(params)) !== null,
 		find: (params) => findAlienAtom({ ctx, ...params }),
 		resize: (params) => resizeAlienAtom({ ctx, ...params }),
+		growVolume: (params) => growAlienAtomVolume({ ctx, ...params }),
 		retry: (params) => retryAlienAtom({ ctx, ...params }),
 		delete: (params) => deleteAlienAtom({ ctx, ...params }),
 		closeSetup: (params) => ctx.alienClient.revokeSetupLinksOnceDeleted(params),

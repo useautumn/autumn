@@ -8,6 +8,8 @@
  *     creating again with its atom_id returns the same Atom; new ones get ids of their own up to the env's cap, past which
  *     a create is refused, and a get naming no Atom refuses to pick one;
  *     byoc.delete_atom forgets it and the token stops working;
+ *  3b. an Atom starts on the volume size its create names, or 20 GiB; byoc.increase_atom_storage only grows it,
+ *     refusing a smaller size and leaving the same size as it is;
  *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
  *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) and pulls the entity,
  *     then answers it itself again, as it does after the entity's next track;
@@ -276,6 +278,51 @@ test.skipIf(hostedAtom)(
 			timeoutMs: 5_000,
 			intervalMs: 250,
 		});
+	},
+	30_000,
+);
+
+test.skipIf(hostedAtom)(
+	`${chalk.yellowBright("atom-deployment3b: an Atom's volume starts at the size its create names and only grows")}`,
+	async () => {
+		await ensureAtomDeployment({ autumn });
+		const { cache } = await autumn.post("/byoc.get_atom", {});
+		expect(cache.volume_size_gib).toBe(20);
+
+		const grown = await autumn.post("/byoc.increase_atom_storage", {
+			atom_id: cache.id,
+			volume_size_gib: 50,
+		});
+		expect(grown).toMatchObject({ id: cache.id, volume_size_gib: 50 });
+		expect(
+			(await autumn.post("/byoc.get_atom", { atom_id: cache.id })).cache,
+		).toMatchObject({ volume_size_gib: 50 });
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "can only grow",
+			func: () =>
+				autumn.post("/byoc.increase_atom_storage", {
+					atom_id: cache.id,
+					volume_size_gib: 30,
+				}),
+		});
+		const unchanged = await autumn.post("/byoc.increase_atom_storage", {
+			atom_id: cache.id,
+			volume_size_gib: 50,
+		});
+		expect(unchanged.volume_size_gib).toBe(50);
+
+		const sized = await autumn.post("/byoc.create_atom", {
+			volume_size_gib: 100,
+		});
+		expect(sized.volume_size_gib).toBe(100);
+		await expectAutumnError({
+			errMessage: "at least 20 GiB",
+			func: () => autumn.post("/byoc.create_atom", { volume_size_gib: 10 }),
+		});
+
+		await deleteAtomDeployment({ autumn });
 	},
 	30_000,
 );

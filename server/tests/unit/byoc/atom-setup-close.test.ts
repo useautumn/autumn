@@ -29,6 +29,7 @@ const record = (status: ByocCacheStatus): ByocCacheDeployment => ({
 	encrypted_token: "encrypted",
 	token_hash: null,
 	region: null,
+	volume_size_gib: 20,
 	network: null,
 	stack_name: null,
 	stages: toCacheStages({ doneStages: [], status }),
@@ -56,6 +57,7 @@ const atomContext = ({ found }: { found: AtomDeployment | null }) => {
 		hasGroup: async () => false,
 		find: async () => found,
 		resize: async () => {},
+		growVolume: async () => {},
 		retry: async () => {},
 		delete: async () => {
 			calls.push("delete");

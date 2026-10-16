@@ -1,11 +1,15 @@
-import { type ApiByocCache, AppEnv } from "@autumn/shared";
+import {
+	type ApiByocCache,
+	AppEnv,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
+} from "@autumn/shared";
 import {
 	shadowAtomRecordId,
 	shadowAtomRecordNames,
 } from "./shadowAtomNames.js";
 import type { ShadowAtomRecord } from "./types/shadowAtomRecord.js";
 
-/** A shadow Atom as an org's Atom page reads it. It serves both envs, so it reports live; it has no first check. */
+/** A shadow Atom as an org's Atom page reads it. It serves both envs, so it reports live; it has no first check, and its volume never grows past the default. */
 export const shadowAtomRecordToApiCache = ({
 	record,
 }: {
@@ -23,6 +27,7 @@ export const shadowAtomRecordToApiCache = ({
 	cpu: record.cpu,
 	memory: record.memory,
 	region: record.region,
+	volume_size_gib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	network: record.network,
 	stages: record.stages,
 	error: record.error,

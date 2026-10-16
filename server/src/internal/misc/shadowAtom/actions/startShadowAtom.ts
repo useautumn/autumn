@@ -4,6 +4,7 @@ import {
 	ByocCacheStatus,
 	type CreateByocCacheResponse,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { refreshAtomRecord } from "@/internal/byoc/atomRecords/refreshAtomRecord.js";
@@ -85,6 +86,7 @@ const startShadowAtomSetup = async ({
 			tokenHash: atomTokenToHash({ token: adminToken }),
 		},
 		machine,
+		volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		region: DEFAULT_BYOC_CACHE_AWS_REGION,
 		network,
 	});
