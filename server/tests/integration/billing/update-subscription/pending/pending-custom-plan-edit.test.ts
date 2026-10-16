@@ -233,3 +233,22 @@ test.concurrent(
 		expect(customer.features?.[TestFeature.Messages]?.included_usage).toBe(200);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("pending custom plan edit: a price edit replaces the Stripe checkout with a new one")}`,
+	async () => {
+		const { autumnV2_2, customerId, pro, paymentUrl, listPendingRows } =
+			await setupCustomPendingPlan({ name: "pending-custom-price-link" });
+
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				customize: { price: itemsV2.monthlyPrice({ amount: 1000 }) },
+			});
+
+		expect(updateResult.payment_url).toContain("checkout.stripe.com");
+		expect(updateResult.payment_url).not.toBe(paymentUrl);
+		expect(await listPendingRows()).toHaveLength(1);
+	},
+);

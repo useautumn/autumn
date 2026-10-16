@@ -12,6 +12,7 @@
  * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
  * - Editing the unpaid plan previews its full new price, bills nothing, and keeps the link,
  *   which then sells the edit and grants it on payment; usage on the plan carries over.
+ * - An edited plan survives Stripe session expiry; once paid, edits are ordinary live updates.
  * - A paid one-off purchase from the link is not treated as unpaid by an edit, and an unpaid
  *   one-off edit replaces its credits rather than adding to them.
  */
@@ -558,5 +559,107 @@ test.concurrent(
 			featureId: TestFeature.Messages,
 			balance: 200,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: an edited plan survives Stripe session expiry")}`,
+	async () => {
+		const customerId = "ll-eppi-edit-expiry";
+		const { autumnV2_2, ctx, pro, internalCustomerId, checkoutId } =
+			await setupLongLivedScenario({ customerId });
+
+		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			customize: { price: itemsV2.monthlyPrice({ amount: 10 }) },
+		});
+		const editedRow = await getActiveProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+
+		const sessionId = getStripeSessionId(
+			await startLongLivedCheckout(checkoutId),
+		);
+		await ctx.stripeCli.checkout.sessions.expire(sessionId);
+		await expect(
+			waitForStripeWebhook({
+				stripeCli: ctx.stripeCli,
+				env: ctx.env,
+				types: ["checkout.session.expired"],
+				objectId: sessionId,
+				until: async () =>
+					!(await getActiveProRow({
+						ctx,
+						internalCustomerId,
+						productId: pro.id,
+					})),
+				replayAfterMs: 5_000,
+				timeoutMs: 15_000,
+			}),
+		).rejects.toThrow("still no effect");
+
+		expect(
+			(await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }))
+				?.id,
+		).toBe(editedRow!.id);
+		const renewed = await ctx.stripeCli.checkout.sessions.retrieve(
+			getStripeSessionId(await startLongLivedCheckout(checkoutId)),
+		);
+		expect(renewed.amount_total).toBe(1000);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: once paid, an edit updates the live subscription")}`,
+	async () => {
+		const customerId = "ll-eppi-paid-edit";
+		const { autumnV2_2, ctx, pro, internalCustomerId, checkoutId } =
+			await setupLongLivedScenario({ customerId });
+
+		const stripeUrl = await startLongLivedCheckout(checkoutId);
+		await completeStripeCheckoutForm({ url: stripeUrl });
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			objectId: getStripeSessionId(stripeUrl),
+			until: async () => {
+				const row = await getActiveProRow({
+					ctx,
+					internalCustomerId,
+					productId: pro.id,
+				});
+				return (row?.subscription_ids ?? []).length === 1;
+			},
+		});
+		const paidRow = await getActiveProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+
+		const updateResult =
+			await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				customize: { price: itemsV2.monthlyPrice({ amount: 50 }) },
+			});
+		expect(updateResult.payment_url ?? "").not.toContain("/co/");
+
+		const editedRow = await getActiveProRow({
+			ctx,
+			internalCustomerId,
+			productId: pro.id,
+		});
+		expect(editedRow?.subscription_ids).toEqual(paidRow!.subscription_ids);
+		const subscription = await ctx.stripeCli.subscriptions.retrieve(
+			paidRow!.subscription_ids![0],
+		);
+		expect(
+			subscription.items.data.map((item) => item.price.unit_amount),
+		).toEqual([5000]);
 	},
 );
