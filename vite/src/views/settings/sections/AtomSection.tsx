@@ -1,19 +1,21 @@
-import { Button, ConditionalTooltip, Skeleton } from "@autumn/ui";
+import { Button, ConditionalTooltip } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect } from "react";
-import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { AtomScope } from "@/contexts/AtomApiContext";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useAtomQuery } from "@/hooks/queries/useAtomQuery";
 import { useAtomsQuery } from "@/hooks/queries/useAtomsQuery";
 import { getBackendErr } from "@/utils/genUtils";
 import { SettingsSection } from "../SettingsSection";
-import { AtomList } from "./components/atom/AtomList";
+import { AtomList, AtomListSkeleton } from "./components/atom/AtomList";
 import { AtomRemovalSheet } from "./components/atom/AtomRemovalSheet";
-import { AtomSetupFlow } from "./components/atom/AtomSetupFlow";
+import {
+	AtomSetupFlow,
+	AtomSetupSkeleton,
+} from "./components/atom/AtomSetupFlow";
 import { AtomSteadyStateSkeleton } from "./components/atom/AtomSteadyState";
-import { AtomSwitcher } from "./components/atom/AtomSwitcher";
+import { AtomBreadcrumb, type AtomView } from "./components/atom/AtomSwitcher";
 import { isAtomBeingRemoved, isAtomSetUp } from "./components/atom/atomDisplay";
 
 const ATOM_SECTION = {
@@ -29,16 +31,61 @@ const NEW_ATOM = "new";
 const useLastSeenAtomSetUp = () =>
 	useLocalStorage("autumn.atom.lastSeenSetUp", true);
 
-const AtomBodySkeleton = () => {
+/** The view the URL and the list call for; with the list still loading and no Atom named, the list. */
+const atomViewOf = ({
+	selected,
+	isLoading,
+	atomCount,
+}: {
+	selected: string | null;
+	isLoading: boolean;
+	atomCount: number;
+}): AtomView => {
+	if (selected === NEW_ATOM) return "new";
+	if (selected) return "detail";
+	if (!isLoading && atomCount === 0) return "new";
+	return "list";
+};
+
+/** The skeleton of the view about to render, in its own card, so it settles in place. */
+const AtomViewSkeleton = ({
+	view,
+	isSetUp,
+}: {
+	view: AtomView;
+	/** Known from the list once it loads; until then, what this browser last saw. */
+	isSetUp?: boolean;
+}) => {
 	const [wasSetUp] = useLastSeenAtomSetUp();
-	if (wasSetUp) return <AtomSteadyStateSkeleton />;
-	return (
-		<div className={TABLE_TRAY_CLASS} aria-busy="true">
-			<Skeleton className="h-10 w-full" />
-			<Skeleton className="h-64 w-full" />
-		</div>
+	if (view === "list") return <AtomListSkeleton />;
+	if (view === "new") return <AtomSetupSkeleton />;
+	return (isSetUp ?? wasSetUp) ? (
+		<AtomSteadyStateSkeleton />
+	) : (
+		<AtomSetupSkeleton />
 	);
 };
+
+/** The section's frame in every view and while loading: a fixed-height actions slot, then the breadcrumb row, then the view. */
+const AtomLayout = ({
+	actions,
+	breadcrumb,
+	children,
+}: {
+	actions?: React.ReactNode;
+	breadcrumb: React.ReactNode;
+	children: React.ReactNode;
+}) => (
+	<SettingsSection
+		{...ATOM_SECTION}
+		actions={<div className="flex h-7 items-center gap-2">{actions}</div>}
+	>
+		<div className="flex flex-col gap-4">
+			{breadcrumb}
+			{children}
+		</div>
+	</SettingsSection>
+);
 
 const AtomLoadError = ({
 	error,
@@ -61,7 +108,13 @@ const AtomLoadError = ({
 );
 
 /** One of the env's Atoms: its setup steps until it is set up, then its details and monitoring. */
-const AtomContent = ({ onGone }: { onGone: () => void }) => {
+const AtomContent = ({
+	isSetUp: wasListedSetUp,
+	onGone,
+}: {
+	isSetUp?: boolean;
+	onGone: () => void;
+}) => {
 	const { cache, stackName, stackNameSuffix, isLoading, error, refetch } =
 		useAtomQuery();
 	const [, setLastSeenSetUp] = useLastSeenAtomSetUp();
@@ -74,7 +127,8 @@ const AtomContent = ({ onGone }: { onGone: () => void }) => {
 		if (isGone) onGone();
 	}, [isGone]);
 
-	if (isLoading || isGone) return <AtomBodySkeleton />;
+	if (isLoading || isGone)
+		return <AtomViewSkeleton view="detail" isSetUp={wasListedSetUp} />;
 	if (error) return <AtomLoadError error={error} onRetry={() => refetch()} />;
 	return (
 		<AtomSetupFlow
@@ -98,6 +152,7 @@ export const AtomSection = () => {
 		error,
 		refetch,
 	} = useAtomsQuery();
+	const view = atomViewOf({ selected, isLoading, atomCount: atoms.length });
 	const canCreate = atoms.length < maxAtoms;
 	// The list is not polled once every Atom settles, so it is re-read on the way back to it.
 	const showAll = () => {
@@ -130,9 +185,9 @@ export const AtomSection = () => {
 	);
 
 	const body = () => {
-		if (isLoading) return <AtomBodySkeleton />;
+		if (isLoading) return <AtomViewSkeleton view={view} />;
 		if (error) return <AtomLoadError error={error} onRetry={() => refetch()} />;
-		if (selected === NEW_ATOM || atoms.length === 0)
+		if (view === "new")
 			return (
 				<AtomScope onCreated={open}>
 					<AtomSetupFlow
@@ -142,46 +197,66 @@ export const AtomSection = () => {
 					/>
 				</AtomScope>
 			);
-		if (selected)
+		if (view === "detail" && selected)
 			return (
 				<AtomScope atomId={selected}>
-					<AtomContent onGone={showAll} />
+					<AtomContent
+						isSetUp={isAtomSetUp(
+							atoms.find(({ id }) => id === selected) ?? null,
+						)}
+						onGone={showAll}
+					/>
 				</AtomScope>
 			);
 		return <AtomList atoms={atoms} maxAtoms={maxAtoms} onOpen={setSelected} />;
 	};
 
-	const isListing = !isLoading && !error && !selected && atoms.length > 0;
 	return (
-		<SettingsSection
-			{...ATOM_SECTION}
+		<AtomLayout
 			actions={
-				<div className="flex items-center gap-2">
+				<>
 					<AtomRemovalSheet removing={removing} />
-					{isListing && newAtomButton}
-				</div>
+					{view === "list" && !isLoading && !error && newAtomButton}
+				</>
+			}
+			breadcrumb={
+				<AtomBreadcrumb
+					view={view}
+					atoms={atoms}
+					selectedId={selected}
+					isLoading={isLoading}
+					canCreate={canCreate}
+					onSelect={setSelected}
+					onCreate={create}
+					onShowAll={showAll}
+				/>
 			}
 		>
-			<div className="flex flex-col gap-4">
-				{selected && atoms.length > 0 && (
-					<AtomSwitcher
-						atoms={atoms}
-						selectedId={selected}
-						canCreate={canCreate}
-						onSelect={setSelected}
-						onCreate={create}
-						onShowAll={showAll}
-					/>
-				)}
-				{body()}
-			</div>
-		</SettingsSection>
+			{body()}
+		</AtomLayout>
 	);
 };
 
-/** The section as it loads, before the org it reads is known. */
-export const AtomSectionSkeleton = () => (
-	<SettingsSection {...ATOM_SECTION}>
-		<AtomBodySkeleton />
-	</SettingsSection>
-);
+/** The section as it loads, before the org it reads is known: the frame and the skeleton of the view the URL asks for. */
+export const AtomSectionSkeleton = () => {
+	const [selected] = useQueryState("atom", parseAsString);
+	const view = atomViewOf({ selected, isLoading: true, atomCount: 0 });
+	return (
+		<AtomLayout
+			breadcrumb={
+				<AtomBreadcrumb
+					view={view}
+					atoms={[]}
+					selectedId={selected}
+					isLoading
+					canCreate={false}
+					onSelect={() => {}}
+					onCreate={() => {}}
+					onShowAll={() => {}}
+				/>
+			}
+		>
+			<AtomViewSkeleton view={view} />
+		</AtomLayout>
+	);
+};
