@@ -204,18 +204,22 @@ type FinalizeAction =
 
 const finalizeThroughSdk = ({
 	sdk,
+	customerId,
 	lockId,
 	finalize = { action: "confirm", overrideValue: CONFIRMED },
 	idempotencyKey,
 }: {
 	sdk: Autumn;
+	customerId: string;
 	lockId: string;
 	finalize?: FinalizeAction;
 	idempotencyKey?: string;
-}) =>
-	sdk.balances
+}) => {
+	// Not a literal: dev's SDK lacks customerId (excess-property error), main's regenerated SDK requires it.
+	const params = { customerId, lockId, ...finalize };
+	return sdk.balances
 		.finalize(
-			{ lockId, ...finalize },
+			params,
 			idempotencyKey
 				? { fetchOptions: { headers: { "Idempotency-Key": idempotencyKey } } }
 				: undefined,
@@ -227,6 +231,7 @@ const finalizeThroughSdk = ({
 				message: error.message,
 			}),
 		);
+};
 
 /** Autumn holds the lock closed at `remaining`, with these seqs landed, and the Atom's view has converged on it. */
 const expectSettled = async ({
@@ -267,7 +272,11 @@ test.skipIf(!replicaSetRunsHere)(
 		try {
 			set.holdHandIns();
 			await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
-			const finalized = await finalizeThroughSdk({ sdk: taps.sdk, lockId });
+			const finalized = await finalizeThroughSdk({
+				sdk: taps.sdk,
+				customerId,
+				lockId,
+			});
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
 			expect(taps.api.seen).toEqual([]);
@@ -319,7 +328,12 @@ test.skipIf(!replicaSetRunsHere)(
 				const lockId = `${customerId}-${name}`;
 				await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
 				expect(
-					await finalizeThroughSdk({ sdk: taps.sdk, lockId, finalize }),
+					await finalizeThroughSdk({
+						sdk: taps.sdk,
+						customerId,
+						lockId,
+						finalize,
+					}),
 				).toEqual({ status: 200, reply: { success: true } });
 			}
 
@@ -351,8 +365,18 @@ test.skipIf(!replicaSetRunsHere)(
 		try {
 			await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
 			const [first, retry] = await Promise.all([
-				finalizeThroughSdk({ sdk: taps.sdk, lockId, idempotencyKey }),
-				finalizeThroughSdk({ sdk: taps.sdk, lockId, idempotencyKey }),
+				finalizeThroughSdk({
+					sdk: taps.sdk,
+					customerId,
+					lockId,
+					idempotencyKey,
+				}),
+				finalizeThroughSdk({
+					sdk: taps.sdk,
+					customerId,
+					lockId,
+					idempotencyKey,
+				}),
 			]);
 
 			expect([first, retry]).toEqual([
@@ -404,6 +428,7 @@ test.skipIf(!replicaSetRunsHere)(
 
 			const finalized = await finalizeThroughSdk({
 				sdk: taps.sdk,
+				customerId,
 				lockId: `${customerId}-never-taken`,
 			});
 
@@ -446,7 +471,11 @@ test.skipIf(!replicaSetRunsHere)(
 				atomSeqs: [1],
 			});
 			set.holdHandIns();
-			const finalized = await finalizeThroughSdk({ sdk: taps.sdk, lockId });
+			const finalized = await finalizeThroughSdk({
+				sdk: taps.sdk,
+				customerId,
+				lockId,
+			});
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
 			expect(taps.api.seen).toEqual([]);
@@ -481,6 +510,7 @@ test.skipIf(!replicaSetRunsHere)(
 		try {
 			const finalized = await finalizeThroughSdk({
 				sdk: taps.sdk,
+				customerId: ghostId,
 				lockId: `${ghostId}-lock`,
 			});
 
