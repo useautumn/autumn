@@ -42,7 +42,7 @@ export const addPaidCustomerProductToPool = ({
 	paidCustomerProductIdsByPoolId.set(poolId, customerProductIds);
 };
 
-const poolHasPaidHost = ({
+export const poolHasPaidHost = ({
 	computeContext,
 	poolId,
 }: {

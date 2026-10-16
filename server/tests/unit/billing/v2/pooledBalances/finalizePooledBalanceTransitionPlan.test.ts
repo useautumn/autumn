@@ -81,6 +81,8 @@ const transitionContext = ({
 	pooledBalanceIdsWithReplacedContributions: new Set(),
 	competingContributionsBySourceId: new Map(),
 	paidCustomerProductIdsByPoolId: new Map(),
+	limitedSourceIdsByPoolId: new Map(),
+	unlimitedShareContributionsBySourceId: new Map(),
 });
 
 test("identical contribution replacement finalizes to a no-op", () => {
