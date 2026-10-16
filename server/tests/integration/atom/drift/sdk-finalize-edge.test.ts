@@ -1,13 +1,18 @@
 /**
- * A finalize sent through the SDK under `useEdge`: edge-first to the Atom that took the lock, falling back to the API
- * under the same Idempotency-Key when the edge is slow.
+ * A finalize sent through the SDK under `useEdge` goes edge-first to the Atom that took the lock, which journals it as
+ * sent, behind the lock, and answers success once the append commits; Autumn decides it where the journal lands.
  *
- * Contract: the lock settles once in Postgres and the Atom's view converges on it, whichever side lands first:
- *  1. the Atom journals the finalize behind the lock it took and answers before either hand-in reaches Autumn; the API is
- *     never asked, the Atom's view shows the lock settled at once, and Autumn settles it once, after the lock;
- *  2. the Atom settles, its reply is late, its hand-in lands before the API's resend: the resend is 400 Lock not found;
- *  3. the Atom settles, its reply is late, the API's resend lands first: the hand-in lands only its seq;
- *  4. a lock the API took: the Atom forwards the finalize, and the SDK takes that reply without asking the API again.
+ * Contract:
+ *  1. a lock then a finalize on the same Atom settles exactly once, in Postgres and in the Atom's view after the push;
+ *     the API is never asked, and the Atom's view keeps the lock held until that push;
+ *  2. release, confirm and override_value each settle at the value their action names;
+ *  3. a retry under the same Idempotency-Key is answered success and never settles the lock twice;
+ *  4. a finalize of a lock never taken is answered success, and nothing changes in Autumn;
+ *  5. a hand-in delayed past the lock's still lands the finalize after its lock;
+ *  6. a customer the Atom holds no subject for is answered success too: the async path reads neither the subject nor the lock.
+ *
+ * Red on dev: the Atom decides the finalize itself (1 settles its view at once; 4 and 6 are 400 from the API), and
+ * Autumn's hand-in has no undecided member.
  */
 
 import { expect, test } from "bun:test";
@@ -24,7 +29,11 @@ import { and, eq, sum } from "drizzle-orm";
 import { HTTPClient } from "../../../../../packages/sdk/src/lib/http.js";
 import { Autumn } from "../../../../../packages/sdk/src/sdk/sdk.js";
 import { atomTestClient } from "../utils/atomTestClient.js";
-import { expectAutumnLockState } from "../utils/autumnLockState.js";
+import {
+	atomSeqsOf,
+	expectAutumnLockState,
+	openLockIdsOf,
+} from "../utils/autumnLockState.js";
 import type { TestAtom } from "../utils/ensureAtomDeployment.js";
 import { checkOnAtom } from "../utils/expectAtomCheckCorrect.js";
 import {
@@ -40,22 +49,18 @@ const replicaSet = useReplicaSet({ size: 1 });
 
 const LOCKED = 30;
 const CONFIRMED = 10;
-/** Past the SDK's edge timeout (edgeHTTPClient.ts EDGE_TIMEOUT_MS = 1 s). */
-const EDGE_DELAY_MS = 1_500;
+/** Long enough for a hand-in and its push to have landed had they been sent. */
+const SETTLE_WAIT_MS = 3_000;
 
 type Seen = { path: string; status: number; key: string | null };
 
-/** Passes every request on to `targetUrl`, after `before` and with `headers` over its own; replies `replyDelayMs` late. */
+/** Passes every request on to `targetUrl`, with `headers` over its own, recording each one's path, status and key. */
 const startTap = ({
 	targetUrl,
 	headers = {},
-	replyDelayMs = 0,
-	before,
 }: {
 	targetUrl: string;
 	headers?: Record<string, string>;
-	replyDelayMs?: number;
-	before?: () => Promise<void>;
 }) => {
 	const seen: Seen[] = [];
 	const server = Bun.serve({
@@ -69,7 +74,6 @@ const startTap = ({
 			for (const [name, value] of Object.entries(headers))
 				sent.set(name, value);
 			const { pathname, search } = new URL(request.url);
-			await before?.();
 			const reply = await fetch(`${targetUrl}${pathname}${search}`, {
 				method: request.method,
 				headers: sent,
@@ -81,7 +85,6 @@ const startTap = ({
 				status: reply.status,
 				key: sent.get("idempotency-key"),
 			});
-			if (replyDelayMs) await timeout(replyDelayMs);
 			const replied = new Headers({ "content-type": "application/json" });
 			const forwarded = reply.headers.get("x-atom-forwarded");
 			if (forwarded) replied.set("x-atom-forwarded", forwarded);
@@ -141,25 +144,41 @@ const namingCustomer = ({ customerId }: { customerId: string }) =>
 		},
 	});
 
-const sdkFor = ({
-	edgeUrl,
-	apiUrl,
+const apiBaseUrl = () => atomTestClient().baseUrl.replace(/\/v1$/, "");
+
+/** The SDK under `useEdge`, its edge and API calls each passing through a tap. */
+const sdkThroughTaps = ({
+	atom,
 	customerId,
 }: {
-	edgeUrl?: string;
-	apiUrl: string;
+	atom: TestAtom;
 	customerId: string;
-}) =>
-	new Autumn({
+}) => {
+	const edge = startTap({
+		targetUrl: atom.endpointUrl,
+		headers: { "x-atom-token": atom.token },
+	});
+	const api = startTap({ targetUrl: apiBaseUrl() });
+	const sdk = new Autumn({
 		secretKey: defaultCtx.orgSecretKey,
-		serverURL: apiUrl,
-		edgeURL: edgeUrl,
-		useEdge: Boolean(edgeUrl),
+		serverURL: api.url,
+		edgeURL: edge.url,
+		useEdge: true,
 		retryConfig: { strategy: "none" },
 		xApiVersion: LATEST_VERSION,
 		failOpen: false,
 		httpClient: namingCustomer({ customerId }),
 	});
+	return {
+		sdk,
+		edge,
+		api,
+		stop: () => {
+			edge.stop();
+			api.stop();
+		},
+	};
+};
 
 const lockThroughSdk = async ({
 	sdk,
@@ -179,13 +198,28 @@ const lockThroughSdk = async ({
 	expect(locked.allowed).toBe(true);
 };
 
-const finalizeThroughSdk = ({ sdk, lockId }: { sdk: Autumn; lockId: string }) =>
+type FinalizeAction =
+	| { action: "release" }
+	| { action: "confirm"; overrideValue?: number };
+
+const finalizeThroughSdk = ({
+	sdk,
+	lockId,
+	finalize = { action: "confirm", overrideValue: CONFIRMED },
+	idempotencyKey,
+}: {
+	sdk: Autumn;
+	lockId: string;
+	finalize?: FinalizeAction;
+	idempotencyKey?: string;
+}) =>
 	sdk.balances
-		.finalize({
-			lockId,
-			action: "confirm",
-			overrideValue: CONFIRMED,
-		})
+		.finalize(
+			{ lockId, ...finalize },
+			idempotencyKey
+				? { fetchOptions: { headers: { "Idempotency-Key": idempotencyKey } } }
+				: undefined,
+		)
 		.then(
 			(reply) => ({ status: 200, reply }),
 			(error: { statusCode?: number; message?: string }) => ({
@@ -194,32 +228,29 @@ const finalizeThroughSdk = ({ sdk, lockId }: { sdk: Autumn; lockId: string }) =>
 			}),
 		);
 
-/** The lock settled once at its confirmed value, in Postgres and in the Atom's view. */
-const expectSettledOnce = async ({
+/** Autumn holds the lock closed at `remaining`, with these seqs landed, and the Atom's view has converged on it. */
+const expectSettled = async ({
 	atom,
 	customerId,
+	remaining,
 	atomSeqs,
 }: {
 	atom: TestAtom;
 	customerId: string;
-	atomSeqs: number[];
+	remaining: number;
+	atomSeqs?: number[];
 }) => {
 	await expectAutumnLockState({ customerId, openLockIds: [], atomSeqs });
-	expect(await postgresRemaining({ customerId })).toBe(
-		INCLUDED_MESSAGES - CONFIRMED,
-	);
+	expect(await postgresRemaining({ customerId })).toBe(remaining);
 	await pollUntilAsserted({
 		fetch: () => atomRemaining({ atom, customerId }),
-		assert: (remaining) =>
-			expect(remaining).toBe(INCLUDED_MESSAGES - CONFIRMED),
+		assert: (seen) => expect(seen).toBe(remaining),
 		timeoutMs: 90_000,
 	});
 };
 
-const apiBaseUrl = () => atomTestClient().baseUrl.replace(/\/v1$/, "");
-
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("sdk-finalize-edge1: the Atom journals the finalize behind its lock and answers at once; Autumn settles it once, after the lock")}`,
+	`${chalk.yellowBright("sdk-finalize-edge1: a lock then a finalize settles once, in Postgres and in the Atom's view after the push; the API is never asked")}`,
 	async () => {
 		const customerId = "sdk-finalize-edge1";
 		const lockId = `${customerId}-lock`;
@@ -228,27 +259,22 @@ test.skipIf(!replicaSetRunsHere)(
 			atom: replicaSet,
 		});
 		const set = replicaSet();
-		const edge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-		});
-		const api = startTap({ targetUrl: apiBaseUrl() });
-		const sdk = sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId });
+		const taps = sdkThroughTaps({ atom, customerId });
 		try {
 			set.holdHandIns();
-			await lockThroughSdk({ sdk, customerId, lockId });
-			const finalized = await finalizeThroughSdk({ sdk, lockId });
+			await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
+			const finalized = await finalizeThroughSdk({ sdk: taps.sdk, lockId });
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
-			expect(api.seen).toEqual([]);
-			expect(edge.seen.map(({ path }) => path)).toEqual([
+			expect(taps.api.seen).toEqual([]);
+			expect(taps.edge.seen.map(({ path }) => path)).toEqual([
 				"/v1/balances.check",
 				"/v1/balances.finalize",
 			]);
-			expect(edge.seen[1]?.key).toBeString();
-			// The Atom's view replays its owed finalize at once: settled there before Autumn holds the lock at all.
+			expect(taps.edge.seen[1]?.key).toBeString();
+			// Nothing is decided on the Atom: its view holds the lock until Autumn's push shows it settled.
 			expect(await atomRemaining({ atom, customerId })).toBe(
-				INCLUDED_MESSAGES - CONFIRMED,
+				INCLUDED_MESSAGES - LOCKED,
 			);
 			await expectAutumnLockState({
 				customerId,
@@ -257,69 +283,58 @@ test.skipIf(!replicaSetRunsHere)(
 			});
 
 			await set.releaseHandIns();
-			await expectSettledOnce({ atom, customerId, atomSeqs: [2] });
+			await expectSettled({
+				atom,
+				customerId,
+				remaining: INCLUDED_MESSAGES - CONFIRMED,
+				atomSeqs: [2],
+			});
 		} finally {
-			edge.stop();
-			api.stop();
+			taps.stop();
 		}
 	},
 	120_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("sdk-finalize-edge2: a slow edge whose hand-in lands first: the API's resend is 400, the lock settles once")}`,
+	`${chalk.yellowBright("sdk-finalize-edge2: release, confirm and override_value each settle at the value their action names")}`,
 	async () => {
 		const customerId = "sdk-finalize-edge2";
-		const lockId = `${customerId}-lock`;
 		const { atom } = await initMessagesCustomer({
 			customerId,
 			atom: replicaSet,
 		});
-		const edge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-		});
-		const api = startTap({ targetUrl: apiBaseUrl() });
-		const sdk = sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId });
-		const slowEdge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-			replyDelayMs: EDGE_DELAY_MS,
-		});
-		const settledApi = startTap({
-			targetUrl: apiBaseUrl(),
-			before: () => expectAutumnLockState({ customerId, openLockIds: [] }),
-		});
+		const taps = sdkThroughTaps({ atom, customerId });
+		const actions: [string, FinalizeAction][] = [
+			["release", { action: "release" }],
+			["confirm", { action: "confirm" }],
+			["override", { action: "confirm", overrideValue: CONFIRMED }],
+		];
 		try {
-			await lockThroughSdk({ sdk, customerId, lockId });
-			const finalized = await finalizeThroughSdk({
-				sdk: sdkFor({
-					edgeUrl: slowEdge.url,
-					apiUrl: settledApi.url,
-					customerId,
-				}),
-				lockId,
-			});
+			for (const [name, finalize] of actions) {
+				const lockId = `${customerId}-${name}`;
+				await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
+				expect(
+					await finalizeThroughSdk({ sdk: taps.sdk, lockId, finalize }),
+				).toEqual({ status: 200, reply: { success: true } });
+			}
 
-			expect(finalized).toMatchObject({
-				status: 400,
-				message: expect.stringContaining("Lock not found"),
+			expect(taps.api.seen).toEqual([]);
+			await expectSettled({
+				atom,
+				customerId,
+				remaining: INCLUDED_MESSAGES - LOCKED - CONFIRMED,
+				atomSeqs: [6],
 			});
-			const [edgeKey] = slowEdge.seen.map(({ key }) => key);
-			expect(edgeKey).toBeString();
-			expect(settledApi.seen).toEqual([
-				{ path: "/v1/balances.finalize", status: 400, key: edgeKey ?? null },
-			]);
-			await expectSettledOnce({ atom, customerId, atomSeqs: [2] });
 		} finally {
-			for (const tap of [edge, api, slowEdge, settledApi]) tap.stop();
+			taps.stop();
 		}
 	},
 	120_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("sdk-finalize-edge3: a slow edge whose resend lands first: the API settles, the hand-in lands only its seq")}`,
+	`${chalk.yellowBright("sdk-finalize-edge3: a retry under the same Idempotency-Key is answered success and never settles the lock twice")}`,
 	async () => {
 		const customerId = "sdk-finalize-edge3";
 		const lockId = `${customerId}-lock`;
@@ -327,88 +342,154 @@ test.skipIf(!replicaSetRunsHere)(
 			customerId,
 			atom: replicaSet,
 		});
-		const set = replicaSet();
-		const edge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-		});
-		const api = startTap({ targetUrl: apiBaseUrl() });
-		const sdk = sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId });
-		const slowEdge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-			replyDelayMs: EDGE_DELAY_MS,
-		});
+		const taps = sdkThroughTaps({ atom, customerId });
+		const idempotencyKey = `${customerId}-key`;
 		try {
-			await lockThroughSdk({ sdk, customerId, lockId });
-			await expectAutumnLockState({
-				customerId,
-				openLockIds: [lockId],
-				atomSeqs: [1],
-			});
-			set.holdHandIns();
-			const finalized = await finalizeThroughSdk({
-				sdk: sdkFor({ edgeUrl: slowEdge.url, apiUrl: api.url, customerId }),
-				lockId,
-			});
-
-			expect(finalized).toEqual({ status: 200, reply: { success: true } });
-			const [edgeKey] = slowEdge.seen.map(({ key }) => key);
-			expect(edgeKey).toBeString();
-			expect(api.seen).toEqual([
-				{ path: "/v1/balances.finalize", status: 200, key: edgeKey ?? null },
+			await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
+			const [first, retry] = await Promise.all([
+				finalizeThroughSdk({ sdk: taps.sdk, lockId, idempotencyKey }),
+				finalizeThroughSdk({ sdk: taps.sdk, lockId, idempotencyKey }),
 			]);
-			await expectAutumnLockState({ customerId, openLockIds: [] });
+
+			expect([first, retry]).toEqual([
+				{ status: 200, reply: { success: true } },
+				{ status: 200, reply: { success: true } },
+			]);
+			expect(taps.api.seen).toEqual([]);
+			expect(
+				taps.edge.seen
+					.filter(({ path }) => path === "/v1/balances.finalize")
+					.map(({ key }) => key),
+			).toEqual([idempotencyKey, idempotencyKey]);
+			await expectSettled({
+				atom,
+				customerId,
+				remaining: INCLUDED_MESSAGES - CONFIRMED,
+			});
+			await timeout(SETTLE_WAIT_MS);
 			expect(await postgresRemaining({ customerId })).toBe(
 				INCLUDED_MESSAGES - CONFIRMED,
 			);
-
-			await set.releaseHandIns();
-			await expectSettledOnce({ atom, customerId, atomSeqs: [2] });
 		} finally {
-			for (const tap of [edge, api, slowEdge]) tap.stop();
+			taps.stop();
 		}
 	},
 	120_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("sdk-finalize-edge4: a lock the API took is finalized through the Atom's forward, never resent to the API")}`,
+	`${chalk.yellowBright("sdk-finalize-edge4: a finalize of a lock never taken is answered success, and nothing changes in Autumn")}`,
 	async () => {
 		const customerId = "sdk-finalize-edge4";
+		const { atom } = await initMessagesCustomer({
+			customerId,
+			atom: replicaSet,
+		});
+		const taps = sdkThroughTaps({ atom, customerId });
+		try {
+			await lockThroughSdk({
+				sdk: taps.sdk,
+				customerId,
+				lockId: `${customerId}-held`,
+			});
+			await expectAutumnLockState({
+				customerId,
+				openLockIds: [`${customerId}-held`],
+				atomSeqs: [1],
+			});
+
+			const finalized = await finalizeThroughSdk({
+				sdk: taps.sdk,
+				lockId: `${customerId}-never-taken`,
+			});
+
+			expect(finalized).toEqual({ status: 200, reply: { success: true } });
+			expect(taps.api.seen).toEqual([]);
+			await timeout(SETTLE_WAIT_MS);
+			expect(await openLockIdsOf({ customerId })).toEqual([
+				`${customerId}-held`,
+			]);
+			expect(await atomSeqsOf({ customerId })).toEqual([1]);
+			expect(await postgresRemaining({ customerId })).toBe(
+				INCLUDED_MESSAGES - LOCKED,
+			);
+			expect(await atomRemaining({ atom, customerId })).toBe(
+				INCLUDED_MESSAGES - LOCKED,
+			);
+		} finally {
+			taps.stop();
+		}
+	},
+	120_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("sdk-finalize-edge5: a hand-in delayed past the lock's still lands the finalize after its lock")}`,
+	async () => {
+		const customerId = "sdk-finalize-edge5";
 		const lockId = `${customerId}-lock`;
 		const { atom } = await initMessagesCustomer({
 			customerId,
 			atom: replicaSet,
 		});
-		const edge = startTap({
-			targetUrl: atom.endpointUrl,
-			headers: { "x-atom-token": atom.token },
-		});
-		const api = startTap({ targetUrl: apiBaseUrl() });
+		const set = replicaSet();
+		const taps = sdkThroughTaps({ atom, customerId });
 		try {
-			await lockThroughSdk({
-				sdk: sdkFor({ apiUrl: api.url, customerId }),
+			await lockThroughSdk({ sdk: taps.sdk, customerId, lockId });
+			await expectAutumnLockState({
 				customerId,
-				lockId,
+				openLockIds: [lockId],
+				atomSeqs: [1],
 			});
+			set.holdHandIns();
+			const finalized = await finalizeThroughSdk({ sdk: taps.sdk, lockId });
+
+			expect(finalized).toEqual({ status: 200, reply: { success: true } });
+			expect(taps.api.seen).toEqual([]);
+			await timeout(SETTLE_WAIT_MS);
+			expect(await openLockIdsOf({ customerId })).toEqual([lockId]);
+			expect(await atomSeqsOf({ customerId })).toEqual([1]);
+
+			await set.releaseHandIns();
+			await expectSettled({
+				atom,
+				customerId,
+				remaining: INCLUDED_MESSAGES - CONFIRMED,
+				atomSeqs: [2],
+			});
+		} finally {
+			taps.stop();
+		}
+	},
+	120_000,
+);
+
+test.skipIf(!replicaSetRunsHere)(
+	`${chalk.yellowBright("sdk-finalize-edge6: a customer the Atom holds no subject for is answered success: the async path reads neither the subject nor the lock")}`,
+	async () => {
+		const customerId = "sdk-finalize-edge6";
+		const { atom } = await initMessagesCustomer({
+			customerId,
+			atom: replicaSet,
+		});
+		const ghostId = `${customerId}-never-stored`;
+		const taps = sdkThroughTaps({ atom, customerId: ghostId });
+		try {
 			const finalized = await finalizeThroughSdk({
-				sdk: sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId }),
-				lockId,
+				sdk: taps.sdk,
+				lockId: `${ghostId}-lock`,
 			});
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
-			expect(api.seen.map(({ path }) => path)).toEqual(["/v1/balances.check"]);
-			expect(edge.seen.map(({ path }) => path)).toEqual([
-				"/v1/balances.finalize",
+			expect(taps.api.seen).toEqual([]);
+			expect(taps.edge.seen).toEqual([
+				{ path: "/v1/balances.finalize", status: 200, key: expect.any(String) },
 			]);
-			await expectAutumnLockState({ customerId, openLockIds: [] });
-			expect(await postgresRemaining({ customerId })).toBe(
-				INCLUDED_MESSAGES - CONFIRMED,
-			);
+			await timeout(SETTLE_WAIT_MS);
+			expect(await openLockIdsOf({ customerId: ghostId })).toEqual([]);
+			expect(await atomRemaining({ atom, customerId })).toBe(INCLUDED_MESSAGES);
 		} finally {
-			edge.stop();
-			api.stop();
+			taps.stop();
 		}
 	},
 	120_000,
