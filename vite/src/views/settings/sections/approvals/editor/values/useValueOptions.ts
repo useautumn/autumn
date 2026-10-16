@@ -1,8 +1,7 @@
 import { ResetInterval } from "@autumn/shared";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { ENUM_LABELS } from "../../buildRuleSentence";
+import { useApprovalsCatalog } from "../../useApprovalsCatalog";
 import type { ChipOption } from "../ChipMultiSelect";
 
 const ENUM_VALUES = {
@@ -40,10 +39,10 @@ const toOption = ({ id, name }: { id: string; name?: string | null }) => ({
 const enumOptions = (values: string[]) =>
 	values.map((value) => ({ value, label: enumLabel(value) }));
 
-const useFeatureOptions = () => useFeaturesQuery().features.map(toOption);
+const useFeatureOptions = () => useApprovalsCatalog().features.map(toOption);
 const useRewardOptions = () => useRewardsQuery().rewards.map(toOption);
 const usePlanOptions = () => {
-	const { products } = useProductsQuery();
+	const { products } = useApprovalsCatalog();
 	return [...new Map(products.map((plan) => [plan.id, plan])).values()].map(
 		toOption,
 	);

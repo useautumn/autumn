@@ -1,7 +1,6 @@
-import type { Membership } from "@autumn/shared";
+import type { Membership, RuleSubject } from "@autumn/shared";
 import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
-import type { RuleSubject } from "../approvalsStub";
 import { SUBJECT_ICONS } from "../subjectIcons";
 import type { ChipOptionGroup } from "./ChipMultiSelect";
 

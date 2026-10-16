@@ -1,19 +1,19 @@
-import {
-	type EditorRowIssue,
-	PINNED_FIELDS,
-	ruleFilterToRows,
-	ruleRowsToFilter,
-} from "@autumn/shared/api/approvals/editor/index";
-import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
 import type {
 	ApprovalAction,
 	ApprovalFilterKey,
 	ApprovalRule,
 	ApprovalRuleEffect,
 	ApprovalRuleFilter,
+	CreateApprovalRuleParams,
 	RuleSubject,
-} from "../approvalsStub";
-import { ACTIONS } from "../approvalsStub";
+} from "@autumn/shared";
+import { ACTIONS } from "@autumn/shared";
+import {
+	type EditorRowIssue,
+	PINNED_FIELDS,
+	ruleFilterToRows,
+	ruleRowsToFilter,
+} from "@autumn/shared/api/approvals/editor/index";
 import { ruleFilterKey } from "./ruleActions";
 import { decodeRow, encodeRow, type RuleRow } from "./ruleRowCodec";
 
@@ -40,7 +40,7 @@ export type RuleEditorValues = {
 };
 
 export type EditorValuesResult =
-	| { ok: true; params: ApprovalRuleCreateParams }
+	| { ok: true; params: CreateApprovalRuleParams }
 	| { ok: false; issues: EditorRowIssue[] };
 
 const emptyPinned = (shape: ApprovalFilterKey | null): RuleRow | null => {

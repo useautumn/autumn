@@ -4,8 +4,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
-import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
+import type { ApprovalRule, CreateApprovalRuleParams } from "@autumn/shared";
 import {
 	editorValuesToParams,
 	ruleToEditorValues,
@@ -14,8 +13,11 @@ import type { RuleRow } from "@/views/settings/sections/approvals/editor/ruleRow
 
 const sales = { type: "role", role_id: "sales" } as const;
 
-const asRule = (params: ApprovalRuleCreateParams): ApprovalRule => ({
+const asRule = (params: CreateApprovalRuleParams): ApprovalRule => ({
 	...params,
+	filter: (params.filter ?? null) as ApprovalRule["filter"],
+	note: params.note ?? null,
+	enabled: params.enabled ?? true,
 	id: "apr_1",
 	position: 1,
 	version: 1,
@@ -29,7 +31,7 @@ const rule = ({
 	effect,
 	actions,
 	filter,
-}: Pick<ApprovalRuleCreateParams, "name" | "effect" | "actions" | "filter">) =>
+}: Pick<CreateApprovalRuleParams, "name" | "effect" | "actions" | "filter">) =>
 	asRule({
 		name,
 		effect,

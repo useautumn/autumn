@@ -1,3 +1,4 @@
+import type { ApprovalRule, ApprovalRuleEffect } from "@autumn/shared";
 import {
 	Button,
 	Input,
@@ -11,7 +12,6 @@ import {
 	TabsList,
 	TabsTrigger,
 } from "@autumn/ui";
-import type { ApprovalRule, ApprovalRuleEffect } from "../approvalsStub";
 import { ChipMultiSelect } from "./ChipMultiSelect";
 import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";

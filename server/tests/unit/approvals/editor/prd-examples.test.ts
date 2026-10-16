@@ -1,47 +1,50 @@
 /**
- * S5 contract with S3: the editor rows for each PRD §8 worked example (A–F)
- * store exactly the example's `filter`, and that filter is valid for its
- * effect. The hand-written shapes (C's nested `$or`, D's allow `$some`) open
- * read-only, and their editor equivalents are editable.
+ * S5 contract with S3: the editor rows for each PRD §8 worked example
+ * (`rules.prdExamples()`) store exactly that rule's `filter`, and the rule
+ * passes S3's validator. The hand-written shapes (C's nested `$or`, D's allow
+ * `$some`) open read-only, and their editor equivalents are editable.
  *
  * Red (before):  no effect, `entity`, `has_paid` or "has a trial" in the editor.
- * Green (after): every example below round-trips.
+ * Green (after): every example round-trips or opens read-only as listed.
  */
 
 import { describe, expect, test } from "bun:test";
 import {
+	ACTIONS,
 	type ApprovalFilterKey,
-	buildApprovalFilterSchema,
+	type ApprovalRuleParams,
+	validateApprovalRule,
+} from "@autumn/shared";
+import {
 	type EditorGroup,
 	type EditorRow,
-	type RuleEffect,
 	ruleFilterToRows,
 	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index.js";
+import { rules } from "@tests/utils/fixtures/rules.js";
 
 const plan = (plan_id: string) => ({ plan_id });
-
-type Example = {
-	name: string;
-	shape: ApprovalFilterKey;
-	effect: RuleEffect;
-	groups: EditorGroup;
-	filter: unknown;
+const examples = rules.prdExamples();
+const example = (name: string) => {
+	const rule = examples.find((candidate) => candidate.name === name);
+	if (!rule) throw new Error(`No PRD example named ${name}`);
+	return rule;
 };
 
-const EXAMPLES: Example[] = [
-	{
-		name: "A · No billing changes (block, no conditions)",
-		shape: "billing_change",
-		effect: "block",
-		groups: [],
-		filter: null,
-	},
-	{
-		name: "A · Sales: Enterprise trials (allow)",
-		shape: "billing_change",
-		effect: "allow",
-		groups: [
+const shapeOf = (rule: ApprovalRuleParams) =>
+	ACTIONS[rule.actions[0]].filter as ApprovalFilterKey;
+
+const deploymentPlans = {
+	field: "incoming_plan",
+	operator: "is_any_of",
+	value: [plan("pro"), plan("enterprise"), plan("hobby")],
+} as EditorRow;
+
+/** Each editable example's rows, in board order. */
+const EDITABLE: Record<string, EditorGroup[]> = {
+	"No billing changes": [],
+	"Sales: Enterprise trials": [
+		[
 			{ field: "paid", operator: "is", value: false },
 			{ field: "incoming_plan", operator: "is", value: plan("enterprise") },
 			{
@@ -50,149 +53,87 @@ const EXAMPLES: Example[] = [
 				value: { length: 2, unit: "month" },
 			},
 		],
-		filter: {
-			paid: false,
-			incoming: {
-				$every: {
-					plan_id: "enterprise",
-					free_trial: { duration: { $lt: { length: 2, unit: "month" } } },
-				},
-			},
-		},
-	},
-	{
-		name: "B · Credit add-ons on the customer (block)",
-		shape: "billing_change",
-		effect: "block",
-		groups: [
+	],
+	"Credit add-ons on the customer": [
+		[
 			{ field: "entity", operator: "is_entity", value: null },
 			{ field: "incoming_plan", operator: "is", value: plan("credits_addon") },
 		],
-		filter: {
-			incoming: { $some: { plan_id: "credits_addon" } },
-			entity: { $ne: null },
-		},
-	},
-	{
-		name: "D · No Enterprise cancels (block)",
-		shape: "billing_cancel",
-		effect: "block",
-		groups: [
-			{ field: "outgoing_plan", operator: "is", value: plan("enterprise") },
-		],
-		filter: { outgoing: { $some: { plan_id: "enterprise" } } },
-	},
-	{
-		name: "E · Trials for new customers only (block)",
-		shape: "billing_change",
-		effect: "block",
-		groups: [
+	],
+	"No Enterprise cancels": [
+		[{ field: "outgoing_plan", operator: "is", value: plan("enterprise") }],
+	],
+	"Trials for new customers only": [
+		[
 			{ field: "customer_has_paid", operator: "is", value: true },
 			{ field: "incoming_plan", operator: "is", value: plan("enterprise") },
 			{ field: "free_trial", operator: "has_any", value: null },
 		],
-		filter: {
-			customer: { has_paid: true },
-			incoming: { $some: { plan_id: "enterprise", free_trial: { $ne: null } } },
-		},
-	},
-	{
-		name: "F · Sales: no custom pricing (block)",
-		shape: "billing_change",
-		effect: "block",
-		groups: [{ field: "customized", operator: "is", value: true }],
-		filter: { incoming: { $some: { customized: true } } },
-	},
-];
+	],
+	"Sales: no custom pricing": [
+		[{ field: "customized", operator: "is", value: true }],
+	],
+};
 
-const keysIn = (value: unknown): string[] =>
-	value && typeof value === "object"
-		? Object.entries(value).flatMap(([key, inner]) => [key, ...keysIn(inner)])
-		: [];
+/** The hand-written examples, and how the editor writes the same rule. */
+const HAND_WRITTEN: Record<string, EditorGroup[]> = {
+	"Plans on deployments": [
+		[
+			{ field: "entity", operator: "is_customer", value: null },
+			deploymentPlans,
+		],
+		[
+			{ field: "entity", operator: "is_none_of", value: ["deployments"] },
+			deploymentPlans,
+		],
+	],
+	"Taylor and Kyle cancel Enterprise": [
+		[{ field: "outgoing_plan", operator: "is", value: plan("enterprise") }],
+	],
+};
+
+test("every PRD example is covered here", () => {
+	expect(examples.map((rule) => rule.name).sort()).toEqual(
+		[...Object.keys(EDITABLE), ...Object.keys(HAND_WRITTEN)].sort(),
+	);
+});
 
 describe("PRD §8 examples round-trip", () => {
-	test.each(EXAMPLES)("$name", ({ shape, effect, groups, filter }) => {
-		const rows = groups.length > 0 ? [groups] : [];
-		expect<unknown>(ruleRowsToFilter({ shape, effect, groups: rows })).toEqual({
+	test.each(Object.entries(EDITABLE))("%s", (name, groups) => {
+		const rule = example(name);
+		const shape = shapeOf(rule);
+		const { effect, filter } = rule;
+		expect<unknown>(ruleRowsToFilter({ shape, effect, groups })).toEqual({
 			ok: true,
 			filter,
 		});
 		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 			editable: true,
 			pinned: null,
-			groups: rows,
+			groups,
 		});
+		expect(validateApprovalRule({ rule }).ok).toBe(true);
 	});
-
-	// Stands in for S3's validateApprovalRule until S3 freezes: the shape parses, and block rules hold no $every.
-	test.each(EXAMPLES.filter((example) => example.filter))(
-		"$name is a valid filter for its effect",
-		({ shape, effect, filter }) => {
-			expect(
-				buildApprovalFilterSchema({ key: shape }).safeParse(filter).success,
-			).toBe(true);
-			if (effect === "block") expect(keysIn(filter)).not.toContain("$every");
-		},
-	);
 });
 
-describe("hand-written examples open read-only; their editor form is editable", () => {
-	const deploymentPlans = {
-		field: "incoming_plan",
-		operator: "is_any_of",
-		value: [plan("pro"), plan("enterprise"), plan("hobby")],
-	} as EditorRow;
-
-	test.each<{
-		name: string;
-		shape: ApprovalFilterKey;
-		effect: RuleEffect;
-		handWritten: unknown;
-		editorGroups: EditorGroup[];
-	}>([
-		{
-			name: "C · Plans on deployments: two OR groups instead of a nested $or",
-			shape: "billing_change",
-			effect: "block",
-			handWritten: {
-				incoming: {
-					$some: { plan_id: { $in: ["pro", "enterprise", "hobby"] } },
-				},
-				$or: [
-					{ entity: null },
-					{ entity: { feature_id: { $ne: "deployments" } } },
-				],
-			},
-			editorGroups: [
-				[
-					{ field: "entity", operator: "is_customer", value: null },
-					deploymentPlans,
-				],
-				[
-					{ field: "entity", operator: "is_none_of", value: ["deployments"] },
-					deploymentPlans,
-				],
-			],
-		},
-		{
-			name: "D · Taylor and Kyle cancel Enterprise: the allow stores $every",
-			shape: "billing_cancel",
-			effect: "allow",
-			handWritten: { outgoing: { $some: { plan_id: "enterprise" } } },
-			editorGroups: [
-				[{ field: "outgoing_plan", operator: "is", value: plan("enterprise") }],
-			],
-		},
-	])("$name", ({ shape, effect, handWritten, editorGroups }) => {
-		expect(ruleFilterToRows({ shape, effect, filter: handWritten })).toEqual({
+describe("hand-written examples open read-only; their editor form is editable and valid", () => {
+	test.each(Object.entries(HAND_WRITTEN))("%s", (name, groups) => {
+		const rule = example(name);
+		const shape = shapeOf(rule);
+		const { effect } = rule;
+		expect(ruleFilterToRows({ shape, effect, filter: rule.filter })).toEqual({
 			editable: false,
 		});
-		const stored = ruleRowsToFilter({ shape, effect, groups: editorGroups });
+		const stored = ruleRowsToFilter({ shape, effect, groups });
 		if (!stored.ok) throw new Error(JSON.stringify(stored.issues));
 		expect(ruleFilterToRows({ shape, effect, filter: stored.filter })).toEqual({
 			editable: true,
 			pinned: null,
-			groups: editorGroups,
+			groups,
 		});
+		const result = validateApprovalRule({
+			rule: { ...rule, filter: stored.filter },
+		});
+		expect(result.ok ? [] : result.issues).toEqual([]);
 	});
 });

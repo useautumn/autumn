@@ -1,7 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import type { ApiRole } from "@/views/settings/sections/approvals/approvalsStub";
+
+// TEMPORARY until D4 exports it: swap for `ApiRole` from `@autumn/shared/api/roles/apiRole`.
+export type ApiRole = {
+	id: string;
+	name: string;
+	built_in: boolean;
+	access: Record<string, "none" | "read" | "write">;
+	member_count: number;
+	rule_count: number;
+};
 
 export const ROLES_QUERY_KEY = ["roles"] as const;
 

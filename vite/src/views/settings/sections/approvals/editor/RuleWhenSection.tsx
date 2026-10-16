@@ -1,7 +1,7 @@
+import type { ApprovalFilterKey } from "@autumn/shared";
 import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { cn } from "@/lib/utils";
 import { AddButton } from "@/views/migrations/migration/shared/AddButton";
-import type { ApprovalFilterKey } from "../approvalsStub";
 import { PinnedFeatureRow } from "./PinnedFeatureRow";
 import { RuleWhenGroup } from "./RuleWhenGroup";
 import { type RuleGroup, type RuleRowItem, withId } from "./ruleEditorValues";

@@ -1,11 +1,11 @@
 /** Contract: Balances pin a required Feature row above the groups, never inside one, saved at the top of `filter`. */
 
 import { describe, expect, test } from "bun:test";
+import type { ApprovalAction } from "@autumn/shared";
 import {
 	EDITOR_FIELDS,
 	type EditorRowIssue,
 } from "@autumn/shared/api/approvals/editor/index";
-import type { ApprovalAction } from "@/views/settings/sections/approvals/approvalsStub";
 import {
 	editorValuesToParams,
 	emptyEditorValues,

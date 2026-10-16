@@ -5,11 +5,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { ApprovalRule } from "@autumn/shared";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApprovalRuleRow } from "@/views/settings/sections/approvals/ApprovalRuleRow";
 import { ApprovalRulesList } from "@/views/settings/sections/approvals/ApprovalRulesList";
-import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
 import { RuleRowMenu } from "@/views/settings/sections/approvals/RuleRowMenu";
 
 const renderList = ({

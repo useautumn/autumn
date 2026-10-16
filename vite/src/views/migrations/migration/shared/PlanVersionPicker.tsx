@@ -15,7 +15,10 @@ import {
 	planScopeIsWholePlan,
 	toggleWholePlan,
 } from "@/components/plans/planScopeSelection";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	type ProductListItem,
+	useProductsQuery,
+} from "@/hooks/queries/useProductsQuery";
 import { normalizePlanKeys, parsePlanKey } from "@/lib/planSelectionKeys";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
@@ -32,13 +35,17 @@ export function PlanVersionPicker({
 	onChange,
 	className,
 	defaultOpen = false,
+	products: productsOverride,
 }: {
 	values: string[];
 	onChange: (next: string[]) => void;
 	className?: string;
 	defaultOpen?: boolean;
+	/** Plans to offer instead of the dashboard env's, e.g. live plans for approval rules. */
+	products?: ProductListItem[];
 }) {
-	const { products } = useProductsQuery();
+	const { products: envProducts } = useProductsQuery();
+	const products = productsOverride ?? envProducts;
 	const versionCounts = getVersionCounts(products);
 	const selectedKeys = normalizePlanKeys(values);
 

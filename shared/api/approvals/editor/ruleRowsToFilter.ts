@@ -1,3 +1,10 @@
+import type { ApprovalRuleEffect as RuleEffect } from "../schemas/approvalRule";
+import {
+	APPROVAL_FILTER_SHAPES,
+	type ApprovalFilterKey,
+	type ApprovalRuleFilter,
+} from "../schemas/filters/approvalFilterShapes";
+import { buildFilterSchema } from "../schemas/filters/buildFilterSchema";
 import {
 	EDITOR_FIELDS,
 	type EditorGroup,
@@ -7,12 +14,6 @@ import {
 } from "./editorFields";
 import { FIELD_CODECS } from "./fieldCodecs";
 import { type Filter, isEmptyObject, mergeFilters } from "./filterParts";
-import {
-	type ApprovalFilterKey,
-	type ApprovalRuleFilter,
-	buildApprovalFilterSchema,
-	type RuleEffect,
-} from "./s3Stub";
 
 /** `group: "pinned"` is the row above the groups. */
 export type EditorRowIssue = {
@@ -55,6 +56,10 @@ const hasValue = (row: EditorRow) => {
 	return row.value !== undefined && row.value !== null;
 };
 
+/** The strict schema for one shape, so a row's filter is checked against its own area. */
+export const shapeSchema = ({ shape }: { shape: ApprovalFilterKey }) =>
+	buildFilterSchema({ shape: APPROVAL_FILTER_SHAPES[shape] });
+
 /** The row's filter, or null when its value is missing or doesn't fit the field. */
 const encodeRow = ({
 	shape,
@@ -67,7 +72,7 @@ const encodeRow = ({
 }) => {
 	if (!hasValue(row)) return null;
 	const filter = FIELD_CODECS[row.field].toFilter({ row, effect });
-	const schema = buildApprovalFilterSchema({ key: shape });
+	const schema = shapeSchema({ shape });
 	return filter && schema.safeParse(filter).success ? filter : null;
 };
 
