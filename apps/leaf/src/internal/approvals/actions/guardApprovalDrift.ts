@@ -5,10 +5,16 @@ import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
-import { firstRuleDenial } from "../utils/approvalRuleVerdict.js";
+import {
+	everyStepAllowedByRule,
+	firstRuleDenial,
+} from "../utils/approvalRuleVerdict.js";
 import { withWritePreviews } from "../utils/fetchApprovalPreview.js";
 import { previewMoneyFactsDrifted } from "../utils/previewMoneyFacts.js";
 import { writeToPreviewTool } from "../utils/toolRegistry.js";
+
+const NO_RULE_MESSAGE =
+	"Your role can't approve this, and no approval rule allows it for you. Ask an Owner or Admin.";
 
 const DRIFT_MESSAGE =
 	"Prices changed since this card was shown — nothing was applied. Review the updated preview and approve again.";
@@ -20,11 +26,13 @@ const detectPreviewDrift = async ({
 	writes,
 	token,
 	actingUserId,
+	rulesMustAllow,
 }: {
 	env: ChatApproval["env"];
 	writes: ReadonlyArray<ChatApprovalWrite>;
 	token: string;
 	actingUserId?: string;
+	rulesMustAllow?: boolean;
 }) => {
 	const checkable = writes.filter(
 		(write) => write.preview && writeToPreviewTool(write.tool_name),
@@ -62,9 +70,12 @@ const detectPreviewDrift = async ({
 			),
 		);
 	};
-	const denial = firstRuleDenial({
-		previews: fresh.map((write) => write.preview),
-	});
+	const freshPreviews = fresh.map((write) => write.preview);
+	const denial =
+		firstRuleDenial({ previews: freshPreviews }) ??
+		(rulesMustAllow && !everyStepAllowedByRule({ previews: freshPreviews })
+			? NO_RULE_MESSAGE
+			: undefined);
 	if (!reason && !denial) return { drifted: false } as const;
 	return {
 		drifted: true,
@@ -104,20 +115,30 @@ export const guardApprovalDrift = async ({
 	approval,
 	providerUserId,
 	actingUserId,
+	rulesMustAllow,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
 	/** The clicker's Autumn user, when known; their approval rules are checked on the fresh previews. */
 	actingUserId?: string;
+	/** Every step must be allowed by a rule: one without a preview can't be, so nothing runs. */
+	rulesMustAllow?: boolean;
 }): Promise<{ drifted: true; message: string } | undefined> => {
 	const writes = await chatApprovalWritesRepo.list({
 		approvalId: approval.id,
 		db,
 	});
-	const checkable = writes.some(
-		(write) => write.preview && writeToPreviewTool(write.tool_name),
-	);
-	if (!checkable) return undefined;
+	const isCheckable = (write: ChatApprovalWrite) =>
+		Boolean(write.preview && writeToPreviewTool(write.tool_name));
+	if (rulesMustAllow && !writes.every(isCheckable)) {
+		await chatApprovalRepo.release({
+			approvalId: approval.id,
+			db,
+			providerUserId,
+		});
+		return { drifted: true, message: NO_RULE_MESSAGE };
+	}
+	if (!writes.some(isCheckable)) return undefined;
 
 	const { accessToken } = await getOrgInstallationToken({
 		env: approval.env,
@@ -130,6 +151,7 @@ export const guardApprovalDrift = async ({
 		writes,
 		token: accessToken,
 		actingUserId,
+		rulesMustAllow,
 	});
 	if (!drift.drifted) return undefined;
 
