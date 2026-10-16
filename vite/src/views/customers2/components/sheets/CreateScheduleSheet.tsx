@@ -11,7 +11,6 @@ import {
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import {
 	CreateScheduleReviewContent,
 	CreateScheduleSheetContent,
@@ -45,6 +44,7 @@ import { EMPTY_DISCOUNTS_FORM_VALUES } from "@/components/forms/shared/utils/dis
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { copyToClipboard } from "@/utils/clipboardUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useSettleApprovalOnApply } from "@/views/approvals/hooks/useSettleApprovalOnApply";
 import { approvalSeedFromSheetData } from "@/views/approvals/utils/approvalSheetIntegration";
@@ -430,10 +430,12 @@ export function CreateScheduleSheet() {
 			subscriptionTarget={subscriptionTarget}
 			subscriptionLinks={subscriptionLinks}
 			nowMs={testClockFrozenTimeMs}
-			onCheckoutRedirect={(checkoutUrl) => {
-				navigator.clipboard.writeText(checkoutUrl);
-				toast.success("Checkout URL copied to clipboard");
-			}}
+			onCheckoutRedirect={(checkoutUrl) =>
+				copyToClipboard({
+					text: checkoutUrl,
+					successMessage: "Checkout URL copied to clipboard",
+				})
+			}
 			onApplied={onApplied}
 			onSuccess={closeSheet}
 		>
