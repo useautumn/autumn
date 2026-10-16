@@ -1,7 +1,8 @@
 import { cn } from "@autumn/ui/lib/utils";
 import { type ReactNode, useEffect, useState } from "react";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
-import { PermissionLock } from "./permission/PermissionLock";
+import { PermissionDenial } from "./permission/PermissionDenial";
+import { usePermissionDenial } from "./permission/PermissionDenialContext";
 
 const REVEAL_DELAY_MS = 350;
 const FADE_CLASS = "animate-in fade-in duration-200";
@@ -24,6 +25,7 @@ export function BillingFooter({
 	layout,
 	isReady = true,
 	reveal = false,
+	invoiceAction,
 	children,
 }: {
 	layout: BillingFooterLayout;
@@ -31,9 +33,12 @@ export function BillingFooter({
 	isReady?: boolean;
 	/** Wait, then fade in, rather than rendering immediately. */
 	reveal?: boolean;
+	/** Opens the invoice stage, which previews and locks on its own, so a denial here leaves it enabled. */
+	invoiceAction?: ReactNode;
 	children: ReactNode;
 }) {
 	const [showFooter, setShowFooter] = useState(false);
+	const permission = usePermissionDenial();
 
 	useEffect(() => {
 		if (!reveal) return;
@@ -46,10 +51,19 @@ export function BillingFooter({
 
 	if (reveal && !showFooter) return null;
 
+	const actions = (
+		<>
+			{invoiceAction}
+			<fieldset disabled={permission?.locksSubmit} className="contents">
+				{children}
+			</fieldset>
+		</>
+	);
+
 	// Split callers fade each button themselves via BillingFooterButton.
 	const footer =
 		layout === "split" ? (
-			<SheetFooter className={LAYOUT_CLASSES.split}>{children}</SheetFooter>
+			<SheetFooter className={LAYOUT_CLASSES.split}>{actions}</SheetFooter>
 		) : (
 			<SheetFooter className={LAYOUT_CLASSES[layout]}>
 				<div
@@ -58,9 +72,18 @@ export function BillingFooter({
 						reveal && FADE_CLASS,
 					)}
 				>
-					{children}
+					{actions}
 				</div>
 			</SheetFooter>
 		);
-	return <PermissionLock>{footer}</PermissionLock>;
+	return (
+		<>
+			{permission && (
+				<div className="px-4 pt-4">
+					<PermissionDenial section="summary" />
+				</div>
+			)}
+			{footer}
+		</>
+	);
 }
