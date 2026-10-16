@@ -226,6 +226,98 @@ describe("deduct", () => {
 	);
 
 	test.concurrent(
+		"the edge case customer drains in order of whichever comes first, reset or expiry",
+		() => {
+			const day = 24 * 60 * 60 * 1000;
+			const row = ({
+				id,
+				resetsIn = null,
+				expiresIn = null,
+			}: {
+				id: string;
+				resetsIn?: number | null;
+				expiresIn?: number | null;
+			}) => ({
+				...createCustomerEntitlement({ id, balance: 1 }),
+				next_reset_at: resetsIn === null ? null : occurredAt + resetsIn * day,
+				expires_at: expiresIn === null ? null : occurredAt + expiresIn * day,
+			});
+			const customerEntitlements = [
+				row({ id: "A_plan_monthly", resetsIn: 16 }),
+				row({ id: "B_top_up", expiresIn: 4 }),
+				row({ id: "C_promo", expiresIn: 365 }),
+				row({ id: "D_lifetime" }),
+				row({ id: "E_expiring_monthly", resetsIn: 30, expiresIn: 75 }),
+				row({ id: "F_expiring_annual", resetsIn: 365, expiresIn: 75 }),
+				row({ id: "G_overdue_monthly", resetsIn: -1 }),
+				row({ id: "H_annual_plan", resetsIn: 2 }),
+			];
+
+			const drainOrder = deductFrom({
+				customerEntitlements,
+				value: 8,
+			}).deltas.map((delta) => delta.id);
+
+			expect(drainOrder).toEqual([
+				"G_overdue_monthly",
+				"H_annual_plan",
+				"B_top_up",
+				"A_plan_monthly",
+				"E_expiring_monthly",
+				"F_expiring_annual",
+				"C_promo",
+				"D_lifetime",
+			]);
+		},
+	);
+
+	test.concurrent(
+		"a grant expiring before the plan resets drains before the plan",
+		() => {
+			const day = 24 * 60 * 60 * 1000;
+			const customerEntitlements = [
+				{
+					...createCustomerEntitlement({ id: "plan_monthly", balance: 100 }),
+					next_reset_at: occurredAt + 12 * day,
+				},
+				{
+					...createCustomerEntitlement({ id: "expiring_grant", balance: 100 }),
+					expires_at: occurredAt + 8 * day,
+				},
+				createCustomerEntitlement({ id: "lifetime", balance: 100 }),
+			];
+
+			const outcome = deductFrom({ customerEntitlements, value: 60 });
+
+			expect(outcome.deltas.map((delta) => delta.id)).toEqual([
+				"expiring_grant",
+			]);
+		},
+	);
+
+	test.concurrent(
+		"reverse_deduction_order keeps the reverse order over expiry",
+		() => {
+			const day = 24 * 60 * 60 * 1000;
+			const customerEntitlements = [
+				{
+					...createCustomerEntitlement({ id: "plan_monthly", balance: 10 }),
+					next_reset_at: occurredAt + 2 * day,
+				},
+				createCustomerEntitlement({ id: "lifetime", balance: 10 }),
+			];
+
+			const drainedFirst = deductFrom({
+				customerEntitlements,
+				value: 5,
+				orgConfig: { ...org.config, reverse_deduction_order: true },
+			}).deltas.map((delta) => delta.id);
+
+			expect(drainedFirst).toEqual(["lifetime"]);
+		},
+	);
+
+	test.concurrent(
 		"past-due products fund a track only when the org says so",
 		() => {
 			const pastDueProduct: WorkerCustomerProduct = {

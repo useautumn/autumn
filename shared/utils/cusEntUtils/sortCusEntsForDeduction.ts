@@ -92,6 +92,21 @@ export const sortCusEntsForDeduction = <
 			return 1;
 		}
 
+		// A reset wipes the balance like an expiry does, so whichever comes first is when it is lost.
+		if (!reverseOrder) {
+			const aLosesAt = Math.min(
+				a.expires_at ?? Infinity,
+				a.next_reset_at ?? Infinity,
+			);
+			const bLosesAt = Math.min(
+				b.expires_at ?? Infinity,
+				b.next_reset_at ?? Infinity,
+			);
+			if (aLosesAt !== bLosesAt) {
+				return aLosesAt - bLosesAt;
+			}
+		}
+
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;
 
