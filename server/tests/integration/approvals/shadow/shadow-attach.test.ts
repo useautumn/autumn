@@ -193,3 +193,64 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("shadow attach 4: a write is checked on its taxed total, as its preview showed it")}`,
+	async () => {
+		const customerId = "approvals-shadow-attach-tax";
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx, members } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+				s.member({ role: "owner" }),
+				s.member({ role: "sales" }),
+			],
+			actions: [],
+		});
+		const [owner, sales] = members;
+		const taxRate = await ctx.stripeCli.taxRates.create({
+			display_name: "Approvals test tax",
+			percentage: 20,
+			inclusive: false,
+		});
+		const { client, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: sales,
+			rules: [
+				rules.rule({
+					name: "Small attaches",
+					subjects: [{ type: "user", user_id: sales.userId }],
+					when: { total: { $lte: 22 } },
+				}),
+			],
+		});
+
+		try {
+			const params: AttachParamsV1Input = {
+				customer_id: customerId,
+				plan_id: pro.id,
+				tax_rate_id: taxRate.id,
+			};
+			const preview = await client.billing.previewAttach(params);
+			expect(preview.total).toBe(24);
+			expect(preview.permission?.verdict).toBe("deny");
+
+			await client.billing.attach(params);
+			const decision = await expectDecisionLogged({
+				ctx,
+				userId: sales.userId,
+				action: "billing.attach",
+				verdict: "deny",
+			});
+			expect(decision.facts).toMatchObject({ total: 24 });
+		} finally {
+			await cleanup();
+		}
+	},
+);
