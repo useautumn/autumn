@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ROLES_KEY } from "@/hooks/queries/useRolesQuery";
+import { ROLES_QUERY_KEY } from "@/hooks/queries/useRolesQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
@@ -20,7 +20,7 @@ export const useRoleMutations = () => {
 	// Role changes move member counts and names, so refresh both lists.
 	const invalidate = () =>
 		Promise.all([
-			queryClient.invalidateQueries({ queryKey: ROLES_KEY }),
+			queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY }),
 			queryClient.invalidateQueries({ queryKey: MEMBERS_KEY }),
 		]);
 

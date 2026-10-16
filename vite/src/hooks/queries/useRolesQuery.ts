@@ -3,7 +3,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { rolesApi } from "@/views/settings/sections/roles/rolesApi";
 
-export const ROLES_KEY = ["roles"] as const;
+export const ROLES_QUERY_KEY = ["roles"] as const;
 
 // Stub until U3a (#4989) ships the shared hook with this shape; then delete this file.
 export const useRolesQuery = () => {
@@ -11,7 +11,7 @@ export const useRolesQuery = () => {
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: buildKey(ROLES_KEY),
+		queryKey: buildKey(ROLES_QUERY_KEY),
 		queryFn: () => rolesApi({ axios }).list(),
 	});
 
