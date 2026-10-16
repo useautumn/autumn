@@ -1,0 +1,296 @@
+---
+title: "approvals"
+---
+
+# Approvals: decisions so far
+
+**Updated 16 Oct 2026.** Designs: [Paper p-V-1](https://app.paper.design/file/01M3740Z5FDVZ854A9JHZTQSTS/p-V-1) · Detail: [API schema](approvals-api-schema.md)
+
+---
+
+## 1. What it is
+
+Admins write **rules** in Settings → Billing → Approvals. Each rule says *who* (roles, members, Everyone) *can do which actions* (from one area) *when* (conditions). Every write path checks the same rules: the dashboard, the API and Slack approvals. Conditions are evaluated against what the request will actually do, computed from the billing plan exactly as the preview computes it. Blocked requests get a 403 that names the limit, the actual value, which rule decided, and which roles could do it. Orgs with no rules behave exactly as today.
+
+## 2. Decisions
+
+| # | Topic | Decision |
+|---|---|---|
+| 1 | Where rules live | First-class rules under Billing → Approvals. Roles hold only identity and coarse access (None / Read / Write per resource). |
+| 2 | Who a rule can name | `everyone`, `role` (by `role_id`, the role's slug) and `user` (by user id). API keys are **not** subjects in v1. They keep today's scopes. |
+| 3 | Actions per rule | An array, all from **one area**, so the condition picker only offers fields every chosen action has. |
+| 4 | Precedence | Most specific first: **user → role → Everyone → the role's coarse scopes**. The first level that has *any* enabled rule for the action decides, even when it denies. |
+| 5 | Combining | Rules only allow. Rules within a level are ORed, and conditions within a rule are ANDed, with optional OR groups. There are no deny rules. |
+| 6 | Granting | A rule grants on its own. A Member with no `billing:write` can attach if a rule allows it. This only applies when the org enforces approvals. |
+| 7 | Out of policy | Hard deny with a clear message. Nothing is routed to an approver automatically. |
+| 8 | "Charges customer" (`paid`) | True if anything charges now or later: due now > 0, the next cycle goes up, a trial converts with `on_end: bill` and a card required, a usage price is added, or a checkout link. **A card-less trial doesn't count**, because the customer opts in by adding a card. |
+| 9 | Checkout links | They count as `paid`. Admins can allow them explicitly with the `checkout` condition ("Sends checkout link"). |
+| 10 | Doing vs approving | The same rules apply to both. Slack approvals are checked against **the person who clicks Approve**, on the server, using the facts at execute time. |
+| 11 | Standard limits only | Owner, Admin, API keys and **sandbox** (rules are live only) keep their standard pre-configured limits. Rules don't apply to them. |
+| 12 | References | Public `plan_id` / `feature_id`, the same as migrations. Renames rewrite rules inside the existing rename steps. Id fields only allow `$eq/$ne/$in/$nin`. |
+| 13 | Roles | Custom roles are managed through Autumn `roles.*` routes. A rename updates `member.role` and rule subjects in one transaction. A role that's in use can't be deleted. |
+| 14 | Which routes are checked | Any route that goes through the billing v2 actions (attach, update subscription, set plans, multi-attach, multi-update, pending-plan edits) is checked, including legacy v1 routes that call them. Writes that skip those actions keep today's scope checks. |
+| 15 | Management surface | Dashboard only. No public API, no `atmn`, no simulator. |
+
+## 3. Schema shapes
+
+### Database tables
+
+**`approval_rules`**: one row per rule. Rules only apply in live, so there's no `env` column.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text PK | `apr_…` |
+| `org_id` | text FK → organizations | cascade delete |
+| `name` | text | shown in the list and in errors |
+| `actions` | text[] | all from one area, e.g. `{billing.attach, billing.update}`. Each one is the RPC route name it gates |
+| `filter` | jsonb, nullable | the condition filter (below); null means always |
+| `note` | text, nullable | shown when blocked |
+| `enabled` | boolean | default true |
+| `version` | integer | +1 on every save |
+| `created_by`, `updated_by` | text | user ids |
+| `created_at`, `updated_at` | numeric (unix ms) | |
+
+Index: `(org_id)`.
+
+**`approval_rule_subjects`**: who each rule names. A join table, not jsonb, so "which rules apply to this person" is one indexed lookup and deletes cascade.
+
+| Column | Type | Notes |
+|---|---|---|
+| `rule_id` | text FK → approval_rules | cascade delete |
+| `org_id` | text | |
+| `subject_type` | text | `everyone`, `role` or `user` |
+| `subject_id` | text | role name, user id, or `*` for everyone |
+
+PK: `(rule_id, subject_type, subject_id)`. Index: `(org_id, subject_type, subject_id)`.
+
+**`approval_rule_versions`**: history. There's no FK to `approval_rules`, so history outlives a deleted rule.
+
+| Column | Type | Notes |
+|---|---|---|
+| `rule_id` | text | |
+| `org_id` | text FK → organizations | |
+| `version` | integer | |
+| `snapshot` | jsonb | `{ name, subjects, actions, filter, note, enabled }` at that version |
+| `created_by` | text | user id |
+| `created_at` | numeric (unix ms) | |
+
+PK: `(rule_id, version)`.
+
+**`approval_decisions`**: the audit and shadow log, one row per rule evaluation on a write. Like the rules table, it has no `env` column, because rules are only evaluated in live.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text PK | |
+| `org_id` | text | |
+| `request_id` | text, nullable | ties the row to request logs |
+| `action` | text | e.g. `billing.attach` |
+| `user_id`, `role` | text, nullable | who made the request (the clicker, for Slack approvals) |
+| `verdict` | text | `allow` or `deny` |
+| `enforced` | boolean | false in shadow mode, where a deny is logged but not blocked |
+| `decided_by` | jsonb, nullable | `{ level, rule_id, rule_name }` |
+| `rule_version` | integer, nullable | the version of the deciding rule |
+| `violations` | jsonb | `[{ field, label, limit, actual }]` |
+| `facts` | jsonb | the facts that were evaluated |
+| `created_at` | numeric (unix ms) | |
+
+Index: `(org_id, created_at)`.
+
+**`organization_role`** (better-auth table, extended): custom roles.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text PK | |
+| `organization_id` | text FK → organizations | |
+| `role` | text | the role's `id` (slug). It's what `member.role` and rule subjects store. Unique per org |
+| `label` | text | display name, returned as `name` |
+| `access` | jsonb | `{ [resource]: "none" or "read" or "write" }`, mapped to scopes |
+| `permission` | text | better-auth's own member/invite permissions, not product scopes |
+| `createdAt`, `updatedAt` | timestamptz | |
+
+Built-in roles (owner, admin, developer, sales, member) aren't stored. Their access comes from code.
+
+**`organizations.config.approvals_enforced`**: a boolean, default false. When it's false, decisions are logged but nothing is blocked. It can't be set through the normal org config update.
+
+### API object
+
+The routes return a rule with its subjects and author joined in:
+```ts
+type ApprovalRule = {
+  id: string; name: string;
+  subjects: ({ type: "everyone" } | { type: "role"; role_id: string } | { type: "user"; user_id: string })[];
+  actions: Action[];
+  filter: ActionFilter | null;
+  note: string | null;
+  enabled: boolean; version: number;
+  updated_by: { user_id: string; name: string }; created_at: number; updated_at: number;
+};
+```
+
+**Areas → actions**
+
+| Area | Actions | Has conditions |
+|---|---|---|
+| Billing | `billing.attach`, `billing.update`, `billing.set_plans`, `billing.create_schedule`, `billing.cancel`, `billing.uncancel` | yes |
+| Invoices | `invoices.create`, `finalize`, `pay`, `void`, `update`, `reissue`, `issue_credit_note` | yes |
+| Balances | `balances.create` (Grant credits), `balances.update` (Set balance) | yes, Feature required |
+| Rewards | `rewards.create`, `rewards.redeem` | redeem only |
+| Customers | `customers.get_or_create` (when it creates), `customers.update`, `customers.delete` | update/delete |
+| Catalog (UI group) | `plans.create`, `plans.update`, `plans.delete` · `features.create`, `features.update`, `features.delete` | yes. `plans` and `features` are separate areas |
+| API keys / Migrations | `api_keys.create`, `migrations.create`, `migrations.run` | who-only |
+
+**Conditions (billing change area).** These are the existing preview and param names, plus the migration `CustomerFilter` / `PlanFilter` unchanged.
+```ts
+type BillingChangeFilter = {
+  customer?: CustomerFilter;                       // customer id, has plan X
+  incoming?: ArrayFilter<PlanFilter & {
+    free_trial?: { duration?: DurationMatcher; card_required; on_end: "bill"|"revert" } | null;
+    // DurationMatcher: { $eq|$lt|$lte|$gt|$gte: { length: number; unit: "day"|"month"|"year" } }
+    feature_quantities?: ArrayFilter<{ feature_id; quantity }>;
+    customized?: boolean;
+  }>;
+  outgoing?: ArrayFilter<PlanFilter>;
+  paid?: boolean; checkout?: boolean;
+  total?: NumberMatcher; next_cycle?: { total?: NumberMatcher } | null;
+  discounts?: ArrayFilter<{ reward_id; percent_off; amount_off }>;
+  plan_schedule?; proration_behavior?; starts_at?; invoice_mode?;
+  $and?: BillingChangeFilter[]; $or?: BillingChangeFilter[];
+};
+```
+The other areas follow the same pattern:
+- Cancel: `cancel_action`, `outgoing`, `refund.amount`
+- Balances: `feature_id`, `included_grant`, `add_to_balance`…
+- Invoices: invoice total and credit amount
+
+Money is always in major units of the org's default currency.
+
+**Example: "Sales: Enterprise trials under 2 months, no charge"**
+```json
+{ "name": "Enterprise trials",
+  "subjects": [{ "type": "role", "role_id": "sales" }],
+  "actions": ["billing.attach", "billing.update"],
+  "filter": { "paid": false,
+    "incoming": { "$every": {
+      "plan_id": "enterprise",
+      "free_trial": { "duration": { "$lt": { "length": 2, "unit": "month" } } } } } },
+  "note": "Sales can only give trials on Enterprise, up to 2 months." }
+```
+A trial is required here, because the rule is about giving trials. `duration` uses a duration matcher: a length plus a unit, compared on the calendar (see the edge cases).
+
+**Preview `permission`.** It's on the `billing.preview_attach`, `preview_update`, `preview_set_plans`, `preview_create_schedule` and multi previews. It's **omitted** when no rule covers the member.
+```json
+{ "verdict": "allow", "decided_by": null }
+{ "verdict": "deny", "message": "…", "violations": [], "decided_by": {}, "allowed_roles": [] }
+```
+
+**Denial: 403** (only when `approvals_enforced` is on)
+```json
+{ "code": "permission_denied",
+  "message": "Sales can approve trials up to 31 days that never charge the customer.",
+  "env": "live",
+  "details": {
+    "violations": [
+      { "field": "incoming[0].free_trial", "label": "Free trial", "limit": "31 days", "actual": "45 days" },
+      { "field": "paid", "label": "Charges customer", "limit": false, "actual": true } ],
+    "decided_by": { "level": "role", "rule_id": "apr_8f2a", "rule_name": "Sales trials" },
+    "allowed_roles": ["owner", "admin", "finance"] } }
+```
+- `details.violations` lists only the failed conditions of the closest rule at the deciding level.
+- `details.allowed_roles` lists roles that have a rule which would allow this exact request.
+
+**Other routes**
+
+| Route | Shape |
+|---|---|
+| `approval_rules.list`, `.get`, `.create`, `.update`, `.delete` (`POST`, `{ id }` in the body) | Rule. Errors: 400 `invalid_approval_rule` with `details.issues: [{ path, message }]`, 404 `approval_rule_not_found` |
+| `approval_rules.versions.list { id }` | `{ list: [{ rule_id, version, rule, updated_by, created_at }] }`, newest first |
+| `approvals.can { action }` | `{ can, reason: "rule" or "scope" or "exempt" or "none" }`. `"rule"` only counts under enforcement |
+| `roles.list`, `.create`, `.update`, `.delete` (`POST`, `{ id }` in the body) | `{ id, name, built_in, access, member_count, rule_count }`, where `access` is none / read / write per resource. Errors: 409 `role_exists` / `role_in_use` (`details.member_count`), 400 `role_built_in`, 404 `role_not_found` |
+
+## 4. Edge cases covered
+
+| Case | Behaviour |
+|---|---|
+| A cap with no value present (no discount, no refund) | `$every` over an empty list passes, so "discounts ≤ 20%" lets through a request with no discount. The validator rejects bare array filters (`$some`), which would block it. |
+| "Free trial < 2 months" | Means a trial is **required** and under 2 months, the same as migrations, where `free_trial: {...}` means "exists and matches". It's stored as one duration matcher, `{ $lt: { length: 2, unit: "month" } }`, shown as one row (number + unit). To also allow no trial, add an OR group with "Free trial has none" (`free_trial: null`). |
+| Comparing durations in different units | Both durations are measured from the same trial start on the calendar. A "1 month" trial always equals a "1 month" limit. A 31-day trial passes "≤ 1 month" when it starts in January and fails when it starts in February, because it really is longer than that month. A 0.1-year trial against "< 2 months" is caught. |
+| Several plan rows (plan is Enterprise AND trial < 2 months) | Stored in one `$every` element, so both conditions apply to the **same** plan. |
+| `customize.price` makes a free plan paid | Facts use the customized plan as it would be attached, so `incoming.paid` and `paid` are true. |
+| A card-less trial on a paid plan | `paid: false` (the customer must opt in). A card-required trial that bills automatically has `paid: true`. |
+| Checkout link | `paid: true` and `checkout: true`. It can be allowed explicitly. |
+| A user rule is narrower than the role rule (John ≤ 50, Engineering ≤ 500) | The user level decides, so John is denied at 200. `allowed_roles` still lists Engineering. The editor warns: "John is named directly, so Engineering's rules no longer apply to him." |
+| A user rule pins a feature and the request uses another feature | Still decided at the user level, so denied (most specific wins). |
+| The role has a rule for attach, but only for Enterprise | Every attach by that role must match a rule, so Pro attaches are denied. Templates pair narrow rules with a broad "no-charge" rule. |
+| No rule covers the action at any level | Falls back to the role's coarse scopes, exactly as today. |
+| Disabled rule | Ignored. |
+| Org without enforcement | Never blocks. Decisions are logged, and `/can` ignores rules. |
+| Owner, Admin, API keys, sandbox | Standard pre-configured limits: rules don't apply, and their usual built-in scopes do. |
+| Plan or feature renamed | Rules are rewritten in the same rename step. A new plan that later reuses the old id does **not** inherit the rule. |
+| Member removed / role renamed / role deleted | Their subject rows are removed / renamed in one transaction / the delete is blocked while the role is in use. |
+| Preview vs execute drift (Slack) | Re-evaluated on the facts at execute time, against the clicker. |
+| Preview and action disagree | They can't by construction: they're the same call inside the billing action (§7), and parity tests assert it for every billing action. |
+| Grouped Slack approval (several writes) | Every step has to pass. |
+| Multi-update | One `permission`, and any denied item denies it. |
+| Facts drifting from what the customer sees | Facts come from the same billing plan as the preview, so the totals always match. |
+| Unsupported filter shapes | Rejected when the rule is saved (validator plus a dry evaluation), never mid-request. The editor shows anything it can't render as read-only. |
+
+## 5. Not in v1
+
+- Member invite and change-role rules. This needs Autumn-owned routes and a design for "which roles can be granted".
+- API keys as rule subjects or restricted keys.
+- Customer age and book-of-business conditions. The data model leaves room for `$actor` later.
+- A simulator, a public API, and `atmn` config for rules.
+
+## 6. Consistency with the rest of the API
+
+I audited this against migrations v2 and the other internal and RPC routes. These are the conventions the approvals API now follows. Where the first draft differed, the old version is shown so the change is visible.
+
+| Area | Convention elsewhere | Approvals |
+|---|---|---|
+| Route style | RPC: `POST /<resource>.<verb>` with a JSON body, ids in the body (`migrations.get { id }`, `plans.update`, `rewards.redeem`) | `approval_rules.list`, `.get`, `.create`, `.update`, `.delete`, `approval_rules.versions.list`, `approvals.can`, `roles.list`, `.create`, `.update`, `.delete`. **Was REST** (`GET /approvals/rules/:id`, `PATCH /roles/:name`). |
+| List envelope | `{ list: [...] }` | Same |
+| Errors | `{ message, code, env, details? }` from `RecaseError`. Extra data goes under `details` (e.g. `role_in_use` → `details.member_count`) | `permission_denied` puts `violations`, `decided_by` and `allowed_roles` under `details`. `invalid_approval_rule` puts `issues` under `details`. **Was** spread at the top level. |
+| `env` in errors | Always added by the error middleware | Kept, because it's the shared envelope and not ours to remove |
+| Not found | `<resource>_not_found`, 404 (`migration_not_found`) | `approval_rule_not_found`, `role_not_found` |
+| Slug + display name | `id` is the slug and `name` is the display name (plans, features, migrations) | Roles are `{ id: "sales", name: "Sales" }`. **Was** `{ name, label }`. Rule subjects become `{ type: "role", role_id }`. Rules have no slug, so `id` is the generated `apr_…` and `name` is free text |
+| Stored filter field | Migrations call it `filter` | `filter`. **Was** `when`. "When" stays as the UI label only |
+| Timestamps | numeric unix ms, `created_at` / `updated_at` | Same |
+| Plan and feature references | Public `plan_id` / `feature_id` plus a `version` matcher | Same |
+| Matchers | Migration filter primitives (`$eq`, `$in`, `$every` …) | The same primitives, moved to `shared/api/common/filters` |
+| Action ids | — | **The RPC route name of the write they gate**, so an action and its route can't drift apart (table below) |
+
+**Action ids aligned to the RPC routes**
+
+| Area | Action ids (route names) | Was |
+|---|---|---|
+| Billing | `billing.attach`, `billing.update`, `billing.set_plans`, `billing.create_schedule`, `billing.multi_attach` (checked as attach), `billing.multi_update` (checked as update) | `update_subscription`, `schedule` |
+| Billing, derived | `billing.cancel` and `billing.uncancel`: `billing.update` with `cancel_action` set. These are separate actions so admins can rule on cancels on their own | — |
+| Invoices | `invoices.create`, `finalize`, `pay`, `void`, `update`, `reissue`, `issue_credit_note` | `credit_note` |
+| Balances | `balances.create`, `balances.update` | — |
+| Rewards | `rewards.create`, `rewards.redeem` | `apply` |
+| Customers | `customers.get_or_create` (only when it creates), `customers.update`, `customers.delete` | `create` |
+| Catalog | `plans.create`, `plans.update`, `plans.delete`, `features.create`, `features.update`, `features.delete` | `catalog.edit_plans`, `catalog.edit_features` |
+| Who-only | `migrations.create`, `migrations.run` (also gates `migrations.lazy_run`), API key creation | — |
+
+"One area per rule" still holds. Areas are now named after the route prefix (`billing`, `invoices`, `balances`, `rewards`, `customers`, `plans`, `features`), and Catalog in the UI groups `plans` and `features`.
+
+## 7. Previews use the same check as the action
+
+**Rule:** every billing action makes **one call**, `checkBillingApproval`, after compute and before execute, for previews and writes alike. The only difference is what happens with the verdict: a preview returns it, and a write logs it and blocks a deny under enforcement.
+
+```ts
+// inside attach / update / set_plans / create_schedule, once per item for multi_*
+const approval = await checkBillingApproval({ ctx, billingContext, billingPlan, preview });
+```
+
+**Inside `checkBillingApproval`**
+1. Resolve the action from the billing context (attach, update, cancel, uncancel, set_plans, create_schedule). Callers never pass one.
+2. Build the facts from the billing plan, with the same tax rate and invoice credits as the preview totals.
+3. Evaluate the rules.
+4. **Preview:** return the verdict. The action attaches it to its result, and the handler only serializes it as `permission`.
+5. **Write:** log the decision, and throw `permission_denied` if the org enforces approvals.
+
+**What this guarantees**
+- **No mismatched action:** a preview of an update that cancels is checked as `billing.cancel`, exactly like the update itself.
+- **No separate preview path:** handlers don't evaluate anything.
+- **One function to test:** for each billing action, preview and then execute the same request with the same rules, and assert the preview's verdict equals the logged decision (verdict, violations, decided_by).
