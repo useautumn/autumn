@@ -4,10 +4,11 @@
  * Contract:
  *  1. a customer's own lock is taken on the Atom, not the API: the Atom's view holds the units at once, and its
  *     journal hands the locked track to Autumn with its writer and seq, where it lands as one balance_locks row;
- *  2. its finalize is settled on the Atom too and handed in after the lock: Autumn closes the lock, the units come back,
- *     and the finalize's own seq lands on the customer, so the Atom's journal clears it;
- *  3. a lock the caller set an expiry on is released by Autumn's timer once handed in: the push that follows drops the
- *     Atom's own row for it, so a later finalize goes to the API, and the Atom's check shows the units back.
+ *  2. its finalize is journaled on the Atom undecided and handed in after the lock: Autumn closes the lock, the units
+ *     come back, the finalize's own seq lands on the customer, and the push settles the Atom's view, which held the
+ *     lock until then;
+ *  3. a lock the caller set an expiry on is released by Autumn's timer once handed in: the push that follows shows the
+ *     units back on the Atom, and a later finalize is answered success there and refused at Autumn, moving nothing.
  */
 
 import { afterAll, expect, test } from "bun:test";
@@ -16,7 +17,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntilAsserted } from "@tests/utils/genUtils.js";
+import { pollUntilAsserted, timeout } from "@tests/utils/genUtils.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -145,7 +146,7 @@ test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
 );
 
 test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
-	`${chalk.yellowBright("atom-lock2: a finalize settled on the Atom hands in after its lock, and Autumn closes the lock")}`,
+	`${chalk.yellowBright("atom-lock2: a finalize journaled on the Atom hands in after its lock; Autumn closes the lock, and its push settles the Atom's view")}`,
 	async () => {
 		const free = products.base({
 			id: "free",
@@ -178,7 +179,8 @@ test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
 			forwarded: null,
 			body: { success: true },
 		});
-		await expectAtomBalance({ atom, customerId, remaining: 100, timeoutMs: 0 });
+		// Nothing is decided on the Atom: its view holds the lock until Autumn's push shows it settled.
+		await expectAtomBalance({ atom, customerId, remaining: 70, timeoutMs: 0 });
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,
@@ -202,7 +204,7 @@ test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
 );
 
 test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
-	`${chalk.yellowBright("atom-lock3: a lock taken on the Atom with an expiry is released by Autumn's timer, and the push drops the Atom's row for it")}`,
+	`${chalk.yellowBright("atom-lock3: a lock taken on the Atom with an expiry is released by Autumn's timer; a finalize after it is answered success and settles nothing")}`,
 	async () => {
 		const free = products.base({
 			id: "free",
@@ -255,7 +257,19 @@ test.skipIf(!isBalanceWorkerRoute() || atomIsHosted())(
 		});
 		await expectAtomBalance({ atom, customerId, remaining: 100 });
 		const afterExpiry = await finalizeOnAtom({ atom, customerId, lockId });
-		expect(afterExpiry.forwarded).toBe("lock_not_held");
+		expect(afterExpiry).toEqual({
+			status: 200,
+			forwarded: null,
+			body: { success: true },
+		});
+		// Autumn refuses it as a lock not found; nothing moves on either side.
+		await timeout(3_000);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 100,
+		});
+		await expectAtomBalance({ atom, customerId, remaining: 100 });
 	},
 	120_000,
 );

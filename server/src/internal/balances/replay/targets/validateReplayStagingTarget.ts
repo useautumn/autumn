@@ -3,7 +3,6 @@ import {
 	REPLAY_STAGING_DEPLOYMENT,
 	REPLAY_STAGING_OWNERSHIP_TOPIC,
 	REPLAY_STAGING_PARTITION_COUNT,
-	REPLAY_STAGING_REGION,
 	ReplayStagingTargetError,
 	type ReplayStagingTargetInput,
 	type ReplayStagingTargetPolicy,
@@ -139,11 +138,6 @@ export const validateReplayStagingTarget = ({
 		actual: parsedTarget.partitionCount,
 		expected: REPLAY_STAGING_PARTITION_COUNT,
 	});
-	assertPinnedField({
-		field: "region",
-		actual: parsedTarget.region,
-		expected: REPLAY_STAGING_REGION,
-	});
 	const database = validateReplayDatabaseUrl({
 		databaseUrl: parsedTarget.databaseUrl,
 		policy: parsedPolicy.database,
@@ -152,7 +146,6 @@ export const validateReplayStagingTarget = ({
 		deployment: REPLAY_STAGING_DEPLOYMENT,
 		topic: REPLAY_STAGING_OWNERSHIP_TOPIC,
 		partitionCount: REPLAY_STAGING_PARTITION_COUNT,
-		region: REPLAY_STAGING_REGION,
 		brokers: REPLAY_STAGING_BROKERS,
 		database,
 	});

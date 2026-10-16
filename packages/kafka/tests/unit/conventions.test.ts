@@ -66,6 +66,8 @@ function transportMechanicsStayDomainIndependent(): void {
 			)
 				continue;
 			const dependency = statement.moduleSpecifier.text;
+			// librdkafka is the transport itself, not worker or topic logic.
+			if (dependency === "@autumn/librdkafka") continue;
 			if (
 				dependency.startsWith("@autumn/") ||
 				dependency.includes("balance-worker") ||

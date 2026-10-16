@@ -167,7 +167,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 			},
 			{
 				id: "atom",
-				label: "Edge Cache",
+				label: "Atom",
 				icon: <AtomIcon className="size-4" />,
 				badge: "PREVIEW",
 			},

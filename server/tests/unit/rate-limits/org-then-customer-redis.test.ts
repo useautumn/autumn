@@ -152,6 +152,49 @@ const runRequests = async ({
 	return outcomes;
 };
 
+type SyncWrite = {
+	path: string;
+	apiVersion: ApiVersion;
+	body: Record<string, unknown>;
+};
+
+const sendSyncWrite = async ({ path, apiVersion, body }: SyncWrite) => {
+	const app = new Hono<HonoEnv>();
+	app.use("*", async (c, next) => {
+		c.set("ctx", {
+			env: "live",
+			org: { id: ORG_ID, slug: "org-then-customer" },
+			customerId: body.customer_id,
+			apiVersion: new ApiVersionClass(apiVersion),
+			requestBody: body,
+			features: [],
+			logger: { error: () => undefined },
+		} as never);
+		return rateLimitMiddleware(c, next);
+	});
+	app.post(path, (c) => c.json({ success: true }));
+	const response = await app.request(path, { method: "POST" });
+	return response.status;
+};
+
+const syncTrack = (customerId: string): SyncWrite => ({
+	path: "/v1/balances.track",
+	apiVersion: ApiVersion.V2_5,
+	body: { customer_id: customerId, feature_id: "messages", async: false },
+});
+
+const finalize = (customerId?: string): SyncWrite => ({
+	path: "/v1/balances.finalize",
+	apiVersion: customerId ? ApiVersion.V2_6 : ApiVersion.V2_5,
+	body: { lock_id: "lock_1", action: "confirm", customer_id: customerId },
+});
+
+const sendSyncWrites = async ({ writes }: { writes: SyncWrite[] }) => {
+	const statuses: number[] = [];
+	for (const write of writes) statuses.push(await sendSyncWrite(write));
+	return statuses;
+};
+
 const hitsByKey = () =>
 	new Map([...fakeRedis.counters].map(([key, { hits }]) => [key, hits]));
 
@@ -232,6 +275,26 @@ describe("org then customer Redis limiters", () => {
 		const hits = hitsByKey();
 		expect(hits.get(customerKey("cus_b"))).toBe(2);
 		expect(hits.get(customerKey("cus_c"))).toBe(1);
+	});
+});
+
+describe("finalize in the sync balance write buckets", () => {
+	test("a finalize shares its customer's bucket with that customer's tracks", async () => {
+		const statuses = await sendSyncWrites({
+			writes: [syncTrack("cus_a"), finalize("cus_a"), finalize("cus_a")],
+		});
+
+		expect(statuses).toEqual([200, 200, 429]);
+		expect(hitsByKey().get(customerKey("cus_a"))).toBe(3);
+	});
+
+	test("a finalize without customer_id is counted only by the org cap", async () => {
+		const statuses = await sendSyncWrites({
+			writes: [finalize(), finalize(), finalize(), finalize()],
+		});
+
+		expect(statuses).toEqual([200, 200, 200, 429]);
+		expect([...hitsByKey().keys()]).toEqual([ORG_KEY]);
 	});
 });
 

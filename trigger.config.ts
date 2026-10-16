@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	additionalPackages,
 	aptGet,
@@ -46,23 +47,9 @@ const workspacePackageStubs = workspacePackageDirs.map((dir) => {
 	};
 });
 
-const listFilesRecursive = ({ dir }: { dir: string }): string[] => {
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-		const path = `${dir}/${entry.name}`;
-		if (entry.isDirectory()) return listFilesRecursive({ dir: path });
-		return entry.isFile() ? [path] : [];
-	});
-};
-
 // Trigger copies patchedDependencies in package.json but only COPY package.json
-// before bun install, so the patch files must already exist in the base image.
-const bunPatchInstallCommands = listFilesRecursive({ dir: "patches" }).map(
-	(path) => {
-		const encoded = readFileSync(path).toString("base64");
-		return `mkdir -p "$(dirname -- '${path}')" && printf '%s' '${encoded}' | base64 -d > '${path}'`;
-	},
-);
+// before bun install; patches ride the build context since Dockerfile lines cap at 64KB.
+const BUN_PATCHES_DIR = "patches";
 
 export default defineConfig({
 	project: "proj_cwiutfmpdzfcshxevkok",
@@ -106,7 +93,7 @@ export default defineConfig({
 		extensions: [
 			{
 				name: "monorepo-workspace-manifests",
-				onBuildComplete: (context) => {
+				onBuildComplete: (context, manifest) => {
 					if (context.target !== "deploy") {
 						return;
 					}
@@ -120,13 +107,19 @@ export default defineConfig({
 							],
 						},
 					});
-					if (bunPatchInstallCommands.length > 0) {
+					if (existsSync(BUN_PATCHES_DIR)) {
+						cpSync(
+							BUN_PATCHES_DIR,
+							join(manifest.outputPath, BUN_PATCHES_DIR),
+							{
+								recursive: true,
+							},
+						);
 						context.addLayer({
 							id: "bun-patched-dependencies",
 							image: {
 								instructions: [
-									"WORKDIR /app",
-									`RUN ${bunPatchInstallCommands.join(" && ")} && chown -R bun:bun /app/patches`,
+									`COPY --chown=bun:bun ${BUN_PATCHES_DIR} /app/${BUN_PATCHES_DIR}`,
 								],
 							},
 						});

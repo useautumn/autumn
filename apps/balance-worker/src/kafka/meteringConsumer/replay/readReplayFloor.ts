@@ -19,9 +19,15 @@ export async function readReplayFloor({
 }): Promise<bigint> {
 	const { topic, partition } = state.position;
 	try {
+		const { lookupTimeoutMs } = ctx.replayWindow;
 		const offset = await withTimeout({
-			read: readWindowStartOffset({ ctx, topic, partition }),
-			timeoutMs: ctx.replayWindow.lookupTimeoutMs,
+			read: readWindowStartOffsetWithRetries({
+				ctx,
+				topic,
+				partition,
+				deadline: performance.now() + lookupTimeoutMs,
+			}),
+			timeoutMs: lookupTimeoutMs,
 		});
 		if (offset === null) return bookmark;
 		const logStartOffset = state.lastLogRange?.logStartOffset ?? offset;
@@ -34,6 +40,33 @@ export async function readReplayFloor({
 			error: cause,
 		});
 		return bookmark;
+	}
+}
+
+const LOOKUP_RETRY_DELAY_MS = 100;
+
+/** A failed lookup is read again until the budget runs out: a leader that moved mid-roll answers a later try,
+ *  and starting at the bookmark instead forgets every command id the window held. */
+async function readWindowStartOffsetWithRetries({
+	ctx,
+	topic,
+	partition,
+	deadline,
+}: {
+	ctx: PartitionReplayContext;
+	topic: string;
+	partition: number;
+	deadline: number;
+}): Promise<bigint | null> {
+	for (;;) {
+		try {
+			return await readWindowStartOffset({ ctx, topic, partition });
+		} catch (cause) {
+			if (performance.now() + LOOKUP_RETRY_DELAY_MS >= deadline) throw cause;
+			await new Promise((resolve) =>
+				setTimeout(resolve, LOOKUP_RETRY_DELAY_MS),
+			);
+		}
 	}
 }
 

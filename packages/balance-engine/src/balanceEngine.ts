@@ -120,6 +120,7 @@ export type { UnsupportedCommandReason } from "./errors.js";
 export {
 	CatalogRowMissingError,
 	LockAlreadyExistsError,
+	LockFeatureNotLoadedError,
 	LockNotFoundError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,
@@ -271,6 +272,7 @@ export {
 	findSubjectStateDifference,
 	subjectStateRowsOf,
 } from "./utils/subjectStateUtils/findSubjectStateUtils.js";
+export { findOpenLockByLockId } from "./utils/subjectStateUtils/openLockIndex.js";
 export { workerStateToFullSubject } from "./utils/subjectStateUtils/workerStateToFullSubject.js";
 export {
 	fullCustomerEntitlementToRow,

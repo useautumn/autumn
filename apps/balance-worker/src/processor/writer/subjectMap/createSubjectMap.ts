@@ -27,6 +27,45 @@ type Entry = {
 const weigh = ({ value }: { value: unknown }): number =>
 	JSON.stringify(value)?.length ?? 0;
 
+/** An array element as JSON writes it: an element with no JSON form is written `null`. */
+const weighElement = ({ value }: { value: unknown }): number =>
+	(JSON.stringify(value) ?? "null").length;
+
+const weighElements = ({ rows }: { rows: unknown[] }): number =>
+	rows.reduce<number>((bytes, row) => bytes + weighElement({ value: row }), 0);
+
+/** `[a,b,c]`: the brackets, and a comma between each pair of elements. */
+const arrayPunctuation = ({ length }: { length: number }): number =>
+	2 + Math.max(length - 1, 0);
+
+/**
+ * How much longer `after` serialises than `before`, from only the elements between the run both share at the front and
+ * the run both share at the back: a lock opened or settled weighs that lock, never every open lock.
+ */
+const reweighResizedRows = ({
+	before,
+	after,
+}: {
+	before: unknown[];
+	after: unknown[];
+}): number => {
+	const shortest = Math.min(before.length, after.length);
+	let front = 0;
+	while (front < shortest && before[front] === after[front]) front++;
+	let back = 0;
+	while (
+		back < shortest - front &&
+		before[before.length - 1 - back] === after[after.length - 1 - back]
+	)
+		back++;
+	return (
+		weighElements({ rows: after.slice(front, after.length - back) }) -
+		weighElements({ rows: before.slice(front, before.length - back) }) +
+		arrayPunctuation({ length: after.length }) -
+		arrayPunctuation({ length: before.length })
+	);
+};
+
 const sameKeys = ({
 	previous,
 	next,
@@ -66,11 +105,11 @@ export const reweighSubjectState = ({
 		if (before === after) continue;
 		if (before === undefined || after === undefined)
 			return weigh({ value: next });
-		if (
-			Array.isArray(before) &&
-			Array.isArray(after) &&
-			before.length === after.length
-		) {
+		if (Array.isArray(before) && Array.isArray(after)) {
+			if (before.length !== after.length) {
+				bytes += reweighResizedRows({ before, after });
+				continue;
+			}
 			for (const [index, row] of after.entries()) {
 				const previousRow = before[index];
 				if (previousRow === row) continue;

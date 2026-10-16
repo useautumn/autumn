@@ -4,6 +4,7 @@ import {
 	ATOM_TRACKS_APPEND_PATH,
 	type AtomFinalize,
 	AtomTracksAppendRequestSchema,
+	type AtomUndecidedFinalize,
 } from "@autumn/byoc";
 
 export type AppliedTrack = {
@@ -22,6 +23,11 @@ export const startFakeAutumn = () => {
 	const applied: AppliedTrack[] = [];
 	/** Each finalize handed in, as its element names the lock, beside its journal and seq. */
 	const finalized: (AtomFinalize & { writerId: string; seq: number })[] = [];
+	/** Each undecided finalize handed in: the caller's request, for Autumn to decide. */
+	const undecided: (AtomUndecidedFinalize & {
+		writerId: string;
+		seq: number;
+	})[] = [];
 	const requestSizes: number[] = [];
 	const switches = {
 		down: false,
@@ -52,13 +58,20 @@ export const startFakeAutumn = () => {
 		)
 			return Response.json({ code: "unreadable" }, { status: 400 });
 		requestSizes.push(parsed.data.tracks.length);
-		for (const entry of parsed.data.tracks)
+		for (const entry of parsed.data.tracks) {
 			if ("finalize" in entry)
 				finalized.push({
 					...entry.finalize,
 					writerId: entry.writerId,
 					seq: entry.seq,
 				});
+			if ("undecidedFinalize" in entry)
+				undecided.push({
+					...entry.undecidedFinalize,
+					writerId: entry.writerId,
+					seq: entry.seq,
+				});
+		}
 		for (const [index, { writerId, seq }] of handedIn.entries()) {
 			const command = commands[index] as (typeof commands)[number];
 			const key = command.idempotency?.key ?? command.commandId;
@@ -94,6 +107,7 @@ export const startFakeAutumn = () => {
 		url: `http://127.0.0.1:${server.port}`,
 		applied,
 		finalized,
+		undecided,
 		requestSizes,
 		switches,
 		/** Forgets every track it took, and comes back up. */
@@ -101,6 +115,7 @@ export const startFakeAutumn = () => {
 			appliedKeys.clear();
 			applied.splice(0);
 			finalized.splice(0);
+			undecided.splice(0);
 			requestSizes.splice(0);
 			Object.assign(switches, {
 				down: false,

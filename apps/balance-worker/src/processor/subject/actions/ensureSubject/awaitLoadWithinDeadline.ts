@@ -1,4 +1,5 @@
 import type { MeteringIdentity, SubjectState } from "@autumn/balance-engine";
+import { SubjectLoadShedError } from "../../../../external/postgres/createSubjectLoadGate.js";
 import { readAnswerDeadline } from "../../../../runtime/answerDeadline.js";
 import { SubjectLoadBusyError } from "../../subjectErrors.js";
 
@@ -25,6 +26,11 @@ export async function awaitLoadWithinDeadline({
 	try {
 		const outcome = await Promise.race([load, expiry]);
 		if (outcome !== EXPIRED) return outcome;
+	} catch (cause) {
+		// The gate drops a queued load at the same deadline; either way nothing ran.
+		if (cause instanceof SubjectLoadShedError)
+			throw new SubjectLoadBusyError({ identity });
+		throw cause;
 	} finally {
 		clearTimeout(timer);
 	}

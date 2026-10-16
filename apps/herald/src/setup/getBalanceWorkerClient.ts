@@ -22,7 +22,6 @@ export function getBalanceWorkerClient(): BalanceWorkerClient {
 				clientId: "herald-balance-worker",
 				brokers: env.KAFKA_BROKERS,
 				authMode: env.KAFKA_AUTH_MODE,
-				region: env.AWS_REGION,
 				sasl: getHeraldEnv().KAFKA_SASL,
 			},
 			ownershipTopic: env.BALANCE_WORKER_OWNERSHIP_TOPIC,

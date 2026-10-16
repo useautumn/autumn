@@ -28,12 +28,14 @@ export function createMutationPublisher({
 		commit?: { mode: KafkaCommitMode };
 		ownerEpoch?(): string | undefined;
 		/** The consumer group's own offset commit: every command offset lands through it, after its batch, without a transaction. */
-		commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
+		commandOffsets?: {
+			commit(offsets: Pick<KafkaOffsetCommit, "topics">): Promise<void>;
+		};
 		logger?: Partial<Pick<AutumnLogger, "warn">>;
 		/** Defaults to a real timer and the settle gap constant; tests drive it by hand. */
 		settle?: CommandOffsetSettleTiming;
 	};
-	config?: { commandTopic: string; groupId: string };
+	config?: { commandTopic: string };
 }): Required<CommittedOutcomeAppender> {
 	const settle = ctx.settle ?? defaultSettleTiming();
 	const settling: CommandOffsetSettling = {
@@ -130,10 +132,8 @@ export function createMutationPublisher({
 		partition: number;
 		nextOffset: bigint;
 	}) {
-		if (!config)
-			throw new Error("Command topic and consumer group are required");
+		if (!config) throw new Error("Command topic is required");
 		return {
-			consumerGroupId: config.groupId,
 			topics: [
 				{
 					topic: config.commandTopic,

@@ -23,6 +23,7 @@ export {
 	AtomTracksAppendErrorCode,
 	type AtomTracksAppendRequest,
 	AtomTracksAppendRequestSchema,
+	type AtomUndecidedFinalize,
 } from "./atomTracks/atomTracksContract.js";
 export {
 	BYOC_CACHE_API_VERSION,
