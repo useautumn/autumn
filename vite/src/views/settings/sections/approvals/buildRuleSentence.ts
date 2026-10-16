@@ -277,7 +277,11 @@ const filterGroups = ({ filter, ctx }: { filter: Filter; ctx: Ctx }) => {
 		Object.keys(rest).length === 0 &&
 		branches.every((branch) => isFilter(branch) && !hasNullField(branch));
 	const groups: Filter[] = isGroups ? branches : [filter];
-	return groups.map((group) => filterConditions({ filter: group, ctx }));
+	return groups.map((group) =>
+		Object.keys(group).length === 0
+			? [CUSTOM]
+			: filterConditions({ filter: group, ctx }),
+	);
 };
 
 const subjectText = ({

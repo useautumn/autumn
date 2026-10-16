@@ -477,6 +477,11 @@ describe("rule sentence: conditions", () => {
 			"Sales can Attach when Timing is End of cycle",
 		],
 		[
+			"an empty OR group stays custom",
+			{ filter: { $or: [{}, { paid: true }] } },
+			"Sales can Attach when Custom condition or Charges customer is Yes",
+		],
+		[
 			"a shape the list can't word yet",
 			{ filter: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",
