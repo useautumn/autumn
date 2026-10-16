@@ -1,8 +1,10 @@
 import {
 	AffectedResource,
 	type AttachParamsV1,
+	type BillingResponse,
 	type Checkout,
 	CheckoutAction,
+	CheckoutStatus,
 	ErrCode,
 	InternalError,
 	RecaseError,
@@ -17,6 +19,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
+import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { checkoutActions } from "../actions";
 
 const STRIPE_SESSION_ID_REGEX = /cs_(test|live)_[A-Za-z0-9]+/;
@@ -50,6 +54,33 @@ const getActiveStripeCheckoutUrl = async ({
 		}
 		throw error;
 	}
+};
+
+const completeCheckoutWithoutPayment = async ({
+	ctx,
+	checkout,
+	response,
+}: {
+	ctx: AutumnContext;
+	checkout: Checkout;
+	response: BillingResponse;
+}) => {
+	await checkoutActions.updateDbAndCache({
+		ctx,
+		oldCheckout: checkout,
+		updates: {
+			status: CheckoutStatus.Completed,
+			response,
+			stripe_invoice_id: response.invoice?.stripe_id ?? null,
+			completed_at: Date.now(),
+		},
+	});
+	await invalidateCachedFullSubject({
+		ctx,
+		customerId: checkout.customer_id,
+		entityId: response.entity_id,
+		source: "startLongLivedCheckout",
+	});
 };
 
 export const handleStartLongLivedCheckout = createRoute({
@@ -123,9 +154,12 @@ export const handleStartLongLivedCheckout = createRoute({
 
 		const response = billingResultToResponse({ billingContext, billingResult });
 		if (!response.payment_url) {
-			throw new InternalError({
-				message: "Long-lived checkout attach did not return a payment URL",
-			});
+			await completeCheckoutWithoutPayment({ ctx, checkout, response });
+			return c.redirect(
+				billingContext.successUrl ??
+					toSuccessUrl({ org: ctx.org, env: ctx.env }),
+				StatusCodes.SEE_OTHER,
+			);
 		}
 
 		await checkoutActions.updateDbAndCache({
