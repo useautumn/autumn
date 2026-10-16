@@ -1,9 +1,11 @@
 import {
+	AppEnv,
 	findFeatureById,
 	getFeatureName,
 	type Membership,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
@@ -16,6 +18,8 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 	const { products, features } = useApprovalsCatalog();
 	const { memberships } = useMemberships();
 	const { roles } = useRolesQuery();
+	// Rules are live, like the catalog above.
+	const { rewards } = useRewardsQuery({ env: AppEnv.Live });
 
 	return {
 		member: (userId) => {
@@ -34,6 +38,8 @@ export const useApprovalRuleLabels = (): RuleLabels => {
 				unit: getFeatureName({ feature, plural: true }),
 			};
 		},
+		reward: (rewardId) =>
+			rewards.find((reward) => reward.id === rewardId)?.name ?? rewardId,
 		money: (amount) =>
 			formatAmountWithCurrencyPrecision({
 				amount,
