@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
@@ -36,6 +37,13 @@ export const handleLazyRunMigration = createRoute({
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
+
+		// A lazy run is gated by the same rules as `migrations.run`.
+		await checkRouteApproval({
+			ctx,
+			action: "migrations.run",
+			buildFacts: async () => null,
+		});
 
 		const { migrationRunId } = await withMigrationRunClaim({
 			ctx,
