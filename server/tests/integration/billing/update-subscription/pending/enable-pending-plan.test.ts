@@ -421,3 +421,43 @@ test.concurrent(
 		expect(pendingAfter.map((row) => row.id)).toContain(pending!.id);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("enable pending plan: a live plan targeted by id still switches collection method")}`,
+	async () => {
+		const live = products.pro({
+			id: "live-by-id",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_2, ctx, customer, customerId } = await initScenario({
+			customerId: "enable-pending-live-by-id",
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [live] }),
+			],
+			actions: [],
+		});
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: live.id,
+		});
+		const [liveRow] = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: [CusProductStatus.Active],
+		});
+
+		await autumnV2_2.subscriptions.update(
+			enablePending({
+				customerId,
+				pendingId: liveRow!.id,
+				planId: live.id,
+			}),
+		);
+
+		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
+			liveRow!.subscription_ids![0]!,
+		);
+		expect(stripeSubscription.collection_method).toBe("send_invoice");
+	},
+);

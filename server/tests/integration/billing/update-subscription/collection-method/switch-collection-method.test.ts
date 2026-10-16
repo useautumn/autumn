@@ -126,11 +126,9 @@ test.concurrent(
 		// To invoicing
 		await autumnV2_3.billing.update({
 			customer_id: customerId,
-			customer_product_id: before.id,
 			plan_id: pro.id,
 			invoice_mode: {
 				enabled: true,
-				enable_plan_immediately: true,
 				net_terms_days: 15,
 				payment_method_types: ["card"],
 			},
