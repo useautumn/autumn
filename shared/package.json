@@ -69,6 +69,16 @@
 			"types": "./utils/infisical.ts",
 			"import": "./utils/infisical.ts",
 			"default": "./utils/infisical.ts"
+		},
+		"./models/approvalModels/index": {
+			"types": "./models/approvalModels/index.ts",
+			"import": "./models/approvalModels/index.ts",
+			"default": "./models/approvalModels/index.ts"
+		},
+		"./api/roles/roleAccess": {
+			"types": "./api/roles/roleAccess.ts",
+			"import": "./api/roles/roleAccess.ts",
+			"default": "./api/roles/roleAccess.ts"
 		}
 	},
 	"author": "Recase Inc.",
