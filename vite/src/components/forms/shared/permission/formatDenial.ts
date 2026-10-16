@@ -14,16 +14,20 @@ const formatValue = (value: PermissionViolation["limit"]) => {
 	return String(value);
 };
 
-/** A matched condition of the deciding block rule: "Plan is Enterprise". */
+const COMPARISON = /^[<>≤≥≠]/;
+
+/** A matched condition of the deciding block rule: "Plan: Enterprise", "Total ≥ 500 (this request: 900)". */
 export const formatViolation = ({
 	violation,
 }: {
 	violation: PermissionViolation;
 }) => {
-	const { label, operator, limit, actual } = violation;
-	if (!operator) return `${label}: ${formatValue(actual)}`;
+	const { label, limit, actual } = violation;
+	if (typeof limit === "boolean") return `${label}: ${formatValue(actual)}`;
 
-	const condition = `${label} ${operator} ${formatValue(limit)}`;
+	const condition = COMPARISON.test(limit)
+		? `${label} ${limit}`
+		: `${label}: ${limit}`;
 	if (actual === limit) return condition;
 	return `${condition} (this request: ${formatValue(actual)})`;
 };
