@@ -1,5 +1,5 @@
 {
-  "id": "c9b2a512-1d22-4807-b374-1216bc992cb6",
+  "id": "bdb22bc6-b7fc-4ed0-bbb3-54db7f972d8f",
   "prevId": "2cc0b24a-2031-4f7a-921e-b215043a65df",
   "version": "7",
   "dialect": "postgresql",
@@ -2269,6 +2269,21 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_entitlement_id_c": {
+          "name": "idx_customer_entitlements_entitlement_id_c",
+          "columns": [
+            {
+              "expression": "\"entitlement_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -6425,6 +6440,21 @@
               "expression": "entitlement_id",
               "isExpression": false,
               "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_license_entitlements_entitlement_id_c": {
+          "name": "idx_license_entitlements_entitlement_id_c",
+          "columns": [
+            {
+              "expression": "\"entitlement_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
