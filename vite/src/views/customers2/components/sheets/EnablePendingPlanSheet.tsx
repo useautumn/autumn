@@ -3,7 +3,7 @@ import type {
 	FullCusProduct,
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
-import { cp } from "@autumn/shared";
+import { cp, LATEST_VERSION } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { useMemo } from "react";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
@@ -45,6 +45,7 @@ export function EnablePendingPlanSheet() {
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody,
 		enabled: !!requestBody,
+		apiVersion: LATEST_VERSION,
 	});
 	const mutation = useBillingMutation<
 		UpdateSubscriptionV1ParamsInput,
@@ -53,6 +54,7 @@ export function EnablePendingPlanSheet() {
 		customerId: requestBody?.customer_id,
 		path: BILLING_OPERATIONS.updateSubscription.path,
 		buildRequestBody: () => requestBody,
+		apiVersion: LATEST_VERSION,
 		successMessage: "Plan enabled successfully",
 		errorMessage: "Failed to enable plan",
 		onSuccess: closeSheet,
