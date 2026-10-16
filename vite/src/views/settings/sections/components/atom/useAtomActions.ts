@@ -63,7 +63,10 @@ export const useAtomActions = () => {
 				...scoped,
 				volume_size_gib: volumeSizeGib,
 			}),
-		onSuccess: setCache,
+		onSuccess: (cache) => {
+			setCache(cache);
+			queryClient.invalidateQueries({ queryKey: [...queryKey, "update"] });
+		},
 	});
 
 	const retry = useMutation({

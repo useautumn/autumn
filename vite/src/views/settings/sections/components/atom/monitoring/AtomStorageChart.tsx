@@ -8,11 +8,14 @@ import {
 } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bar, LabelList, Line, ReferenceDot, ReferenceLine } from "recharts";
+import { toast } from "sonner";
+import { useAtomUpdateQuery } from "@/hooks/queries/useAtomUpdateQuery";
 import { cn } from "@/lib/utils";
 import { IncreaseStorageDialog } from "../IncreaseStorageDialog";
 import { useAtomActions } from "../useAtomActions";
+import { AtomStorageGrowProgress } from "./AtomStorageGrowProgress";
 import type {
 	AtomMetricsChartData,
 	AtomMetricsSeries,
@@ -27,6 +30,11 @@ import {
 	formatEvictionCount,
 	formatEvictionsCount,
 } from "./atomStorageDisplay";
+import {
+	type AtomStorageGrowth,
+	atomStorageGrowth,
+	isAtomStorageGrowing,
+} from "./atomStorageGrowth";
 import { MonitoringChartCard } from "./MonitoringChartCard";
 import { MonitoringPlot } from "./MonitoringPlot";
 
@@ -190,6 +198,23 @@ const StoragePlots = ({
 	);
 };
 
+/** Toasts the grow's end once, when the card sees it finish or fail. */
+const useGrowthToasts = (growth: AtomStorageGrowth | null) => {
+	const previous = useRef(growth?.phase);
+	useEffect(() => {
+		const wasGrowing =
+			previous.current === "requested" || previous.current === "growing";
+		previous.current = growth?.phase;
+		if (!growth || !wasGrowing) return;
+		if (growth.phase === "complete")
+			toast.success(`Storage grown to ${growth.targetGib} GiB per replica`);
+		if (growth.phase === "failed")
+			toast.error(
+				growth.error ?? `Growing storage to ${growth.targetGib} GiB failed`,
+			);
+	}, [growth?.phase]);
+};
+
 /** How full the fullest replica's volume is, how often Atom evicts to keep it under 80%, and growing it. */
 export const AtomStorageChart = ({
 	cache,
@@ -206,8 +231,21 @@ export const AtomStorageChart = ({
 }) => {
 	const { increaseStorage } = useAtomActions();
 	const [isIncreaseOpen, setIncreaseOpen] = useState(false);
+	const isReady = cache?.status === ByocCacheStatus.Ready;
+	const [isPolling, setPolling] = useState(false);
+	const update = useAtomUpdateQuery({ enabled: isReady, isActive: isPolling });
+	const growth =
+		cache &&
+		atomStorageGrowth({
+			targetGib: cache.volume_size_gib,
+			volumes,
+			update,
+			now: Date.now(),
+		});
+	const isGrowing = isAtomStorageGrowing(growth);
+	useEffect(() => setPolling(isGrowing), [isGrowing]);
+	useGrowthToasts(growth);
 	const hasDisk = Boolean(chartData?.rows.some((row) => row.disk !== null));
-	const canIncrease = cache?.status === ByocCacheStatus.Ready;
 
 	return (
 		<>
@@ -216,21 +254,25 @@ export const AtomStorageChart = ({
 				info={<StorageInfo volumes={volumes} />}
 				description={
 					cache
-						? `${BYOC_CACHE_REPLICAS} × ${cache.volume_size_gib} GiB`
+						? isGrowing
+							? `Growing to ${cache.volume_size_gib} GiB`
+							: `${BYOC_CACHE_REPLICAS} × ${cache.volume_size_gib} GiB`
 						: undefined
 				}
 				action={
-					canIncrease && (
+					isReady && (
 						<Button
 							variant="secondary"
 							size="mini"
 							onClick={() => setIncreaseOpen(true)}
+							disabled={isGrowing}
 						>
 							Increase storage
 							<PlusIcon className="size-3" />
 						</Button>
 					)
 				}
+				notice={growth && <AtomStorageGrowProgress growth={growth} />}
 				summary={
 					<StorageSummary
 						volumes={volumes}

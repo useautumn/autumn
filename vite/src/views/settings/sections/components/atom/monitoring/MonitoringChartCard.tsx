@@ -36,6 +36,7 @@ export const MonitoringChartCard = ({
 	description,
 	readingAt,
 	action,
+	notice,
 	summary,
 	footer,
 	isLoading,
@@ -52,6 +53,8 @@ export const MonitoringChartCard = ({
 	readingAt?: number;
 	/** Takes the reading's place at the right of the title row. */
 	action?: React.ReactNode;
+	/** Shown above everything on the surface, data or not. */
+	notice?: React.ReactNode;
 	summary: React.ReactNode;
 	footer?: React.ReactNode;
 	isLoading: boolean;
@@ -89,6 +92,7 @@ export const MonitoringChartCard = ({
 				ATOM_PAGE_CARD_SURFACE_CELL_CLASS,
 			)}
 		>
+			{notice}
 			{isEmptyCompact && isEmpty && !isLoading ? (
 				<span className="text-sm text-tertiary-foreground">{emptyLabel}</span>
 			) : (
