@@ -1,11 +1,11 @@
 import { z } from "zod/v4";
 
-export const DurationSchema = z.strictObject({
+export const DurationBoundSchema = z.strictObject({
 	length: z.number().int().positive(),
 	unit: z.enum(["day", "month", "year"]),
 });
 
-export type Duration = z.infer<typeof DurationSchema>;
+export type DurationBound = z.infer<typeof DurationBoundSchema>;
 
 const DURATION_OPERATORS = ["$eq", "$lt", "$lte", "$gt", "$gte"] as const;
 
@@ -15,11 +15,11 @@ const DURATION_OPERATORS = ["$eq", "$lt", "$lte", "$gt", "$gte"] as const;
  */
 export const DurationMatcherSchema = z
 	.strictObject({
-		$eq: DurationSchema.optional(),
-		$lt: DurationSchema.optional(),
-		$lte: DurationSchema.optional(),
-		$gt: DurationSchema.optional(),
-		$gte: DurationSchema.optional(),
+		$eq: DurationBoundSchema.optional(),
+		$lt: DurationBoundSchema.optional(),
+		$lte: DurationBoundSchema.optional(),
+		$gt: DurationBoundSchema.optional(),
+		$gte: DurationBoundSchema.optional(),
 	})
 	.refine(
 		(matcher) =>
