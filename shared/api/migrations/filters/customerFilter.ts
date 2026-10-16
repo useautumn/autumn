@@ -1,4 +1,8 @@
 import { z } from "zod/v4";
+import {
+	type BooleanMatcher,
+	BooleanMatcherSchema,
+} from "../../common/filters/matcher.js";
 import { arrayFilter } from "./arrayFilter.js";
 import { StringMatcherSchema } from "./matcher.js";
 import { PlanFilterSchema } from "./planFilter.js";
@@ -19,12 +23,16 @@ import { PlanItemFilterSchema } from "./planItemFilter.js";
  * is its own `CustomerFilter` (typically a single `plan` quantifier), so
  * `$and: [{ plan: free }, { plan: pro }]` means "has free AND also has pro"
  * — two separate existence checks, not one plan that is both.
+ *
+ * `has_paid` is customer-wide, never per entity: has the customer ever had a
+ * paid invoice with a total above zero (refunds still count).
  */
 type PlanFilterValue = z.infer<typeof PlanFilterSchema>;
 type PlanItemFilterValue = z.infer<typeof PlanItemFilterSchema>;
 
 export type CustomerFilter = {
 	customer_id?: z.infer<typeof StringMatcherSchema>;
+	has_paid?: BooleanMatcher;
 	plan?:
 		| PlanFilterValue
 		| {
@@ -46,6 +54,7 @@ export type CustomerFilter = {
 export const CustomerFilterSchema: z.ZodType<CustomerFilter> = z.lazy(() =>
 	z.object({
 		customer_id: StringMatcherSchema.optional(),
+		has_paid: BooleanMatcherSchema.optional(),
 		plan: arrayFilter(PlanFilterSchema).optional(),
 		item: arrayFilter(PlanItemFilterSchema).optional(),
 		$and: z.array(CustomerFilterSchema).min(1).optional(),
