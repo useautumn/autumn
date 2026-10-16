@@ -246,6 +246,24 @@ describe("billing footer", () => {
 		);
 	});
 
+	test("an enforced deny leaves the invoice stage reachable", () => {
+		const html = render({
+			preview: enforcedDeny,
+			children: (
+				<BillingFooter
+					layout="stacked"
+					invoiceAction={<button type="button">Send an invoice</button>}
+				>
+					<button type="button">Attach</button>
+				</BillingFooter>
+			),
+		});
+		const locked = html.slice(html.indexOf("<fieldset disabled="));
+		expect(locked).toContain("Attach");
+		expect(locked).not.toContain("Send an invoice");
+		expect(html).toContain("Send an invoice");
+	});
+
 	test("a field section renders only its violations", () => {
 		const html = render({
 			preview: enforcedDeny,
