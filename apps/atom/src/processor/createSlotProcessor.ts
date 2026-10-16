@@ -4,7 +4,7 @@ import { CannotAnswerError } from "../lib/forward/cannotAnswerError.js";
 import { check } from "./actions/check/check.js";
 import { checkResponseToJson } from "./actions/check/checkResponseToJson.js";
 import { deleteSubject } from "./actions/deleteSubject/deleteSubject.js";
-import { finalize } from "./actions/finalize/finalize.js";
+import { undecidedFinalize } from "./actions/finalize/undecidedFinalize.js";
 import { setSubject } from "./actions/setSubject/setSubject.js";
 import { track } from "./actions/track/track.js";
 import { createCallerKeyClaims } from "./callerKeys/createCallerKeyClaims.js";
@@ -139,7 +139,7 @@ export const createSlotProcessor = ({
 			return decide({
 				customerId: request.params.customer_id,
 				movedFrom: request.movedFrom,
-				run: () => finalize({ ctx, request }),
+				run: () => undecidedFinalize({ ctx, request }),
 			});
 		},
 		setSubject: async (params) => {
