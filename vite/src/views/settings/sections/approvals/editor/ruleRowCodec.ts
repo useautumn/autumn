@@ -99,7 +99,7 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 				return values.length > 0 ? values.map(toPlan) : null;
 			return first ? toPlan(first) : null;
 		case "yes_no":
-			return first === "true";
+			return first === undefined ? null : first === "true";
 		case "trial": {
 			const length = toNumber(first);
 			return length === null
