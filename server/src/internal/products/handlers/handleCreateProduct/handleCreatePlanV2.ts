@@ -6,6 +6,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
@@ -25,6 +26,11 @@ export const handleCreatePlanV2 = createRoute({
 				...body,
 			},
 		}) as CreateProductV2Params;
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "plans.create", planId: body.plan_id }],
+		});
 
 		await createProduct({
 			ctx,

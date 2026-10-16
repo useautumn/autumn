@@ -14,6 +14,7 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature";
 
 export const handleUpdateFeatureV1 = createRoute({
@@ -40,6 +41,13 @@ export const handleUpdateFeatureV1 = createRoute({
 				statusCode: 400,
 			});
 		}
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [feature_id, body.id].flatMap((featureId) =>
+				featureId ? [{ action: "features.update" as const, featureId }] : [],
+			),
+		});
 
 		const newConfig = featureV1ToDbFeatureConfig({
 			apiFeature: body,

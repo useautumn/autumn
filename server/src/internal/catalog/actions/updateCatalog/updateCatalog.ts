@@ -9,6 +9,8 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { legacyCatalogParamsToApprovalChecks } from "@/internal/approvals/facts/catalog/legacyCatalogParamsToApprovalChecks.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
@@ -542,17 +544,28 @@ export const updateCatalog = async ({
 				plans: params.plans ?? [],
 			}).filter((removal) => !params.skip_plan_ids.includes(removal.planId));
 
-	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
-	await upsertPlans({ ctx, params });
-	await applyCatalogConfigResources({ ctx, params, preview: configPreview });
-	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
-
 	const replaceFeatureIds = params.skip_deletions
 		? []
 		: deriveReplaceFeatureIds({
 				features: ctx.features,
 				desiredFeatures: params.features ?? [],
 			}).filter((featureId) => !params.skip_feature_ids.includes(featureId));
+
+	await checkCatalogApprovals({
+		ctx,
+		checks: legacyCatalogParamsToApprovalChecks({
+			params,
+			existingPlanIds: productsBeforeUpdate.map(({ id }) => id),
+			existingFeatureIds: ctx.features.map(({ id }) => id),
+			removedPlanIds: replacePlanIds.map(({ planId }) => planId),
+			removedFeatureIds: replaceFeatureIds,
+		}),
+	});
+
+	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
+	await upsertPlans({ ctx, params });
+	await applyCatalogConfigResources({ ctx, params, preview: configPreview });
+	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
 	await applyMissingFeatureRemovals({ ctx, featureIds: replaceFeatureIds });
 
 	return resolveCatalogUpdateResponse({ ctx, params });
