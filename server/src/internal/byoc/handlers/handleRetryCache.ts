@@ -7,6 +7,7 @@ export const handleRetryCache = createRoute({
 	body: RetryByocCacheParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		return c.json(await retryCache({ ctx }));
+		const { atom_id } = c.req.valid("json");
+		return c.json(await retryCache({ ctx, atomId: atom_id }));
 	},
 });

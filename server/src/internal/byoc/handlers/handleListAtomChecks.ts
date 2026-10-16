@@ -7,6 +7,7 @@ export const handleListAtomChecks = createRoute({
 	body: ListAtomChecksParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		return c.json(await listAtomChecks({ ctx }));
+		const { atom_id } = c.req.valid("json");
+		return c.json(await listAtomChecks({ ctx, atomId: atom_id }));
 	},
 });

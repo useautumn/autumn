@@ -53,6 +53,10 @@ export const ByocStackNameSchema = z
 export const ApiByocCacheSchema = z.object({
 	id: z.string().describe("This Atom; a replacement is a new one."),
 	env: z.enum(AppEnv).describe("The environment this Atom serves."),
+	name: z
+		.string()
+		.nullable()
+		.describe("What you call this Atom in your dashboard, when you named it."),
 	stack_name: z.string().describe("The stack's name in your cloud."),
 	status: ByocCacheStatusSchema,
 	deployment_id: z
@@ -120,8 +124,29 @@ const offeredMachineError = {
 	message: `cpu and memory must be one of: ${OFFERED_MACHINES}`,
 };
 
+/** Names one of the env's Atoms; omitted, the env's only one. */
+const AtomIdParamsSchema = z.object({
+	atom_id: z
+		.string()
+		.optional()
+		.describe(
+			"The Atom to act on. Required when the environment has more than one; defaults to its only one.",
+		),
+});
+
+const ByocAtomNameSchema = z.string().trim().min(1).max(64);
+
 export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 	.extend({
+		atom_id: z
+			.string()
+			.optional()
+			.describe(
+				"An Atom still waiting on its setup, for a fresh setup link. Omitted, a new Atom is created.",
+			),
+		name: ByocAtomNameSchema.optional().describe(
+			"What you call the new Atom in your dashboard, e.g. its region.",
+		),
 		region: ByocCacheRegionSchema.optional().describe(
 			"The AWS region to set Atom up in.",
 		),
@@ -135,10 +160,9 @@ export const CreateByocCacheParamsSchema = ByocCacheResourcesSchema.partial()
 		`The machine to start Atom on; defaults to ${DEFAULT_BYOC_CACHE_MACHINE.cpu} vCPU / ${DEFAULT_BYOC_CACHE_MACHINE.memory} GiB.`,
 	);
 
-export const ResizeByocCacheParamsSchema = ByocCacheResourcesSchema.refine(
-	isOfferedMachine,
-	offeredMachineError,
-);
+export const ResizeByocCacheParamsSchema = ByocCacheResourcesSchema.extend(
+	AtomIdParamsSchema.shape,
+).refine(isOfferedMachine, offeredMachineError);
 
 export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 	setup_url: z
@@ -152,7 +176,7 @@ export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 		.describe("Sent as `x-atom-token` on Autumn's pushes to Atom."),
 });
 
-export const GetByocCacheParamsSchema = z.object({});
+export const GetByocCacheParamsSchema = AtomIdParamsSchema;
 
 export const GetByocCacheResponseSchema = z.object({
 	cache: ApiByocCacheSchema.nullable(),
@@ -176,11 +200,33 @@ export const DeleteByocCacheParamsSchema = z.object({
 		.string()
 		.optional()
 		.describe(
-			"An Atom whose removal stopped, to retry it. Defaults to the env's Atom.",
+			"The Atom to delete, or one whose removal stopped, to retry it. Required when the environment has more than one Atom.",
 		),
 });
 
-export const RetryByocCacheParamsSchema = z.object({});
+export const RetryByocCacheParamsSchema = AtomIdParamsSchema;
+
+export const FinishByocCacheSetupParamsSchema = AtomIdParamsSchema;
+
+export const ListByocAtomsParamsSchema = z.object({});
+
+export const ListByocAtomsResponseSchema = z.object({
+	atoms: z
+		.array(ApiByocCacheSchema)
+		.describe("The environment's Atoms, oldest first."),
+	removing: GetByocCacheResponseSchema.shape.removing,
+	next_stack_name: z
+		.string()
+		.describe("The name Autumn gives the next Atom's stack in your cloud."),
+	next_stack_name_suffix: z
+		.string()
+		.describe(
+			"What Autumn adds after `-` to the name you pick for the next Atom.",
+		),
+	max_atoms: z
+		.number()
+		.describe("How many Atoms the environment can run at once."),
+});
 
 export type ApiByocCache = z.infer<typeof ApiByocCacheSchema>;
 export type CreateByocCacheResponse = z.infer<
@@ -189,3 +235,5 @@ export type CreateByocCacheResponse = z.infer<
 export type GetByocCacheResponse = z.infer<typeof GetByocCacheResponseSchema>;
 export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
 export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;
+export type ByocAtomIdParams = z.infer<typeof AtomIdParamsSchema>;
+export type ListByocAtomsResponse = z.infer<typeof ListByocAtomsResponseSchema>;

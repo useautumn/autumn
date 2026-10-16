@@ -87,7 +87,10 @@ export const useAtomSetupForm = ({
 		validators: { onSubmit: AtomSetupSchema },
 		onSubmit: async ({ value }) => {
 			try {
-				await startSetup(setupValuesToCreateParams(value));
+				await startSetup({
+					...setupValuesToCreateParams(value),
+					atom_id: cache?.id,
+				});
 				onStarted();
 			} catch (error) {
 				toast.error(getBackendErr(error, "Failed to set up Atom"));

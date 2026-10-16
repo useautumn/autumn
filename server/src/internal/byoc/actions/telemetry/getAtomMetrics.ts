@@ -6,7 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import { queryAtomMetrics } from "./atomLogs/queryAtomMetrics.js";
 
-/** The env's Atom's CPU, memory and traffic over the range, for its Monitoring charts. */
+/** An Atom's CPU, memory and traffic over the range, for its Monitoring charts. */
 export const getAtomMetrics = async ({
 	ctx,
 	params,
@@ -14,7 +14,10 @@ export const getAtomMetrics = async ({
 	ctx: AutumnContext;
 	params: GetAtomMetricsParams;
 }): Promise<GetAtomMetricsResponse> => {
-	const cacheDeployment = await cacheDeploymentRepo.find({ ctx });
+	const cacheDeployment = await cacheDeploymentRepo.find({
+		ctx,
+		atomId: params.atom_id,
+	});
 	if (!cacheDeployment?.deployment_id)
 		return { period_seconds: 0, points: [], latest: null };
 	return queryAtomMetrics({

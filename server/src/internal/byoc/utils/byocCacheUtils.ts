@@ -102,6 +102,21 @@ export const atomStackName = ({
 		label: [base, atomStackNameSuffix({ owner, atomId })].join("-"),
 	});
 
+/** The stack name the owner's next Atom takes, and the suffix Autumn adds to a name the org picks for it. */
+export const nextAtomStackName = ({
+	owner,
+	existingAtomIds,
+}: {
+	owner: AtomOwner;
+	existingAtomIds: string[];
+}) => {
+	const atomId = nextAtomId({ owner, existingAtomIds });
+	return {
+		stackName: atomStackName({ owner, atomId }),
+		suffix: atomStackNameSuffix({ owner, atomId }),
+	};
+};
+
 /** An Atom's names, as its deployer starts it. */
 export const atomNames = ({
 	owner,
@@ -199,9 +214,42 @@ export const cacheNotFailed = () =>
 		statusCode: 409,
 	});
 
-/** One cache change per env at a time. */
-export const cacheLockKey = ({ ctx }: { ctx: AutumnContext }) =>
-	`lock:byoc-cache:${ctx.org.id}:${ctx.env}`;
+/** How many Atoms an env runs at once. Two Atoms can each grant one customer's whole balance until a push lands, so one until that's settled. */
+export const MAX_ATOMS_PER_ENV = 1;
+
+/** With an id, one change per Atom at a time; without, one new Atom per env at a time, since each takes the next free id. */
+export const cacheLockKey = ({
+	ctx,
+	atomId,
+}: {
+	ctx: AutumnContext;
+	atomId?: string;
+}) =>
+	[`lock:byoc-cache:${ctx.org.id}:${ctx.env}`, atomId]
+		.filter(Boolean)
+		.join(":");
+
+export const atomIdRequired = () =>
+	new RecaseError({
+		message:
+			"This environment has more than one Atom, so name the one you mean with atom_id.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+
+export const atomNotFound = ({ atomId }: { atomId: string }) =>
+	new RecaseError({
+		message: `No Atom ${atomId} in this environment.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 404,
+	});
+
+export const atomLimitReached = () =>
+	new RecaseError({
+		message: `This environment already runs ${MAX_ATOMS_PER_ENV} Atoms. Delete one to create another.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 409,
+	});
 
 export const cacheDeploymentToApiCache = ({
 	cacheDeployment,
@@ -212,6 +260,7 @@ export const cacheDeploymentToApiCache = ({
 }): ApiByocCache => ({
 	id: cacheDeployment.id,
 	env: cacheDeployment.env,
+	name: cacheDeployment.name,
 	stack_name: cacheDeploymentStackName({ cacheDeployment, org }),
 	status: cacheDeployment.status,
 	deployment_id: cacheDeployment.deployment_id,
