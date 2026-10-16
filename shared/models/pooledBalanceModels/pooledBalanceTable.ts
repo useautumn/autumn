@@ -171,6 +171,10 @@ export const pooledBalanceContributions = pgTable(
 			.on(table.pooled_balance_id)
 			.where(sql`${table.effective_at} IS NOT NULL`)
 			.concurrently(),
+		// Serves the ON DELETE CASCADE from customer_products.
+		index("idx_pooled_balance_contributions_source_product")
+			.on(table.source_customer_product_id)
+			.concurrently(),
 	],
 );
 

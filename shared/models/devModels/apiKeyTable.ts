@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -31,6 +32,9 @@ export const apiKeys = pgTable(
 			name: "api_keys_org_id_fkey",
 		}).onDelete("cascade"),
 		unique("api_keys_hashed_key_key").on(table.hashed_key),
+		index("idx_api_keys_org_env_id")
+			.on(table.org_id, table.env, sql`${table.id} DESC`)
+			.concurrently(),
 	],
 );
 

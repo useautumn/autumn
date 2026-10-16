@@ -1,5 +1,5 @@
 {
-  "id": "03a7ae90-8e80-4fef-beb4-09cb459dcbde",
+  "id": "8d91e7c5-865d-45c4-af94-37efab7f24b3",
   "prevId": "27612300-7ac1-471f-b3dd-8db41536f87c",
   "version": "7",
   "dialect": "postgresql",
@@ -430,7 +430,35 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_api_keys_org_env_id": {
+          "name": "idx_api_keys_org_env_id",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"id\" DESC",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "api_keys_org_id_fkey": {
           "name": "api_keys_org_id_fkey",
@@ -535,13 +563,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "volume_size_gib": {
-          "name": "volume_size_gib",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 20
         },
         "network": {
           "name": "network",
@@ -2263,6 +2284,21 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_entitlement_id_c": {
+          "name": "idx_customer_entitlements_entitlement_id_c",
+          "columns": [
+            {
+              "expression": "\"entitlement_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -6426,6 +6462,21 @@
           "concurrently": true,
           "method": "btree",
           "with": {}
+        },
+        "idx_license_entitlements_entitlement_id_c": {
+          "name": "idx_license_entitlements_entitlement_id_c",
+          "columns": [
+            {
+              "expression": "\"entitlement_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7055,6 +7106,33 @@
           "isUnique": false,
           "where": "\"migration_item_runs\".\"item_kind\" = 'customer'",
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_migration_item_runs_reporting": {
+          "name": "idx_migration_item_runs_reporting",
+          "columns": [
+            {
+              "expression": "migration_internal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "item_kind",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "migration_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -8046,7 +8124,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_oauth_refresh_token_token": {
+          "name": "idx_oauth_refresh_token_token",
+          "columns": [
+            {
+              "expression": "token",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "oauth_refresh_token_client_id_oauth_client_client_id_fk": {
           "name": "oauth_refresh_token_client_id_oauth_client_client_id_fk",
@@ -8407,6 +8501,49 @@
           "columns": [
             {
               "expression": "(\"live_stripe_connect\"->>'account_id')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_organizations_redis_configured": {
+          "name": "idx_organizations_redis_configured",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"organizations\".\"redis_config\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_organizations_owner_sandbox_created": {
+          "name": "idx_organizations_owner_sandbox_created",
+          "columns": [
+            {
+              "expression": "created_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_sandbox",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"createdAt\" DESC",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -8929,6 +9066,21 @@
           ],
           "isUnique": false,
           "where": "\"pooled_balance_contributions\".\"effective_at\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_pooled_balance_contributions_source_product": {
+          "name": "idx_pooled_balance_contributions_source_product",
+          "columns": [
+            {
+              "expression": "source_customer_product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": true,
           "method": "btree",
           "with": {}

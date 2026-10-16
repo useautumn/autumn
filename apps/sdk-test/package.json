@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@autumn/atmn-old": "workspace:*",
+    "@tanstack/react-form": "^1.23.8",
+    "@tanstack/react-query": "catalog:",
     "autumn-js": "workspace:*",
     "better-auth": "catalog:",
     "kysely": "^0.28.11",
