@@ -23,6 +23,19 @@ const STRING_OPERATORS: Record<string, string> = {
 	$nin: "is_none_of",
 };
 
+/** Each number operator's opposite; the map is its own inverse. */
+export const NEGATED_NUMBER_OPERATORS: Record<string, string> = {
+	eq: "ne",
+	ne: "eq",
+	lt: "gte",
+	lte: "gt",
+	gt: "lte",
+	gte: "lt",
+};
+
+export const isCapOperator = (operator: string) =>
+	operator === "lt" || operator === "lte";
+
 /** Mongo convention: equality ("is", "=") is the bare value. */
 export const toMatcher = ({ operator, value }: RowRead) => {
 	const key = MATCHER_KEYS[operator];
@@ -61,14 +74,46 @@ const isPlanSelection = (value: unknown): value is PlanSelection =>
 	value.plan_id !== "" &&
 	(value.version === undefined || typeof value.version === "number");
 
-/** Null when the picker has no valid choice yet. */
-export const toPlanFilter = (value: unknown) =>
-	isPlanSelection(value) ? toSelection(value) : null;
+/**
+ * Version-less choices fit one `$in`; a pinned version needs a branch per choice.
+ * Null when the picker has no valid choice yet.
+ */
+export const toPlanFilter = (value: unknown) => {
+	if (!Array.isArray(value)) {
+		return isPlanSelection(value) ? toSelection(value) : null;
+	}
+	if (value.length === 0 || !value.every(isPlanSelection)) return null;
+	if (value.every((selection) => selection.version === undefined)) {
+		return { plan_id: { $in: value.map((selection) => selection.plan_id) } };
+	}
+	return { $or: value.map(toSelection) };
+};
 
-export const fromPlanFilter = (filter: unknown): PlanSelection | null =>
-	isPlainObject(filter) && typeof filter.plan_id === "string"
-		? toSelection(filter as PlanSelection)
-		: null;
+const isPlanBranches = (branches: unknown) =>
+	Array.isArray(branches) &&
+	branches.every((branch) => isPlainObject(branch) && "plan_id" in branch);
+
+/** Every plan choice a filter holds: one plan (`plan_id`), or several (`$in` / `$or`). */
+export const planSelectionsOf = (
+	filter: unknown,
+): (PlanSelection | PlanSelection[])[] => {
+	if (!isPlainObject(filter)) return [];
+	const { plan_id: planId, $or: branches } = filter;
+	const ids =
+		isPlainObject(planId) && Array.isArray(planId.$in) ? planId.$in : null;
+	return [
+		...(typeof planId === "string"
+			? [toSelection(filter as PlanSelection)]
+			: []),
+		...(ids ? [ids.map((id: string) => ({ plan_id: id }))] : []),
+		...(isPlanBranches(branches)
+			? [(branches as PlanSelection[]).map(toSelection)]
+			: []),
+	];
+};
+
+export const fromPlanFilter = (filter: unknown) =>
+	planSelectionsOf(filter)[0] ?? null;
 
 /** `{ $ne: null }` / `{ $eq: null }`: matches by presence alone, so nothing merges into it. */
 const isNullMatcher = (value: Filter) =>
@@ -90,20 +135,33 @@ export const get = (value: unknown, path: string[]) =>
 		value,
 	);
 
+/**
+ * "No plan is X" and "no plan is Y" aren't "no plan is both", and each
+ * customer plan check stands alone ("has A", "has B"), so these never merge.
+ */
+const keepsApart = ({ key, parent }: { key: string; parent?: string }) =>
+	key === "$none" || parent === "plan";
+
 const deepMerge = ({
 	base,
 	addition,
+	parent,
 }: {
 	base: Filter;
 	addition: Filter;
+	parent?: string;
 }): Filter | null => {
 	const merged = { ...base };
 	for (const [key, value] of Object.entries(addition)) {
 		const current = merged[key];
 		if (!(key in merged)) {
 			merged[key] = value;
-		} else if (isMergeable(current) && isMergeable(value)) {
-			const inner = deepMerge({ base: current, addition: value });
+		} else if (
+			isMergeable(current) &&
+			isMergeable(value) &&
+			!keepsApart({ key, parent })
+		) {
+			const inner = deepMerge({ base: current, addition: value, parent: key });
 			if (!inner) return null;
 			merged[key] = inner;
 		} else {

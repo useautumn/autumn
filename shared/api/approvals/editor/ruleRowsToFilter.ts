@@ -9,12 +9,18 @@ import {
 	EDITOR_FIELDS,
 	type EditorGroup,
 	type EditorRow,
+	PINNED_FIELDS,
 	VALUELESS_OPERATORS,
 } from "./editorFields";
 import { FIELD_CODECS } from "./fieldCodecs";
-import { type Filter, mergeFilters } from "./filterParts";
+import { type Filter, isEmptyObject, mergeFilters } from "./filterParts";
 
-export type EditorRowIssue = { group: number; row: number; message: string };
+/** `group: "pinned"` is the row above the groups. */
+export type EditorRowIssue = {
+	group: number | "pinned";
+	row: number;
+	message: string;
+};
 
 export type RuleRowsToFilterResult =
 	| { ok: true; filter: ApprovalRuleFilter | null }
@@ -23,9 +29,11 @@ export type RuleRowsToFilterResult =
 const rowIssue = ({
 	shape,
 	row,
+	pinned,
 }: {
 	shape: ApprovalFilterKey;
 	row: EditorRow;
+	pinned: boolean;
 }) => {
 	const fields: Record<string, readonly string[]> = EDITOR_FIELDS[shape];
 	if (!Object.keys(fields).includes(row.field)) {
@@ -33,6 +41,11 @@ const rowIssue = ({
 	}
 	if (!fields[row.field].includes(row.operator)) {
 		return "This operator isn't available for this condition.";
+	}
+	if (pinned !== (PINNED_FIELDS[shape] === row.field)) {
+		return pinned
+			? "Only the Feature condition sits above the groups."
+			: "Feature is chosen once, above the groups.";
 	}
 	return null;
 };
@@ -87,7 +100,7 @@ const groupToFilter = ({
 		.map((row, index) => ({ row, index }))
 		.sort((a, b) => order.indexOf(a.row.field) - order.indexOf(b.row.field));
 	for (const { row, index } of inBoardOrder) {
-		const fieldIssue = rowIssue({ shape, row });
+		const fieldIssue = rowIssue({ shape, row, pinned: false });
 		const addition = fieldIssue ? null : encodeRow({ shape, effect, row });
 		if (addition) {
 			filter = mergeFilters({ base: filter, addition });
@@ -101,25 +114,42 @@ const groupToFilter = ({
 
 /**
  * Editor rows → the rule's stored filter; null = always. Groups are ORed,
- * rows in a group ANDed, and array quantifiers follow the rule's effect.
+ * rows in a group ANDed, the pinned row applies to every group, and array
+ * quantifiers follow the rule's effect.
  */
 export const ruleRowsToFilter = ({
 	shape,
 	effect,
+	pinned = null,
 	groups,
 }: {
 	shape: ApprovalFilterKey;
 	effect: RuleEffect;
+	pinned?: EditorRow | null;
 	groups: EditorGroup[];
 }): RuleRowsToFilterResult => {
+	const pinnedFilter = pinned && encodeRow({ shape, effect, row: pinned });
+	const pinnedIssue =
+		pinned &&
+		(rowIssue({ shape, row: pinned, pinned: true }) ??
+			(pinnedFilter ? null : "Choose a value for this condition."));
 	const encoded = groups
 		.map((rows, group) => groupToFilter({ shape, effect, rows, group }))
 		.filter((_, group) => groups[group].length > 0);
-	const issues = encoded.flatMap((group) => group.issues);
+	const issues = [
+		...(pinnedIssue
+			? [{ group: "pinned" as const, row: 0, message: pinnedIssue }]
+			: []),
+		...encoded.flatMap((group) => group.issues),
+	];
 	if (issues.length > 0) return { ok: false, issues };
 
 	const filters = encoded.map((group) => group.filter);
-	if (filters.length === 0) return { ok: true, filter: null };
-	const filter = filters.length > 1 ? { $or: filters } : filters[0];
-	return { ok: true, filter: filter as ApprovalRuleFilter };
+	const conditions = filters.length > 1 ? { $or: filters } : (filters[0] ?? {});
+	// Groups never hold the pinned field, so its keys can't collide with theirs.
+	const filter = { ...pinnedFilter, ...conditions };
+	return {
+		ok: true,
+		filter: isEmptyObject(filter) ? null : (filter as ApprovalRuleFilter),
+	};
 };

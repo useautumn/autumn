@@ -102,6 +102,7 @@ test.each(cells)(
 		});
 		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 			editable: true,
+			pinned: null,
 			groups: [rows],
 		});
 	},

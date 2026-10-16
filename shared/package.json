@@ -69,6 +69,11 @@
 			"types": "./utils/infisical.ts",
 			"import": "./utils/infisical.ts",
 			"default": "./utils/infisical.ts"
+		},
+		"./api/approvals/editor/index": {
+			"types": "./api/approvals/editor/index.ts",
+			"import": "./api/approvals/editor/index.ts",
+			"default": "./api/approvals/editor/index.ts"
 		}
 	},
 	"author": "Recase Inc.",

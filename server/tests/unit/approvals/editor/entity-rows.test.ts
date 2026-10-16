@@ -51,6 +51,7 @@ test.each(cells)("$effect · $name", ({ effect, row, filter }) => {
 	);
 	expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 		editable: true,
+		pinned: null,
 		groups: [[row]],
 	});
 });
@@ -82,6 +83,7 @@ test("two Entity rows stay separate checks instead of one invalid object", () =>
 	).toEqual({ ok: true, filter });
 	expect(ruleFilterToRows({ shape, effect: "block", filter })).toEqual({
 		editable: true,
+		pinned: null,
 		groups: [rows],
 	});
 });
@@ -110,5 +112,5 @@ test("PRD example C's hand-written $or opens read-only; its two-group form is ed
 	if (!stored.ok) throw new Error(JSON.stringify(stored.issues));
 	expect(
 		ruleFilterToRows({ shape, effect: "block", filter: stored.filter }),
-	).toEqual({ editable: true, groups });
+	).toEqual({ editable: true, pinned: null, groups });
 });
