@@ -87,7 +87,7 @@ To try the edge cache on a single call, leave `useEdge` off and call it directly
 Each edge cache has its own endpoint URL, shown on its page under **Settings → Edge cache**. Pass a client the `edgeURL` of the edge cache it should use, usually the one closest to the servers it runs on. Every edge cache in an environment holds all of that environment's customers, so any of them can answer for any customer.
 
 <Note>
-Each environment runs one edge cache for now.
+Each environment can run up to three edge caches. Each one answers from its own copy, so a customer whose calls go to two edge caches at once can briefly be granted more than their balance; the extra lands in Autumn as overage.
 </Note>
 
 ## What the edge cache handles
