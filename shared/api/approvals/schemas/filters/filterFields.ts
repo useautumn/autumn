@@ -33,12 +33,16 @@ export const RelativeDateMatcherSchema = z.union([
 export type RelativeDateMatcher = z.infer<typeof RelativeDateMatcherSchema>;
 
 /**
- * Fields more than one `when` shape has. Shapes must reuse these instances:
+ * Fields more than one filter shape has. Shapes must reuse these instances:
  * rules mixing actions only get the fields whose schemas are identical.
  */
-export const sharedWhenFields = {
+export const sharedFilterFields = {
 	customer: CustomerFilterSchema.optional(),
 	outgoing: arrayFilter(PlanFilterSchema).optional(),
+	/** `null` = the change is at the customer level; otherwise the entity's type. */
+	entity: nullableObjectFilter(
+		z.object({ feature_id: IdMatcherSchema.optional() }),
+	).optional(),
 	feature_id: IdMatcherSchema.optional(),
 	included_grant: NumberMatcherSchema.optional(),
 	refund: nullableObjectFilter(

@@ -1,9 +1,8 @@
 /** Contract: a rule's actions come from one area; picking one locks the others until cleared. */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalAction } from "@/views/settings/sections/approvals/approvalsStub";
+import type { ApprovalAction, ApprovalArea } from "@autumn/shared";
 import {
-	type ApprovalArea,
 	actionAreas,
 	toggleAction,
 } from "@/views/settings/sections/approvals/editor/ruleActions";
@@ -36,7 +35,7 @@ describe("editor area lock", () => {
 		]).toEqual([
 			"Billing",
 			"Attach",
-			"Update",
+			"Update subscription",
 			"Set plans",
 			"Create schedule",
 			"Cancel",

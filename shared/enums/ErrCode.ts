@@ -225,6 +225,9 @@ export const ErrCode = {
 	HistoricalPlanVersionCannotBeDefault:
 		"historical_plan_version_cannot_be_default",
 
+	// Approvals
+	InvalidApprovalRule: "invalid_approval_rule",
+
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };

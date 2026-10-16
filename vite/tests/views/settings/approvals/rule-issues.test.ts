@@ -1,11 +1,9 @@
 /** Contract: the editor reads a rejected save's issues from `details.issues`. */
 
 import { describe, expect, test } from "bun:test";
+import type { ApprovalRuleIssue } from "@autumn/shared";
 import { AxiosError, type AxiosResponse } from "axios";
-import {
-	type ApprovalRuleIssue,
-	invalidRuleIssues,
-} from "@/hooks/queries/useApprovalRulesMutations";
+import { invalidRuleIssues } from "@/hooks/queries/useApprovalRulesMutations";
 
 const axiosError = (data: unknown) =>
 	new AxiosError("Bad request", "400", undefined, undefined, {

@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { arrayFilter } from "../../../common/filters/arrayFilter";
+import { DurationMatcherSchema } from "../../../common/filters/durationMatcher";
 import {
 	BooleanMatcherSchema,
 	enumMatcher,
@@ -10,12 +11,12 @@ import {
 	type PlanFilter,
 	PlanFilterSchema,
 } from "../../../migrations/filters/planFilter";
-import { IdMatcherSchema } from "./whenFields";
+import { IdMatcherSchema } from "./filterFields";
 
+/** `null` = no trial. A shape = there is a trial and it matches. */
 const FreeTrialFilterSchema = nullableObjectFilter(
 	z.object({
-		duration_length: NumberMatcherSchema.optional(),
-		duration_type: enumMatcher(["day", "month", "year"]).optional(),
+		duration: DurationMatcherSchema.optional(),
 		card_required: BooleanMatcherSchema.optional(),
 		on_end: enumMatcher(["bill", "revert"]).optional(),
 	}),
@@ -39,7 +40,6 @@ const FeatureQuantityFilterSchema: z.ZodType<FeatureQuantityFilter> = z.lazy(
 );
 
 type PlanChangeFields = {
-	/** `null` = no trial. A shape = there is a trial and it matches. */
 	free_trial?: z.infer<typeof FreeTrialFilterSchema>;
 	feature_quantities?: z.infer<
 		ReturnType<typeof arrayFilter<typeof FeatureQuantityFilterSchema>>
@@ -59,7 +59,7 @@ const PlanChangeFieldsSchema: z.ZodType<PlanChangeFields> = z.lazy(() =>
 		feature_quantities: arrayFilter(FeatureQuantityFilterSchema).optional(),
 		customized: BooleanMatcherSchema.optional(),
 		$and: z.array(PlanChangeFilterSchema).min(1).optional(),
-		$or: z.array(PlanChangeFilterSchema).optional(),
+		$or: z.array(PlanChangeFilterSchema).min(1).optional(),
 	}),
 );
 

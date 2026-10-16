@@ -1,3 +1,4 @@
+import type { ApprovalRule } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -6,7 +7,6 @@ import {
 	IconButton,
 } from "@autumn/ui";
 import { DotsThreeIcon } from "@phosphor-icons/react";
-import type { ApprovalRule } from "./approvalsStub";
 
 export type RuleRowActions = {
 	onEdit: (rule: ApprovalRule) => void;

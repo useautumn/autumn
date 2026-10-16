@@ -1,4 +1,9 @@
-import type { FullProduct, ProductCounts, ProductV2 } from "@autumn/shared";
+import type {
+	AppEnv,
+	FullProduct,
+	ProductCounts,
+	ProductV2,
+} from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { PERSIST_META } from "@/lib/queryPersistence";
@@ -14,18 +19,20 @@ export type ProductListItem = ProductV2 &
  * Fetch all products for the current org.
  *
  * Pass `allVersions: true` to include every version of each plan (the default
- * route only returns the latest per public id).
+ * route only returns the latest per public id). `env` reads another env's catalog.
  */
 export const useProductsQuery = ({
 	allVersions = false,
 	enabled = true,
+	env,
 }: {
 	allVersions?: boolean;
 	enabled?: boolean;
+	env?: AppEnv;
 } = {}) => {
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ env });
 	const queryClient = useQueryClient();
-	const buildKey = useQueryKeyFactory();
+	const buildKey = useQueryKeyFactory({ env });
 
 	const fetchProducts = async () => {
 		const { data } = await axiosInstance.get("/products/products", {

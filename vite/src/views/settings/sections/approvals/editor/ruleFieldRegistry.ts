@@ -1,4 +1,8 @@
 import {
+	APPROVAL_FILTER_FIELD_LABELS,
+	type ApprovalFilterKey,
+} from "@autumn/shared";
+import {
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorOperator,
@@ -8,10 +12,6 @@ import {
 } from "@autumn/shared/api/approvals/editor/index";
 import { createFieldRegistry } from "@/components/filters/fieldRegistry";
 import type { FilterOperatorOption } from "@/components/filters/types";
-import {
-	APPROVAL_FILTER_FIELD_LABELS,
-	type ApprovalFilterKey,
-} from "../approvalsStub";
 import { decodeRow, encodeRow, valueInputOf } from "./ruleRowCodec";
 
 // Dot paths into S3's APPROVAL_FILTER_FIELD_LABELS where they aren't the field's own name.
@@ -38,7 +38,7 @@ const LABEL_PATHS: Partial<Record<EditorField, string>> = {
 	feature: "feature_id",
 	reset_interval: "reset.interval",
 	reward: "reward_id",
-	plan: "plan.plan_id",
+	plan: "plan_id",
 };
 
 const OPERATOR_LABELS: Record<EditorOperator, string> = {

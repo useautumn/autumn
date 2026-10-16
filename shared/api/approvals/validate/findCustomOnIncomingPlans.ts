@@ -1,13 +1,13 @@
-import type { ApprovalRuleIssue, WhenEntry } from "./types";
+import type { ApprovalRuleIssue, FilterEntry } from "./types";
 
 const PLAN_ARRAY_KEYS = ["incoming", "outgoing", "plan"];
 
-const nearestPlanArray = ({ path }: { path: WhenEntry["path"] }) =>
+const nearestPlanArray = ({ path }: { path: FilterEntry["path"] }) =>
 	[...path]
 		.reverse()
 		.find((segment) => PLAN_ARRAY_KEYS.includes(String(segment)));
 
-const isCustomOnIncomingPlan = ({ key, path }: WhenEntry) =>
+const isCustomOnIncomingPlan = ({ key, path }: FilterEntry) =>
 	key === "custom" && nearestPlanArray({ path }) === "incoming";
 
 /**
@@ -17,7 +17,7 @@ const isCustomOnIncomingPlan = ({ key, path }: WhenEntry) =>
 export const findCustomOnIncomingPlans = ({
 	entries,
 }: {
-	entries: WhenEntry[];
+	entries: FilterEntry[];
 }): ApprovalRuleIssue[] =>
 	entries.filter(isCustomOnIncomingPlan).map((entry) => ({
 		path: entry.path.join("."),
