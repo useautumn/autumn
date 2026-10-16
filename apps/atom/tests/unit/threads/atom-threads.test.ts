@@ -365,8 +365,9 @@ describe("pulls across threads", () => {
 
 const readHealth = async ({ url }: { url: string }) => {
 	try {
+		// As the load balancer's checker: every other prober is held 503 for the load balancer's settle after ready.
 		const response = await fetch(`${url}/health`, {
-			headers: { connection: "close" },
+			headers: { connection: "close", "user-agent": "ELB-HealthChecker/2.0" },
 		});
 		const body = (await response.json()) as {
 			status: string;
