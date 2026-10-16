@@ -4,7 +4,10 @@ import {
 	createSubjectState,
 	subjectStateToFullSubject,
 } from "@autumn/balance-engine";
-import { serializeMeteringRecord } from "@autumn/kafka";
+import {
+	KafkaConsumerLeaseLostError,
+	serializeMeteringRecord,
+} from "@autumn/kafka";
 import type {
 	ConsumerCrashEvent,
 	ConsumerRunConfig,
@@ -19,6 +22,7 @@ import {
 	createTrackCommand,
 	identity,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
+import { nativeConsumerConfigOf } from "../../../../../packages/kafka/src/client/librdkafka/consumer/nativeConsumerConfig.js";
 import { createStreamConsumer } from "../../../src/stream/createStreamConsumer.js";
 import type {
 	StreamConsumer,
@@ -51,6 +55,8 @@ const badMessage = ({ offset }: { offset: string }) => ({
 	value: Buffer.from("{"),
 });
 
+type NativeGroupConfig = Parameters<typeof nativeConsumerConfigOf>[0]["config"];
+
 type Delivered = {
 	offset: string;
 	key: Buffer | null;
@@ -77,6 +83,7 @@ const createFakeKafka = ({
 	let runConfig: ConsumerRunConfig | undefined;
 	let running = false;
 	let heartbeats = 0;
+	const consumerConfigs: NativeGroupConfig[] = [];
 	const consumer = {
 		events: {
 			CRASH: "consumer.crash",
@@ -142,7 +149,10 @@ const createFakeKafka = ({
 		},
 	};
 	const kafka = {
-		consumer: () => consumer,
+		consumer: (config: NativeGroupConfig) => {
+			consumerConfigs.push(config);
+			return consumer;
+		},
 		admin: () => admin,
 	} as unknown as Pick<Kafka, "consumer" | "admin">;
 
@@ -212,9 +222,15 @@ const createFakeKafka = ({
 		await runConfig.eachBatch(payload);
 	};
 
-	const crash = ({ restart }: { restart: boolean }) =>
+	const crash = ({
+		restart,
+		error = new Error("boom"),
+	}: {
+		restart: boolean;
+		error?: Error;
+	}) =>
 		emit("consumer.crash", {
-			payload: { error: new Error("boom"), restart, groupId: "g" },
+			payload: { error, restart, groupId: "g" },
 		} as ConsumerCrashEvent);
 
 	const joinGroup = () =>
@@ -239,6 +255,7 @@ const createFakeKafka = ({
 	return {
 		kafka,
 		events,
+		consumerConfigs,
 		deliver,
 		crash,
 		joinGroup,
@@ -248,11 +265,14 @@ const createFakeKafka = ({
 };
 
 const recordType = (payload: unknown) => {
-	if (typeof payload === "object" && payload && "type" in payload)
-		logged.push(String(payload.type));
+	if (typeof payload !== "object" || !payload || !("type" in payload)) return;
+	logged.push(String(payload.type));
+	const data = "data" in payload ? payload.data : undefined;
+	loggedLines.push({ type: String(payload.type), data });
 };
 const logger = { info: () => {}, warn: recordType, error: recordType };
 const logged: string[] = [];
+const loggedLines: { type: string; data: unknown }[] = [];
 
 const startConsumer = async ({
 	job,
@@ -560,4 +580,99 @@ test("a job still joining its group counts its lag from when it started joining"
 		partitions: 0,
 		maxLagMs: 45 * MINUTE_MS,
 	});
+});
+
+test("a job's consumer gives one poll's slices librdkafka's default 300 s before the member rewinds", async () => {
+	const { consumerConfigs } = await startConsumer({
+		job: { name: "usage-events", handle: async () => {} },
+	});
+	const [groupConfig] = consumerConfigs;
+	if (!groupConfig) throw new Error("No consumer was created");
+	expect(
+		nativeConsumerConfigOf({ config: groupConfig })["max.poll.interval.ms"],
+	).toBe(300_000);
+});
+
+test("a slice that takes 10 s or more to land is logged with its job, partition and duration", async () => {
+	let nowMs = 0;
+	const sliceDurationsMs = [12_000, 9_999];
+	const { deliver } = await startConsumer({
+		job: {
+			name: "usage-events",
+			handle: async () => {
+				nowMs += sliceDurationsMs.shift() ?? 0;
+			},
+		},
+		now: () => nowMs,
+	});
+	loggedLines.length = 0;
+	await deliver({
+		records: ["0", "1", "2", "3"].map((offset) => trackMessage({ offset })),
+	});
+	expect(loggedLines).toEqual([
+		{
+			type: "herald_slice_slow",
+			data: {
+				job: "usage-events",
+				topic,
+				partition,
+				firstOffset: "0",
+				records: 2,
+				durationMs: 12_000,
+			},
+		},
+	]);
+});
+
+test("a restart logs what its rewind to the last commit repeats: the records handed past it and how long they ran", async () => {
+	let nowMs = 0;
+	const { deliver, joinGroup, crash } = await startConsumer({
+		job: {
+			name: "usage-events",
+			handle: async () => {
+				nowMs += 30_000;
+			},
+		},
+		heartbeatFailsAfter: 2,
+		now: () => nowMs,
+	});
+	joinGroup();
+	await deliver({
+		records: ["0", "1"].map((offset) => trackMessage({ offset })),
+	});
+	await expect(
+		deliver({
+			records: ["2", "3", "4", "5"].map((offset) => trackMessage({ offset })),
+		}),
+	).rejects.toThrow("REBALANCE_IN_PROGRESS");
+	loggedLines.length = 0;
+	crash({
+		restart: true,
+		error: new KafkaConsumerLeaseLostError({ topic, partition }),
+	});
+	crash({ restart: true });
+	expect(loggedLines).toEqual([
+		{
+			type: "herald_job_rewound",
+			data: {
+				job: "usage-events",
+				groupId: "local-herald-usage-events",
+				leaseLost: true,
+				records: 4,
+				longestRanMs: 60_000,
+				rewound: [{ partition, records: 4, ranMs: 60_000 }],
+			},
+		},
+		{
+			type: "herald_job_rewound",
+			data: {
+				job: "usage-events",
+				groupId: "local-herald-usage-events",
+				leaseLost: false,
+				records: 0,
+				longestRanMs: 0,
+				rewound: [],
+			},
+		},
+	]);
 });

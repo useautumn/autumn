@@ -218,29 +218,35 @@ export const oauthConsent = pgTable("oauth_consent", {
 	updatedAt: timestamp("updated_at", { withTimezone: true }),
 }).enableRLS();
 
-export const oauthRefreshToken = pgTable("oauth_refresh_token", {
-	id: text("id").primaryKey(),
-	token: text("token").notNull(),
-	clientId: text("client_id")
-		.notNull()
-		.references(() => oauthClient.clientId, { onDelete: "cascade" }),
-	sessionId: text("session_id").references(() => session.id, {
-		onDelete: "set null",
-	}),
-	userId: text("user_id")
-		.notNull()
-		.references(() => user.id, { onDelete: "cascade" }),
-	referenceId: text("reference_id"),
-	oauthConsentId: text("oauth_consent_id").references(() => oauthConsent.id, {
-		onDelete: "cascade",
-	}),
-	expiresAt: timestamp("expires_at", { withTimezone: true }),
-	createdAt: timestamp("created_at", { withTimezone: true }),
-	revoked: timestamp("revoked", { withTimezone: true }),
-	authTime: timestamp("auth_time", { withTimezone: true }),
-	scopes: text("scopes").array().notNull(),
-	resource: text("resource"),
-}).enableRLS();
+export const oauthRefreshToken = pgTable(
+	"oauth_refresh_token",
+	{
+		id: text("id").primaryKey(),
+		token: text("token").notNull(),
+		clientId: text("client_id")
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+		sessionId: text("session_id").references(() => session.id, {
+			onDelete: "set null",
+		}),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		referenceId: text("reference_id"),
+		oauthConsentId: text("oauth_consent_id").references(() => oauthConsent.id, {
+			onDelete: "cascade",
+		}),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }),
+		revoked: timestamp("revoked", { withTimezone: true }),
+		authTime: timestamp("auth_time", { withTimezone: true }),
+		scopes: text("scopes").array().notNull(),
+		resource: text("resource"),
+	},
+	(table) => [
+		index("idx_oauth_refresh_token_token").on(table.token).concurrently(),
+	],
+).enableRLS();
 
 export const oauthAccessToken = pgTable("oauth_access_token", {
 	id: text("id").primaryKey(),

@@ -10,6 +10,7 @@
  */
 import type {
 	KafkaProducerClient,
+	KafkaProducerStatistics,
 	KafkaRequestTiming,
 	ProducerConfig,
 	ProducerRecord,
@@ -24,6 +25,7 @@ import type {
 declare var self: Worker;
 
 type Listener = (timing: KafkaRequestTiming) => void;
+type StatisticsListener = (statistics: KafkaProducerStatistics) => void;
 
 /** What Confluent's shim throws: librdkafka's code and verdict on the error itself. */
 function librdkafkaError({
@@ -49,6 +51,7 @@ function fakeProducer({
 }): KafkaProducerClient {
 	const offsets = new Map<string, number>();
 	const listeners = new Set<Listener>();
+	const statisticsListeners = new Set<StatisticsListener>();
 	let connected = false;
 
 	function echoOf({ record }: { record: ProducerRecord }): string {
@@ -73,6 +76,23 @@ function fakeProducer({
 				broker: "fake:9092",
 				durationMs: 3,
 				pendingMs: 1,
+			});
+		for (const listener of statisticsListeners)
+			listener({
+				brokers: [
+					{
+						broker: "fake:9092/1",
+						nodeId: 1,
+						requests: 1,
+						responses: 0,
+						timeouts: 0,
+						rttP50Ms: null,
+						rttP99Ms: null,
+						outbufCount: 0,
+						waitRespCount: 1,
+						stalled: true,
+					},
+				],
 			});
 		if (record.topic === "crash") process.exit(7);
 		if (record.topic === "refuse")
@@ -125,6 +145,9 @@ function fakeProducer({
 		transaction: () => Promise.reject(new Error("no transactions")),
 		onRequestTimings(listener: Listener) {
 			listeners.add(listener);
+		},
+		onStatistics(listener: StatisticsListener) {
+			statisticsListeners.add(listener);
 		},
 	};
 }

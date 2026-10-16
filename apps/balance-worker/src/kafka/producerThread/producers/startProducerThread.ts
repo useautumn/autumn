@@ -26,6 +26,9 @@ function receive({
 		const { producerId, ...timing } = message.event;
 		for (const listener of scope.requestListeners.get(producerId) ?? [])
 			listener(timing);
+	} else if (message.kind === "statistics") {
+		const listeners = scope.statisticsListeners.get(message.producerId);
+		for (const listener of listeners ?? []) listener(message.statistics);
 	} else if (message.kind === "stopped") scope.stopped.resolve();
 }
 
