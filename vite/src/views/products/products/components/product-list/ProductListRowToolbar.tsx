@@ -32,6 +32,7 @@ import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
 import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
+import { usePlanRowPermissions } from "./usePlanRowPermissions";
 
 export const ProductListRowToolbar = ({
 	product,
@@ -61,6 +62,16 @@ export const ProductListRowToolbar = ({
 
 	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
 	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
+	const {
+		showCopyMenu,
+		canCopyToEnv,
+		showSandboxSeparator,
+		canCreateVariant,
+		canDelete,
+	} = usePlanRowPermissions({
+		product,
+		hasOtherSandboxes: otherSandboxes.length > 0,
+	});
 
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
 		setDropdownOpen(false);
@@ -77,8 +88,6 @@ export const ProductListRowToolbar = ({
 			toast.error(getBackendErr(error, "Failed to copy plan"));
 		}
 	};
-
-	const isVariant = !!product.base_internal_product_id;
 
 	const productCounts = counts[product.id];
 	const allCount = productCounts?.all || 0;
@@ -167,38 +176,42 @@ export const ProductListRowToolbar = ({
 					</DropdownMenuTrigger>
 				</div>
 				<DropdownMenuContent align="end">
-					{!isVariant && (
+					{showCopyMenu && (
 						<DropdownMenuSub>
 							<DropdownMenuSubTrigger className="flex gap-2">
 								<CopyIcon />
 								Copy to
 							</DropdownMenuSubTrigger>
 							<DropdownMenuSubContent>
-								<DropdownMenuItem
-									className="flex gap-2"
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setDropdownOpen(false);
-										setCopyToEnv(AppEnv.Sandbox);
-										setCopyOpen(true);
-									}}
-								>
-									Sandbox
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									className="flex gap-2"
-									onClick={(e) => {
-										e.stopPropagation();
-										e.preventDefault();
-										setDropdownOpen(false);
-										setCopyToEnv(AppEnv.Live);
-										setCopyOpen(true);
-									}}
-								>
-									Production
-								</DropdownMenuItem>
-								{otherSandboxes.length > 0 && <DropdownMenuSeparator />}
+								{canCopyToEnv && (
+									<>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Sandbox);
+												setCopyOpen(true);
+											}}
+										>
+											Sandbox
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Live);
+												setCopyOpen(true);
+											}}
+										>
+											Production
+										</DropdownMenuItem>
+									</>
+								)}
+								{showSandboxSeparator && <DropdownMenuSeparator />}
 								{otherSandboxes.map((s) => (
 									<DropdownMenuItem
 										key={s.id}
@@ -215,7 +228,7 @@ export const ProductListRowToolbar = ({
 							</DropdownMenuSubContent>
 						</DropdownMenuSub>
 					)}
-					{!isVariant && !product.archived && (
+					{canCreateVariant && (
 						<DropdownMenuItem
 							className="flex gap-2"
 							onClick={(e) => {
@@ -229,18 +242,20 @@ export const ProductListRowToolbar = ({
 							Create variant
 						</DropdownMenuItem>
 					)}
-					<DropdownMenuItem
-						className="flex gap-2"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							setDropdownOpen(false);
-							onDeleteClick?.(product);
-						}}
-					>
-						<DeleteIcon />
-						{deleteText}
-					</DropdownMenuItem>
+					{canDelete && (
+						<DropdownMenuItem
+							className="flex gap-2"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								onDeleteClick?.(product);
+							}}
+						>
+							<DeleteIcon />
+							{deleteText}
+						</DropdownMenuItem>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</>

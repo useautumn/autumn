@@ -52,7 +52,9 @@ import {
 } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { Table, useCursorPagination } from "@/components/general/table";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,
@@ -275,6 +277,7 @@ export function MigrationLiveView({
 		parseAsBoolean.withDefault(false),
 	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+	const canRun = useCanDo(APPROVAL_OPENERS.runMigration);
 	const {
 		value: runControls,
 		setValue: setRunControls,
@@ -322,6 +325,7 @@ export function MigrationLiveView({
 		hasActiveRun ||
 		hasRealtimeActive ||
 		isRunDisabled(migrationStatus);
+	const runLocked = isRunInProgress || !canRun;
 
 	const previewSource = previewSourceForStatus(migrationStatus);
 	const executionStatusOptions = executionStatusesForSource(
@@ -522,7 +526,7 @@ export function MigrationLiveView({
 						className="rounded-r-none border-r-0"
 						onClick={() => setIsRunDialogOpen(true)}
 						isLoading={isRunning}
-						disabled={isRunInProgress}
+						disabled={runLocked}
 					>
 						<PlayIcon size={14} weight="fill" />
 						{runButtonLabel(migrationStatus)}
@@ -533,21 +537,21 @@ export function MigrationLiveView({
 								variant="primary"
 								size="default"
 								className="rounded-l-none border-l border-l-white/20 px-2"
-								disabled={isRunInProgress}
+								disabled={runLocked}
 							>
 								<CaretDownIcon size={12} />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" sideOffset={4}>
 							<DropdownMenuItem
-								disabled={isRunInProgress}
+								disabled={runLocked}
 								onClick={() => triggerRun({ dryRun: true })}
 							>
 								<EyeIcon size={14} />
 								Dry Run All
 							</DropdownMenuItem>
 							<DropdownMenuItem
-								disabled={isRunInProgress}
+								disabled={runLocked}
 								onClick={() => setSample((s) => ({ ...s, open: true }))}
 							>
 								<PlayIcon size={14} weight="fill" />
@@ -643,7 +647,7 @@ export function MigrationLiveView({
 									triggerRun({ dryRun: false, ...resolvedRunControls });
 								}}
 								isLoading={isRunning}
-								disabled={isRunInProgress}
+								disabled={runLocked}
 							>
 								<PlayIcon size={14} weight="fill" />
 								Run
@@ -751,7 +755,7 @@ export function MigrationLiveView({
 								variant="secondary"
 								isLoading={sample.running === "dry"}
 								disabled={
-									isRunInProgress ||
+									runLocked ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -790,7 +794,7 @@ export function MigrationLiveView({
 								metaShortcut="enter"
 								isLoading={sample.running === "live"}
 								disabled={
-									isRunInProgress ||
+									runLocked ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1

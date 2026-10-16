@@ -4,9 +4,14 @@ import type {
 	InvoiceLineItem,
 } from "@autumn/shared";
 import { Sheet, SheetContent } from "@autumn/ui";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import {
+	CREDIT_NOTE_DENIAL_SECTIONS,
+	CREDIT_NOTE_WRITE_KEY,
+} from "@/views/customers2/components/sheets/creditNoteWrite";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
@@ -113,9 +118,21 @@ export function CustomerSheets() {
 			case "invoice-reissue":
 				return <ReissueInvoiceSheet />;
 			case "invoice-credit-note":
-				return <CreditNoteInvoiceSheet />;
+				return (
+					<PermissionDenialProvider
+						preview={undefined}
+						mutationKey={CREDIT_NOTE_WRITE_KEY}
+						sections={CREDIT_NOTE_DENIAL_SECTIONS}
+					>
+						<CreditNoteInvoiceSheet />
+					</PermissionDenialProvider>
+				);
 			case "create-invoice":
-				return <CreateInvoiceSheet />;
+				return (
+					<PermissionDenialProvider preview={undefined}>
+						<CreateInvoiceSheet />
+					</PermissionDenialProvider>
+				);
 			case "upcoming-invoice-detail": {
 				const preview = sheetData?.preview as ApiInvoicePreviewV0 | undefined;
 				if (!preview) return null;

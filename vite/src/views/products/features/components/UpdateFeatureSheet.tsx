@@ -3,11 +3,13 @@ import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useUpdateCatalogMutation } from "@/hooks/queries/catalog/useUpdateCatalogMutation";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { getBackendErr } from "@/utils/genUtils";
 import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeatureAdvanced";
@@ -36,6 +38,7 @@ function UpdateFeatureSheet({
 	const setBaseFeature = useFeatureStore((s) => s.setBaseFeature);
 
 	const { mutateAsync: updateCatalog, isPending } = useUpdateCatalogMutation();
+	const canUpdate = useCanDo(APPROVAL_OPENERS.updateFeature);
 	useSheetBrowserBack({ enabled: open });
 
 	// Initialize feature store when selectedFeature changes
@@ -77,7 +80,7 @@ function UpdateFeatureSheet({
 	};
 
 	const handleUpdateFeature = async () => {
-		if (!selectedFeature) return;
+		if (!selectedFeature || !canUpdate) return;
 		if (isAnyCreditSystem(feature.type)) {
 			const validationError = validateCreditSystem(feature);
 			if (validationError) {
@@ -122,6 +125,7 @@ function UpdateFeatureSheet({
 						onClick={handleUpdateFeature}
 						metaShortcut="enter"
 						isLoading={isPending}
+						disabled={!canUpdate}
 					>
 						Update feature
 					</ShortcutButton>

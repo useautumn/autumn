@@ -11,6 +11,8 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
+import { denialFromError } from "@/components/forms/shared/permission/resolvePermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useSession } from "@/lib/auth-client";
@@ -89,13 +91,14 @@ export const CreateApiKeySheet = ({
 
 			setApiKey(api_key);
 		} catch (error: any) {
-			console.log("Error:", error);
-			if (error?.response?.status === 403) {
+			if (error?.response?.status === 403 && !denialFromError({ error })) {
 				toast.error("You can't grant scopes you don't have yourself.");
 			} else {
-				toast.error(
-					error?.response?.data?.message ?? "Failed to create API key",
-				);
+				toastWriteError({
+					error,
+					fallback: "Failed to create API key",
+					inlineDenials: false,
+				});
 			}
 		}
 
@@ -168,6 +171,7 @@ export const CreateApiKeySheet = ({
 									value={scopes}
 									onChange={setScopes}
 									availableScopes={callerScopes}
+									unrestrictedHint="Limit this key to specific scopes. Leave unchecked to give it the same access you have."
 									disabled={loading}
 								/>
 							</div>

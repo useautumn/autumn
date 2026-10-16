@@ -32,6 +32,7 @@ export function useCreateInvoiceMutation({
 		buildRequestBody,
 		successMessage: "Invoice created",
 		errorMessage: "Failed to create invoice",
+		inlineDenials: true,
 	});
 
 	const createInvoice = async () => {

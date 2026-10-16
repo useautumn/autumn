@@ -6,19 +6,20 @@ import {
 	SheetTrigger,
 	ShortcutButton,
 } from "@autumn/ui";
-import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useRewardStore } from "@/hooks/stores/useRewardStore";
 import { RewardService } from "@/services/products/RewardService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
 import { missingDiscountField } from "../../utils/missingDiscountField";
 import { mapFrontendToApiReward } from "../../utils/rewardMappers";
 import { DiscountRewardConfig } from "./DiscountRewardConfig";
@@ -36,6 +37,7 @@ export function CreateRewardSheet({
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
 }: CreateRewardSheetProps = {}) {
+	const canCreate = useCanDo(APPROVAL_OPENERS.createReward);
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useRewardsQuery();
 	const { features } = useFeaturesQuery();
@@ -137,9 +139,11 @@ export function CreateRewardSheet({
 			toast.success("Reward created successfully");
 			setOpen(false);
 		} catch (error: unknown) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to create reward"),
-			);
+			toastWriteError({
+				error,
+				fallback: "Failed to create reward",
+				inlineDenials: false,
+			});
 		} finally {
 			setLoading(false);
 		}
@@ -148,6 +152,8 @@ export function CreateRewardSheet({
 	const handleCancel = () => {
 		setOpen(false);
 	};
+
+	if (!canCreate) return null;
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>

@@ -24,7 +24,9 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
@@ -54,6 +56,9 @@ export function CustomerActions() {
 	const { org } = useOrg({ skipSandbox: false });
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
+	const canEditCustomer = useCanDo(APPROVAL_OPENERS.editCustomer);
+	const canApplyReward = useCanDo(APPROVAL_OPENERS.redeemReward);
+	const canDeleteCustomer = useCanDo(APPROVAL_OPENERS.deleteCustomer);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 
@@ -119,6 +124,7 @@ export function CustomerActions() {
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" keepMounted>
 					<DropdownMenuItem
+						disabled={!canEditCustomer}
 						onClick={() => setIsModalOpen(true)}
 						className="flex gap-2"
 						shortcut="e"
@@ -127,6 +133,7 @@ export function CustomerActions() {
 						Edit customer
 					</DropdownMenuItem>
 					<DropdownMenuItem
+						disabled={!canEditCustomer}
 						onClick={() => {
 							setSheet({ type: "customer-config-edit" });
 							setActionsOpen(false);
@@ -146,6 +153,7 @@ export function CustomerActions() {
 						Create entity
 					</DropdownMenuItem>
 					<DropdownMenuItem
+						disabled={!canApplyReward}
 						onClick={() => setAddCouponOpen(true)}
 						className="flex gap-2"
 						shortcut="c"
@@ -244,6 +252,7 @@ export function CustomerActions() {
 					)}
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
+						disabled={!canDeleteCustomer}
 						onClick={() => setDeleteOpen(true)}
 						variant="destructive"
 						className="flex gap-2 text-red-500 !hover:bg-red-500"

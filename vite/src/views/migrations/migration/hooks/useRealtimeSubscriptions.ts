@@ -1,11 +1,10 @@
-import type { AxiosError } from "axios";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import {
 	type RetryableMigrationItemRunStatus,
 	useMigrationMutations,
 } from "@/hooks/queries/useMigrationMutations";
-import { getBackendErr } from "@/utils/genUtils";
 import { buildRunMigrationRequest } from "./buildRunMigrationRequest";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
 
@@ -78,9 +77,11 @@ export function useRealtimeSubscriptions({
 			toast.success(`${label} triggered (${result.run_id})`);
 			invalidateRuns();
 		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to run migration"),
-			);
+			toastWriteError({
+				error,
+				fallback: "Failed to run migration",
+				inlineDenials: false,
+			});
 		}
 	};
 
