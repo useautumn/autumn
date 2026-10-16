@@ -7,6 +7,9 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { ReactNode } from "react";
 import type { PermissionDenial as Denial } from "@/components/forms/shared/permission/permissionSchemas";
+import { restoreQueryClientContext } from "../../../utils/restoreQueryClientContext";
+
+await restoreQueryClientContext();
 
 mock.module("@/hooks/queries/useRolesQuery", () => ({
 	useRolesQuery: () => ({
