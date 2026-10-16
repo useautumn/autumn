@@ -3,6 +3,7 @@ import { TableCell, TableRow } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { RoleSelect } from "@/components/v2/selects/RoleSelect";
+import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
 import { authClient } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
@@ -10,8 +11,13 @@ import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
 } from "@/views/settings/SettingsTable";
+import {
+	memberRoleOptions,
+	roleLabel,
+} from "@/views/settings/sections/roles/roleAccess";
 import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";
+import { MemberEmail } from "./MemberEmail";
 import { MemberRowToolbar } from "./MemberRowToolbar";
 
 const NON_OWNER_ROLES: Role[] = ["admin", "developer", "sales", "member"];
@@ -36,22 +42,25 @@ const MemberRoleSelect = ({
 	onRoleChanged: () => void;
 }) => {
 	const [loading, setLoading] = useState(false);
-	const currentRole = membership.member.role as Role;
+	const { roles, refetch: refetchRoles } = useRolesQuery();
+	const currentRole = membership.member.role;
 
-	const handleRoleChange = async (newRole: Role) => {
+	const handleRoleChange = async (newRole: string) => {
 		if (newRole === currentRole) return;
 		setLoading(true);
 		try {
 			const { error } = await authClient.organization.updateMemberRole({
 				memberId: membership.member.id,
-				role: newRole,
+				// better-auth's static role union predates dynamic (custom) roles.
+				role: newRole as Role,
 			});
 			if (error) {
 				toast.error(error.message ?? "Failed to update role");
 				return;
 			}
-			toast.success(`Role updated to ${newRole}`);
+			toast.success(`Role updated to ${roleLabel({ roles, name: newRole })}`);
 			onRoleChanged();
+			refetchRoles();
 		} catch {
 			toast.error("Failed to update role");
 		} finally {
@@ -59,13 +68,19 @@ const MemberRoleSelect = ({
 		}
 	};
 
-	const allowed = allowOwnerPromotion ? ALL_ROLES : NON_OWNER_ROLES;
+	// Until /roles answers, offer the built-in roles as before.
+	const options =
+		roles.length > 0
+			? memberRoleOptions({ roles, allowOwner: allowOwnerPromotion })
+			: undefined;
 
 	return (
 		<RoleSelect
 			value={currentRole}
 			onChange={handleRoleChange}
-			allowed={allowed}
+			allowed={allowOwnerPromotion ? ALL_ROLES : NON_OWNER_ROLES}
+			options={options}
+			valueLabel={roleLabel({ roles, name: currentRole })}
 			disabled={disabled || loading}
 			className="h-7 w-[120px] text-xs"
 		/>
@@ -94,7 +109,9 @@ export const OrgMembersList = () => {
 
 				return (
 					<TableRow key={user.id} className={SETTINGS_ROW_CLASS}>
-						<TableCell className="pl-4 text-foreground">{user.email}</TableCell>
+						<TableCell className="pl-4 text-foreground">
+							<MemberEmail membership={membership} />
+						</TableCell>
 						<TableCell className="text-tertiary-foreground">
 							{user.name || "No name"}
 						</TableCell>

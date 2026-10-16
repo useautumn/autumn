@@ -1,5 +1,6 @@
 import { Button } from "@autumn/ui";
 import { ReceiptIcon } from "@phosphor-icons/react";
+import { PermissionLock } from "@/components/forms/shared/permission/PermissionLock";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCreateInvoiceFormContext } from "../context/CreateInvoiceFormProvider";
@@ -38,17 +39,19 @@ export function CreateInvoiceFooter() {
 		previewQuery.isError;
 
 	return (
-		<SheetFooter className="grid-cols-1 pt-4">
-			<Button
-				className="w-full"
-				disabled={disabled}
-				isLoading={mutation.isPending}
-				onClick={() => mutation.createInvoice()}
-				variant="primary"
-			>
-				<ReceiptIcon size={16} />
-				Create Invoice
-			</Button>
-		</SheetFooter>
+		<PermissionLock>
+			<SheetFooter className="grid-cols-1 pt-4">
+				<Button
+					className="w-full"
+					disabled={disabled}
+					isLoading={mutation.isPending}
+					onClick={() => mutation.createInvoice()}
+					variant="primary"
+				>
+					<ReceiptIcon size={16} />
+					Create Invoice
+				</Button>
+			</SheetFooter>
+		</PermissionLock>
 	);
 }

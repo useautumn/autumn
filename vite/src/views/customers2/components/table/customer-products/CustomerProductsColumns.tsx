@@ -113,6 +113,7 @@ export const CustomerProductsColumns = [
 				onCancelImmediatelyClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
+				canCancel?: boolean;
 				hasEntities?: boolean;
 			};
 
@@ -157,29 +158,30 @@ export const CustomerProductsColumns = [
 								<PencilIcon size={16} /> Update
 							</DropdownMenuItem>
 						)}
-						{isCanceling ? (
-							<>
-								<DropdownMenuItem
-									className="flex items-center gap-2 text-xs"
-									onClick={(e) => {
-										e.stopPropagation();
-										meta.onUncancelClick?.(row.original);
-									}}
-								>
-									<RotateCcw size={16} /> Manage Cancellation
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									variant="destructive"
-									className="flex items-center gap-2 text-xs"
-									onClick={(e) => {
-										e.stopPropagation();
-										meta.onCancelImmediatelyClick?.(row.original);
-									}}
-								>
-									<Zap size={16} /> Cancel Immediately
-								</DropdownMenuItem>
-							</>
-						) : (
+						{isCanceling && meta.onUncancelClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onUncancelClick?.(row.original);
+								}}
+							>
+								<RotateCcw size={16} /> Manage Cancellation
+							</DropdownMenuItem>
+						)}
+						{isCanceling && meta.canCancel && (
+							<DropdownMenuItem
+								variant="destructive"
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onCancelImmediatelyClick?.(row.original);
+								}}
+							>
+								<Zap size={16} /> Cancel Immediately
+							</DropdownMenuItem>
+						)}
+						{!isCanceling && meta.canCancel && (
 							<DropdownMenuItem
 								variant="destructive"
 								className="flex items-center gap-2 text-xs"

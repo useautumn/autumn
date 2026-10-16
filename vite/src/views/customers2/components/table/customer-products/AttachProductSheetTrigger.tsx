@@ -10,6 +10,7 @@ import {
 	CaretDownIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import {
 	useIsAttachingProduct,
 	useSheetStore,
@@ -28,6 +29,23 @@ export function AttachProductSheetTrigger() {
 
 	const openSetPlans = useOpenSetPlans();
 	usePrefetchSetPlans();
+	const canAttach = useCanDo("billing.attach");
+	const canSetPlans = useCanDo("billing.set_plans");
+
+	if (!canAttach && !canSetPlans) return null;
+	if (!canAttach) {
+		return (
+			<Button
+				variant="primary"
+				size="mini"
+				className="gap-1 font-medium"
+				onClick={openSetPlans}
+			>
+				<CalendarBlankIcon className="size-3.5" />
+				Set Plans
+			</Button>
+		);
+	}
 
 	return (
 		<div
@@ -39,29 +57,32 @@ export function AttachProductSheetTrigger() {
 			<Button
 				variant="primary"
 				size="mini"
-				className="gap-1 font-medium rounded-r-none"
+				className={cn("gap-1 font-medium", canSetPlans && "rounded-r-none")}
 				onClick={handleAttachClick}
 			>
 				<PlusIcon className="size-3.5" />
 				Attach Plan
 			</Button>
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="primary"
-						size="mini"
-						className="rounded-l-none border-l-0 px-1.5"
-					>
-						<CaretDownIcon className="size-3" />
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" sideOffset={4}>
-					<DropdownMenuItem onClick={openSetPlans}>
-						<CalendarBlankIcon className="size-4" />
-						Set Plans
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+			{canSetPlans && (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="primary"
+							size="mini"
+							className="rounded-l-none border-l-0 px-1.5"
+							aria-label="More plan actions"
+						>
+							<CaretDownIcon className="size-3" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" sideOffset={4}>
+						<DropdownMenuItem onClick={openSetPlans}>
+							<CalendarBlankIcon className="size-4" />
+							Set Plans
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			)}
 		</div>
 	);
 }

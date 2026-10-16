@@ -27,6 +27,8 @@ export type ScopeSelectorProps = {
 	/** Optional: limit the picker to these resources (defaults to all). */
 	resources?: readonly ResourceType[];
 	allowUnrestricted?: boolean;
+	/** Overrides the hint under "Restricted mode". */
+	unrestrictedHint?: string;
 	disabled?: boolean;
 	/**
 	 * Optional: render quick-apply presets above the grid. When `defaultScopes`
@@ -159,6 +161,7 @@ export function ScopeSelector({
 	value,
 	onChange,
 	allowUnrestricted = true,
+	unrestrictedHint = "Limit this key to specific scopes. Leave unchecked for full access.",
 	availableScopes,
 	requestedScopes,
 	resources = RESOURCES,
@@ -237,8 +240,7 @@ export function ScopeSelector({
 					<div className="flex flex-col gap-0.5">
 						<span className="text-sm text-foreground">Restricted mode</span>
 						<span className="text-xs text-muted-foreground">
-							Limit this key to specific scopes. Leave unchecked for full
-							access.
+							{unrestrictedHint}
 						</span>
 					</div>
 				</label>

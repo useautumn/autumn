@@ -1,10 +1,13 @@
 import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { cn } from "@/lib/utils";
 import CreateProductSheet from "../CreateProductSheet";
 
 export function ProductListCreateButton({ className }: { className?: string }) {
+	const canCreate = useCanDo(APPROVAL_OPENERS.editPlans);
 	const [createPlanOpen, setCreatePlanOpen] = useState(false);
 
 	useHotkeys(
@@ -15,6 +18,8 @@ export function ProductListCreateButton({ className }: { className?: string }) {
 		},
 		{ enableOnFormTags: false },
 	);
+
+	if (!canCreate) return null;
 
 	return (
 		<>

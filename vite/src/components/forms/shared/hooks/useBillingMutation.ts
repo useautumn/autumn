@@ -1,8 +1,8 @@
 import type { ApiVersion } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { toastWriteError } from "../permission/toastWriteError";
 import type { BillingStageParams } from "../utils/billingStageParams";
 import { invalidateCustomerBillingQueries } from "../utils/invalidateCustomerBillingQueries";
 
@@ -20,6 +20,9 @@ const isSentInvoice = (data: BillingMutationResponse) =>
 	!data.required_action &&
 	Boolean(data.invoice?.hosted_invoice_url) &&
 	data.payment_url === data.invoice?.hosted_invoice_url;
+
+/** Lets a sheet read its latest failed submit; gcTime 0 drops it once the sheet unmounts. */
+export const BILLING_MUTATION_KEY = ["billing-mutation"] as const;
 
 export type BillingMutationParams = BillingStageParams & {
 	skipDefaultSuccess?: boolean;
@@ -40,6 +43,7 @@ export function useBillingMutation<
 	onCheckoutRedirect,
 	onSuccess,
 	apiVersion,
+	inlineDenials = false,
 }: {
 	customerId: string | undefined;
 	path: string;
@@ -51,6 +55,8 @@ export function useBillingMutation<
 	onSuccess?: () => void;
 	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
 	apiVersion?: ApiVersion;
+	/** The sheet renders a `permission_denied` inline, so it skips the toast. */
+	inlineDenials?: boolean;
 }) {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -58,6 +64,8 @@ export function useBillingMutation<
 		invalidateCustomerBillingQueries({ queryClient });
 
 	return useMutation({
+		mutationKey: BILLING_MUTATION_KEY,
+		gcTime: 0,
 		mutationFn: async ({
 			skipDefaultSuccess,
 			...stageParams
@@ -103,11 +111,7 @@ export function useBillingMutation<
 			if (!useInvoice || !data.invoice) onSuccess?.();
 			invalidateBillingQueries();
 		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					errorMessage,
-			);
-		},
+		onError: (error) =>
+			toastWriteError({ error, fallback: errorMessage, inlineDenials }),
 	});
 }

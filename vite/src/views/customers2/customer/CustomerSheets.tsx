@@ -4,6 +4,11 @@ import type {
 	InvoiceLineItem,
 } from "@autumn/shared";
 import { Sheet, SheetContent } from "@autumn/ui";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
+import {
+	CREDIT_NOTE_DENIAL_SECTIONS,
+	CREDIT_NOTE_WRITE_KEY,
+} from "@/components/forms/shared/permission/permissionDenialUtils";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
@@ -15,6 +20,7 @@ import { AllocateBalancesSheet } from "../components/sheets/AllocateBalancesShee
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
+import { BalanceDenialProvider } from "../components/sheets/BalanceDenialProvider";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { BillingAutoTopupSheet } from "../components/sheets/BillingAutoTopupSheet";
 import { BillingControlPlanManagedSheet } from "../components/sheets/BillingControlPlanManagedSheet";
@@ -90,11 +96,19 @@ export function CustomerSheets() {
 			case "subscription-uncancel":
 				return <SubscriptionUncancelSheet />;
 			case "balance-edit":
-				return <BalanceEditSheet />;
+				return (
+					<BalanceDenialProvider>
+						<BalanceEditSheet />
+					</BalanceDenialProvider>
+				);
 			case "balance-delete":
 				return <BalanceDeleteSheet />;
 			case "balance-create":
-				return <BalanceCreateSheet />;
+				return (
+					<BalanceDenialProvider>
+						<BalanceCreateSheet />
+					</BalanceDenialProvider>
+				);
 			case "invoice-detail": {
 				const invoice = sheetData?.invoice as Invoice | undefined;
 				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
@@ -104,9 +118,21 @@ export function CustomerSheets() {
 			case "invoice-reissue":
 				return <ReissueInvoiceSheet />;
 			case "invoice-credit-note":
-				return <CreditNoteInvoiceSheet />;
+				return (
+					<PermissionDenialProvider
+						preview={undefined}
+						mutationKey={CREDIT_NOTE_WRITE_KEY}
+						sections={CREDIT_NOTE_DENIAL_SECTIONS}
+					>
+						<CreditNoteInvoiceSheet />
+					</PermissionDenialProvider>
+				);
 			case "create-invoice":
-				return <CreateInvoiceSheet />;
+				return (
+					<PermissionDenialProvider preview={undefined}>
+						<CreateInvoiceSheet />
+					</PermissionDenialProvider>
+				);
 			case "upcoming-invoice-detail": {
 				const preview = sheetData?.preview as ApiInvoicePreviewV0 | undefined;
 				if (!preview) return null;

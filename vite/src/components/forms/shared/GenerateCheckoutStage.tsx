@@ -16,6 +16,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { ConfigRow } from "./ConfigRow";
 import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
+import { PermissionLock } from "./permission/PermissionLock";
 import { PlanActivationSection } from "./SendInvoiceStage";
 import { UrlSuccessView } from "./UrlSuccessView";
 
@@ -118,18 +119,20 @@ function ActivationPreviewStage({
 				startDate={scheduledStartDate}
 			/>
 
-			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-				<Button
-					variant="primary"
-					className="w-full"
-					onClick={handleSubmit}
-					isLoading={isSubmitting || isPending}
-					disabled={isPending || isSubmitting}
-				>
-					{buttonIcon}
-					{buttonLabel}
-				</Button>
-			</SheetFooter>
+			<PermissionLock>
+				<SheetFooter className="flex flex-col grid-cols-1 mt-0">
+					<Button
+						variant="primary"
+						className="w-full"
+						onClick={handleSubmit}
+						isLoading={isSubmitting || isPending}
+						disabled={isPending || isSubmitting}
+					>
+						{buttonIcon}
+						{buttonLabel}
+					</Button>
+				</SheetFooter>
+			</PermissionLock>
 		</>
 	);
 }

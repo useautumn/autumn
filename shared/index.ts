@@ -333,3 +333,5 @@ export * from "./utils/usageWindowUtils/findUsageWindowAnchor/pickAnchorCustomer
 export * from "./utils/usageWindowUtils/getCurrentUsageWindowUsage";
 export * from "./utils/usageWindowUtils/getUsageWindowAnchorTimestamp";
 export * from "./utils/usageWindowUtils/getUsageWindowBounds";
+// Approvals (rule schemas, actions catalog, validator)
+export * from "./api/approvals/index";
