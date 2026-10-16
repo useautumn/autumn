@@ -3,7 +3,11 @@ import { alienRequest } from "../common/alienRequest.js";
 import { isAlienRequestError } from "../common/alienRequestError.js";
 import { hostedQuery } from "../common/hostedQuery.js";
 import type { AlienApi } from "../types/alienApi.js";
-import type { AlienDeployment, AlienFixedPools } from "../types/alienClient.js";
+import type {
+	AlienContainerResources,
+	AlienDeployment,
+	AlienFixedPools,
+} from "../types/alienClient.js";
 import {
 	isDeploymentAwaitingSetup,
 	isDeploymentBeingDeleted,
@@ -152,15 +156,17 @@ export const deleteDeployment = async ({
 	});
 };
 
-/** Same machines is a no-op on alien's side. The local manager runs no machines, so it has nothing to change. */
+/** Same settings is a no-op on alien's side. The local manager runs no machines or volumes, so it has nothing to change. */
 export const updateDeploymentCompute = async ({
 	ctx,
 	deployment,
 	pools,
+	containers,
 }: {
 	ctx: { api: AlienApi };
 	deployment: AlienDeployment;
 	pools: AlienFixedPools;
+	containers?: AlienContainerResources;
 }): Promise<void> => {
 	if (ctx.api.config.kind === "local") return;
 	await alienRequest({
@@ -171,7 +177,12 @@ export const updateDeploymentCompute = async ({
 			deploymentId: deployment.id,
 			action: "/compute",
 		}),
-		body: { compute: fixedPoolsToCompute({ pools }) },
+		body: {
+			compute: {
+				...fixedPoolsToCompute({ pools }),
+				...(containers && { containers }),
+			},
+		},
 		schema: z.unknown(),
 	});
 };

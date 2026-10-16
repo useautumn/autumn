@@ -57,15 +57,16 @@ describe("CloudFormation quick-create link", () => {
 
 	test("each container's allocation is the template's Container<Id> params", () => {
 		const { params } = quickCreate(null, {
-			atom: { cpu: 7, memory: "12Gi" },
+			atom: { cpu: 7, memory: "12Gi", volumeSizeGib: 50 },
 		});
 		expect(params.get("param_ContainerAtomCpu")).toBe("7");
 		expect(params.get("param_ContainerAtomMemory")).toBe("12Gi");
+		expect(params.get("param_ContainerAtomVolumeSizeGib")).toBe("50");
 	});
 
 	test("a container id with separators is named as alien's template names it", () => {
 		const { params } = quickCreate(null, {
-			"push-reader": { cpu: 1, memory: "512Mi" },
+			"push-reader": { cpu: 1, memory: "512Mi", volumeSizeGib: 20 },
 		});
 		expect(params.get("param_ContainerPushReaderCpu")).toBe("1");
 		expect(params.get("param_ContainerPushReaderMemory")).toBe("512Mi");

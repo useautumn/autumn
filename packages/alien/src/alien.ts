@@ -20,6 +20,7 @@ export {
 	deploymentToErrorMessage,
 	deploymentToResources,
 } from "./deployments/deploymentToResources.js";
+export { deploymentToVolumeSizeGib } from "./deployments/deploymentToVolumeSizeGib.js";
 export { toDeploymentGroupName } from "./setup/deploymentGroupName.js";
 export type {
 	AlienClient,
