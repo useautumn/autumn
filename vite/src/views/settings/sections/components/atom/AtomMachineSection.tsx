@@ -45,6 +45,7 @@ export const AtomMachineSection = ({
 						<AtomMachineTable
 							selected={selected}
 							current={current}
+							volumeSizeGib={cache.volume_size_gib}
 							onSelect={selectMachine}
 							disabled={resize.isPending}
 						/>
@@ -74,6 +75,7 @@ export const AtomMachineSection = ({
 				onOpenChange={setConfirmOpen}
 				current={current}
 				target={selected}
+				volumeSizeGib={cache.volume_size_gib}
 				onConfirm={confirmResize}
 			/>
 		</>

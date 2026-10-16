@@ -17,15 +17,18 @@ import {
 const GRID_CLASS =
 	"grid grid-cols-[minmax(0,1fr)_64px_80px_144px_96px] items-center gap-4 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
 
-/** Atom's sizes as rows on a section's surface; the one it runs on now is marked Current. */
+/** Atom's sizes as rows on a section's surface, each priced with its volumes; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
 	selected,
 	current,
+	volumeSizeGib,
 	onSelect,
 	disabled = false,
 }: {
 	selected: ByocCacheMachine;
 	current?: ByocCacheMachine | null;
+	/** Null while a typed size is not valid yet, so no row shows a price for it. */
+	volumeSizeGib: number | null;
 	onSelect: (machine: ByocCacheMachine) => void;
 	disabled?: boolean;
 }) => {
@@ -86,7 +89,9 @@ export const AtomMachineTable = ({
 							{atomMachinesLabel(machine)}
 						</span>
 						<span className="text-foreground">
-							{atomMonthlyEstimate(machine)}
+							{volumeSizeGib === null
+								? "—"
+								: atomMonthlyEstimate({ machine, volumeSizeGib })}
 						</span>
 					</label>
 				);

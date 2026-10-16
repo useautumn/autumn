@@ -5,6 +5,7 @@ import {
 	ByocStackNameSchema,
 	type CreateByocCacheParams,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ import {
 	networkToAtomNetworkValues,
 	withAtomNetworkRules,
 } from "./atomNetworkForm";
+import { atomVolumeSize, volumeSizeToChoice } from "./atomVolumeDisplay";
 import type { AtomActions } from "./useAtomActions";
 
 const AtomSetupSchema = withAtomNetworkRules(
@@ -28,6 +30,10 @@ const AtomSetupSchema = withAtomNetworkRules(
 		name: z.string().trim().max(64, "Keep it under 64 characters"),
 		instanceType: z.string(),
 		region: z.enum(BYOC_CACHE_AWS_REGIONS),
+		volume: z.object({
+			presetGib: z.number().nullable(),
+			customGib: z.string(),
+		}),
 		stackName: ByocStackNameSchema,
 	}),
 );
@@ -52,6 +58,9 @@ const cacheToSetupValues = ({
 			(cache && cacheToMachine(cache)?.instanceType) ??
 			DEFAULT_ATOM_INSTANCE_TYPE,
 		region: isAwsRegion(region) ? region : DEFAULT_BYOC_CACHE_AWS_REGION,
+		volume: volumeSizeToChoice(
+			cache?.volume_size_gib ?? DEFAULT_BYOC_CACHE_VOLUME_GIB,
+		),
 		...networkToAtomNetworkValues(cache?.network),
 		stackName: stackNameBase,
 	};
@@ -68,6 +77,7 @@ const setupValuesToCreateParams = (
 		cpu: machine?.cpu,
 		memory: machine?.memory,
 		region: values.region,
+		volume_size_gib: atomVolumeSize({ choice: values.volume }).gib ?? undefined,
 		stack_name: values.stackName.trim(),
 		network: atomNetworkValuesToNetwork(values),
 	};
