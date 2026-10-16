@@ -43,6 +43,8 @@ export const atomDeployments = pgTable(
 		stages: jsonb("stages").$type<ByocCacheStages>().notNull(),
 		/** When the org finished setup on its first checks; setup is done from then on. */
 		first_check_at: bigint("first_check_at", { mode: "number" }),
+		/** When the Atom's health first counted a check from the org's app; written once, and setup can finish from then on. */
+		first_check_seen_at: bigint("first_check_seen_at", { mode: "number" }),
 		/** Why the deploy or teardown stopped, in alien's words. */
 		error: text("error"),
 		created_at: bigint("created_at", { mode: "number" }).notNull(),

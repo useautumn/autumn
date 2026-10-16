@@ -2,18 +2,19 @@ import type { AtomCheck } from "@autumn/shared";
 import { axiomStringFrom } from "@/external/axiom/utils/resultUtils.js";
 import { queryAtomLogs } from "./queryAtomLogs.js";
 
-const LOOKBACK = "now-5m";
 const LIMIT = 5;
 
-/** The Atom's latest checks whose key got through; a thread logs its first ten in full, so an org's first checks are always here. */
+/** The Atom's latest logged checks whose key got through since `since`; past a thread's first ten, only 1% are logged. */
 export const queryRecentAtomChecks = async ({
 	deploymentId,
+	since,
 }: {
 	deploymentId: string;
+	since: number;
 }): Promise<AtomCheck[]> => {
 	const rows = await queryAtomLogs({
 		deploymentId,
-		startTime: LOOKBACK,
+		startTime: new Date(since).toISOString(),
 		pipeline: `
 			| where line contains '/v1/balances.check'
 			| extend check = parse_json(line)

@@ -34,6 +34,7 @@ const record = (status: ByocCacheStatus): ByocCacheDeployment => ({
 	stages: toCacheStages({ doneStages: [], status }),
 	error: null,
 	first_check_at: null,
+	first_check_seen_at: null,
 	created_at: 1,
 });
 
