@@ -172,7 +172,7 @@ export function CreateScheduleReviewContent() {
 
 			<BillingFooter
 				layout="stacked"
-				invoiceAction={
+				stageAction={
 					<DisabledTooltipButton
 						variant="secondary"
 						className="w-full"
