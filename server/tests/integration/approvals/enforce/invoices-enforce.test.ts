@@ -12,6 +12,8 @@ import {
 } from "@tests/integration/approvals/utils/expectPermissionDenied";
 import { setupApprovalRules } from "@tests/integration/approvals/utils/setupApprovalRules";
 import { createInvoice } from "@tests/integration/invoices/create/utils/expectCreatedInvoiceCorrect";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
 import { rules } from "@tests/utils/fixtures/rules";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -287,6 +289,69 @@ test.concurrent(
 					body: { invoice_id: invoiceId },
 				}),
 				violations: [{ field: "total", actual: "500" }],
+			});
+		} finally {
+			await cleanup();
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoices enforce 5: a new customer's invoice is judged with the default plans it would get")}`,
+	async () => {
+		const suffix = Date.now();
+		const free = products.base({
+			id: "free",
+			isDefault: true,
+			items: [items.monthlyMessages({ includedUsage: 10 })],
+		});
+		const { ctx, members } = await initScenario({
+			customerId: `approvals-invoices-defaults-${suffix}`,
+			setup: [
+				s.platform.create({
+					setupDefaultFeatures: true,
+					userEmail: `approvals-invoices-defaults-${suffix}@autumn.test`,
+				}),
+				s.products({ list: [free] }),
+				s.member({ role: "owner" }),
+				s.member({ role: "sales" }),
+			],
+			actions: [],
+		});
+		const [owner, sales] = members;
+		const { client, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: sales,
+			rules: [
+				rules.rule({
+					name: "Customers on the free plan",
+					subjects: [{ type: "user", user_id: sales.userId }],
+					actions: ["invoices.create"],
+					when: {
+						customer: { plan: { $some: { plan_id: free.id } } },
+					},
+				}),
+			],
+		});
+		enforceApprovals(client);
+
+		try {
+			// The sub-org's Stripe rejects the email-less customer after approval, so judge the decision.
+			await postRaw({
+				client,
+				path: "/invoices.create",
+				body: customInvoice({
+					customerId: `approvals-invoices-new-default-${suffix}`,
+					amount: 50,
+				}),
+			});
+			await expectDecisionLogged({
+				ctx,
+				userId: sales.userId,
+				action: "invoices.create",
+				verdict: "allow",
+				enforced: true,
 			});
 		} finally {
 			await cleanup();

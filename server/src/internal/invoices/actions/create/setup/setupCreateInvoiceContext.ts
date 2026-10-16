@@ -16,8 +16,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { resolveParamDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/resolveParamDiscounts";
 import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
+import { previewCustomerWithDefaults } from "@/internal/customers/actions/createWithDefaults/previewCustomerWithDefaults";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer";
-import { initFullCustomer } from "@/internal/customers/cusUtils/initCustomer";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { ProductService } from "@/internal/products/ProductService";
 import type { InvoicePeriod } from "../compute/prorateInvoiceLineAmount";
@@ -109,7 +109,7 @@ export const setupCreateInvoiceContext = async ({
 	ctx: AutumnContext;
 	params: CreateInvoiceParams;
 	preview: boolean;
-	/** Previews an unknown customer as an unsaved one instead of 404ing. */
+	/** Previews an unknown customer as the unsaved one creation would make, instead of 404ing. */
 	previewNewCustomer?: boolean;
 }): Promise<CreateInvoiceContext> => {
 	const hasCharges =
@@ -135,7 +135,10 @@ export const setupCreateInvoiceContext = async ({
 		if (!(previewNewCustomer && error instanceof CustomerNotFoundError)) {
 			throw error;
 		}
-		return initFullCustomer({ ctx, customerId: params.customer_id });
+		return previewCustomerWithDefaults({
+			ctx,
+			customerId: params.customer_id,
+		});
 	});
 	const entitiesById = await loadInvoiceEntities({
 		ctx,
