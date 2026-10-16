@@ -71,7 +71,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("multi enforce 2: a multi-update that cancels immediately is denied by an end-of-cycle cancel rule, and its preview says so")}`,
+	`${chalk.yellowBright("multi enforce 2: a multi-update mixing an allowed and a denied cancel is denied, and its preview says so")}`,
 	async () => {
 		const customerId = "approvals-enforce-multi-update";
 		const messages = items.monthlyMessages({ includedUsage: 100 });
@@ -108,19 +108,15 @@ test.concurrent(
 		const params = {
 			customer_id: customerId,
 			updates: [
-				{ plan_id: pro.id, cancel_action: "cancel_immediately" },
+				// The allowed cancel first: each item must be judged on its own action.
+				{ plan_id: pro.id, cancel_action: "cancel_end_of_cycle" },
 				{ plan_id: addon.id, cancel_action: "cancel_immediately" },
 			],
 		};
 
 		try {
 			const preview = await client.billing.previewMultiUpdate(params);
-			expect(
-				preview.subscriptions.map(
-					({ permission }: { permission?: { verdict: string } }) =>
-						permission?.verdict,
-				),
-			).toContain("deny");
+			expect(preview.permission?.verdict).toBe("deny");
 
 			const res = await postRaw({
 				client: enforceApprovals(client),
