@@ -324,7 +324,7 @@ export function pendingCommitsFor({
 	return commits;
 }
 
-/** The row a lock still pending for this customer opened: decided, but not yet applied by the store; its feature's internal id from the track that opened it, as a read-back row carries it. */
+/** The row a lock still pending for this customer opened: decided, but not yet applied by the store. Its feature's internal id comes from the track that opened it, as a row read back carries it. */
 export function pendingLockRowOf({
 	state,
 	customerKey,

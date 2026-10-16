@@ -152,7 +152,8 @@ export const atomFinalizeOf = ({
 	lockId: string;
 	seq: number;
 	finalValue?: number | null;
-	featureId?: string;
+	/** Null for a finalize the Atom journaled undecided, naming no feature. */
+	featureId?: string | null;
 	commandId?: string;
 }): AtomFinalizeCommand =>
 	parseAtomFinalizeCommand({
@@ -166,7 +167,7 @@ export const atomFinalizeOf = ({
 			org: testOrg,
 			lockId,
 			featureId,
-			internalFeatureId: "feat_messages",
+			internalFeatureId: featureId === null ? null : "feat_messages",
 			finalValue,
 			properties: null,
 			source: { atomId: "atom_1", writerId: "w_1", seq },

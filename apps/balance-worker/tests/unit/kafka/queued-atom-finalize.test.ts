@@ -7,6 +7,12 @@
  *  replayed after its lock id was reused, by an id nothing remembers → its seq is held, so the new lock stays open;
  *  a held row whose feature is not the one named → settles nothing, the lock stays open, the seq lands;
  *  a settle lands the seq in its own mutation, one record; a resend inside the writer's window is a duplicate.
+ *
+ * Left undecided by the Atom (no feature named), the worker settles it from its own row:
+ *  the lock pending in the same batch → the track that opened it names the feature, settled, the seq lands;
+ *  the lock stored in an earlier batch → the row read with the batch names it, settled;
+ *  a confirm above what the row's own overage allows → rejected and logged, the lock stays open, the seq lands;
+ *  a lock Autumn holds no row for → refused and logged, nothing lands.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -204,6 +210,100 @@ describe("an Atom's queued finalize", () => {
 				balance: STARTING_BALANCE - 10,
 				openLocks: ["L1"],
 				atomSeqs: { atom_1: { w_1: 3 } },
+			});
+		}));
+
+	test("undecided, in the same batch as its lock's track, it settles from the pending row under the track's feature", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({
+				commands: [
+					lockTrack,
+					atomFinalizeOf({
+						customerId,
+						lockId: "L1",
+						seq: 2,
+						featureId: null,
+						finalValue: 4,
+					}),
+				],
+			});
+			await pipeline.drain();
+
+			expect(readCustomer({ pipeline })).toEqual({
+				balance: STARTING_BALANCE - 4,
+				openLocks: [],
+				atomSeqs: { atom_1: { w_1: 2 } },
+			});
+			expect(pipeline.logs).toEqual([]);
+		}));
+
+	test("undecided, for a lock stored in an earlier batch, it settles from the row read with the batch", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({ commands: [lockTrack] });
+			await pipeline.drain();
+			await pipeline.consumeBatch({
+				commands: [
+					atomFinalizeOf({ customerId, lockId: "L1", seq: 2, featureId: null }),
+				],
+				firstOffset: 1,
+			});
+			await pipeline.drain();
+
+			expect(readCustomer({ pipeline })).toEqual({
+				balance: STARTING_BALANCE,
+				openLocks: [],
+				atomSeqs: { atom_1: { w_1: 2 } },
+			});
+			expect(pipeline.lockReads).toEqual([["L1"]]);
+		}));
+
+	test("undecided, a confirm above what the row's own overage covers is rejected and logged: the lock stays open, its seq lands", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({
+				commands: [
+					lockTrack,
+					atomFinalizeOf({
+						customerId,
+						lockId: "L1",
+						seq: 2,
+						featureId: null,
+						finalValue: STARTING_BALANCE + 1,
+					}),
+				],
+			});
+			await pipeline.drain();
+
+			expect(pipeline.logs).toEqual([
+				"warn:Queued atomFinalize rejected by the balance",
+			]);
+			expect(readCustomer({ pipeline })).toEqual({
+				balance: STARTING_BALANCE - 10,
+				openLocks: ["L1"],
+				atomSeqs: { atom_1: { w_1: 2 } },
+			});
+		}));
+
+	test("undecided, for a lock Autumn holds no row for, it is refused and logged, and nothing lands", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({
+				commands: [
+					lockTrack,
+					atomFinalizeOf({
+						customerId,
+						lockId: "L_never",
+						seq: 2,
+						featureId: null,
+					}),
+				],
+			});
+			await pipeline.drain();
+
+			expect(pipeline.logs).toEqual(["warn:Queued atomFinalize refused"]);
+			expect(pipeline.parked).toEqual([]);
+			expect(readCustomer({ pipeline })).toEqual({
+				balance: STARTING_BALANCE - 10,
+				openLocks: ["L1"],
+				atomSeqs: { atom_1: { w_1: 1 } },
 			});
 		}));
 

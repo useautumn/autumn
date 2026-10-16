@@ -163,9 +163,15 @@ export const createCommandPipeline = ({
 				},
 				db: {
 					...createSyntheticWorkerDb(),
+					// A row read back carries its feature's internal id, joined on as Postgres joins it.
 					readLockRows: async ({ keys }) => {
 						lockReads.push(keys.map(({ lockId }) => lockId));
-						return keys.flatMap(({ lockId }) => storedLocks.get(lockId) ?? []);
+						return keys.flatMap(({ lockId }) => {
+							const row = storedLocks.get(lockId);
+							return row
+								? [{ ...row, internal_feature_id: "feat_messages" }]
+								: [];
+						});
 					},
 				},
 				catalogCache: createTestCatalogCache(),

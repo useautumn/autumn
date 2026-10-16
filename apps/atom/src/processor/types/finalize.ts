@@ -16,7 +16,7 @@ export type FinalizeRequest = {
 export type AnswerableFinalize = {
 	customerId: string;
 	lockId: string;
-	/** 0 releases the lock, null confirms it at what it took. */
+	/** 0 releases the lock, null confirms it at what it took, any other value settles it there. */
 	finalValue: number | null;
 	properties: FinalizeCommand["properties"];
 };

@@ -241,7 +241,11 @@ const expectSettled = async ({
 	atomSeqs?: number[];
 }) => {
 	await expectAutumnLockState({ customerId, openLockIds: [], atomSeqs });
-	expect(await postgresRemaining({ customerId })).toBe(remaining);
+	// Polled: no open lock row is also what the row looks like before the lock's own hand-in lands.
+	await pollUntilAsserted({
+		fetch: () => postgresRemaining({ customerId }),
+		assert: (seen) => expect(seen).toBe(remaining),
+	});
 	await pollUntilAsserted({
 		fetch: () => atomRemaining({ atom, customerId }),
 		assert: (seen) => expect(seen).toBe(remaining),

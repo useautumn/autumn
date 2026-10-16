@@ -4,7 +4,7 @@ import type { FinalizeCommand } from "../finalize/types/finalizeCommand.js";
 import { lockFeatureOf } from "./lockFeatureOf.js";
 import type { AtomFinalizeCommand } from "./types/atomFinalizeCommand.js";
 
-/** The row's terms. Decided on the Atom, a draw above the lock overflows rather than leaving the lock open behind the Atom's 200; undecided, the row's own overage governs. */
+/** Decided on the Atom, a draw above the lock overflows rather than leaving the lock open behind the Atom's 200; undecided, the row's own overage governs. */
 const lockTermsOf = ({
 	command,
 	lock,
