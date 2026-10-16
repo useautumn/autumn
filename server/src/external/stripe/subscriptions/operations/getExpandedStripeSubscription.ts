@@ -32,5 +32,13 @@ export const getExpandedStripeSubscription = async ({
 			],
 		},
 	);
+
+	if (typeof expandedStripeSubscription.schedule === "string") {
+		expandedStripeSubscription.schedule =
+			await stripeCli.subscriptionSchedules.retrieve(
+				expandedStripeSubscription.schedule,
+			);
+	}
+
 	return expandedStripeSubscription as ExpandedStripeSubscription;
 };
