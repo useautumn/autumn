@@ -33,7 +33,10 @@ export const ApprovalRuleRow = ({
 					))}
 				</p>
 				<span className="text-subtle text-xs">
-					Edited by {rule.updated_by.name} · {format(rule.updated_at, "MMM d")}
+					{rule.updated_by.name
+						? `Edited by ${rule.updated_by.name}`
+						: "Edited with an API key"}{" "}
+					· {format(rule.updated_at, "MMM d")}
 				</span>
 			</div>
 		</TableCell>

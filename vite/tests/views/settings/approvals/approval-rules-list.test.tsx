@@ -42,12 +42,18 @@ const rule: ApprovalRule = {
 	updated_at: 0,
 };
 
-const renderRow = ({ canToggle }: { canToggle: boolean }) =>
+const renderRow = ({
+	canToggle,
+	editor = rule.updated_by.name,
+}: {
+	canToggle: boolean;
+	editor?: string;
+}) =>
 	renderToStaticMarkup(
 		<table>
 			<tbody>
 				<ApprovalRuleRow
-					rule={rule}
+					rule={{ ...rule, updated_by: { user_id: "usr_1", name: editor } }}
 					parts={[]}
 					order={2}
 					enabled={true}
@@ -85,6 +91,13 @@ describe("approval rules list states", () => {
 });
 
 describe("approval rule row", () => {
+	test("a rule saved by an API key says so instead of an empty name", () => {
+		expect(renderRow({ canToggle: true })).toContain("Edited by Charlie Lamb");
+		expect(renderRow({ canToggle: true, editor: "" })).toContain(
+			"Edited with an API key",
+		);
+	});
+
 	test("rules show their position", () => {
 		expect(renderRow({ canToggle: true })).toContain(">2</td>");
 	});
