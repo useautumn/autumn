@@ -7,7 +7,7 @@ import {
 } from "@autumn/balance-engine";
 import type { JournalEntry } from "../../../state/journal/types/journal.js";
 import type { StoredSubject } from "../../../state/types/storedSubject.js";
-import { replayOwed } from "./replayOwed.js";
+import { NO_ENTITY_PARTS, replayOwed } from "./replayOwed.js";
 import type { ReplayBase, ViewFold } from "./types/viewFold.js";
 
 /** The entries a fold applied: the journal may have grown its array since. */
@@ -32,7 +32,7 @@ const trimmedCountOf = ({
 
 /** Which guard a push failed, so the fold was replayed from it: and where Autumn's copy first differs, when that is known. */
 export type FoldRebuilt = {
-	rebuiltFor: "trim" | "catalog" | "state";
+	rebuiltFor: "trim" | "catalog" | "state" | "entity";
 	difference: StructuralDifference | null;
 };
 
@@ -51,6 +51,9 @@ export const foldAcrossPush = ({
 	owed: readonly JournalEntry[];
 	catalog: Catalog;
 }): { kept: ReplayBase } | FoldRebuilt => {
+	// An entity's entries moved rows its own push replaces apart from this one: only a customer-only fold is compared.
+	if (fold.parts.entities.size > 0)
+		return { rebuiltFor: "entity", difference: null };
 	const trimmed = trimmedCountOf({ fold, owed });
 	if (trimmed === null) return { rebuiltFor: "trim", difference: null };
 	// Bun's compare decides; the path finder, ten times slower, runs only to name what differs.
@@ -67,9 +70,10 @@ export const foldAcrossPush = ({
 			? fold.customer.state
 			: replayOwed({
 					owed: fold.owed.slice(0, trimmed),
-					state: fold.customer.state,
+					parts: { customer: fold.customer.state, entities: NO_ENTITY_PARTS },
 					catalog,
-				});
+					entityCopyOf: () => null,
+				}).customer;
 	if (
 		!Bun.deepEquals(
 			subjectStateRowsOf(acknowledged),
@@ -84,17 +88,20 @@ export const foldAcrossPush = ({
 			}),
 		};
 	// The fold's own steps past the acknowledged ones, counted on from Autumn's revision so the next replay starts there.
-	const stepsPastPush = fold.customerState.revision - acknowledged.revision;
+	const stepsPastPush = fold.parts.customer.revision - acknowledged.revision;
 	return {
 		kept: {
 			// The worker's apply of the trimmed entries raised the push's atom_seqs; the Atom's replay never writes it.
-			state: {
-				...fold.customerState,
-				revision: customer.state.revision + stepsPastPush,
+			parts: {
 				customer: {
-					...fold.customerState.customer,
-					atom_seqs: customer.state.customer.atom_seqs,
+					...fold.parts.customer,
+					revision: customer.state.revision + stepsPastPush,
+					customer: {
+						...fold.parts.customer.customer,
+						atom_seqs: customer.state.customer.atom_seqs,
+					},
 				},
+				entities: NO_ENTITY_PARTS,
 			},
 			applied: fold.applied - trimmed,
 			fullSubject: null,

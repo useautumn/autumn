@@ -32,11 +32,12 @@ export const THREAD_STAT_FIELDS = [
 	/** Pushes that replaced the copy of a customer still owing deductions: its view's fold continued, or replayed from the push. */
 	"viewFoldKept",
 	"viewFoldRebuilt",
-	/** Of those replays, why: no fold was held, the push trimmed more than a prefix, or its catalog or rows differed. */
+	/** Of those replays, why: no fold was held, the push trimmed more than a prefix, its catalog or rows differed, or it had replayed an entity's entries. */
 	"viewFoldRebuiltNoFold",
 	"viewFoldRebuiltTrim",
 	"viewFoldRebuiltCatalog",
 	"viewFoldRebuiltState",
+	"viewFoldRebuiltEntity",
 	"subjectMisses",
 	/** Of those misses, the ones that sent Autumn a pull; and the pulled subjects stored. */
 	"subjectPulls",
