@@ -20,13 +20,19 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
+import {
+	type ExpandedStripeCustomer,
+	getExpandedStripeCustomer,
+} from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import { getStripeInvoiceLineItems } from "@/external/stripe/invoices/lineItems/operations/getStripeInvoiceLineItems";
 import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { resolveVercelInstallationId } from "@/external/vercel/misc/vercelInvoiceUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
+import { buildApprovalCustomerFacts } from "@/internal/approvals/facts/customer/buildApprovalCustomerFacts";
+import { invoicePreviewToFacts } from "@/internal/approvals/facts/invoices/invoicePreviewToFacts";
 import { expirePendingPlanForVoidedInvoice } from "@/internal/billing/v2/actions/expirePendingPlan/expirePendingPlanForVoidedInvoice";
 import { stripeLineItemsToDbLineItems } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines";
 import {
@@ -999,25 +1005,58 @@ export const reissueInvoice = async ({
 		currency: stripeInvoice.currency,
 	});
 
+	const previewReplacement = ({
+		stripeCustomer,
+	}: {
+		stripeCustomer: ExpandedStripeCustomer;
+	}) =>
+		previewReissue({
+			stripeCli,
+			stripeInvoice,
+			stripeCustomer,
+			customerOverrides,
+			overrides: invoiceOverrides,
+			lines: replacementLines,
+			storedLines,
+			addedLineItems,
+			credits,
+			dueDateMs,
+		});
+
 	if (preview) {
 		return {
 			replacement: null,
 			voidedInvoiceId: null,
 			creditNoteId: null,
-			preview: await previewReissue({
-				stripeCli,
-				stripeInvoice,
-				stripeCustomer,
-				customerOverrides,
-				overrides: invoiceOverrides,
-				lines: replacementLines,
-				storedLines,
-				addedLineItems,
-				credits,
-				dueDateMs,
-			}),
+			preview: await previewReplacement({ stripeCustomer }),
 		};
 	}
+
+	// Judged on the replacement's total, tax included, before anything is voided or issued.
+	await checkRouteApproval({
+		ctx,
+		action: "invoices.reissue",
+		buildFacts: async () =>
+			invoicePreviewToFacts({
+				customer: await buildApprovalCustomerFacts({
+					ctx,
+					fullCustomer: await CusService.getFull({
+						ctx,
+						idOrInternalId: previewCustomerId,
+					}),
+				}),
+				preview: await previewReplacement({
+					stripeCustomer: await getExpandedStripeCustomer({
+						ctx,
+						stripeCustomerId: stripeInvoiceToStripeCustomerId({
+							stripeInvoice,
+						}),
+						errorOnNotFound: true,
+						expandTax: true,
+					}),
+				}),
+			}),
+	});
 
 	// Stripe snapshots the customer's email, name, address and tax ids at
 	// finalization, so these must precede the draft.
