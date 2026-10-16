@@ -19,6 +19,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getRewardPrices } from "@/internal/rewards/actions/getRewardPrices.js";
+import { restoreStripeCoupon } from "@/internal/rewards/actions/restoreStripeCoupon.js";
 import { validateCouponStripeProductScope } from "@/internal/rewards/actions/validateCouponStripeProductScope.js";
 import { validateRewardUniqueness } from "@/internal/rewards/actions/validateRewardUniqueness.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
@@ -134,14 +135,19 @@ export const handleUpdateCoupon = createRoute({
 		} catch (_) {}
 
 		if (willRecreateStripeCoupon) {
-			await createStripeCoupon({
-				reward: updatedReward,
-				org,
-				env,
-				prices,
-				logger,
-				legacyVersion: legacyStripe,
-			});
+			try {
+				await createStripeCoupon({
+					reward: updatedReward,
+					org,
+					env,
+					prices,
+					logger,
+					legacyVersion: legacyStripe,
+				});
+			} catch (error) {
+				await restoreStripeCoupon({ ctx, reward, legacyStripe });
+				throw error;
+			}
 		}
 
 		const updatedCoupon = await rewardRepo.update({

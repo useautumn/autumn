@@ -25,6 +25,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "../../repos/index.js";
 import { initRewardStripePrices } from "../../rewardUtils.js";
 import { getRewardPrices } from "../getRewardPrices.js";
+import { restoreStripeCoupon } from "../restoreStripeCoupon.js";
 import { validateCouponStripeProductScope } from "../validateCouponStripeProductScope.js";
 import { validateRewardUniqueness } from "../validateRewardUniqueness.js";
 import { requireApiReward, toApiRewardResponse } from "./apiRewardUtils.js";
@@ -231,7 +232,12 @@ const recreateStripeCoupon = async ({
 		await stripeCli.coupons.del(previous.internal_id);
 	} catch (_) {}
 
-	await createStripeCoupon({ reward: updated, org, env, prices, logger });
+	try {
+		await createStripeCoupon({ reward: updated, org, env, prices, logger });
+	} catch (error) {
+		await restoreStripeCoupon({ ctx, reward: previous });
+		throw error;
+	}
 };
 
 export const updateApiReward = async ({

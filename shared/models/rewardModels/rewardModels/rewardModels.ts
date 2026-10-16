@@ -58,6 +58,26 @@ const addCouponNameLengthIssue = (
 	});
 };
 
+const addDiscountValueIssue = (
+	{
+		type,
+		discount_config,
+	}: {
+		type?: RewardType | null;
+		discount_config?: { discount_value: number } | null;
+	},
+	ctx: z.RefinementCtx,
+) => {
+	if (type === RewardType.FreeProduct || type === RewardType.FeatureGrant)
+		return;
+	if (!discount_config || discount_config.discount_value > 0) return;
+	ctx.addIssue({
+		code: "custom",
+		message: "Discount value must be greater than 0",
+		path: ["discount_config", "discount_value"],
+	});
+};
+
 const RewardSchema = z.object({
 	name: z.string().nullish(),
 
@@ -105,7 +125,8 @@ export const CreateRewardSchema = z
 		},
 		{ message: "Feature grant rewards require at least one promo code" },
 	)
-	.superRefine(addCouponNameLengthIssue);
+	.superRefine(addCouponNameLengthIssue)
+	.superRefine(addDiscountValueIssue);
 
 export const UpdateRewardSchema = z
 	.object({
@@ -118,7 +139,8 @@ export const UpdateRewardSchema = z
 		free_product_id: z.string().nullish(),
 		entitlements: z.array(RewardEntitlementSchema).nullish(),
 	})
-	.superRefine(addCouponNameLengthIssue);
+	.superRefine(addCouponNameLengthIssue)
+	.superRefine(addDiscountValueIssue);
 
 export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;
