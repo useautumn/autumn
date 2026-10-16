@@ -70,10 +70,11 @@ const keepsAllowance = ({ before, after }: BalanceTransition) =>
 const resetsAllowance = (transition: BalanceTransition) =>
 	clearsUsage(transition) && keepsAllowance(transition);
 
-/** What was left survives as a fresh grant, as a one-off prepaid carry-over does. */
+/** What was left survives as a fresh grant, as a one-off prepaid carry-over does; pay-as-you-go has nothing left to keep. */
 const keepsRemaining = ({ before, after }: BalanceTransition) =>
 	clearsUsage({ before, after }) &&
 	!after.unlimited &&
+	after.remaining > 0 &&
 	after.remaining === before.remaining;
 
 /** First matching row wins: access changes outrank usage changes, which outrank a plain update. */
