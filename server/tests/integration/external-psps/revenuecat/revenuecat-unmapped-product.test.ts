@@ -6,9 +6,15 @@ import { OrgService } from "@/internal/orgs/OrgService";
 import { encryptData } from "@/utils/encryptUtils";
 import { RevenueCatWebhookClient } from "./utils/revenue-cat-webhook-client";
 
-const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_unmapped";
+const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
 
 const setupRevenueCatOrg = async () => {
+	if (
+		ctx.org.processor_configs?.revenuecat?.sandbox_webhook_secret ===
+		RC_WEBHOOK_SECRET
+	)
+		return;
+
 	await OrgService.update({
 		db: ctx.db,
 		orgId: ctx.org.id,
