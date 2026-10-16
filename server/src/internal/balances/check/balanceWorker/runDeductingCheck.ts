@@ -17,6 +17,7 @@ import {
 	type ParsedCheckParams,
 	RecaseError,
 } from "@autumn/shared";
+import { throwOnSimulatedBalanceWorkerOutage } from "@/external/balanceWorker/simulateBalanceWorkerOutage.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { scheduleLockExpiry } from "../../balanceWorker/lockExpirySchedule.js";
 import { trackParamsToTrackCommand } from "../../track/balanceWorker/balanceWorkerTrackRequest.js";
@@ -142,6 +143,7 @@ export async function runDeductingCheck({
 		},
 	});
 	try {
+		throwOnSimulatedBalanceWorkerOutage({ ctx });
 		const reply = await client.track({ command });
 		// A rejected track took nothing, so there is no lock to expire.
 		if (body.lock && reply.result.status === "applied")
