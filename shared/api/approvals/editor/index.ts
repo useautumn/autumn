@@ -1,3 +1,5 @@
 export * from "./editorFields";
-export * from "./rowsToWhen";
-export * from "./whenToRows";
+export * from "./ruleFilterToRows";
+export * from "./ruleRowsToFilter";
+// STUB re-export until S3 freezes; then these come from `@autumn/shared`.
+export * from "./s3Stub";
