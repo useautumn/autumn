@@ -4,6 +4,7 @@ import {
 	ATOM_STORAGE_PER_GIB_LABEL,
 	atomMonthlyCost,
 	atomStorageMonthlyEstimate,
+	atomStorageMonthlyIncrease,
 	atomVolumePresets,
 	atomVolumeSize,
 } from "@/views/settings/sections/components/atom/atomVolumeDisplay";
@@ -46,6 +47,17 @@ describe("Atom storage prices", () => {
 			compute: "$233",
 			storage: "$8",
 		});
+	});
+
+	test("growing 20 to 50 GiB adds $4.80 a month", () => {
+		expect(atomStorageMonthlyIncrease({ fromGib: 20, toGib: 50 })).toBe(
+			"+$4.80",
+		);
+	});
+
+	test("only presets above the current size are offered to grow to", () => {
+		expect(atomVolumePresets({ aboveGib: 20 })).toEqual([50, 100]);
+		expect(atomVolumePresets({ aboveGib: 100 })).toEqual([]);
 	});
 });
 

@@ -28,6 +28,19 @@ export const atomStorageMonthlyEstimate = ({
 	volumeSizeGib: number;
 }) => `~$${centsFormat.format(byocCacheStorageMonthlyUsd({ volumeSizeGib }))}`;
 
+/** What growing both volumes adds a month, to the cent: e.g. "+$4.80". */
+export const atomStorageMonthlyIncrease = ({
+	fromGib,
+	toGib,
+}: {
+	fromGib: number;
+	toGib: number;
+}) =>
+	`+$${centsFormat.format(
+		byocCacheStorageMonthlyUsd({ volumeSizeGib: toGib }) -
+			byocCacheStorageMonthlyUsd({ volumeSizeGib: fromGib }),
+	)}`;
+
 /** What each GiB per replica costs a month across both volumes. */
 export const ATOM_STORAGE_PER_GIB_LABEL = `$${centsFormat.format(
 	byocCacheStorageMonthlyUsd({ volumeSizeGib: 1 }),

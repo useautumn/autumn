@@ -4,12 +4,16 @@ import {
 	type AtomMetricsRange,
 	type AtomVolume,
 	BYOC_CACHE_REPLICAS,
+	ByocCacheStatus,
 } from "@autumn/shared";
-import { Alert, Skeleton } from "@autumn/ui";
-import { WarningIcon } from "@phosphor-icons/react";
+import { Alert, Button, Skeleton } from "@autumn/ui";
+import { PlusIcon, WarningIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { Bar, LabelList, Line, ReferenceDot, ReferenceLine } from "recharts";
 import { useNow } from "@/hooks/common/useNow";
 import { atomStorageMonthlyEstimate } from "../atomVolumeDisplay";
+import { IncreaseStorageDialog } from "../IncreaseStorageDialog";
+import { useAtomActions } from "../useAtomActions";
 import type {
 	AtomMetricsChartData,
 	AtomMetricsSeries,
@@ -227,7 +231,7 @@ const StorageFooter = ({
 	</div>
 );
 
-/** How full the fullest replica's volume is, and how often Atom evicts to keep it under 80%. */
+/** How full the fullest replica's volume is, how often Atom evicts to keep it under 80%, and growing it. */
 export const AtomStorageChart = ({
 	cache,
 	chartData,
@@ -241,41 +245,67 @@ export const AtomStorageChart = ({
 	range: AtomMetricsRange;
 	isLoading: boolean;
 }) => {
+	const { increaseStorage } = useAtomActions();
+	const [isIncreaseOpen, setIncreaseOpen] = useState(false);
 	const latestVolume = volumes[0];
 	const now = useNow({ active: Boolean(latestVolume) });
 	const hasDisk = Boolean(chartData?.rows.some((row) => row.disk !== null));
+	const canIncrease = cache?.status === ByocCacheStatus.Ready;
 
 	return (
-		<MonitoringChartCard
-			title="Storage"
-			description={[
-				"Fullest replica",
-				latestVolume && `updated ${formatUpdatedAgo(now - latestVolume.at)}`,
-			]
-				.filter(Boolean)
-				.join(" · ")}
-			summary={
-				<StorageSummary
-					volumes={volumes}
-					evictionsTotal={chartData && atomEvictionsTotal(chartData)}
-					range={range}
-					isLoading={isLoading}
-				/>
-			}
-			footer={
-				cache && (
-					<StorageFooter
+		<>
+			<MonitoringChartCard
+				title="Storage"
+				description={[
+					"Fullest replica",
+					latestVolume && `updated ${formatUpdatedAgo(now - latestVolume.at)}`,
+				]
+					.filter(Boolean)
+					.join(" · ")}
+				action={
+					canIncrease && (
+						<Button
+							variant="secondary"
+							size="mini"
+							onClick={() => setIncreaseOpen(true)}
+						>
+							Increase storage
+							<PlusIcon className="size-3" />
+						</Button>
+					)
+				}
+				summary={
+					<StorageSummary
 						volumes={volumes}
-						volumeSizeGib={cache.volume_size_gib}
+						evictionsTotal={chartData && atomEvictionsTotal(chartData)}
+						range={range}
+						isLoading={isLoading}
 					/>
-				)
-			}
-			isLoading={isLoading}
-			isEmpty={!hasDisk}
-			emptyLabel={UNAVAILABLE}
-			plotClassName="h-[280px]"
-		>
-			{chartData && <StoragePlots chartData={chartData} range={range} />}
-		</MonitoringChartCard>
+				}
+				footer={
+					cache && (
+						<StorageFooter
+							volumes={volumes}
+							volumeSizeGib={cache.volume_size_gib}
+						/>
+					)
+				}
+				isLoading={isLoading}
+				isEmpty={!hasDisk}
+				emptyLabel={UNAVAILABLE}
+				plotClassName="h-[280px]"
+			>
+				{chartData && <StoragePlots chartData={chartData} range={range} />}
+			</MonitoringChartCard>
+			{cache && (
+				<IncreaseStorageDialog
+					key={cache.volume_size_gib}
+					open={isIncreaseOpen}
+					onOpenChange={setIncreaseOpen}
+					currentGib={cache.volume_size_gib}
+					increaseStorage={increaseStorage}
+				/>
+			)}
+		</>
 	);
 };

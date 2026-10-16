@@ -57,6 +57,15 @@ export const useAtomActions = () => {
 		onSuccess: setCache,
 	});
 
+	const increaseStorage = useMutation({
+		mutationFn: ({ volumeSizeGib }: { volumeSizeGib: number }) =>
+			postAtom<ApiByocCache>("increase_atom_storage", {
+				...scoped,
+				volume_size_gib: volumeSizeGib,
+			}),
+		onSuccess: setCache,
+	});
+
 	const retry = useMutation({
 		mutationFn: () => postAtom<ApiByocCache>("retry_atom", scoped),
 		onSuccess: setCache,
@@ -87,7 +96,15 @@ export const useAtomActions = () => {
 		}
 	};
 
-	return { create, resize, retry, finish, remove, startSetup };
+	return {
+		create,
+		resize,
+		increaseStorage,
+		retry,
+		finish,
+		remove,
+		startSetup,
+	};
 };
 
 export type AtomActions = ReturnType<typeof useAtomActions>;
