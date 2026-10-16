@@ -147,6 +147,20 @@ export const isAtomBeingRemoved = (cache: ApiByocCache | null) =>
 	cache?.status === ByocCacheStatus.Removing ||
 	cache?.status === ByocCacheStatus.TeardownRequired;
 
+/** What the org calls the Atom: its name, else its region, else its stack. */
+export const atomDisplayName = (cache: ApiByocCache) =>
+	cache.name ?? cache.region ?? cache.stack_name;
+
+/** One chip for where an Atom stands, as the list and the switcher show it. */
+export const atomStatusChip = (cache: ApiByocCache): AtomChipDisplay => {
+	if (cache.status === ByocCacheStatus.Failed)
+		return ATOM_STAGE_STATUS_CHIPS.failed;
+	if (cache.status === ByocCacheStatus.AwaitingSetup)
+		return ATOM_WAITING_FOR_AWS_CHIP;
+	if (cache.status === ByocCacheStatus.Provisioning) return ATOM_DEPLOYING_CHIP;
+	return isAtomConnected(cache) ? ATOM_CONNECTED_CHIP : ATOM_CONNECTING_CHIP;
+};
+
 /** The first step not done yet; null once Atom is connected. */
 export const atomCurrentStage = (cache: ApiByocCache): ByocCacheStage | null =>
 	BYOC_CACHE_STAGES.find((stage) => !isAtomStageDone({ cache, stage })) ?? null;

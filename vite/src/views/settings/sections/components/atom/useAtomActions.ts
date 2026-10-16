@@ -6,7 +6,7 @@ import type {
 	GetByocCacheResponse,
 } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAtomApi } from "@/contexts/AtomApiContext";
+import { atomIdBody, useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Opened inside the click so the browser allows it; the setup link is loaded into it once the server returns one. */
@@ -20,7 +20,8 @@ const openSetupTab = (): Window | null => {
 export const useAtomActions = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
-	const { basePath, queryKey } = useAtomApi();
+	const { basePath, queryKey, atomId, onCreated } = useAtomApi();
+	const scoped = atomIdBody({ atomId });
 
 	const setCache = (cache: ApiByocCache | null) =>
 		queryClient.setQueryData<GetByocCacheResponse>(
@@ -43,30 +44,33 @@ export const useAtomActions = () => {
 	const create = useMutation({
 		mutationFn: (params: CreateByocCacheParams) =>
 			postAtom<CreateByocCacheResponse>("create_atom", params),
-		onSuccess: ({ setup_url: _setupUrl, token: _token, ...cache }) =>
-			setCache(cache),
+		// A new Atom opens on its own page; a fresh link for an existing one lands in place.
+		onSuccess: ({ setup_url: _setupUrl, token: _token, ...cache }) => {
+			if (!atomId && onCreated) onCreated(cache.id);
+			else setCache(cache);
+		},
 	});
 
 	const resize = useMutation({
 		mutationFn: ({ cpu, memory }: ByocCacheMachine) =>
-			postAtom<ApiByocCache>("resize_atom", { cpu, memory }),
+			postAtom<ApiByocCache>("resize_atom", { ...scoped, cpu, memory }),
 		onSuccess: setCache,
 	});
 
 	const retry = useMutation({
-		mutationFn: () => postAtom<ApiByocCache>("retry_atom"),
+		mutationFn: () => postAtom<ApiByocCache>("retry_atom", scoped),
 		onSuccess: setCache,
 	});
 
 	const finish = useMutation({
-		mutationFn: () => postAtom<ApiByocCache>("finish_atom_setup"),
+		mutationFn: () => postAtom<ApiByocCache>("finish_atom_setup", scoped),
 		onSuccess: setCache,
 	});
 
 	// A delete keeps the record while the stack is torn down, so read where it landed.
 	const remove = useMutation({
-		mutationFn: ({ atomId }: { atomId?: string } = {}) =>
-			postAtom("delete_atom", { atom_id: atomId }),
+		mutationFn: ({ atomId: removedId = atomId }: { atomId?: string } = {}) =>
+			postAtom("delete_atom", atomIdBody({ atomId: removedId })),
 		onSuccess: refetchCache,
 	});
 
