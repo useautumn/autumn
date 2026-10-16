@@ -13,9 +13,8 @@ import {
 	atomEvictionBuckets,
 	atomEvictionsTotal,
 	atomReplicaLines,
-	atomReplicasReporting,
 	atomVolumeUsage,
-	formatEvictionsTotal,
+	formatEvictionsCount,
 } from "@/views/settings/sections/components/atom/monitoring/atomStorageDisplay";
 
 const GIB = 1024 ** 3;
@@ -102,8 +101,6 @@ describe("the storage card's readings", () => {
 	});
 
 	test("says when a replica is not reporting", () => {
-		expect(atomReplicasReporting(2)).toBe("2 reporting");
-		expect(atomReplicasReporting(1)).toBe("1 of 2 reporting");
 		expect(
 			atomReplicaLines([
 				{
@@ -117,15 +114,8 @@ describe("the storage card's readings", () => {
 	});
 
 	test("counts evictions in the window", () => {
-		expect(formatEvictionsTotal({ total: 1240, range: "24h" })).toBe(
-			"1,240 customers evicted in 24h",
-		);
-		expect(formatEvictionsTotal({ total: 1, range: "1h" })).toBe(
-			"1 customer evicted in 1h",
-		);
-		expect(formatEvictionsTotal({ total: 0, range: "7d" })).toBe(
-			"No customers evicted in 7d",
-		);
+		expect(formatEvictionsCount(1240)).toBe("1,240 evicted");
+		expect(formatEvictionsCount(0)).toBe("0 evicted");
 	});
 });
 

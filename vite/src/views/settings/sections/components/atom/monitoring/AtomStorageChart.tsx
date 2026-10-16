@@ -6,12 +6,11 @@ import {
 	BYOC_CACHE_REPLICAS,
 	ByocCacheStatus,
 } from "@autumn/shared";
-import { Alert, Button, Skeleton } from "@autumn/ui";
-import { PlusIcon, WarningIcon } from "@phosphor-icons/react";
+import { Button } from "@autumn/ui";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Bar, LabelList, Line, ReferenceDot, ReferenceLine } from "recharts";
-import { useNow } from "@/hooks/common/useNow";
-import { atomStorageMonthlyEstimate } from "../atomVolumeDisplay";
+import { cn } from "@/lib/utils";
 import { IncreaseStorageDialog } from "../IncreaseStorageDialog";
 import { useAtomActions } from "../useAtomActions";
 import type {
@@ -23,12 +22,10 @@ import {
 	atomEvictionBuckets,
 	atomEvictionsTotal,
 	atomReplicaLines,
-	atomReplicasReporting,
 	atomVolumeUsage,
 	EVICTION_BUCKETS,
 	formatEvictionCount,
-	formatEvictionsTotal,
-	formatUpdatedAgo,
+	formatEvictionsCount,
 } from "./atomStorageDisplay";
 import { MonitoringChartCard } from "./MonitoringChartCard";
 import { MonitoringPlot } from "./MonitoringPlot";
@@ -54,74 +51,52 @@ const BAR_LABEL_HEADROOM = 1.6;
 
 const PLOT_LABEL_CLASS = "pl-10 text-xs text-tertiary-foreground";
 
-/** The fullest replica's volume, and how many customers the window evicted, with a warning while it evicts. */
+/** The fullest replica's volume, and how many customers the window evicted. */
 const StorageSummary = ({
 	volumes,
 	evictionsTotal,
-	range,
-	isLoading,
 }: {
 	volumes: AtomVolume[];
 	evictionsTotal: number | null;
-	range: AtomMetricsRange;
-	isLoading: boolean;
 }) => {
 	const usage = atomVolumeUsage(volumes[0]);
 	return (
-		<div className="flex flex-col gap-5">
-			<div className="flex flex-wrap items-start justify-between gap-6">
-				<div className="flex flex-col gap-2">
-					<span className="text-xs text-tertiary-foreground">
-						Volume usage · fullest replica
+		<div className="flex items-baseline justify-between gap-4 text-sm tabular-nums">
+			{usage && (
+				<span className="text-foreground">
+					{usage.used} / {usage.total} GiB
+					<span className="text-tertiary-foreground">
+						{" "}
+						· {formatPercent(usage.share)}
 					</span>
-					{isLoading ? (
-						<Skeleton className="h-[30px] w-40" />
-					) : usage ? (
-						<span className="flex items-baseline gap-2">
-							<span className="text-[25px] leading-[30px] font-medium tabular-nums text-foreground">
-								{usage.used} / {usage.total} GiB
-							</span>
-							<span className="text-[15px] text-tertiary-foreground">
-								· {formatPercent(usage.share)}
-							</span>
-						</span>
-					) : (
-						<span className="text-[17px] leading-[30px] text-tertiary-foreground">
-							{UNAVAILABLE}
-						</span>
+				</span>
+			)}
+			{evictionsTotal !== null && (
+				<span
+					className={cn(
+						"text-tertiary-foreground",
+						evictionsTotal > 0 && "text-amber-500",
 					)}
-					<span className="text-xs leading-[18px] text-tertiary-foreground">
-						Per replica · {atomReplicasReporting(volumes.length)}
-					</span>
-				</div>
-				{evictionsTotal !== null && (
-					<div className="flex flex-col items-end gap-2 text-right">
-						<span className="text-xs text-tertiary-foreground">
-							Cache evictions · selected window
-						</span>
-						<span className="text-[17px] leading-[30px] font-medium tabular-nums text-foreground">
-							{formatEvictionsTotal({ total: evictionsTotal, range })}
-						</span>
-						<span className="text-[11px] leading-[18px] text-tertiary-foreground">
-							Eviction events across both replicas · not unique customers
-						</span>
-					</div>
-				)}
-			</div>
-			{evictionsTotal !== null && evictionsTotal > 0 && (
-				<Alert
-					variant="warning"
-					className="flex items-start gap-2 rounded-md border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs leading-[18px] text-amber-200/90"
 				>
-					<WarningIcon className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
-					Atom is clearing cached customers to stay under{" "}
-					{formatPercent(ATOM_DISK_EVICTION_SHARE)} disk. Their next checks go
-					to the API. Increase storage to keep them local.
-				</Alert>
+					{formatEvictionsCount(evictionsTotal)}
+				</span>
 			)}
 		</div>
 	);
 };
+
+/** What the card measures, and each replica's own reading. */
+const StorageInfo = ({ volumes }: { volumes: AtomVolume[] }) => (
+	<div className="flex max-w-72 flex-col gap-1.5">
+		<p>
+			Disk used on the fullest replica. Above{" "}
+			{formatPercent(ATOM_DISK_EVICTION_SHARE)}, Atom evicts cached customers;
+			their next checks go to the API until they are cached again.
+		</p>
+		<p>Evictions count events across both replicas, not unique customers.</p>
+		{volumes.length > 0 && <p>{atomReplicaLines(volumes).join(" · ")}</p>}
+	</div>
+);
 
 /** Disk used against the 80% line, and above the same time axis the evictions it set off, per bucket. */
 const StoragePlots = ({
@@ -137,7 +112,6 @@ const StoragePlots = ({
 	const latestDisk = chartData.latest.disk;
 	return (
 		<div className="flex size-full flex-col gap-1.5">
-			<span className={PLOT_LABEL_CLASS}>{DISK.label}</span>
 			<div className="h-40">
 				<MonitoringPlot
 					chartData={chartData}
@@ -212,25 +186,6 @@ const StoragePlots = ({
 	);
 };
 
-/** Each replica's volume, and the size both run with and its price. */
-const StorageFooter = ({
-	volumes,
-	volumeSizeGib,
-}: {
-	volumes: AtomVolume[];
-	volumeSizeGib: number;
-}) => (
-	<div className="flex flex-wrap justify-between gap-4 border-t border-table-row-divider pt-3 text-xs leading-[18px] text-tertiary-foreground">
-		{atomReplicaLines(volumes).map((line) => (
-			<span key={line}>{line}</span>
-		))}
-		<span>
-			{BYOC_CACHE_REPLICAS} × {volumeSizeGib} GiB ·{" "}
-			{atomStorageMonthlyEstimate({ volumeSizeGib })} / mo
-		</span>
-	</div>
-);
-
 /** How full the fullest replica's volume is, how often Atom evicts to keep it under 80%, and growing it. */
 export const AtomStorageChart = ({
 	cache,
@@ -247,8 +202,6 @@ export const AtomStorageChart = ({
 }) => {
 	const { increaseStorage } = useAtomActions();
 	const [isIncreaseOpen, setIncreaseOpen] = useState(false);
-	const latestVolume = volumes[0];
-	const now = useNow({ active: Boolean(latestVolume) });
 	const hasDisk = Boolean(chartData?.rows.some((row) => row.disk !== null));
 	const canIncrease = cache?.status === ByocCacheStatus.Ready;
 
@@ -256,12 +209,12 @@ export const AtomStorageChart = ({
 		<>
 			<MonitoringChartCard
 				title="Storage"
-				description={[
-					"Fullest replica",
-					latestVolume && `updated ${formatUpdatedAgo(now - latestVolume.at)}`,
-				]
-					.filter(Boolean)
-					.join(" · ")}
+				info={<StorageInfo volumes={volumes} />}
+				description={
+					cache
+						? `${BYOC_CACHE_REPLICAS} × ${cache.volume_size_gib} GiB`
+						: undefined
+				}
 				action={
 					canIncrease && (
 						<Button
@@ -278,22 +231,13 @@ export const AtomStorageChart = ({
 					<StorageSummary
 						volumes={volumes}
 						evictionsTotal={chartData && atomEvictionsTotal(chartData)}
-						range={range}
-						isLoading={isLoading}
 					/>
-				}
-				footer={
-					cache && (
-						<StorageFooter
-							volumes={volumes}
-							volumeSizeGib={cache.volume_size_gib}
-						/>
-					)
 				}
 				isLoading={isLoading}
 				isEmpty={!hasDisk}
 				emptyLabel={UNAVAILABLE}
-				plotClassName="h-[280px]"
+				isEmptyCompact
+				plotClassName="h-[248px]"
 			>
 				{chartData && <StoragePlots chartData={chartData} range={range} />}
 			</MonitoringChartCard>

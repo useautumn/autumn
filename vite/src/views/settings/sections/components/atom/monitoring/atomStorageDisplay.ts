@@ -20,9 +20,9 @@ export const EVICTION_BUCKETS: Record<
 	AtomMetricsRange,
 	{ ms: number; label: string }
 > = {
-	"1h": { ms: 5 * MINUTE_MS, label: "Customers evicted per 5 min" },
-	"24h": { ms: HOUR_MS, label: "Customers evicted per hour" },
-	"7d": { ms: DAY_MS, label: "Customers evicted per day" },
+	"1h": { ms: 5 * MINUTE_MS, label: "Evicted per 5 min" },
+	"24h": { ms: HOUR_MS, label: "Evicted per hour" },
+	"7d": { ms: DAY_MS, label: "Evicted per day" },
 };
 
 const gibFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -49,12 +49,6 @@ export const atomVolumeUsage = (volume: AtomVolume | undefined) => {
 	};
 };
 
-/** e.g. "2 reporting", or "1 of 2 reporting" while a replica is silent. */
-export const atomReplicasReporting = (reportingCount: number) =>
-	reportingCount >= BYOC_CACHE_REPLICAS
-		? `${reportingCount} reporting`
-		: `${reportingCount} of ${BYOC_CACHE_REPLICAS} reporting`;
-
 /** Each replica in a stable order, e.g. "Replica 1 · 15.2 / 20 GiB"; one that reported nothing says so. */
 export const atomReplicaLines = (volumes: AtomVolume[]) => {
 	const byReplica = [...volumes].sort((a, b) =>
@@ -72,29 +66,13 @@ export const atomReplicaLines = (volumes: AtomVolume[]) => {
 	);
 };
 
-/** e.g. "10s ago", "3 min ago", "2h ago" */
-export const formatUpdatedAgo = (ms: number) => {
-	if (ms < MINUTE_MS) return `${Math.max(0, Math.floor(ms / SECOND_MS))}s ago`;
-	if (ms < HOUR_MS) return `${Math.floor(ms / MINUTE_MS)} min ago`;
-	return `${Math.floor(ms / HOUR_MS)}h ago`;
-};
-
 /** Every eviction the plotted periods counted. */
 export const atomEvictionsTotal = (chartData: AtomMetricsChartData) =>
 	chartData.rows.reduce((total, row) => total + (row.evicted ?? 0), 0);
 
-/** e.g. "1,240 customers evicted in 24h" */
-export const formatEvictionsTotal = ({
-	total,
-	range,
-}: {
-	total: number;
-	range: AtomMetricsRange;
-}) => {
-	if (total === 0) return `No customers evicted in ${range}`;
-	const noun = total === 1 ? "customer" : "customers";
-	return `${countFormat.format(total)} ${noun} evicted in ${range}`;
-};
+/** e.g. "1,240 evicted" */
+export const formatEvictionsCount = (total: number) =>
+	`${countFormat.format(total)} evicted`;
 
 /** Periods' evictions summed into local-time buckets clipped to the plotted span; a bucket with none plots nothing. */
 export const atomEvictionBuckets = ({
