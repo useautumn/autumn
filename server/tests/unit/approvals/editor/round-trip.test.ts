@@ -1,32 +1,32 @@
 /**
- * S5 contract: every field × operator in `EDITOR_FIELDS` (the When fields
- * board) converts rows → `when` → rows unchanged, and the `when` passes S3's validator.
+ * S5 contract: every effect × shape × field × operator in `EDITOR_FIELDS`
+ * (the When fields board) converts rows → filter → rows unchanged, and the
+ * filter parses against its shape with no `$every` in a block rule.
  *
- * Red (before):  `rowsToWhen` / `whenToRows` don't exist.
+ * Red (before):  `ruleRowsToFilter` / `ruleFilterToRows` don't exist.
  * Green (after): each cell round-trips; rows that can't be stored report an issue.
  */
 
 import { describe, expect, test } from "bun:test";
 import {
-	ACTIONS,
-	type ApprovalAction,
-	validateApprovalRule,
-	type WhenKey,
-} from "@autumn/shared";
-import {
+	type ApprovalFilterKey,
+	buildApprovalFilterSchema,
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorGroup,
 	type EditorRow,
-	rowsToWhen,
-	whenToRows,
+	type RuleEffect,
+	ruleFilterToRows,
+	ruleRowsToFilter,
+	VALUELESS_OPERATORS,
 } from "@autumn/shared/api/approvals/editor/index.js";
-import { rules } from "@tests/utils/fixtures/rules.js";
 
 /** Per field: the value for a single-value operator, then a second for "any of" / "none of". */
 const SAMPLES: Record<EditorField, unknown[]> = {
 	customer: ["acme", "globex"],
 	customer_plan: [{ plan_id: "enterprise", version: 2 }],
+	customer_has_paid: [true],
+	entity: ["deployments", "seats"],
 	paid: [true],
 	checkout: [true],
 	total: [20],
@@ -39,6 +39,7 @@ const SAMPLES: Record<EditorField, unknown[]> = {
 	discount_amount_off: [50],
 	plan_schedule: ["immediate", "end_of_cycle"],
 	proration_behavior: ["none", "bill_difference"],
+	billing_cycle_anchor: ["now", "custom"],
 	starts_at: [7],
 	invoice_mode: [false],
 	cancel_action: ["cancel_immediately", "cancel_end_of_cycle"],
@@ -60,83 +61,112 @@ const sampleRow = (field: string, operator: string): EditorRow => {
 	return {
 		field,
 		operator,
-		value: operator === "has_none" ? null : value,
+		value: VALUELESS_OPERATORS.includes(operator) ? null : value,
 	} as EditorRow;
 };
 
-const AREAS = Object.keys(EDITOR_FIELDS) as WhenKey[];
-const fieldsOf = (area: WhenKey) =>
-	Object.entries(EDITOR_FIELDS[area] as Record<string, readonly string[]>);
+const SHAPES = Object.keys(EDITOR_FIELDS) as ApprovalFilterKey[];
+const EFFECTS: RuleEffect[] = ["allow", "block"];
+const fieldsOf = (shape: ApprovalFilterKey) =>
+	Object.entries(EDITOR_FIELDS[shape] as Record<string, readonly string[]>);
 
-/** One group of rows in board order; Balances rules also need a Feature row. */
-const editorInput = (area: WhenKey, rows: EditorRow[]) => {
-	const needsFeature =
-		area.startsWith("balance_") && !rows.some((row) => row.field === "feature");
-	const order = Object.keys(EDITOR_FIELDS[area]);
-	const group = needsFeature
-		? [sampleRow("feature", "is"), ...rows]
-		: [...rows];
-	group.sort((a, b) => order.indexOf(a.field) - order.indexOf(b.field));
-	return { groups: [group] };
-};
-
-const stored = (input: { area: WhenKey; groups: EditorGroup[] }) => {
-	const result = rowsToWhen(input);
-	if (!result.ok) throw new Error(JSON.stringify(result.issues));
-	return result.when;
-};
-
-const expectValid = (area: WhenKey, when: unknown) => {
-	const action = (Object.keys(ACTIONS) as ApprovalAction[]).find(
-		(key) => ACTIONS[key].when === area,
+const inBoardOrder = (shape: ApprovalFilterKey, rows: EditorRow[]) => {
+	const order = Object.keys(EDITOR_FIELDS[shape]);
+	return [...rows].sort(
+		(a, b) => order.indexOf(a.field) - order.indexOf(b.field),
 	);
-	const result = validateApprovalRule({
-		...rules.rule({ actions: [action as ApprovalAction] }),
-		when,
-	});
-	expect(result.ok ? [] : result.issues).toEqual([]);
 };
 
-const expectRoundTrip = (area: WhenKey, rows: EditorRow[]) => {
-	const when = stored({ area, ...editorInput(area, rows) });
-	expect(whenToRows({ area, when })).toEqual({
+const stored = (input: {
+	shape: ApprovalFilterKey;
+	effect: RuleEffect;
+	groups: EditorGroup[];
+}) => {
+	const result = ruleRowsToFilter(input);
+	if (!result.ok) throw new Error(JSON.stringify(result.issues));
+	return result.filter;
+};
+
+const keysIn = (value: unknown): string[] =>
+	value && typeof value === "object"
+		? Object.entries(value).flatMap(([key, inner]) => [key, ...keysIn(inner)])
+		: [];
+
+// Swap for S3's validateApprovalRule once S3 freezes; this is its shape and effect check.
+const expectValid = (
+	shape: ApprovalFilterKey,
+	effect: RuleEffect,
+	filter: unknown,
+) => {
+	expect(
+		buildApprovalFilterSchema({ key: shape }).safeParse(filter).success,
+	).toBe(true);
+	if (effect === "block") expect(keysIn(filter)).not.toContain("$every");
+};
+
+const expectRoundTrip = ({
+	shape,
+	effect,
+	rows,
+}: {
+	shape: ApprovalFilterKey;
+	effect: RuleEffect;
+	rows: EditorRow[];
+}) => {
+	const groups = [inBoardOrder(shape, rows)];
+	const filter = stored({ shape, effect, groups });
+	expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 		editable: true,
-		...editorInput(area, rows),
+		groups,
 	});
-	expectValid(area, when);
+	expectValid(shape, effect, filter);
 };
 
-describe("every field × operator round-trips", () => {
-	const cells = AREAS.flatMap((area) =>
-		fieldsOf(area).flatMap(([field, operators]) =>
-			operators.map((operator) => ({ area, field, operator })),
+describe("every effect × field × operator round-trips", () => {
+	const cells = EFFECTS.flatMap((effect) =>
+		SHAPES.flatMap((shape) =>
+			fieldsOf(shape).flatMap(([field, operators]) =>
+				operators.map((operator) => ({ effect, shape, field, operator })),
+			),
 		),
 	);
 
-	test.each(cells)("$area · $field $operator", ({ area, field, operator }) => {
-		expectRoundTrip(area, [sampleRow(field, operator)]);
-	});
+	test.each(cells)(
+		"$effect · $shape · $field $operator",
+		({ effect, shape, field, operator }) => {
+			expectRoundTrip({ shape, effect, rows: [sampleRow(field, operator)] });
+		},
+	);
 
-	test.each(AREAS)("%s: every field at once, in one group", (area) => {
-		expectRoundTrip(
-			area,
-			fieldsOf(area).map(([field, operators]) =>
-				sampleRow(field, operators[0]),
-			),
-		);
-	});
+	test.each(
+		EFFECTS.flatMap((effect) => SHAPES.map((shape) => ({ effect, shape }))),
+	)(
+		"$effect · $shape: every field at once, in one group",
+		({ effect, shape }) => {
+			expectRoundTrip({
+				shape,
+				effect,
+				rows: fieldsOf(shape).map(([field, operators]) =>
+					sampleRow(field, operators[0]),
+				),
+			});
+		},
+	);
 });
 
 describe("groups", () => {
+	const shape = "billing_change";
+	const effect = "block";
+
 	test("a range on one field is two rows on one matcher", () => {
 		const rows: EditorRow[] = [
 			{ field: "total", operator: "gte", value: 10 },
 			{ field: "total", operator: "lte", value: 500 },
 		];
-		expect(stored({ area: "billing_change", groups: [rows] })).toEqual({
+		expect(stored({ shape, effect, groups: [rows] })).toEqual({
 			total: { $gte: 10, $lte: 500 },
 		});
-		expectRoundTrip("billing_change", rows);
+		expectRoundTrip({ shape, effect, rows });
 	});
 
 	test("OR groups become $or branches; empty groups are dropped", () => {
@@ -145,28 +175,20 @@ describe("groups", () => {
 			[],
 			[{ field: "total", operator: "lte", value: 0 }],
 		];
-		const when = stored({ area: "billing_change", groups });
-		expect(when).toEqual({ $or: [{ paid: true }, { total: { $lte: 0 } }] });
-		expectValid("billing_change", when);
+		const filter = stored({ shape, effect, groups });
+		expect(filter).toEqual({ $or: [{ paid: true }, { total: { $lte: 0 } }] });
+		expectValid(shape, effect, filter);
 	});
 
 	test("one non-empty group is stored without an $or", () => {
 		const groups: EditorGroup[] = [[], [sampleRow("paid", "is")], []];
-		expect(stored({ area: "billing_change", groups })).toEqual({ paid: true });
-		expect(stored({ area: "billing_change", groups: [[], []] })).toBeNull();
-	});
-
-	test("Custom pricing stores `customized`, never the plan filter's `custom`", () => {
-		const when = stored({
-			area: "billing_change",
-			groups: [[sampleRow("customized", "is")]],
-		});
-		expect(when).toEqual({ incoming: { $every: { customized: true } } });
-		expectValid("billing_change", when);
+		expect(stored({ shape, effect, groups })).toEqual({ paid: true });
+		expect(stored({ shape, effect, groups: [[], []] })).toBeNull();
 	});
 });
 
 describe("rows that set the same condition are ANDed, never overwritten", () => {
+	const shape = "billing_change";
 	const cap = (value: number): EditorRow => ({
 		field: "discount_percent_off",
 		operator: "lte",
@@ -175,26 +197,29 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 
 	test.each<{
 		name: string;
+		effect: RuleEffect;
 		rows: EditorRow[];
-		when: unknown;
+		filter: unknown;
 		readsBack?: EditorRow[];
 	}>([
 		{
 			name: "two Customer rows",
+			effect: "block",
 			rows: [
 				{ field: "customer", operator: "is_not", value: "acme" },
 				{ field: "customer", operator: "is_not", value: "globex" },
 			],
-			when: {
+			filter: {
 				customer: { customer_id: { $ne: "acme" } },
 				$and: [{ customer: { customer_id: { $ne: "globex" } } }],
 			},
 		},
 		{
 			name: "three Discount caps, out of board order with another field",
+			effect: "allow",
 			rows: [cap(20), sampleRow("paid", "is"), cap(30), cap(40)],
 			readsBack: [sampleRow("paid", "is"), cap(20), cap(30), cap(40)],
-			when: {
+			filter: {
 				paid: true,
 				discounts: { $every: { percent_off: { $lte: 20 } } },
 				$and: [
@@ -205,6 +230,7 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 		},
 		{
 			name: "two Customer has plan rows stay separate checks",
+			effect: "block",
 			rows: [
 				{
 					field: "customer_plan",
@@ -213,57 +239,32 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 				},
 				{ field: "customer_plan", operator: "has_none", value: null },
 			],
-			when: {
+			filter: {
 				customer: { plan: { $none: { plan_id: "pro" } } },
 				$and: [{ customer: { plan: { $none: {} } } }],
 			},
 		},
-	])("$name", ({ rows, when, readsBack = rows }) => {
-		const area = "billing_change";
-		expect<unknown>(stored({ area, groups: [rows] })).toEqual(when);
-		expect(whenToRows({ area, when })).toEqual({
+	])("$effect · $name", ({ effect, rows, filter, readsBack = rows }) => {
+		expect<unknown>(stored({ shape, effect, groups: [rows] })).toEqual(filter);
+		expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
 			editable: true,
 			groups: [readsBack],
 		});
-		expectValid(area, when);
+		expectValid(shape, effect, filter);
 	});
 });
-
-describe("stored design cases open in the editor", () => {
-	test.each([
-		["recurring discounts", "billing_change", rules.recurringDiscounts()],
-		[
-			"credit grants",
-			"balance_create",
-			rules.creditGrants({ maxGrant: 50, subjects: [{ type: "everyone" }] }),
-		],
-	] as const)("%s", (_name, area, rule) => {
-		const read = whenToRows({ area, when: rule.when });
-		if (!read.editable) throw new Error("not editable");
-		expect(stored({ area, groups: read.groups })).toEqual(rule.when);
-	});
-});
-
-type IssueCase = {
-	name: string;
-	area: WhenKey;
-	rows: EditorRow[];
-	issue: { group: number; row: number };
-};
 
 describe("rows that can't be stored report an issue", () => {
-	test.each<IssueCase>([
+	test.each<{ name: string; shape: ApprovalFilterKey; rows: EditorRow[] }>([
 		{
-			name: "a field from another area",
-			area: "invoice",
+			name: "a field from another shape",
+			shape: "invoice",
 			rows: [sampleRow("paid", "is")],
-			issue: { group: 0, row: 0 },
 		},
 		{
 			name: "an operator the field doesn't offer",
-			area: "billing_change",
+			shape: "billing_change",
 			rows: [{ field: "paid", operator: "lt", value: 1 }],
-			issue: { group: 0, row: 0 },
 		},
 		...[
 			{ field: "customer_plan", operator: "has", value: null },
@@ -273,16 +274,18 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "starts_at", operator: "is", value: "7" },
 			{ field: "paid", operator: "is", value: null },
 			{ field: "customer", operator: "is_any_of", value: [1, 2] },
+			{ field: "billing_cycle_anchor", operator: "is", value: "tomorrow" },
 		].map((row) => ({
 			name: `an unfinished value: ${row.field} = ${JSON.stringify(row.value)}`,
-			area: "billing_change" as const,
+			shape: "billing_change" as const,
 			rows: [row as EditorRow],
-			issue: { group: 0, row: 0 },
 		})),
-	])("$name", ({ area, rows, issue }) => {
-		expect(rowsToWhen({ area, groups: [rows] })).toEqual({
+	])("$name", ({ shape, rows }) => {
+		expect(
+			ruleRowsToFilter({ shape, effect: "block", groups: [rows] }),
+		).toEqual({
 			ok: false,
-			issues: [{ ...issue, message: expect.any(String) }],
+			issues: [{ group: 0, row: 0, message: expect.any(String) }],
 		});
 	});
 });

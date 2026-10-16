@@ -69,12 +69,25 @@ export const fromPlanFilter = (filter: unknown): PlanSelection | null =>
 		? toSelection(filter as PlanSelection)
 		: null;
 
+/** `{ $ne: null }` / `{ $eq: null }`: matches by presence alone, so nothing merges into it. */
+const isNullMatcher = (value: Filter) =>
+	Object.entries(value).every(
+		([key, inner]) => (key === "$ne" || key === "$eq") && inner === null,
+	);
+
 // `{}` is a value ("has no plan"), not a container to merge into.
 const isMergeable = (value: unknown): value is Filter =>
-	isPlainObject(value) && !isEmptyObject(value);
+	isPlainObject(value) && !isEmptyObject(value) && !isNullMatcher(value);
 
-// "Some plan is X" and "some plan is Y" aren't one plan that's both, and the same goes for none.
-const EXISTENTIAL_QUANTIFIERS = ["$some", "$none"];
+/** `{ a: { b: leaf } }` from `["a", "b"]`. */
+export const at = (path: string[], leaf: unknown): Filter =>
+	path.reduceRight<unknown>((inner, key) => ({ [key]: inner }), leaf) as Filter;
+
+export const get = (value: unknown, path: string[]) =>
+	path.reduce<unknown>(
+		(inner, key) => (isPlainObject(inner) ? inner[key] : undefined),
+		value,
+	);
 
 const deepMerge = ({
 	base,
@@ -88,11 +101,7 @@ const deepMerge = ({
 		const current = merged[key];
 		if (!(key in merged)) {
 			merged[key] = value;
-		} else if (
-			isMergeable(current) &&
-			isMergeable(value) &&
-			!EXISTENTIAL_QUANTIFIERS.includes(key)
-		) {
+		} else if (isMergeable(current) && isMergeable(value)) {
 			const inner = deepMerge({ base: current, addition: value });
 			if (!inner) return null;
 			merged[key] = inner;
@@ -104,8 +113,9 @@ const deepMerge = ({
 };
 
 /**
- * Merges one row's filter into its group's. A row that sets something already
- * set is kept whole as an `$and` entry, so no condition is ever overwritten.
+ * Merges one row's filter into its group's, so rows on one plan share an
+ * element. A row that sets something already set is kept whole as an `$and`
+ * entry, so no condition is ever overwritten.
  */
 export const mergeFilters = ({
 	base,
