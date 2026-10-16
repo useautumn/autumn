@@ -45,7 +45,7 @@ const fullCustomer = {
 } as unknown as FullCustomer;
 
 describe(chalk.yellowBright("setupStripeSubscriptionScope"), () => {
-	test("covers the target subscription, its schedule and free plans only", () => {
+	test("covers the target subscription, its schedule and every plan no subscription bills", () => {
 		const scope = setupStripeSubscriptionScope({
 			fullCustomer,
 			stripeSubscriptionId: SUBSCRIPTION_A,
@@ -54,7 +54,12 @@ describe(chalk.yellowBright("setupStripeSubscriptionScope"), () => {
 
 		expect(scope).toEqual({
 			stripeSubscriptionId: SUBSCRIPTION_A,
-			customerProductIds: ["cus_prod_pro", "cus_prod_premium", "cus_prod_free"],
+			customerProductIds: [
+				"cus_prod_pro",
+				"cus_prod_premium",
+				"cus_prod_free",
+				"cus_prod_manual",
+			],
 			otherStripeSubscriptionIds: [SUBSCRIPTION_B],
 		});
 	});
