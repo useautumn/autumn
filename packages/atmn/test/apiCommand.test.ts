@@ -23,14 +23,17 @@ import { AutumnApiError } from "../src/generated/client";
 const check = findApiRoute({ group: "balances", method: "check" });
 if (check === undefined) throw new Error("balances.check is not in the spec");
 
-test("every route is an RPC path under its group and method", () => {
+test("every route is an RPC path under its snake_case group and method", () => {
 	expect(API_ROUTES.length).toBeGreaterThan(50);
 	for (const route of API_ROUTES) {
-		expect(route.path).toBe(`/v1/${route.group}.${route.method}`);
+		expect(`${route.group} ${route.method}`).toMatch(/^[a-z0-9_]+ [a-z0-9_]+$/);
+		expect(
+			route.path.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`),
+		).toBe(`/v1/${route.group}.${route.method}`);
 	}
 	// Internal routes never reach the public spec, so they never become commands.
 	expect(
-		findApiRoute({ group: "catalogV2", method: "update" }),
+		findApiRoute({ group: "catalog_v2", method: "update" }),
 	).toBeUndefined();
 	expect(
 		findApiRoute({ group: "organization", method: "update" }),
@@ -186,6 +189,25 @@ test("-H adds a header and can override the api version", async () => {
 	expect(() => parseHeaderArgs({ headers: ["nocolon"] })).toThrow(
 		'Expected -H "name: value"',
 	);
+});
+
+test("a snake_case command sends the spec's own camelCase path", async () => {
+	const request = await buildApiRequest({
+		route: {
+			group: "invoices",
+			method: "list_templates",
+			path: "/v1/invoices.listTemplates",
+			body: "object",
+			fields: [{ name: "limit", type: "number", required: false }],
+		},
+		baseUrl: "https://api.useautumn.com",
+		secretKey: "sk",
+		fields: { limit: "5" },
+	});
+	expect(request.url).toBe(
+		"https://api.useautumn.com/v1/invoices.listTemplates",
+	);
+	expect(JSON.parse(request.body)).toEqual({ limit: 5 });
 });
 
 test("--curl prints the request with the key's env var in place of the key", async () => {
