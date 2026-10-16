@@ -22,8 +22,11 @@ export function followOwnClaims({
 			runtime: entry.runtime,
 		});
 	}
+	entry.claimFollow?.abort();
+	const claimFollow = new AbortController();
+	entry.claimFollow = claimFollow;
 	entry.publication.followClaims?.({
-		signal: entry.handoffAbort.signal,
+		signal: AbortSignal.any([entry.handoffAbort.signal, claimFollow.signal]),
 		onClaim,
 	});
 }

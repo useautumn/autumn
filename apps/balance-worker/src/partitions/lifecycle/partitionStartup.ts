@@ -68,6 +68,7 @@ export function createPartitionEntries({
 				handoffAbort: new AbortController(),
 				withdrawn: false,
 				newestOwnClaim: null,
+				claimFollow: null,
 				retirement: null,
 				drain: null,
 			};
@@ -160,11 +161,12 @@ export async function startPartition({
 		});
 		if (!isStillStarting()) return;
 
+		// Before announcing ready: every claim naming this worker can only follow that announcement.
+		followOwnClaims({ state, entry });
 		const handedOff = await awaitHandoffClaim({ ctx, entry });
 		if (!isStillStarting()) return;
 		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
 		watchForSuccessor({ ctx, state, entry });
-		followOwnClaims({ state, entry });
 
 		const activation = entry.runtime.activate();
 		try {

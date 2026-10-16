@@ -81,6 +81,8 @@ export function closePartitionAdmission({
 	entry.withdrawn = true;
 	entry.unsubscribeUnavailable?.();
 	entry.unsubscribeUnavailable = null;
+	entry.claimFollow?.abort();
+	entry.claimFollow = null;
 	entry.drain ??= drainPartition({ entry });
 }
 

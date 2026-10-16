@@ -141,6 +141,19 @@ export function createPartitionRuntimeFactory({
 	return createRuntime;
 }
 
+/** An acknowledgement can arrive after a later claim was already followed, so the epoch only moves forward. */
+function recordNewerEpoch({
+	cell,
+	routeEpoch,
+}: {
+	cell: OwnerEpochCell;
+	routeEpoch: string;
+}): void {
+	const held = cell.read();
+	if (held === undefined || BigInt(routeEpoch) > BigInt(held))
+		cell.write(routeEpoch);
+}
+
 /** Remembers the route epoch of the latest claim this worker won for the partition, however it won it. */
 function trackOwnerEpoch({
 	publication,
@@ -156,14 +169,14 @@ function trackOwnerEpoch({
 		...params: Parameters<PartitionOwnershipPublication["claim"]>
 	): ReturnType<PartitionOwnershipPublication["claim"]> {
 		const claimed = await publication.claim(...params);
-		cell.write(claimed.routeEpoch);
+		recordNewerEpoch({ cell, routeEpoch: claimed.routeEpoch });
 		return claimed;
 	}
 	async function awaitClaim(
 		...params: Parameters<PartitionOwnershipPublication["awaitClaim"]>
 	): ReturnType<PartitionOwnershipPublication["awaitClaim"]> {
 		const claimed = await publication.awaitClaim(...params);
-		cell.write(claimed.routeEpoch);
+		recordNewerEpoch({ cell, routeEpoch: claimed.routeEpoch });
 		return claimed;
 	}
 	function followClaims(
@@ -173,9 +186,7 @@ function trackOwnerEpoch({
 	): void {
 		const [{ signal, onClaim }] = params;
 		function recordNewer(claim: { routeEpoch: string }): void {
-			const held = cell.read();
-			if (held === undefined || BigInt(claim.routeEpoch) > BigInt(held))
-				cell.write(claim.routeEpoch);
+			recordNewerEpoch({ cell, routeEpoch: claim.routeEpoch });
 			onClaim(claim);
 		}
 		publication.followClaims?.({ signal, onClaim: recordNewer });

@@ -109,20 +109,37 @@ const createOwnershipLog = () => {
 		}
 		return null;
 	};
+	const followersByEndpoint = new Map<string, number>();
 	/** Every later record until the signal aborts, as a tail listener sees them. */
 	const follow = ({
 		signal,
 		listen,
+		endpoint,
 	}: {
 		signal: AbortSignal;
 		listen: (event: OwnershipEvent) => void;
+		endpoint: string;
 	}) => {
 		if (signal.aborted) return;
 		listeners.add(listen);
-		signal.addEventListener("abort", () => listeners.delete(listen), {
-			once: true,
-		});
+		followersByEndpoint.set(
+			endpoint,
+			(followersByEndpoint.get(endpoint) ?? 0) + 1,
+		);
+		signal.addEventListener(
+			"abort",
+			() => {
+				listeners.delete(listen);
+				followersByEndpoint.set(
+					endpoint,
+					(followersByEndpoint.get(endpoint) ?? 1) - 1,
+				);
+			},
+			{ once: true },
+		);
 	};
+	const followers = (endpoint: string) =>
+		followersByEndpoint.get(endpoint) ?? 0;
 	return {
 		records,
 		events,
@@ -130,6 +147,7 @@ const createOwnershipLog = () => {
 		publish,
 		await: await_,
 		follow,
+		followers,
 		owner,
 		activeDrain,
 		activePreparation,
@@ -144,6 +162,8 @@ type WorkerOptions = {
 	/** Holds the `draining` send; a slow topic must never hold the drain itself. */
 	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
+	/** Holds the acknowledgement of the ready send after the record is on the log. */
+	announceReadyGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
@@ -161,6 +181,7 @@ const createWorker = ({
 	drainGate,
 	announceDrainingGate,
 	prepareGate,
+	announceReadyGate,
 	prepareFailures,
 	activateGate,
 	awaitReadyAnnouncement,
@@ -243,6 +264,7 @@ const createWorker = ({
 			announceReady: async () => {
 				record("announce");
 				log.publish({ type: "ready", partition, endpoint });
+				await announceReadyGate;
 			},
 			announcePreparing: async () => {
 				if (silentPreparation) return;
@@ -324,6 +346,7 @@ const createWorker = ({
 			followClaims: ({ signal, onClaim }) =>
 				log.follow({
 					signal,
+					endpoint,
 					listen: (event) => {
 						if (
 							event.type === "claimed" &&
@@ -973,6 +996,63 @@ describe("partition handoff", () => {
 			expect(B.errors).toEqual([]);
 		} finally {
 			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("claims landing while the successor waits on its ready announcement still leave it serving the newest", async () => {
+		const log = createOwnershipLog();
+		const readyAck = deferred();
+		const A = createWorker({ name: "A", log });
+		const B = createWorker({
+			name: "B",
+			log,
+			announceReadyGate: readyAck.promise,
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("claim:B:2"), 1_000);
+			const lateEpoch = log.nextEpoch();
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: B.endpoint,
+				routeEpoch: lateEpoch,
+			});
+			readyAck.resolve();
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			await waitFor(
+				() =>
+					B.ownership.findRuntime({ partition: 2, routeEpoch: lateEpoch }) !==
+					undefined,
+			);
+			expect(B.errors).toEqual([]);
+		} finally {
+			readyAck.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a partition handed off stops following claims; its successor keeps one follower", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({ name: "A", log });
+		const B = createWorker({ name: "B", log });
+		try {
+			await ownAlone(A, [2]);
+			expect(log.followers(A.endpoint)).toBe(1);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			await waitFor(() => A.status(2) === "stopped", 1_000);
+			expect(log.followers(A.endpoint)).toBe(0);
+			expect(log.followers(B.endpoint)).toBe(1);
+		} finally {
 			await A.ownership.stop();
 			await B.ownership.stop();
 		}
