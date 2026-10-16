@@ -17,6 +17,26 @@ import {
 	whenValuesFor,
 } from "./ruleEditorValues";
 
+// Fields the sheet shows issues under; anything else (an unknown key) still needs to be seen.
+const FIELD_PATHS = [
+	"name",
+	"subjects",
+	"effect",
+	"actions",
+	"filter",
+	"note",
+	"enabled",
+];
+
+const isUnder = ({ path, field }: { path: string; field: string }) =>
+	path === field || path.startsWith(`${field}.`);
+
+export const unplacedIssue = ({ issues }: { issues: ApprovalRuleIssue[] }) =>
+	issues.find(
+		(issue) =>
+			!FIELD_PATHS.some((field) => isUnder({ path: issue.path, field })),
+	)?.message;
+
 export const useApprovalRuleForm = ({
 	rule,
 	onSaved,
@@ -49,9 +69,9 @@ export const useApprovalRuleForm = ({
 		isSaving: save.isPending,
 		/** The first server issue under `path` ("name", "filter"…), for inline display. */
 		serverIssue: (path: string) =>
-			serverIssues.find(
-				(issue) => issue.path === path || issue.path.startsWith(`${path}.`),
-			)?.message,
+			serverIssues.find((issue) => isUnder({ path: issue.path, field: path }))
+				?.message,
+		unplacedIssue: unplacedIssue({ issues: serverIssues }),
 		/** A different filter shape starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,
