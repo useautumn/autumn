@@ -116,14 +116,12 @@ describe("resolveLockRow", () => {
 		const resolve = (command: ReturnType<typeof named>) =>
 			resolveLockRow({ pending: null, rows, command });
 
-		expect(resolve(named({ customerId: "cus_1", lockId: "L1" }))).toEqual({
-			...first,
-			internal_feature_id: "feat_messages",
-		});
-		expect(resolve(named({ customerId: "cus_2", lockId: "L2" }))).toEqual({
-			...second,
-			internal_feature_id: "feat_messages",
-		});
+		expect(resolve(named({ customerId: "cus_1", lockId: "L1" }))).toEqual(
+			first,
+		);
+		expect(resolve(named({ customerId: "cus_2", lockId: "L2" }))).toEqual(
+			second,
+		);
 		expect(resolve(named({ customerId: "cus_2", lockId: "L1" }))).toBeNull();
 	});
 });

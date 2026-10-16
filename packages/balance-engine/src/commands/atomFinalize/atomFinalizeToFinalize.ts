@@ -1,18 +1,7 @@
 import { UnsupportedCommandError } from "../../errors.js";
 import type { WorkerLock } from "../../models/subject/rows/workerLock.js";
 import type { FinalizeCommand } from "../finalize/types/finalizeCommand.js";
-import { lockFeatureOf } from "./lockFeatureOf.js";
 import type { AtomFinalizeCommand } from "./types/atomFinalizeCommand.js";
-
-/** Decided on the Atom, a draw above the lock overflows rather than leaving the lock open behind the Atom's 200; undecided, the row's own overage governs. */
-const lockTermsOf = ({
-	command,
-	lock,
-}: {
-	command: AtomFinalizeCommand;
-	lock: WorkerLock;
-}): WorkerLock =>
-	command.featureId === null ? lock : { ...lock, overage_behavior: "overflow" };
 
 /** The finalize the API would send for this row: its identity from the row, the settlement from the Atom. */
 export const atomFinalizeToFinalize = ({
@@ -22,8 +11,7 @@ export const atomFinalizeToFinalize = ({
 	command: AtomFinalizeCommand;
 	lock: WorkerLock;
 }): FinalizeCommand => {
-	const feature = lockFeatureOf({ command, lock });
-	if (!feature)
+	if (command.internalFeatureId === null)
 		throw new UnsupportedCommandError({ reason: "feature_not_found" });
 	return {
 		schemaVersion: 1,
@@ -37,8 +25,13 @@ export const atomFinalizeToFinalize = ({
 			entityId: lock.entity_id,
 		},
 		org: command.org,
-		lock: lockTermsOf({ command, lock }),
-		internalFeatureId: feature.internalFeatureId,
+		// Decided on the Atom, a draw above the lock overflows rather than leaving the lock open behind the Atom's 200;
+		// left undecided, the row's own overage governs, as it does for the API's finalize.
+		lock:
+			command.featureId === null
+				? lock
+				: { ...lock, overage_behavior: "overflow" },
+		internalFeatureId: command.internalFeatureId,
 		finalValue: command.finalValue,
 		properties: command.properties,
 	};

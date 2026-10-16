@@ -110,7 +110,7 @@ const remainingOf = async ({
 	(await checkResponseOf({ processor, request: checkRequestFor() })).balance
 		?.remaining;
 
-describe("a finalize the Atom decides itself (kept, off the route)", () => {
+describe("a finalize on the Atom", () => {
 	test("L3: a release before hand-in is journaled after its lock at the next seq, answered as the API answers, and gives the units back", async () => {
 		const { processor, journal } = await openHolding({ balance: 1000 });
 		await lockOf({ processor, value: 30 });

@@ -324,7 +324,7 @@ export function pendingCommitsFor({
 	return commits;
 }
 
-/** The row a lock still pending for this customer opened: decided, but not yet applied by the store. Its feature's internal id comes from the track that opened it, as a row read back carries it. */
+/** The row a lock still pending for this customer opened: decided, but not yet applied by the store. */
 export function pendingLockRowOf({
 	state,
 	customerKey,
@@ -342,12 +342,7 @@ export function pendingLockRowOf({
 				change.op === "insert" &&
 				change.row.lock_id === lockId
 			)
-				return mutation.command.type === "track"
-					? {
-							...change.row,
-							internal_feature_id: mutation.command.internalFeatureId,
-						}
-					: change.row;
+				return change.row;
 	return null;
 }
 

@@ -8,15 +8,17 @@
  *  a held row whose feature is not the one named → settles nothing, the lock stays open, the seq lands;
  *  a settle lands the seq in its own mutation, one record; a resend inside the writer's window is a duplicate.
  *
- * Left undecided by the Atom (no feature named), the worker settles it from its own row:
- *  the lock pending in the same batch → the track that opened it names the feature, settled, the seq lands;
- *  the lock stored in an earlier batch → the row read with the batch names it, settled;
+ * Left undecided by the Atom (no feature named), the worker settles it from its own row, the row's feature resolved
+ * from the subject's catalog:
+ *  the lock pending in the same batch, or stored in an earlier one → settled, the seq lands;
  *  a confirm above what the row's own overage allows → rejected and logged, the lock stays open, the seq lands;
- *  a lock Autumn holds no row for → refused and logged, nothing lands.
+ *  a lock Autumn holds no row for → refused and logged, nothing lands;
+ *  a row whose feature the catalog does not hold → the record fails and is redelivered, never settled another way.
  */
 
 import { describe, expect, test } from "bun:test";
-import type { TrackCommand } from "@autumn/balance-engine";
+import type { TrackCommand, WorkerLock } from "@autumn/balance-engine";
+import { LockFeatureNotLoadedError } from "../../../src/processor/common/processorErrors.js";
 import {
 	type CommandPipeline,
 	createCommandPipeline,
@@ -213,7 +215,7 @@ describe("an Atom's queued finalize", () => {
 			});
 		}));
 
-	test("undecided, in the same batch as its lock's track, it settles from the pending row under the track's feature", () =>
+	test("undecided, in the same batch as its lock's track, it settles from the pending row under the row's feature", () =>
 		withPipeline(async (pipeline) => {
 			await pipeline.consumeBatch({
 				commands: [
@@ -300,6 +302,32 @@ describe("an Atom's queued finalize", () => {
 
 			expect(pipeline.logs).toEqual(["warn:Queued atomFinalize refused"]);
 			expect(pipeline.parked).toEqual([]);
+			expect(readCustomer({ pipeline })).toEqual({
+				balance: STARTING_BALANCE - 10,
+				openLocks: ["L1"],
+				atomSeqs: { atom_1: { w_1: 1 } },
+			});
+		}));
+
+	test("undecided, for a row whose feature the subject's catalog does not hold, the record fails loudly and is redelivered", () =>
+		withPipeline(async (pipeline) => {
+			await pipeline.consumeBatch({ commands: [lockTrack] });
+			await pipeline.drain();
+			const row = await pipeline.processor.readLockRows({
+				keys: [{ orgId: "org_1", env: "sandbox", lockId: "L1" }],
+			});
+
+			const decided = pipeline.processor.decideAtomFinalize({
+				command: atomFinalizeOf({
+					customerId,
+					lockId: "L1",
+					seq: 2,
+					featureId: null,
+				}),
+				lock: { ...(row[0] as WorkerLock), feature_id: "credit_funded" },
+			});
+
+			await expect(decided).rejects.toBeInstanceOf(LockFeatureNotLoadedError);
 			expect(readCustomer({ pipeline })).toEqual({
 				balance: STARTING_BALANCE - 10,
 				openLocks: ["L1"],
