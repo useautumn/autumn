@@ -41,6 +41,14 @@ export const useApprovalRulesApi = () => {
 			);
 			return data;
 		},
+		/** Positions follow the order of `ids`, which must name every rule. */
+		reorder: async ({ ids }: { ids: string[] }) => {
+			const { data } = await axiosInstance.post<{ list: ApprovalRule[] }>(
+				"/approval_rules.reorder",
+				{ ids },
+			);
+			return data;
+		},
 		remove: async ({ id }: { id: string }) => {
 			const { data } = await axiosInstance.post<{ success: true }>(
 				"/approval_rules.delete",

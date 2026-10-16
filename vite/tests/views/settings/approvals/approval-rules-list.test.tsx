@@ -108,6 +108,9 @@ describe("approval rule row", () => {
 			<RuleRowMenu
 				rule={rule}
 				actions={{ canEdit: false, onOpen: () => {}, onDelete: () => {} }}
+				isFirst={false}
+				isLast={false}
+				onMove={() => {}}
 			/>
 		);
 		expect(renderRow({ canToggle: false, menu })).toContain(
