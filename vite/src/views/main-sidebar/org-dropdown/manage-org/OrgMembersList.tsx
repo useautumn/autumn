@@ -42,7 +42,7 @@ const MemberRoleSelect = ({
 	onRoleChanged: () => void;
 }) => {
 	const [loading, setLoading] = useState(false);
-	const { roles } = useRolesQuery();
+	const { roles, refetch: refetchRoles } = useRolesQuery();
 	const currentRole = membership.member.role;
 
 	const handleRoleChange = async (newRole: string) => {
@@ -60,6 +60,7 @@ const MemberRoleSelect = ({
 			}
 			toast.success(`Role updated to ${roleLabel({ roles, name: newRole })}`);
 			onRoleChanged();
+			refetchRoles();
 		} catch {
 			toast.error("Failed to update role");
 		} finally {
