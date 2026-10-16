@@ -522,6 +522,12 @@ test.concurrent(
 			0,
 		);
 
+		const noProrationPreview = await autumnV2_2.subscriptions.previewUpdate({
+			...enable,
+			proration_behavior: "none",
+		});
+		expect(noProrationPreview.total).toBe(0);
+
 		const reset = { ...enable, billing_cycle_anchor: "now" as const };
 		const resetPreview = await autumnV2_2.subscriptions.previewUpdate(reset);
 		expect(resetPreview.total).toBeCloseTo(resetTotal, 0);

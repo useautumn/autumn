@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	BillingResponse,
 	FullCusProduct,
 	UpdateSubscriptionV1ParamsInput,
@@ -9,7 +10,9 @@ import { useMemo, useState } from "react";
 import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
+import { ProrationBehaviorConfigRow } from "@/components/forms/shared/ProrationBehaviorConfigRow";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
+import { getBillingOptionRules } from "@/components/forms/shared/utils/billingOptionRules";
 import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionPreview";
 import {
 	SheetBody,
@@ -28,6 +31,9 @@ export function EnablePendingPlanSheet() {
 	const { customer } = useCusQuery();
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const [resetBillingCycle, setResetBillingCycle] = useState(false);
+	const [proration, setProration] = useState<BillingBehavior>(
+		"prorate_immediately",
+	);
 
 	const requestBody = useMemo<UpdateSubscriptionV1ParamsInput | null>(() => {
 		if (!customer || !cusProduct) return null;
@@ -42,8 +48,10 @@ export function EnablePendingPlanSheet() {
 				enable_plan_immediately: true,
 			},
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+			proration_behavior:
+				proration === "prorate_immediately" ? undefined : proration,
 		};
-	}, [customer, cusProduct, productV2, resetBillingCycle]);
+	}, [customer, cusProduct, productV2, resetBillingCycle, proration]);
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody,
@@ -82,6 +90,10 @@ export function EnablePendingPlanSheet() {
 					stripeSubscriptionId: cusProduct.subscription_ids?.[0],
 				}).valid,
 	);
+	const rules = getBillingOptionRules({
+		flow: "update",
+		state: { hasActiveSubscription: !!replacementPlan },
+	});
 	const previewReady =
 		!!previewQuery.data && !previewQuery.isLoading && !previewQuery.error;
 
@@ -111,13 +123,19 @@ export function EnablePendingPlanSheet() {
 				)}
 			</SheetSection>
 
-			{replacementPlan && (
+			{rules.proration.visible && (
 				<SheetSection>
+					<ProrationBehaviorConfigRow
+						rule={rules.proration}
+						value={proration}
+						onChange={setProration}
+					/>
 					<BillingCycleAnchorConfigRow
 						enabled={resetBillingCycle}
 						mode="now"
 						customAnchor={null}
 						allowCustomAnchor={false}
+						rule={rules.resetBillingCycle}
 						onEnabledChange={setResetBillingCycle}
 						onModeChange={() => {}}
 						onCustomAnchorChange={() => {}}
