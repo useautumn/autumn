@@ -4,18 +4,16 @@ import {
 	type Membership,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { formatAmountWithCurrencyPrecision } from "@/utils/formatUtils/formatCurrencyUtils";
 import { useMemberships } from "@/views/main-sidebar/org-dropdown/hooks/useMemberships";
 import type { RuleLabels } from "./buildRuleSentence";
+import { useApprovalsCatalog } from "./useApprovalsCatalog";
 
 /** Resolves the ids a rule stores to the names the list shows, falling back to the id. */
 export const useApprovalRuleLabels = (): RuleLabels => {
 	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
-	const { products } = useProductsQuery();
+	const { products, features } = useApprovalsCatalog();
 	const { memberships } = useMemberships();
 	const { roles } = useRolesQuery();
 

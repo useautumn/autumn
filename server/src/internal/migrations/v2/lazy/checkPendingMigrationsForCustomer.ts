@@ -1,6 +1,10 @@
 import type { FullCustomer, MigrationItemRunData } from "@autumn/shared";
-import { customerFilterMatchesFullCustomer } from "@autumn/shared/api/customers/utils/match/index.js";
+import {
+	customerFilterMatchesFullCustomer,
+	customerFilterUsesHasPaid,
+} from "@autumn/shared/api/customers/utils/match/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { invoiceRepo } from "@/internal/invoices/repos/invoiceRepo.js";
 import { LAZY_MIGRATION_RUNS_DISABLED } from "@/internal/migrations/v2/run/utils/migrationRunConstants.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import { MIGRATION_LAZY_TASK_PRIORITY_SECONDS } from "@/trigger/migrations/migrationTaskQueue.js";
@@ -14,7 +18,8 @@ import {
  * needs migrating and enqueue a per-customer Trigger.dev task if so.
  *
  * Reads `migration_item_runs` from the already-loaded `fullCustomer` (embedded
- * by the FullSubject / FullCustomer query) — no extra DB roundtrip.
+ * by the FullSubject / FullCustomer query) — no extra DB roundtrip, except
+ * one invoice lookup when a pending filter uses `customer.has_paid`.
  *
  * Fire-and-forget: the helper doesn't wait for the migration to complete.
  * `executeMigrateCustomerPlan` inside the task busts the customer cache,
@@ -56,12 +61,27 @@ export const checkPendingMigrationsForCustomer = async ({
 		}
 	}
 
+	// Loaded at most once, and only when a pending filter reads `has_paid`.
+	let hasPaid: boolean | undefined;
+	const loadHasPaid = async () => {
+		hasPaid ??= await invoiceRepo.customerHasPaidInvoice({
+			ctx,
+			internalCustomerId: fullCustomer.internal_id,
+		});
+		return hasPaid;
+	};
+
 	for (const pendingMigration of pending) {
 		const { internal_id: migrationRunId, migration } = pendingMigration;
 
+		const customerFilter = migration.filter?.customer ?? {};
+		const filterUsesHasPaid = customerFilterUsesHasPaid({
+			filter: customerFilter,
+		});
 		const matches = customerFilterMatchesFullCustomer({
-			filter: migration.filter?.customer ?? {},
+			filter: customerFilter,
 			fullCustomer,
+			hasPaid: filterUsesHasPaid ? await loadHasPaid() : undefined,
 		});
 		if (!matches) continue;
 

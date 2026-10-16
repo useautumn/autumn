@@ -6,8 +6,8 @@ import {
 	NumberMatcherSchema,
 	nullableObjectFilter,
 } from "../../../common/filters/matcher";
-import { buildWhenSchema, type WhenOf } from "./buildWhenSchema";
-import { RelativeDateMatcherSchema, sharedWhenFields } from "./whenFields";
+import { buildFilterSchema, type FilterOf } from "./buildFilterSchema";
+import { RelativeDateMatcherSchema, sharedFilterFields } from "./filterFields";
 
 type ResetIntervalValue = `${ResetInterval}`;
 
@@ -17,10 +17,10 @@ const RESET_INTERVALS = Object.values(ResetInterval) as [
 ];
 
 /** Grant credits: `balances.create` params. Amounts are in the feature's unit. */
-export const balanceCreateWhenShape = {
-	customer: sharedWhenFields.customer,
-	feature_id: sharedWhenFields.feature_id,
-	included_grant: sharedWhenFields.included_grant,
+export const balanceCreateFilterShape = {
+	customer: sharedFilterFields.customer,
+	feature_id: sharedFilterFields.feature_id,
+	included_grant: sharedFilterFields.included_grant,
 	unlimited: BooleanMatcherSchema.optional(),
 	expires_at: RelativeDateMatcherSchema.optional(),
 	reset: nullableObjectFilter(
@@ -28,22 +28,22 @@ export const balanceCreateWhenShape = {
 	).optional(),
 };
 
-export const BalanceCreateWhenSchema = buildWhenSchema({
-	shape: balanceCreateWhenShape,
+export const BalanceCreateFilterSchema = buildFilterSchema({
+	shape: balanceCreateFilterShape,
 });
-export type BalanceCreateWhen = WhenOf<typeof balanceCreateWhenShape>;
+export type BalanceCreateFilter = FilterOf<typeof balanceCreateFilterShape>;
 
 /** Set balance: `balances.update` params. */
-export const balanceUpdateWhenShape = {
-	customer: sharedWhenFields.customer,
-	feature_id: sharedWhenFields.feature_id,
-	included_grant: sharedWhenFields.included_grant,
+export const balanceUpdateFilterShape = {
+	customer: sharedFilterFields.customer,
+	feature_id: sharedFilterFields.feature_id,
+	included_grant: sharedFilterFields.included_grant,
 	add_to_balance: NumberMatcherSchema.optional(),
 	remaining: NumberMatcherSchema.optional(),
 	usage: NumberMatcherSchema.optional(),
 };
 
-export const BalanceUpdateWhenSchema = buildWhenSchema({
-	shape: balanceUpdateWhenShape,
+export const BalanceUpdateFilterSchema = buildFilterSchema({
+	shape: balanceUpdateFilterShape,
 });
-export type BalanceUpdateWhen = WhenOf<typeof balanceUpdateWhenShape>;
+export type BalanceUpdateFilter = FilterOf<typeof balanceUpdateFilterShape>;

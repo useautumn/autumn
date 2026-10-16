@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-	ProductService,
 	type PlanVariant,
+	ProductService,
 } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 

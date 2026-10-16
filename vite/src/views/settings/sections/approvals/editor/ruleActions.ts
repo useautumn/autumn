@@ -1,23 +1,10 @@
 import {
 	ACTIONS,
+	APPROVAL_AREAS,
 	type ApprovalAction,
+	type ApprovalArea,
 	type ApprovalFilterKey,
-} from "../approvalsStub";
-
-// Action ids are route names, so the namespace is the area. Plans and features show under Catalog.
-const AREA_LABELS = {
-	billing: "Billing",
-	invoices: "Invoices",
-	balances: "Balances",
-	rewards: "Rewards",
-	customers: "Customers",
-	plans: "Catalog · Plans",
-	features: "Catalog · Features",
-	api_keys: "API keys",
-	migrations: "Migrations",
-} as const;
-
-export type ApprovalArea = keyof typeof AREA_LABELS;
+} from "@autumn/shared";
 
 export type ActionAreaOption = {
 	area: ApprovalArea;
@@ -28,8 +15,20 @@ export type ActionAreaOption = {
 
 const ACTION_KEYS = Object.keys(ACTIONS) as ApprovalAction[];
 
-const actionArea = (action: ApprovalAction) =>
-	action.slice(0, action.indexOf(".")) as ApprovalArea;
+// Not rule-controlled yet: S3's validator rejects them and they stay on organisation:write.
+const DEFERRED_ACTIONS: ApprovalAction[] = [
+	"members.invite",
+	"members.change_role",
+];
+
+export const isDeferredAction = (action: ApprovalAction) =>
+	DEFERRED_ACTIONS.includes(action);
+
+// Display only: the picker shows Plans and Features under one Catalog heading.
+const AREA_GROUPS: Partial<Record<ApprovalArea, string>> = {
+	plans: "Catalog",
+	features: "Catalog",
+};
 
 // The board words who-only captions per area, or per action where the area also has conditions.
 const WHO_ONLY_NOUNS: Partial<Record<ApprovalAction | ApprovalArea, string>> = {
@@ -39,26 +38,31 @@ const WHO_ONLY_NOUNS: Partial<Record<ApprovalAction | ApprovalArea, string>> = {
 	migrations: "migration",
 };
 
+export const areaLabel = (area: ApprovalArea) => {
+	const group = AREA_GROUPS[area];
+	return group ? `${group} · ${APPROVAL_AREAS[area]}` : APPROVAL_AREAS[area];
+};
+
 export const ruleArea = ({ actions }: { actions: ApprovalAction[] }) =>
-	actions.length > 0 ? actionArea(actions[0]) : null;
+	actions.length > 0 ? ACTIONS[actions[0]].area : null;
 
-export const areaLabel = (area: ApprovalArea) => AREA_LABELS[area];
-
-/** The areas for the Can picker; once an action is picked, the other areas lock. */
+/** The areas for the Actions picker; once an action is picked, the other areas lock. */
 export const actionAreas = ({
 	actions,
 }: {
 	actions: ApprovalAction[];
 }): ActionAreaOption[] => {
 	const picked = ruleArea({ actions });
-	return (Object.keys(AREA_LABELS) as ApprovalArea[]).map((area) => ({
-		area,
-		label: AREA_LABELS[area],
-		actions: ACTION_KEYS.filter((action) => actionArea(action) === area).map(
-			(action) => ({ value: action, label: ACTIONS[action].label }),
-		),
-		locked: picked !== null && picked !== area,
-	}));
+	return (Object.keys(APPROVAL_AREAS) as ApprovalArea[])
+		.map((area) => ({
+			area,
+			label: areaLabel(area),
+			actions: ACTION_KEYS.filter(
+				(action) => ACTIONS[action].area === area && !isDeferredAction(action),
+			).map((action) => ({ value: action, label: ACTIONS[action].label })),
+			locked: picked !== null && picked !== area,
+		}))
+		.filter((option) => option.actions.length > 0);
 };
 
 export const toggleAction = ({
@@ -70,7 +74,7 @@ export const toggleAction = ({
 }) => {
 	if (actions.includes(action)) return actions.filter((a) => a !== action);
 	const picked = ruleArea({ actions });
-	if (picked !== null && picked !== actionArea(action)) return actions;
+	if (picked !== null && picked !== ACTIONS[action].area) return actions;
 	return ACTION_KEYS.filter((a) => a === action || actions.includes(a));
 };
 
@@ -80,7 +84,9 @@ export const ruleFilterKey = ({
 }: {
 	actions: ApprovalAction[];
 }): ApprovalFilterKey | null => {
-	const keys = new Set(actions.map((action) => ACTIONS[action].filter));
+	const keys = new Set<ApprovalFilterKey | null>(
+		actions.map((action) => ACTIONS[action].filter),
+	);
 	const [key] = keys;
 	return keys.size === 1 && key ? key : null;
 };

@@ -1,5 +1,5 @@
+import type { ApprovalRule } from "@autumn/shared";
 import { useState } from "react";
-import type { ApprovalRule } from "../approvalsStub";
 
 /** Which rule dialog is open; the nonce remounts the editor so each open starts fresh. */
 export const useRuleDialogs = () => {

@@ -1,4 +1,5 @@
-import type { ApprovalFilterKey } from "./s3Stub";
+import type { DurationBound } from "../../common/filters/durationMatcher";
+import type { ApprovalFilterKey } from "../schemas/filters/approvalFilterShapes";
 
 const ID_OPERATORS = ["is", "is_not", "is_any_of", "is_none_of"] as const;
 const NUMBER_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte"] as const;
@@ -11,18 +12,24 @@ const customerFields = {
 	customer_has_paid: IS,
 } as const;
 
-const cancelFields = {
+const ENTITY_OPERATORS = [
+	"is_customer",
+	"is_entity",
+	"is_any_of",
+	"is_none_of",
+] as const;
+
+const uncancelFields = {
 	...customerFields,
-	cancel_action: ENUM_OPERATORS,
+	entity: ENTITY_OPERATORS,
 	outgoing_plan: ID_OPERATORS,
-	refund: NUMBER_OPERATORS,
 } as const;
 
 /** The "When fields by area" board: filter shape → field → operators, in board order. */
 export const EDITOR_FIELDS = {
 	billing_change: {
 		...customerFields,
-		entity: ["is_customer", "is_entity", "is_any_of", "is_none_of"],
+		entity: ENTITY_OPERATORS,
 		paid: IS,
 		checkout: IS,
 		total: NUMBER_OPERATORS,
@@ -47,8 +54,14 @@ export const EDITOR_FIELDS = {
 		starts_at: IS,
 		invoice_mode: IS,
 	},
-	billing_cancel: cancelFields,
-	billing_uncancel: cancelFields,
+	billing_cancel: {
+		...customerFields,
+		entity: ENTITY_OPERATORS,
+		cancel_action: ENUM_OPERATORS,
+		outgoing_plan: ID_OPERATORS,
+		refund: NUMBER_OPERATORS,
+	},
+	billing_uncancel: uncancelFields,
 	invoice: {
 		...customerFields,
 		total: NUMBER_OPERATORS,
@@ -106,8 +119,6 @@ export type EditorOperator = {
 
 /** A plan picker's choice; no `version` means any version. */
 export type PlanSelection = { plan_id: string; version?: number };
-/** A free trial length, compared on the calendar: 1 month is 1 month whatever its days. */
-export type Duration = { length: number; unit: "day" | "month" | "year" };
 export type FeatureQuantity = { feature_id: string; quantity: number };
 
 /**
@@ -121,7 +132,7 @@ export type EditorRowValue =
 	| boolean
 	| PlanSelection
 	| PlanSelection[]
-	| Duration
+	| DurationBound
 	| FeatureQuantity
 	| null;
 

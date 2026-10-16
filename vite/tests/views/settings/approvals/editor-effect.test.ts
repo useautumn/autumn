@@ -1,7 +1,7 @@
 /** Contract: rules carry an effect (new ones default to "can't"), roles save by id, and the server owns position. */
 
 import { describe, expect, test } from "bun:test";
-import type { ApprovalRule } from "@/views/settings/sections/approvals/approvalsStub";
+import type { ApprovalRule } from "@autumn/shared";
 import {
 	editorValuesToParams,
 	emptyEditorValues,

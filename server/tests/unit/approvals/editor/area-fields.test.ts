@@ -5,11 +5,13 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type {
+	ApprovalFilterKey,
+	ApprovalRuleEffect as RuleEffect,
+} from "@autumn/shared";
 import {
-	type ApprovalFilterKey,
 	EDITOR_FIELDS,
 	type EditorRow,
-	type RuleEffect,
 	ruleFilterToRows,
 	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index.js";

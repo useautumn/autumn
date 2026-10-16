@@ -1,10 +1,11 @@
 import {
 	ACTIONS,
 	APPROVAL_FILTER_FIELD_LABELS,
+	type ApprovalAction,
 	type ApprovalRule,
 	type ApprovalRuleEffect,
 	type RuleSubject,
-} from "./approvalsStub";
+} from "@autumn/shared";
 
 export type RuleLabels = {
 	member: (userId: string) => string;
@@ -110,7 +111,7 @@ const FIELDS: Record<string, Field> = {
 	outgoing: { kind: "each" },
 	discounts: { kind: "each" },
 	customer: { kind: "object" },
-	entity: { kind: "object", none: "customer", any: "any entity" },
+	entity: { kind: "object", none: "none", any: "any" },
 	free_trial: { kind: "object", none: "none", any: "any" },
 	refund: { kind: "object" },
 	next_cycle: { kind: "object" },
@@ -296,6 +297,13 @@ const subjectText = ({
 	return labels.member(subject.user_id);
 };
 
+/** Areas whose labels are bare verbs carry a `sentence_label` that names the object. */
+const actionText = (action: ApprovalAction) => {
+	const definition: { label: string; sentence_label?: string } =
+		ACTIONS[action];
+	return definition.sentence_label ?? definition.label;
+};
+
 const word = (text: string, key = text): SentencePart => ({
 	kind: "word",
 	key,
@@ -354,7 +362,7 @@ export const buildRuleSentence = ({
 		(action): SentencePart => ({
 			kind: "action",
 			key: action,
-			text: ACTIONS[action].label,
+			text: actionText(action),
 		}),
 	),
 	...filterParts({ rule, labels }),

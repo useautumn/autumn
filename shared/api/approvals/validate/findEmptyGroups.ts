@@ -1,6 +1,6 @@
-import type { ApprovalRuleIssue, WhenEntry } from "./types";
+import type { ApprovalRuleIssue, FilterEntry } from "./types";
 
-const isEmptyGroup = ({ key, value }: WhenEntry) =>
+const isEmptyGroup = ({ key, value }: FilterEntry) =>
 	(key === "$or" || key === "$and") &&
 	Array.isArray(value) &&
 	value.length === 0;
@@ -9,7 +9,7 @@ const isEmptyGroup = ({ key, value }: WhenEntry) =>
 export const findEmptyGroups = ({
 	entries,
 }: {
-	entries: WhenEntry[];
+	entries: FilterEntry[];
 }): ApprovalRuleIssue[] =>
 	entries.filter(isEmptyGroup).map((entry) => ({
 		path: entry.path.join("."),

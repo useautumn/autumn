@@ -1,7 +1,10 @@
 import type { z } from "zod/v4";
 import { ACTIONS, type ApprovalAction } from "../actions/approvalActions";
-import { buildWhenSchema } from "./when/buildWhenSchema";
-import { WHEN_SHAPES, type WhenKey } from "./when/whenSchemas";
+import {
+	APPROVAL_FILTER_SHAPES,
+	type ApprovalFilterKey,
+} from "./filters/approvalFilterShapes";
+import { buildFilterSchema } from "./filters/buildFilterSchema";
 
 const fieldsSharedByAll = ({
 	shapes,
@@ -17,23 +20,27 @@ const fieldsSharedByAll = ({
 };
 
 /**
- * The `when` schema a rule on these actions may use, or null when it can't
+ * The filter schema a rule on these actions may use, or null when it can't
  * have conditions. Mixed actions only get the fields every one of them has.
  */
-export const actionsToWhenSchema = ({
+export const actionsToFilterSchema = ({
 	actions,
 }: {
 	actions: ApprovalAction[];
 }) => {
-	const whenKeys = [...new Set(actions.map((action) => ACTIONS[action].when))];
-	const shapeKeys = whenKeys.filter((key): key is WhenKey => key !== null);
-	const hasWhoOnlyAction = shapeKeys.length < whenKeys.length;
+	const filterKeys = [
+		...new Set(actions.map((action) => ACTIONS[action].filter)),
+	];
+	const shapeKeys = filterKeys.filter(
+		(key): key is ApprovalFilterKey => key !== null,
+	);
+	const hasWhoOnlyAction = shapeKeys.length < filterKeys.length;
 	if (shapeKeys.length === 0 || hasWhoOnlyAction) return null;
 
 	const shape = fieldsSharedByAll({
-		shapes: shapeKeys.map((key) => WHEN_SHAPES[key]),
+		shapes: shapeKeys.map((key) => APPROVAL_FILTER_SHAPES[key]),
 	});
 	if (Object.keys(shape).length === 0) return null;
 
-	return buildWhenSchema({ shape });
+	return buildFilterSchema({ shape });
 };

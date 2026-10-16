@@ -1,11 +1,11 @@
-import type { ApprovalRuleCreateParams } from "@/hooks/queries/useApprovalRulesApi";
 import type {
 	ApprovalAction,
 	ApprovalRule,
 	ApprovalRuleEffect,
 	ApprovalRuleFilter,
+	CreateApprovalRuleParams,
 	RuleSubject,
-} from "../approvalsStub";
+} from "@autumn/shared";
 import { ruleFilterKey } from "./ruleActions";
 
 export type RuleEditorValues = {
@@ -47,7 +47,7 @@ export const editorValuesToParams = ({
 	values,
 }: {
 	values: RuleEditorValues;
-}): { ok: true; params: ApprovalRuleCreateParams } => ({
+}): { ok: true; params: CreateApprovalRuleParams } => ({
 	ok: true,
 	params: {
 		name: values.name.trim(),

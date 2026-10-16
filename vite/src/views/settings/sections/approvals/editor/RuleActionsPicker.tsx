@@ -1,4 +1,4 @@
-import type { ApprovalAction } from "../approvalsStub";
+import type { ApprovalAction } from "@autumn/shared";
 import { ChipMultiSelect } from "./ChipMultiSelect";
 import {
 	actionAreas,

@@ -1,10 +1,7 @@
 /** Contract: actions with no shared filter fields hide When, show the board's caption and save `filter: null`. */
 
 import { describe, expect, test } from "bun:test";
-import type {
-	ApprovalAction,
-	ApprovalFilterKey,
-} from "@/views/settings/sections/approvals/approvalsStub";
+import type { ApprovalAction, ApprovalFilterKey } from "@autumn/shared";
 import {
 	ruleFilterKey,
 	whoOnlyCaption,
