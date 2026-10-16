@@ -140,6 +140,7 @@ export function buildInitialValues({
 		customerProducts: customer?.customer_products ?? [],
 		stripeSubscriptionId,
 		stripeScheduleId,
+		unlinkedPlans: "all",
 	});
 	const hasScheduledPlans = customerProducts.some(isScheduledCustomerProduct);
 	const currentPhaseStart = hasScheduledPlans

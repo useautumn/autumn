@@ -24,6 +24,7 @@ import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
 } from "./subscriptionStateToWarnings";
+import { unbilledPlansAddedWarnings } from "./unbilledPlansAddedWarnings";
 import { unbilledUsageWarnings } from "./unbilledUsageWarnings";
 import { warningText } from "./warningText";
 
@@ -109,6 +110,8 @@ export const setPlansPreviewToWarnings = ({
 	resetsCycleNow = false,
 	prorationOverride,
 	liveCustomerProducts = [],
+	customerProducts = [],
+	now = Date.now(),
 }: {
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
@@ -130,6 +133,9 @@ export const setPlansPreviewToWarnings = ({
 	prorationOverride?: ProrationBehaviorOverride;
 	/** Plans live on the subscription before the request. */
 	liveCustomerProducts?: FullCusProduct[];
+	/** Every plan the customer has before the request. */
+	customerProducts?: FullCusProduct[];
+	now?: number;
 }): SetPlansPreviewWarning[] => {
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
@@ -208,6 +214,12 @@ export const setPlansPreviewToWarnings = ({
 					},
 				]
 			: []),
+		...unbilledPlansAddedWarnings({
+			stripeSubscriptionScope,
+			customerProducts,
+			immediatePhase: phases[0],
+			now,
+		}),
 		...otherSubscriptionsWarnings({ stripeSubscriptionScope }),
 	];
 

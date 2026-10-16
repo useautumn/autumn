@@ -126,6 +126,8 @@ export const buildSetPlansPreview = async ({
 						stripeSubscriptionId: billingContext.stripeSubscription.id,
 					}).filter(customerProductHasActiveStatus)
 				: [],
+			customerProducts: billingContext.fullCustomer.customer_products,
+			now: billingContext.currentEpochMs,
 		}),
 	};
 
