@@ -4,6 +4,7 @@ import {
 	MultiUpdateParamsV0Schema,
 	Scopes,
 } from "@autumn/shared";
+import { billingApprovalsToPreviewFields } from "@/internal/approvals/preview/billingApprovalsToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -15,11 +16,12 @@ export const handlePreviewMultiUpdate = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const { previewResponse } = await billingActions.multiUpdate({
-			ctx,
-			params: body,
-			preview: true,
-		});
+		const { previewResponse, approvals = [] } =
+			await billingActions.multiUpdate({
+				ctx,
+				params: body,
+				preview: true,
+			});
 
 		if (!previewResponse) {
 			throw new InternalError({
@@ -27,6 +29,9 @@ export const handlePreviewMultiUpdate = createRoute({
 			});
 		}
 
-		return c.json(previewResponse, 200);
+		return c.json(
+			{ ...previewResponse, ...billingApprovalsToPreviewFields({ approvals }) },
+			200,
+		);
 	},
 });

@@ -1,5 +1,6 @@
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { attachLicense } from "@/internal/billing/v2/actions/attachLicense/attachLicense";
+import { createSchedule } from "@/internal/billing/v2/actions/createSchedule/createSchedule";
 import { flash } from "@/internal/billing/v2/actions/dfu/flash";
 import { legacyAttach } from "@/internal/billing/v2/actions/legacy/legacyAttach";
 import { renew } from "@/internal/billing/v2/actions/legacy/renew";
@@ -27,6 +28,7 @@ export const billingActions = {
 	attachLicense: attachLicense,
 	multiAttach: multiAttach,
 	setPlans: setPlans,
+	createSchedule: createSchedule,
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,
 	updateSubscription: updateSubscription,

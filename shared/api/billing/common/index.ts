@@ -21,6 +21,7 @@ export * from "./invoiceModeParams";
 export * from "./licenseQuantityParams";
 export * from "./mappers/billingParamsV1ToV0";
 export * from "./multi/index";
+export * from "./previewPermission";
 export * from "./redirectMode";
 export * from "./refundLastPayment";
 export * from "./removeLine";

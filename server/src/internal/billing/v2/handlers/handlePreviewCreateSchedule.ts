@@ -3,8 +3,8 @@ import {
 	CreateScheduleParamsV0Schema,
 	Scopes,
 } from "@autumn/shared";
+import { billingApprovalToPreviewFields } from "@/internal/approvals/preview/billingApprovalToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
@@ -15,13 +15,12 @@ export const handlePreviewCreateSchedule = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 
-		const { billingContext, billingPlan } = await billingActions.setPlans({
-			ctx,
-			params: createScheduleParamsToSetPlansParams({
+		const { billingContext, billingPlan, approval } =
+			await billingActions.createSchedule({
+				ctx,
 				params: c.req.valid("json"),
-			}),
-			preview: true,
-		});
+				preview: true,
+			});
 
 		const preview = await billingPlanToAttachPreview({
 			ctx,
@@ -29,6 +28,9 @@ export const handlePreviewCreateSchedule = createRoute({
 			billingPlan,
 		});
 
-		return c.json(preview, 200);
+		return c.json(
+			{ ...preview, ...billingApprovalToPreviewFields({ approval }) },
+			200,
+		);
 	},
 });

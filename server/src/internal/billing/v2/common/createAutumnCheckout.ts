@@ -12,12 +12,15 @@ import type {
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import type { BillingApprovalOutcome } from "@/internal/approvals/check/types/billingApprovalOutcome";
 import { billingPlanToAutumnCheckout } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAutumnCheckout";
 
 export interface CreateAutumnCheckoutResult<T extends BillingContext> {
 	billingContext: T;
 	billingPlan?: BillingPlan;
 	billingResult?: BillingResult;
+	/** Present on previews: what the approval check was judged as and on. */
+	approval?: BillingApprovalOutcome;
 }
 
 /**

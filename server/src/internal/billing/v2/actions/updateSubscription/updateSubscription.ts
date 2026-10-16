@@ -5,6 +5,7 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/check/checkBillingApproval";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionComputeErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionComputeErrors";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
@@ -85,16 +86,28 @@ export async function updateSubscription({
 		params,
 	});
 
+	// Approvals: the one check, shared by the preview and the write
+	const previewBillingPlan = preview
+		? await computeAttachPreviewBillingPlan({
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+			})
+		: undefined;
+	const approval = await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan: { ...billingPlan, preview: previewBillingPlan },
+		route: "billing.update",
+		preview,
+	});
+
 	if (preview) {
-		const previewBillingPlan = await computeAttachPreviewBillingPlan({
-			ctx,
-			billingContext,
-			autumnBillingPlan,
-		});
 		return {
 			billingContext,
 			billingPlan: { ...billingPlan, preview: previewBillingPlan },
 			billingResult: undefined,
+			approval,
 		};
 	}
 

@@ -3,6 +3,7 @@ import {
 	BillingPreviewResponseSchema,
 	ExtBillingPreviewResponseSchema,
 } from "../common/billingPreviewResponse";
+import { PreviewPermissionSchema } from "../common/previewPermission";
 
 const planIdsField = z.array(z.string()).meta({
 	description: "The IDs of the plans updated on this subscription.",
@@ -47,6 +48,11 @@ export const ExtMultiUpdatePreviewResponseV0Schema = z.object({
 
 export const MultiUpdatePreviewResponseV0Schema = z.object({
 	object: z.literal("multi_update_preview").meta({ internal: true }),
+	permission: PreviewPermissionSchema.optional().meta({
+		internal: true,
+		description:
+			"The approval rules' verdict on every update for the member previewing it (any deny decides); absent when no rule matches.",
+	}),
 	...multiUpdatePreviewBase,
 	subscriptions: z
 		.array(MultiUpdateSubscriptionPreviewV0Schema)
