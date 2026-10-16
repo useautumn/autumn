@@ -2,6 +2,17 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+// Approvals
+import { approvalDecisions } from "../models/approvalModels/approvalDecisionTable.js";
+import {
+	approvalRuleSubjectsRelations,
+	approvalRulesRelations,
+} from "../models/approvalModels/approvalRuleRelations.js";
+import {
+	approvalRuleSubjects,
+	approvalRules,
+	approvalRuleVersions,
+} from "../models/approvalModels/approvalRuleTable.js";
 // Balance worker: open locks
 import { balanceLocks } from "../models/balanceLockModels/balanceLockTable.js";
 import {
@@ -136,6 +147,7 @@ import {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	organizationRole,
 	passkey,
 	session,
 	ssoConnection,
@@ -147,6 +159,12 @@ import {
 export {
 	account,
 	actions,
+	approvalDecisions,
+	approvalRuleSubjects,
+	approvalRuleSubjectsRelations,
+	approvalRules,
+	approvalRulesRelations,
+	approvalRuleVersions,
 	apiKeyRelations,
 	apiKeys,
 	customerJwtFamilies,
@@ -196,6 +214,7 @@ export {
 	// OAuth Provider
 	jwks,
 	member,
+	organizationRole,
 	memberRelations,
 	metadata,
 	migrationErrorRelations,
