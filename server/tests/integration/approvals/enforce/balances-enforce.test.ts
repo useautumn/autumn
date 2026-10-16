@@ -177,3 +177,74 @@ test.concurrent(
 		}
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("balances enforce 4: the legacy current_balance alias is checked as remaining")}`,
+	async () => {
+		const customerId = "approvals-balances-current-balance";
+		const { ctx, members } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({}),
+				s.member({ role: "owner" }),
+				s.member({ role: "sales" }),
+			],
+			actions: [],
+		});
+		const [owner, sales] = members;
+		const subjects = [{ type: "user" as const, user_id: sales.userId }];
+		const { client: memberClient, cleanup } = await setupApprovalRules({
+			ctx,
+			owner,
+			member: sales,
+			rules: [
+				rules.creditGrants({
+					featureId: TestFeature.Messages,
+					maxGrant: 100,
+					subjects,
+				}),
+				rules.rule({
+					name: "Balances up to 100",
+					subjects,
+					actions: ["balances.update"],
+					when: {
+						feature_id: TestFeature.Messages,
+						remaining: { $lte: 100 },
+					},
+				}),
+			],
+		});
+		const client = enforceApprovals(memberClient);
+		const setBalance = (currentBalance: number) =>
+			postRaw({
+				client,
+				path: "/balances.update",
+				body: {
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					current_balance: currentBalance,
+				},
+			});
+
+		try {
+			const created = await postRaw({
+				client,
+				path: "/balances.create",
+				body: grant({
+					customerId,
+					featureId: TestFeature.Messages,
+					amount: 50,
+				}),
+			});
+			expect(created.status).toBe(200);
+
+			expect((await setBalance(80)).status).toBe(200);
+			expectPermissionDenied({
+				res: await setBalance(1_000_000),
+				violations: [{ field: "remaining", actual: "1000000" }],
+			});
+		} finally {
+			await cleanup();
+		}
+	},
+);
