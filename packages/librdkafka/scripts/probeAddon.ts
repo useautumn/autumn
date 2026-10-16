@@ -1,5 +1,6 @@
 import { getKafkaJS, getLibrdkafkaInfo } from "../src/librdkafka.js";
 
+const startedAt = performance.now();
 const brokers = (process.env.PROBE_BROKERS ?? "127.0.0.1:9092").split(",");
 const topic = `addon-probe-${Date.now()}`;
 const { Kafka } = getKafkaJS();
@@ -23,6 +24,6 @@ await producer.disconnect();
 if (sent?.errorCode !== 0)
 	throw new Error(`send failed: ${JSON.stringify(sent)}`);
 console.log(
-	`librdkafka ${getLibrdkafkaInfo().version}: created ${topic}, idempotent send at offset ${sent.baseOffset ?? sent.offset}. ADDON PROBE OK`,
+	`librdkafka ${getLibrdkafkaInfo().version}: created ${topic}, idempotent send at offset ${sent.baseOffset ?? sent.offset} in ${Math.round(performance.now() - startedAt)}ms. ADDON PROBE OK`,
 );
 process.exit(0);
