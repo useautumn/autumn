@@ -24,9 +24,11 @@ const CUSTOMER = "cus_1";
 const callOf = ({
 	body,
 	apiVersion = LATEST_VERSION,
+	idempotencyKey,
 }: {
 	body: Record<string, unknown>;
 	apiVersion?: string;
+	idempotencyKey?: string;
 }) => ({
 	method: "POST",
 	headers: {
@@ -34,6 +36,7 @@ const callOf = ({
 		authorization: "Bearer am_sk_test_1",
 		"x-atom-token": ATOM_TOKEN,
 		"x-api-version": apiVersion,
+		...(idempotencyKey && { "idempotency-key": idempotencyKey }),
 	},
 	body: JSON.stringify(body),
 });
@@ -55,6 +58,7 @@ const finalizeOn = (
 	replica: Replica,
 	body: Record<string, unknown> = {},
 	apiVersion?: string,
+	idempotencyKey?: string,
 ) =>
 	replica.app.request(
 		"/v1/balances.finalize",
@@ -66,8 +70,15 @@ const finalizeOn = (
 				...body,
 			},
 			apiVersion,
+			idempotencyKey,
 		}),
 	);
+
+/** As the SDK sends it under useEdge: it resends the same key to the API when the Atom cannot settle it. */
+const keyedFinalizeOn = (
+	replica: Replica,
+	body: Record<string, unknown> = {},
+) => finalizeOn(replica, body, undefined, "key_1");
 
 const remainingOn = async (replica: Replica) => {
 	const reply = await replica.app.request(
@@ -91,6 +102,17 @@ const replicaAt100 = async ({
 	});
 	connect({ replicas: [replica], autumn });
 	return replica;
+};
+
+const apiCalls = () => {
+	const calls: string[] = [];
+	return {
+		calls,
+		autumn: async (request: Request) => {
+			calls.push(new URL(request.url).pathname);
+			return Response.json({ code: "lock_not_found" }, { status: 404 });
+		},
+	};
 };
 
 describe("a finalize of a lock the Atom took", () => {
@@ -154,19 +176,41 @@ describe("a finalize the Atom leaves to the API", () => {
 	});
 });
 
-describe("a finalize the Atom cannot run for a transport reason", () => {
-	const apiCalls = () => {
-		const calls: string[] = [];
-		return {
-			calls,
-			autumn: async (request: Request) => {
-				calls.push(new URL(request.url).pathname);
-				return Response.json({ code: "lock_not_found" }, { status: 404 });
-			},
-		};
-	};
+describe("a keyed finalize the Atom cannot settle", () => {
+	test("is a 503 without x-atom-forwarded, so the SDK sends it to the API under its key; the Atom never forwards it", async () => {
+		const api = apiCalls();
+		const replica = await replicaAt100({ autumn: api.autumn });
 
-	test("on a stopping replica is a 503 marked x-atom-forwarded, so the SDK retries the Atom; a check there is still left to the API", async () => {
+		const notHeld = await keyedFinalizeOn(replica, { lock_id: "lock_never" });
+		const beforeVersion = await finalizeOn(
+			replica,
+			{ lock_id: "lock_never" },
+			ApiVersion.V2_5,
+			"key_2",
+		);
+		await settle();
+
+		for (const reply of [notHeld, beforeVersion]) {
+			expect(reply.status).toBe(503);
+			expect(await reply.json()).toMatchObject({ code: "atom_cannot_settle" });
+			expect(reply.headers.get("x-atom-forwarded")).toBeNull();
+		}
+		expect(api.calls).toEqual([]);
+	});
+
+	test("unkeyed, is still forwarded to the API with its reason", async () => {
+		const api = apiCalls();
+		const replica = await replicaAt100({ autumn: api.autumn });
+
+		const notHeld = await finalizeOn(replica, { lock_id: "lock_never" });
+
+		expect(notHeld.headers.get("x-atom-forwarded")).toBe("lock_not_held");
+		expect(api.calls).toEqual(["/v1/balances.finalize"]);
+	});
+});
+
+describe("a finalize the Atom cannot run for a transport reason", () => {
+	test("on a stopping replica is a 503 without x-atom-forwarded, as a check there is, so the SDK asks the API", async () => {
 		const api = apiCalls();
 		const replica = createReplica({
 			address: A,
@@ -175,7 +219,7 @@ describe("a finalize the Atom cannot run for a transport reason", () => {
 		});
 		connect({ replicas: [replica], autumn: api.autumn });
 
-		const finalized = await finalizeOn(replica);
+		const finalized = await keyedFinalizeOn(replica);
 		const checked = await replica.app.request(
 			"/v1/balances.check",
 			callOf({ body: { customer_id: CUSTOMER, feature_id: "messages" } }),
@@ -183,13 +227,13 @@ describe("a finalize the Atom cannot run for a transport reason", () => {
 
 		expect(finalized.status).toBe(503);
 		expect(await finalized.json()).toMatchObject({ code: "atom_stopping" });
-		expect(finalized.headers.get("x-atom-forwarded")).toBe("atom_stopping");
+		expect(finalized.headers.get("x-atom-forwarded")).toBeNull();
 		expect(checked.status).toBe(503);
 		expect(checked.headers.get("x-atom-forwarded")).toBeNull();
 		expect(api.calls).toEqual([]);
 	});
 
-	test("handed on to an owner that cannot be reached, or that is stopping, is a 503 marked x-atom-forwarded, never the API's", async () => {
+	test("keyed and handed on to an owner that cannot be reached, or that is stopping, is a 503 the SDK takes to the API", async () => {
 		const api = apiCalls();
 		const a = createReplica({
 			address: A,
@@ -201,15 +245,15 @@ describe("a finalize the Atom cannot run for a transport reason", () => {
 		await storeOnly({ replica: b, customerId: CUSTOMER, readAt: 1700 });
 
 		connect({ replicas: [b], autumn: api.autumn });
-		const unreachable = await finalizeOn(b);
+		const unreachable = await keyedFinalizeOn(b);
 		disconnect();
 		connect({ replicas: [a, b], autumn: api.autumn });
-		const shed = await finalizeOn(b);
+		const shed = await keyedFinalizeOn(b);
 
 		for (const reply of [unreachable, shed]) {
 			expect(reply.status).toBe(503);
-			expect(await reply.json()).toMatchObject({ code: "atom_unavailable" });
-			expect(reply.headers.get("x-atom-forwarded")).toBe("owner_unavailable");
+			expect(await reply.json()).toMatchObject({ code: "atom_cannot_settle" });
+			expect(reply.headers.get("x-atom-forwarded")).toBeNull();
 		}
 		expect(api.calls).toEqual([]);
 	});

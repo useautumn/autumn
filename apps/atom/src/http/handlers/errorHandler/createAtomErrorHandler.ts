@@ -4,10 +4,10 @@ import {
 	type ForwardReason,
 } from "../../../lib/forward/cannotAnswerError.js";
 import { CustomerMovedError } from "../../../processor/ownership/customerMovedError.js";
-import { FORWARDED_HEADER } from "../../forward/forwardRequest.js";
 import { forwardToAutumn } from "../../forward/forwardToAutumn.js";
 import { hopMovedRequest } from "../../forward/hopMovedRequest.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../../types/atomHttp.js";
+import { IDEMPOTENCY_KEY_HEADER } from "../receiveCheck.js";
 import { atomErrorOf } from "./atomErrorOf.js";
 
 /** Forwards waiting on the API, per app; past this a check is refused, so a slow API cannot pile up a backlog the loop-lag gate never sees. */
@@ -47,30 +47,34 @@ export const createAtomErrorHandler = ({
 		}
 	}
 
+	/** A keyed finalize goes back unforwarded: its caller resends it to the API, where a forward would already hold its key. */
+	async function leaveToApi(
+		context: Context<AtomHttpEnv>,
+		cause: CannotAnswerError,
+	): Promise<Response> {
+		const keyedFinalize =
+			context.req.path === "/v1/balances.finalize" &&
+			Boolean(context.req.header(IDEMPOTENCY_KEY_HEADER));
+		if (!keyedFinalize) return forwardWithinCap(context, cause.reason);
+		context.set("failure", { code: cause.reason, error: cause });
+		return context.json(
+			{
+				message: "Atom cannot settle this finalize; ask the Autumn API",
+				code: "atom_cannot_settle",
+			},
+			503,
+		);
+	}
+
 	return async function handleError(cause, context) {
-		// An owner out of reach is no verdict on the lock, and the API holds no row for it until its hand-in lands.
-		if (
-			cause instanceof CannotAnswerError &&
-			cause.reason === "owner_unavailable" &&
-			context.req.path === "/v1/balances.finalize"
-		)
-			return context.json(
-				{
-					message: "The replica that owns this customer is unavailable",
-					code: "atom_unavailable",
-				},
-				503,
-				{ [FORWARDED_HEADER]: cause.reason },
-			);
-		if (cause instanceof CannotAnswerError)
-			return forwardWithinCap(context, cause.reason);
+		if (cause instanceof CannotAnswerError) return leaveToApi(context, cause);
 		// The customer moved on while this request waited: its owner decides it, or the API when they disagree.
 		if (cause instanceof CustomerMovedError) {
 			try {
 				return await hopMovedRequest({ ctx, context, owner: cause.owner });
 			} catch (error) {
 				if (error instanceof CannotAnswerError)
-					return forwardWithinCap(context, error.reason);
+					return leaveToApi(context, error);
 				throw error;
 			}
 		}
