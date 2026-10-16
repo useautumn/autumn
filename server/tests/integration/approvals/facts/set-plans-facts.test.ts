@@ -48,7 +48,7 @@ test.concurrent(
 		// Test-only field, outside the typed set plans preview.
 		const preview = (await permissionFactsClient().billing.previewSetPlans(
 			params,
-		)) as {
+		)) as unknown as {
 			_permission_facts: { paid: boolean; incoming: { plan_id: string }[] };
 		};
 		const facts = preview._permission_facts;
