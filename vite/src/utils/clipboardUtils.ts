@@ -16,7 +16,8 @@ export const copyToClipboard = async ({
 				onClick: () => copyToClipboard({ text, successMessage }),
 			},
 		});
-		return;
+		return false;
 	}
 	toast.success(successMessage);
+	return true;
 };

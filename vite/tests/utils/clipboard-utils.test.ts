@@ -1,5 +1,10 @@
-import { beforeEach, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 
+const originalSonnerModule = { ...(await import("sonner")) };
+const originalClipboard = Object.getOwnPropertyDescriptor(
+	globalThis.navigator,
+	"clipboard",
+);
 const toastSuccess = mock();
 const toastError = mock();
 mock.module("sonner", () => ({
@@ -14,6 +19,13 @@ Object.defineProperty(globalThis.navigator, "clipboard", {
 
 const { copyToClipboard } = await import("@/utils/clipboardUtils");
 
+afterAll(() => {
+	mock.module("sonner", () => originalSonnerModule);
+	if (originalClipboard)
+		Object.defineProperty(globalThis.navigator, "clipboard", originalClipboard);
+	else Reflect.deleteProperty(globalThis.navigator, "clipboard");
+});
+
 beforeEach(() => {
 	toastSuccess.mockReset();
 	toastError.mockReset();
@@ -23,7 +35,12 @@ beforeEach(() => {
 test("a rejected clipboard write shows an error toast and no success toast", async () => {
 	writeText.mockRejectedValue(new DOMException("denied", "NotAllowedError"));
 
-	await copyToClipboard({ text: "https://checkout", successMessage: "Copied" });
+	const copied = await copyToClipboard({
+		text: "https://checkout",
+		successMessage: "Copied",
+	});
+
+	expect(copied).toBe(false);
 
 	expect(toastSuccess).not.toHaveBeenCalled();
 	expect(toastError).toHaveBeenCalledTimes(1);
@@ -46,7 +63,9 @@ test("the error toast's retry action copies again from a fresh click", async () 
 test("a successful clipboard write shows the success toast", async () => {
 	writeText.mockResolvedValue(undefined);
 
-	await copyToClipboard({ text: "{}", successMessage: "Copied" });
+	const copied = await copyToClipboard({ text: "{}", successMessage: "Copied" });
+
+	expect(copied).toBe(true);
 
 	expect(writeText).toHaveBeenCalledWith("{}");
 	expect(toastSuccess).toHaveBeenCalledWith("Copied");

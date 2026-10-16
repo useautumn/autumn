@@ -50,7 +50,7 @@ CodeGroupTab.displayName = "CodeGroupTab";
 
 interface CodeGroupCopyButtonProps
 	extends React.ComponentPropsWithoutRef<"button"> {
-	onCopy?: () => void;
+	onCopy?: () => unknown;
 }
 
 const CodeGroupCopyButton = React.forwardRef<
@@ -60,8 +60,8 @@ const CodeGroupCopyButton = React.forwardRef<
 	const [copied, setCopied] = React.useState(false);
 
 	const handleClick = React.useCallback(
-		(e: React.MouseEvent<HTMLButtonElement>) => {
-			if (onCopy) onCopy();
+		async (e: React.MouseEvent<HTMLButtonElement>) => {
+			if (onCopy && (await onCopy()) === false) return;
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1200);
 			if (props.onClick) props.onClick(e);
