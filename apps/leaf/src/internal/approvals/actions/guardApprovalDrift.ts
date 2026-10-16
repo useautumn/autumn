@@ -4,6 +4,7 @@ import { logger } from "../../../lib/logger.js";
 import { getOrgInstallationToken } from "../../installations/actions/getOrgInstallationToken.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { chatApprovalWritesRepo } from "../repos/chatApprovalWritesRepo.js";
+import { firstRuleDenial } from "../utils/approvalRuleVerdict.js";
 import { withWritePreviews } from "../utils/fetchApprovalPreview.js";
 import { previewMoneyFactsDrifted } from "../utils/previewMoneyFacts.js";
 import { writeToPreviewTool } from "../utils/toolRegistry.js";
@@ -45,10 +46,15 @@ const detectPreviewDrift = async ({
 			return verdict.drifted ? verdict.reason : undefined;
 		})
 		.find(Boolean);
-	if (!reason) return { drifted: false } as const;
+	// The fresh preview is the approver's own, so its enforced rules' verdict applies to them.
+	const denial = firstRuleDenial({
+		previews: fresh.map((write) => write.preview),
+	});
+	if (!reason && !denial) return { drifted: false } as const;
 	return {
 		drifted: true,
-		reason,
+		reason: reason ?? "approval rules deny the approver",
+		message: denial ?? DRIFT_MESSAGE,
 		refresh: async () => {
 			await Promise.all(
 				checkable.map((write, index) =>
@@ -86,8 +92,8 @@ const setWritePreviewEverywhere = async ({
 	}
 };
 
-/** Pre-resume money guard: a drifted card is released back to pending with
- * fresh previews instead of resuming — nothing executes. */
+/** Pre-resume guard: a card whose money facts drifted, or that the enforced
+ * approval rules deny the approver, goes back to pending with fresh previews — nothing executes. */
 export const guardApprovalDrift = async ({
 	approval,
 	providerUserId,
@@ -130,5 +136,5 @@ export const guardApprovalDrift = async ({
 		approval_id: approval.id,
 		data: { reason: drift.reason },
 	});
-	return { drifted: true, message: DRIFT_MESSAGE };
+	return { drifted: true, message: drift.message };
 };
