@@ -771,6 +771,13 @@
       "when": 1792159200217,
       "tag": "0109_balance_locks_internal_customer_id_c",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1792163130885,
+      "tag": "0110_prod_applied_indexes",
+      "breakpoints": true
     }
   ]
 }
