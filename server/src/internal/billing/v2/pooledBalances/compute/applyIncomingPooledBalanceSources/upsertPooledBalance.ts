@@ -30,6 +30,7 @@ export const upsertPooledBalance = ({
 	contributionAmounts,
 	nextResetAt,
 	competes,
+	unlimitedShareHost,
 	now,
 }: {
 	ctx: AutumnContext;
@@ -41,8 +42,12 @@ export const upsertPooledBalance = ({
 	nextResetAt: number | null;
 	/** A competing share moves the pool once every share is known, in finalize. */
 	competes: boolean;
+	/** The limited pool an unlimited additive grant joins: it moves neither granted nor balance, only the pool's unlimited flag in finalize. */
+	unlimitedShareHost?: MutablePooledCustomerEntitlement;
 	now: number;
 }): MutablePooledCustomerEntitlement => {
+	if (unlimitedShareHost) return unlimitedShareHost;
+
 	const existingPooledCustomerEntitlement =
 		computeContext.pooledCustomerEntitlementByIdentity.get(
 			pooledBalanceIdentityToKey({ identity }),
