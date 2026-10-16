@@ -3,6 +3,9 @@ import {
 	Scopes,
 	UpdateBalancesParamsSchema,
 } from "@autumn/shared";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
+import { updateBalanceParamsToFacts } from "@/internal/approvals/facts/balances/updateBalanceParamsToFacts";
+import { buildApprovalCustomerFacts } from "@/internal/approvals/facts/customer/buildApprovalCustomerFacts";
 import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer";
 import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled";
@@ -34,6 +37,25 @@ export const handleUpdateBalancesV2 = createRoute({
 			if (!feature) {
 				throw new FeatureNotFoundError({ featureId: balance.feature_id });
 			}
+		}
+
+		// Each target balance is a set balance, judged before any of them is written.
+		for (const balance of balances) {
+			await checkRouteApproval({
+				ctx,
+				action: "balances.update",
+				buildFacts: async () =>
+					updateBalanceParamsToFacts({
+						customer: await buildApprovalCustomerFacts({
+							ctx,
+							fullCustomer: fullCus,
+						}),
+						params: {
+							feature_id: balance.feature_id,
+							remaining: balance.balance,
+						},
+					}),
+			});
 		}
 
 		const featureDeductions = balances.map((b) => ({
