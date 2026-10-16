@@ -1,5 +1,14 @@
-import { type AppEnv, customerProducts, customers } from "@autumn/shared";
-import { and, eq, gt, inArray, min, or, sql } from "drizzle-orm";
+import {
+	ACTIVE_STATUSES,
+	type AppEnv,
+	BillingInterval,
+	customerLicenses,
+	customerPrices,
+	customerProducts,
+	customers,
+	prices,
+} from "@autumn/shared";
+import { and, eq, exists, gt, inArray, min, ne, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 /** The oldest customer bounds how far back the Stripe sweep must reach. */
@@ -42,6 +51,60 @@ export const getStripeLinkedCustomerIds = async ({
 					gt(sql`cardinality(${customerProducts.subscription_ids})`, 0),
 					gt(sql`cardinality(${customerProducts.scheduled_ids})`, 0),
 				),
+			),
+		);
+
+	return new Set(rows.map((row) => row.internalCustomerId));
+};
+
+/** Customers holding an active plan with a recurring price or paid seats but no
+ * Stripe subscription or schedule — verify reports these as unbilled. Prices
+ * are not checked for amount here; verify decides whether the plan is paid. */
+export const getUnlinkedPaidPlanCustomerIds = async ({
+	db,
+	internalCustomerIds,
+}: {
+	db: DrizzleCli;
+	internalCustomerIds: string[];
+}): Promise<Set<string>> => {
+	if (internalCustomerIds.length === 0) return new Set();
+
+	const hasRecurringPrice = exists(
+		db
+			.select({ id: customerPrices.id })
+			.from(customerPrices)
+			.innerJoin(prices, eq(prices.id, customerPrices.price_id))
+			.where(
+				and(
+					eq(customerPrices.customer_product_id, customerProducts.id),
+					ne(sql`${prices.config}->>'interval'`, BillingInterval.OneOff),
+				),
+			),
+	);
+	const hasPaidSeats = exists(
+		db
+			.select({ id: customerLicenses.id })
+			.from(customerLicenses)
+			.where(
+				and(
+					eq(customerLicenses.parent_customer_product_id, customerProducts.id),
+					gt(customerLicenses.paid_quantity, 0),
+				),
+			),
+	);
+
+	const rows = await db
+		.selectDistinct({
+			internalCustomerId: customerProducts.internal_customer_id,
+		})
+		.from(customerProducts)
+		.where(
+			and(
+				inArray(customerProducts.internal_customer_id, internalCustomerIds),
+				inArray(customerProducts.status, ACTIVE_STATUSES),
+				sql`coalesce(cardinality(${customerProducts.subscription_ids}), 0) = 0`,
+				sql`coalesce(cardinality(${customerProducts.scheduled_ids}), 0) = 0`,
+				or(hasRecurringPrice, hasPaidSeats),
 			),
 		);
 

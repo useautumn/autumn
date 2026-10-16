@@ -4,13 +4,15 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getSharedStripeCustomerIds,
 	getStripeLinkedCustomerIds,
+	getUnlinkedPaidPlanCustomerIds,
 } from "../queries/getBillingVerifyCandidates.js";
 import type { CustomerExportScalarRow } from "../queries/getCustomerExportScalars.js";
 import { retryExportDbRead } from "./retryExportDbRead.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 
-/** A customer with no Stripe subscription, no Stripe-linked
- * plan and no shared Stripe id has nothing to verify, so it is never loaded. */
+/** A customer with no Stripe subscription, no Stripe-linked plan, no paid plan
+ * missing its subscription and no shared Stripe id has nothing to verify, so
+ * it is never loaded. */
 export const filterBillingVerifyCandidates = async ({
 	ctx,
 	scalars,
@@ -33,17 +35,25 @@ export const filterBillingVerifyCandidates = async ({
 		operation: "getStripeLinkedCustomerIds",
 		query: getStripeLinkedCustomerIds,
 	});
+	const readUnlinkedPaidPlanCustomerIds = retryExportDbRead({
+		logger,
+		operation: "getUnlinkedPaidPlanCustomerIds",
+		query: getUnlinkedPaidPlanCustomerIds,
+	});
 	const readSharedStripeCustomerIds = retryExportDbRead({
 		logger,
 		operation: "getSharedStripeCustomerIds",
 		query: getSharedStripeCustomerIds,
 	});
 
-	const [linkedCustomerIds, sharedStripeCustomerIds] = await Promise.all([
-		readLinkedCustomerIds({
-			db,
-			internalCustomerIds: onStripe.map((scalar) => scalar.internal_id),
-		}),
+	const internalCustomerIds = onStripe.map((scalar) => scalar.internal_id);
+	const [
+		linkedCustomerIds,
+		unlinkedPaidPlanCustomerIds,
+		sharedStripeCustomerIds,
+	] = await Promise.all([
+		readLinkedCustomerIds({ db, internalCustomerIds }),
+		readUnlinkedPaidPlanCustomerIds({ db, internalCustomerIds }),
 		readSharedStripeCustomerIds({
 			db,
 			orgId: ctx.org.id,
@@ -59,6 +69,7 @@ export const filterBillingVerifyCandidates = async ({
 		return (
 			sweptSubscriptions.has(stripeCustomerId) ||
 			linkedCustomerIds.has(scalar.internal_id) ||
+			unlinkedPaidPlanCustomerIds.has(scalar.internal_id) ||
 			sharedStripeCustomerIds.has(stripeCustomerId)
 		);
 	});
