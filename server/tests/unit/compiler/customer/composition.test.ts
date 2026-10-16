@@ -20,7 +20,7 @@ const normalize = (sql: string) =>
 const planExists = (predicate: string) =>
 	`EXISTS (
 		SELECT 1
-		FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
+		FROM customer_products cp JOIN products p ON p.internal_id COLLATE \"default\" = cp.internal_product_id
 		WHERE cp.internal_customer_id = c.internal_id
 			AND cp.customer_license_link_id IS NULL
 			AND ${PLAN_AMBIENT}
