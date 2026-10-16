@@ -658,7 +658,8 @@ export const getFullCusQuery = ({
             '[]'::json
           ) AS events
         FROM events e
-        WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
+        -- customer_record.internal_id is COLLATE "C"; default collation lets idx_events_customer_non_usage_ts seek.
+        WHERE e.internal_customer_id = (SELECT internal_id COLLATE "default" FROM customer_record)
           AND e.set_usage = false
       )
     `);
