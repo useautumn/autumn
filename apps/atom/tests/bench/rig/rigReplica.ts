@@ -17,6 +17,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { rigConfig } from "./rigConfig.js";
+import { preloadJournalKeys } from "./rigPreloadKeys.js";
 
 const { values } = parseArgs({
 	options: {
@@ -195,6 +196,13 @@ const control = Bun.serve({
 });
 
 writePeers([peer]);
+const preloaded = replica.preloadKeys
+	? preloadJournalKeys({
+			folder: join(dataDir, rigConfig.tenant.atomId),
+			slotCount: replica.slotCount,
+			...replica.preloadKeys,
+		})
+	: null;
 run = startAtom({ srcDir: defaultSrcDir });
 console.log(
 	JSON.stringify({
@@ -207,6 +215,7 @@ console.log(
 		threads: replica.threads,
 		pushVia: rigConfig.stub.pushVia,
 		dataDir,
+		preloaded,
 		control: `http://${self}:${replica.controlPort}`,
 		log: logPath,
 	}),

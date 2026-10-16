@@ -467,10 +467,25 @@ export const openJournal = ({
 	/** One chunk per writer round trip, until a chunk comes back short. */
 	async function pruneKeys(): Promise<void> {
 		const appendedBefore = String(now() - KEY_ROW_TTL_MS);
+		const startedAt = now();
+		let rows = 0;
+		let chunks = 0;
 		while (!closed) {
-			const pruned = await file.write("pruneJournalKeys", appendedBefore);
-			if (Number(pruned) < PRUNE_CHUNK) return;
+			const pruned = Number(
+				await file.write("pruneJournalKeys", appendedBefore),
+			);
+			rows += pruned;
+			chunks++;
+			if (pruned < PRUNE_CHUNK) break;
 		}
+		if (rows > 0)
+			getAtomLogger().info(
+				{
+					type: "atom_journal_keys_pruned",
+					data: { path: databasePath, rows, chunks, ms: now() - startedAt },
+				},
+				`Pruned ${rows} journal keys in ${chunks} chunks over ${now() - startedAt} ms`,
+			);
 	}
 
 	let pruneTimer: ReturnType<typeof setTimeout> | null = null;

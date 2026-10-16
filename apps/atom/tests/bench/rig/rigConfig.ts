@@ -22,6 +22,12 @@ const defaults = {
 		/** Passed to the replica's Bun as environment, e.g. { BUN_JSC_useJIT: "1" }. */
 		bunJscFlags: {} as Record<string, string>,
 		extraEnv: {} as Record<string, string>,
+		/** Keys written into one slot's journal before the Atom opens it, as a long-running Atom holds them (see rigPreloadKeys). */
+		preloadKeys: null as {
+			slot: number;
+			customerId: string;
+			rows: number;
+		} | null,
 	},
 	stub: {
 		port: 18877,
