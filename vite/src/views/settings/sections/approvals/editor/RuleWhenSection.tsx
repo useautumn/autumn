@@ -34,12 +34,12 @@ export const RuleWhenSection = ({
 		onGroupsChange(
 			groups.map((group, i) => (i === index ? { ...group, rules } : group)),
 		);
-	const addRow = () => {
-		const last = groups.at(-1);
-		if (!last) return onGroupsChange([withId({ rules: [newRow()] })]);
-		setRows(groups.length - 1, [
-			...last.rules,
-			withId(registry.nextRow({ rows: last.rules })),
+	const addRow = (index: number) => {
+		const group = groups[index];
+		if (!group) return onGroupsChange([withId({ rules: [newRow()] })]);
+		setRows(index, [
+			...group.rules,
+			withId(registry.nextRow({ rows: group.rules })),
 		]);
 	};
 	const addGroup = () =>
@@ -74,10 +74,15 @@ export const RuleWhenSection = ({
 								: undefined
 						}
 					/>
+					{isSplit && (
+						<AddButton label="Add condition" onClick={() => addRow(index)} />
+					)}
 				</div>
 			))}
 			<div className="flex gap-2">
-				<AddButton label="Add condition" onClick={addRow} />
+				{!isSplit && (
+					<AddButton label="Add condition" onClick={() => addRow(0)} />
+				)}
 				{groups.some((group) => group.rules.length > 0) && (
 					<AddButton label='Add "or" group' onClick={addGroup} />
 				)}
