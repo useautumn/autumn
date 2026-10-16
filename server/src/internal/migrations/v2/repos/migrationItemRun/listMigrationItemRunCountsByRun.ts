@@ -34,6 +34,13 @@ const emptyCounts: MigrationItemRunCounts = {
 	failed: 0,
 };
 
+/** Both partial indexes are keyed on dry_run, so a count must always name it;
+ * "either" is spelled as two arms so the planner can BitmapOr the indexes. */
+const dryRunPredicate = (dryRun: boolean | undefined): SQL =>
+	dryRun === undefined
+		? sql`(${migrationItemRuns.dry_run} = false OR ${migrationItemRuns.dry_run} = true)`
+		: eq(migrationItemRuns.dry_run, dryRun);
+
 export const listMigrationItemRunCountsByRun = async ({
 	ctx,
 	migrationInternalId,
@@ -57,6 +64,7 @@ export const listMigrationItemRunCountsByRun = async ({
 			and(
 				eq(migrationItemRuns.migration_internal_id, migrationInternalId),
 				eq(migrationItemRuns.item_kind, itemKind),
+				dryRunPredicate(undefined),
 				inArray(migrationItemRuns.migration_run_id, migrationRunIds),
 			),
 		)
@@ -79,9 +87,9 @@ export const getMigrationItemRunCounts = async ({
 	const where: SQL[] = [
 		eq(migrationItemRuns.migration_internal_id, migrationInternalId),
 		eq(migrationItemRuns.item_kind, itemKind),
+		dryRunPredicate(dryRun),
 	];
 
-	if (dryRun !== undefined) where.push(eq(migrationItemRuns.dry_run, dryRun));
 	if (migrationRunId !== undefined)
 		where.push(eq(migrationItemRuns.migration_run_id, migrationRunId));
 
