@@ -14,6 +14,7 @@ import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { parseAsArrayOf, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -40,6 +41,7 @@ import {
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
 	const { setSheet } = useSheetStore();
+	const canCreateBalance = useCanDo("balances.create");
 
 	const { entityId } = useEntity();
 
@@ -217,15 +219,17 @@ export function CustomerFeatureUsageTable() {
 							Features
 						</Table.Heading>
 						<Table.Actions>
-							<Button
-								variant="secondary"
-								size="mini"
-								className="gap-2 font-medium"
-								onClick={() => setSheet({ type: "balance-create" })}
-							>
-								<PlusIcon className="size-3.5" />
-								Create Balance
-							</Button>
+							{canCreateBalance && (
+								<Button
+									variant="secondary"
+									size="mini"
+									className="gap-2 font-medium"
+									onClick={() => setSheet({ type: "balance-create" })}
+								>
+									<PlusIcon className="size-3.5" />
+									Create Balance
+								</Button>
+							)}
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasFlagsSection && <SectionTag>Balances</SectionTag>}
