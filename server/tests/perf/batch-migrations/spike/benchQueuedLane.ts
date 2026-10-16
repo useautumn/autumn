@@ -94,6 +94,40 @@ const parseArgs = () => {
 };
 
 const DELETE_BATCH_SIZE = 500;
+const DELETE_CONCURRENCY = 4;
+
+const deleteCustomerRows = async ({
+	ctx,
+	internalIds,
+	withCustomers,
+}: {
+	ctx: AutumnContext;
+	internalIds: string[];
+	withCustomers: boolean;
+}) => {
+	const ids = JSON.stringify(internalIds);
+	await ctx.db.execute(sql`
+		DELETE FROM customer_entitlements WHERE internal_customer_id IN (
+			SELECT jsonb_array_elements_text(${ids}::jsonb))
+	`);
+	await ctx.db.execute(sql`
+		DELETE FROM customer_products WHERE internal_customer_id IN (
+			SELECT jsonb_array_elements_text(${ids}::jsonb))
+	`);
+	await ctx.db.execute(sql`
+		DELETE FROM migration_item_runs WHERE item_kind = 'customer' AND item_id IN (
+			SELECT jsonb_array_elements_text(${ids}::jsonb))
+	`);
+	await ctx.db.execute(sql`
+		DELETE FROM subject_snapshots WHERE internal_customer_id IN (
+			SELECT jsonb_array_elements_text(${ids}::jsonb))
+	`);
+	if (withCustomers)
+		await ctx.db.execute(sql`
+			DELETE FROM customers WHERE internal_id IN (
+				SELECT jsonb_array_elements_text(${ids}::jsonb))
+		`);
+};
 
 const deleteSeededRows = async ({
 	ctx,
@@ -114,32 +148,19 @@ const deleteSeededRows = async ({
 				AND internal_id LIKE ${`${internalCustomerPrefix}%`}
 				AND internal_id > ${after}
 			ORDER BY internal_id
-			LIMIT ${DELETE_BATCH_SIZE}
+			LIMIT ${DELETE_BATCH_SIZE * DELETE_CONCURRENCY}
 		`);
 		const last = rows.at(-1)?.internal_id;
 		if (!last) return;
-		const ids = JSON.stringify(rows.map((row) => row.internal_id));
-		await ctx.db.execute(sql`
-			DELETE FROM customer_entitlements WHERE internal_customer_id IN (
-				SELECT jsonb_array_elements_text(${ids}::jsonb))
-		`);
-		await ctx.db.execute(sql`
-			DELETE FROM customer_products WHERE internal_customer_id IN (
-				SELECT jsonb_array_elements_text(${ids}::jsonb))
-		`);
-		await ctx.db.execute(sql`
-			DELETE FROM migration_item_runs WHERE item_kind = 'customer' AND item_id IN (
-				SELECT jsonb_array_elements_text(${ids}::jsonb))
-		`);
-		await ctx.db.execute(sql`
-			DELETE FROM subject_snapshots WHERE internal_customer_id IN (
-				SELECT jsonb_array_elements_text(${ids}::jsonb))
-		`);
-		if (withCustomers)
-			await ctx.db.execute(sql`
-				DELETE FROM customers WHERE internal_id IN (
-					SELECT jsonb_array_elements_text(${ids}::jsonb))
-			`);
+		const internalIds = rows.map((row) => row.internal_id);
+		const batches: string[][] = [];
+		for (let start = 0; start < internalIds.length; start += DELETE_BATCH_SIZE)
+			batches.push(internalIds.slice(start, start + DELETE_BATCH_SIZE));
+		await Promise.all(
+			batches.map((batch) =>
+				deleteCustomerRows({ ctx, internalIds: batch, withCustomers }),
+			),
+		);
 		after = last;
 	}
 };
