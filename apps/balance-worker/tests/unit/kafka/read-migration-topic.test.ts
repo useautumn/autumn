@@ -63,7 +63,7 @@ describe("readMigrationTopic", () => {
 		).toBeUndefined();
 	});
 
-	test("a broker that refuses the listing leaves the lane off instead of failing the worker", async () => {
+	test("a broker that keeps refusing the listing leaves the lane off instead of failing the worker", async () => {
 		const { kafka, disconnects } = kafkaWith({
 			listTopics: async () => {
 				throw new Error("TOPIC_AUTHORIZATION_FAILED");
@@ -72,6 +72,21 @@ describe("readMigrationTopic", () => {
 		expect(
 			await readMigrationTopic({ kafka, topic: TOPIC, partitionCount: 4 }),
 		).toBeUndefined();
-		expect(disconnects()).toBe(1);
-	});
+		expect(disconnects()).toBe(5);
+	}, 15_000);
+
+	test("a listing that fails once is read again and turns the lane on", async () => {
+		let calls = 0;
+		const { kafka } = kafkaWith({
+			listTopics: async () => {
+				calls += 1;
+				if (calls === 1) throw new Error("REQUEST_TIMED_OUT");
+				return [TOPIC];
+			},
+		});
+		expect(
+			await readMigrationTopic({ kafka, topic: TOPIC, partitionCount: 4 }),
+		).toBe(TOPIC);
+		expect(calls).toBe(2);
+	}, 15_000);
 });

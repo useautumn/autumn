@@ -12,14 +12,14 @@ export async function readMigrationTopic({
 	topic: string;
 	partitionCount: number;
 }): Promise<string | undefined> {
-	for (let attempt = 1; ; attempt++) {
+	for (let attempt = 1; attempt <= READ_ATTEMPTS; attempt++) {
 		try {
 			return await readTopicOnce({ kafka, topic, partitionCount });
-		} catch (cause) {
-			if (attempt >= READ_ATTEMPTS) throw cause;
-			await Bun.sleep(READ_RETRY_MS);
+		} catch {
+			if (attempt < READ_ATTEMPTS) await Bun.sleep(READ_RETRY_MS);
 		}
 	}
+	return undefined;
 }
 
 async function readTopicOnce({
