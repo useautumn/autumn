@@ -82,16 +82,12 @@ export const fetchCanDo = async ({
 	(await axios.get<CanDoResponse>("/approvals/can", { params: { action } }))
 		.data;
 
-/** An unanswered check allows, so a missing or failing endpoint never hides a button. */
+/** Gates on `can` alone; `reason` is informational. An unanswered check allows. */
 export const canDoAllows = ({
 	response,
 }: {
 	response: CanDoResponse | undefined;
-}) =>
-	!response ||
-	response.can ||
-	response.reason === "exempt" ||
-	response.reason === "none";
+}) => !response || response.can;
 
 const denialFromPreview = ({ preview }: { preview: unknown }) => {
 	const parsed = z
