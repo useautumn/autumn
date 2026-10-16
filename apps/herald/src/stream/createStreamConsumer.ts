@@ -25,6 +25,7 @@ import {
 	HeraldStoppedMidSliceError,
 	type RunningStreamConsumer,
 	type StreamConsumer,
+	type StreamReadSize,
 } from "./types/streamConsumer.js";
 import { createUncommittedLandings } from "./uncommittedLandings/createUncommittedLandings.js";
 
@@ -32,6 +33,11 @@ import { createUncommittedLandings } from "./uncommittedLandings/createUncommitt
 const PARTITIONS_CONSUMED_CONCURRENTLY = 8;
 /** One store round trip per slice; the resolve and heartbeat after it bound what a lost partition can repeat. */
 const RECORDS_PER_SLICE = 500;
+/** One poll is one slice: a rewind repeats at most one slice per partition. */
+const DEFAULT_READ_SIZE: StreamReadSize = {
+	recordsPerPoll: RECORDS_PER_SLICE,
+	recordsPerSlice: RECORDS_PER_SLICE,
+};
 const CONSUMER_TIMINGS: KafkaConsumerGroupTimings = {
 	fetchMaxWaitTimeMs: 250,
 	heartbeatIntervalMs: 3000,
@@ -69,6 +75,7 @@ export function createStreamConsumer({
 	streamConsumer: StreamConsumer;
 }): RunningStreamConsumer {
 	const groupId = `${config.groupIdPrefix}-${streamConsumer.name}`;
+	const readSize = streamConsumer.readSize ?? DEFAULT_READ_SIZE;
 	const consumer = ctx.kafka.consumer({
 		...createConsumerGroupConfig({
 			groupId,
@@ -78,6 +85,7 @@ export function createStreamConsumer({
 		}),
 		// An idle job hears its fetches answered from statistics; without them it would read as stalled.
 		statisticsIntervalMs: FETCH_LIVENESS_INTERVAL_MS,
+		maxRecordsPerPoll: readSize.recordsPerPoll,
 	});
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
@@ -217,7 +225,7 @@ export function createStreamConsumer({
 		config: {
 			topic: config.topic,
 			partitionsConsumedConcurrently: PARTITIONS_CONSUMED_CONCURRENTLY,
-			recordsPerSlice: config.recordsPerSlice ?? RECORDS_PER_SLICE,
+			recordsPerSlice: config.recordsPerSlice ?? readSize.recordsPerSlice,
 		},
 	});
 
