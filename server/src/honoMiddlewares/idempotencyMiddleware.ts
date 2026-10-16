@@ -14,6 +14,7 @@ export const idempotencyMiddleware = async (
 	const ctx = c.get("ctx");
 	const idempotencyKey =
 		headers["idempotency-key"] || headers["Idempotency-Key"];
+	if (idempotencyKey) ctx.idempotencyKey = idempotencyKey;
 
 	await withIdempotencyKey({
 		ctx,
