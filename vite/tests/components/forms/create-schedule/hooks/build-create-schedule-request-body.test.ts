@@ -829,7 +829,7 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].starts_at).toBe(now);
 	});
 
-	test("sends carry_over_usages only when enabled, with its feature ids", () => {
+	test("sends carry_over_usages whenever the row is shown, with its feature ids", () => {
 		const bodyWith = (carryOver: {
 			carryOverUsages?: boolean;
 			carryOverUsageFeatureIds?: string[];
@@ -848,7 +848,7 @@ describe("buildCreateScheduleRequestBody", () => {
 				carryOverUsages: false,
 				carryOverUsageFeatureIds: ["api_calls"],
 			})!.carry_over_usages,
-		).toBeUndefined();
+		).toEqual({ enabled: false });
 		expect(bodyWith({ carryOverUsages: true })!.carry_over_usages).toEqual({
 			enabled: true,
 		});
