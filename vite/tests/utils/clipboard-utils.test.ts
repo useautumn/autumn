@@ -63,7 +63,10 @@ test("the error toast's retry action copies again from a fresh click", async () 
 test("a successful clipboard write shows the success toast", async () => {
 	writeText.mockResolvedValue(undefined);
 
-	const copied = await copyToClipboard({ text: "{}", successMessage: "Copied" });
+	const copied = await copyToClipboard({
+		text: "{}",
+		successMessage: "Copied",
+	});
 
 	expect(copied).toBe(true);
 
