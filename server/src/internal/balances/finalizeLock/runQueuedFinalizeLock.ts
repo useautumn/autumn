@@ -1,6 +1,9 @@
-import { type FinalizeLockParamsV1, RecaseError } from "@autumn/shared";
+import type { FinalizeLockParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { finalizeWhereTheLockLives } from "./runFinalizeLock.js";
+import {
+	finalizeWhereTheLockLives,
+	isLockNotFoundError,
+} from "./runFinalizeLock.js";
 
 /** Queued finalize replay. Never re-queues — the same dedup id would drop
  *  inside the FIFO window; transient errors rethrow so SQS redelivery retries. */
@@ -14,10 +17,7 @@ export const runQueuedFinalizeLock = async ({
 	try {
 		return await finalizeWhereTheLockLives({ ctx, params });
 	} catch (error) {
-		if (
-			error instanceof RecaseError &&
-			error.message.includes("Lock not found")
-		) {
+		if (isLockNotFoundError(error)) {
 			ctx.logger.info("[finalizeLock] queued replay already resolved", {
 				type: "finalize_lock_queue_replay_resolved",
 				lock_id: params.lock_id,
