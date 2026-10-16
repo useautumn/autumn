@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, type Mock, test } from "bun:test";
+import { afterEach, describe, expect, type Mock, spyOn, test } from "bun:test";
 import { LATEST_VERSION } from "@autumn/shared";
 import {
 	ATOM_TOKEN,
@@ -206,6 +206,66 @@ describe("a check on a replica that does not own the customer", () => {
 		// Without it the SDK takes the API's reply for the Atom's own, and asks the API again.
 		expect(reply.headers.get("x-atom-forwarded")).toBe("feature_not_stored");
 		expect(autumn.calls).toEqual(["/v1/balances.check"]);
+	});
+});
+
+describe("the request line of a check hopped to its owner", () => {
+	type Line = { fields: { statusCode: number; sample_rate?: number } };
+	/** Every sampled line falls inside the 1-in-100 sample, or none does. */
+	const sampleEvery = ({ sampled }: { sampled: boolean }) =>
+		spyOn(Math, "random").mockReturnValue(sampled ? 0 : 0.99);
+	const loggingReplica = ({
+		address,
+		peer,
+	}: {
+		address: string;
+		peer: string;
+	}) => {
+		const logged: Line[] = [];
+		const record = (fields: unknown) => void logged.push({ fields } as Line);
+		const replica = createReplica({
+			address,
+			peers: [peer],
+			ringPeers: [peer],
+			logger: { info: record, warn: record, error: record },
+		});
+		return { replica, logged };
+	};
+	afterEach(() => spyOn(Math, "random").mockRestore());
+
+	test("is sampled like an allowed check, since the owner logs the answer itself; outside the sample the hop leaves no line", async () => {
+		sampleEvery({ sampled: false });
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const { replica: b, logged } = loggingReplica({ address: B, peer: A });
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+
+		const viaB = await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+
+		expect(viaB.headers.get("x-atom-proxied")).toBe("owner");
+		expect(logged).toEqual([]);
+	});
+
+	test("inside the sample the hop's line says its rate", async () => {
+		sampleEvery({ sampled: true });
+		const a = createReplica({ address: A, peers: [B], ringPeers: [B] });
+		const { replica: b, logged } = loggingReplica({ address: B, peer: A });
+		for (const replica of [a, b])
+			await storeOnly({ replica, customerId: CUSTOMER, readAt: 1700 });
+		connect({ replicas: [a, b] });
+
+		await b.app.request(
+			"/v1/balances.check",
+			checkFor({ customerId: CUSTOMER }),
+		);
+
+		expect(
+			logged.map(({ fields }) => [fields.statusCode, fields.sample_rate]),
+		).toEqual([[200, 0.01]]);
 	});
 });
 
