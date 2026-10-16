@@ -146,6 +146,7 @@ export function CustomerProductsTable() {
 
 	const canCancel = useCanDo("billing.cancel");
 	const canUpdate = useCanDo("billing.update_subscription");
+	const canUncancel = useCanDo("billing.uncancel");
 
 	const handleUpdateClick = (product: FullCusProduct) => {
 		setSheet({ type: "subscription-update", itemId: product.id });
@@ -161,7 +162,7 @@ export function CustomerProductsTable() {
 		options: {
 			meta: {
 				onCancelClick: handleCancelClick,
-				onUncancelClick: handleUncancelClick,
+				onUncancelClick: canUncancel ? handleUncancelClick : undefined,
 				onCancelImmediatelyClick: handleCancelImmediatelyClick,
 				onTransferClick: handleTransferClick,
 				onUpdateClick: canUpdate ? handleUpdateClick : undefined,
