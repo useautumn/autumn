@@ -3,8 +3,10 @@ import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { releaseLockClaimMarker } from "@/internal/balances/utils/lockV2/releaseLockClaimMarker.js";
+import { isBalanceWorkerRolloutEnabled } from "@/internal/misc/rollouts/isBalanceWorkerRolloutEnabled.js";
 import { getBalanceLock } from "./balanceWorker/getBalanceLock.js";
 import { runBalanceWorkerFinalize } from "./balanceWorker/runBalanceWorkerFinalize.js";
+import { waitForHandedInLock } from "./balanceWorker/waitForHandedInLock.js";
 import { queueFinalizeLock } from "./queueFinalizeLock.js";
 import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 
@@ -20,18 +22,32 @@ const isLegacyFinalizeWithoutCustomer = ({
 	params: FinalizeLockParamsV1;
 }): boolean => !params.customer_id;
 
+/** The worker's row for the lock; with `waitForHandIn`, a worker customer's lock an Atom may not have handed in yet is waited for. */
+const findWorkerLock = async ({
+	ctx,
+	params,
+	waitForHandIn,
+}: RunFinalizeLockArgs & { waitForHandIn: boolean }) => {
+	const customerId = isLegacyFinalizeWithoutCustomer({ params })
+		? undefined
+		: params.customer_id;
+	const lock = await getBalanceLock({
+		ctx,
+		lockId: params.lock_id,
+		customerId,
+	});
+	if (lock || !waitForHandIn || !customerId) return lock;
+	if (!isBalanceWorkerRolloutEnabled({ ctx, customerId })) return null;
+	return waitForHandedInLock({ ctx, lockId: params.lock_id, customerId });
+};
+
 /** A lock lives where it was taken and names its customer; the request names the lock, and from 2.6 its customer. */
 export const finalizeWhereTheLockLives = async ({
 	ctx,
 	params,
-}: RunFinalizeLockArgs) => {
-	const workerLock = await getBalanceLock({
-		ctx,
-		lockId: params.lock_id,
-		customerId: isLegacyFinalizeWithoutCustomer({ params })
-			? undefined
-			: params.customer_id,
-	});
+	waitForHandIn = false,
+}: RunFinalizeLockArgs & { waitForHandIn?: boolean }) => {
+	const workerLock = await findWorkerLock({ ctx, params, waitForHandIn });
 	return workerLock
 		? runBalanceWorkerFinalize({ ctx, params, lock: workerLock })
 		: runFinalizeLockInner({ ctx, params });
@@ -40,7 +56,7 @@ export const finalizeWhereTheLockLives = async ({
 export const runFinalizeLock = async (args: RunFinalizeLockArgs) =>
 	withRedisFailOpen({
 		source: "runFinalizeLock",
-		run: () => finalizeWhereTheLockLives(args),
+		run: () => finalizeWhereTheLockLives({ ...args, waitForHandIn: true }),
 		fallback: async (error) => {
 			// The dying attempt may have claimed the receipt; release so the
 			// queued replay can reclaim.
