@@ -50,12 +50,12 @@ export const handlePreviewUpdateSubscription = createRoute({
 
 		if (!isSwitch && !liveUpdate) {
 			const pending = await previewPendingPlanIfAny({ ctx, params: body });
-			// The edit re-attaches the pending plan, so it's checked as an attach.
+			// The edit re-attaches the pending plan, but it's still the member's update.
 			if (pending) {
 				const permissionFields = await billingPreviewPermissionFields({
 					ctx,
 					...pending,
-					action: "billing.attach",
+					action: "billing.update_subscription",
 				});
 				return c.json({ ...pending.preview, ...permissionFields }, 200);
 			}
