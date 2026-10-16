@@ -133,11 +133,11 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"scheduled_cancel_changed",
 	"interval_change_invoices_now",
 	"usage_not_billed",
-	"past_due_invoice_open",
 	"cycle_reset",
 	"cycle_reset_ignored",
 	"cycle_reset_rebills_plans",
 	"other_subscriptions_unaffected",
+	"unbilled_plans_added",
 	"billing_starts_later",
 	"subscription_recreated_backdated",
 ]);

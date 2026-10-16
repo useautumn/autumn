@@ -9,15 +9,16 @@ const warningsFor = (otherStripeSubscriptionIds?: string[]) =>
 		liveProcessorItems: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
-		features: [],
-		billingContext: { currentEpochMs: 0, billingCycleAnchorMs: "now" },
+		ctx: { features: [] },
+		billingContext: {
+			currentEpochMs: 0,
+			billingCycleAnchorMs: "now",
+			stripeSubscriptionScope: otherStripeSubscriptionIds
+				? scopeOver({ customerProducts: [], otherStripeSubscriptionIds })
+				: undefined,
+		},
 		stripeBillingPlan: {},
 		replacedOpenInvoices: [],
-		liveOpenInvoices: [],
-		requestedAnchorResetMs: undefined,
-		stripeSubscriptionScope: otherStripeSubscriptionIds
-			? scopeOver({ customerProducts: [], otherStripeSubscriptionIds })
-			: undefined,
 	});
 
 describe(chalk.yellowBright("other_subscriptions_unaffected warning"), () => {

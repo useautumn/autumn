@@ -73,8 +73,6 @@ const noSubscriptionState = {
 	billingContext: { currentEpochMs: 0, billingCycleAnchorMs: "now" as const },
 	stripeBillingPlan: {},
 	replacedOpenInvoices: [],
-	liveOpenInvoices: [],
-	requestedAnchorResetMs: undefined,
 };
 
 describe("setPlansPreviewToWarnings", () => {
@@ -92,7 +90,7 @@ describe("setPlansPreviewToWarnings", () => {
 				],
 				withdrawnCustomerProducts: [],
 				outgoingCustomerProducts: [],
-				features: [],
+				ctx: { features: [] },
 				...noSubscriptionState,
 			}),
 		).toEqual([]);
@@ -131,9 +129,12 @@ describe("setPlansPreviewToWarnings", () => {
 			],
 			withdrawnCustomerProducts: [scheduledEnterprise],
 			outgoingCustomerProducts: [outgoingPro],
-			requestedProrationBehavior: "none",
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
+			billingContext: {
+				...noSubscriptionState.billingContext,
+				requestedProrationBehavior: "none",
+			},
 		});
 
 		expect(warnings.map((warning) => warning.type)).toEqual([
@@ -173,7 +174,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -190,7 +191,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -211,7 +212,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -263,7 +264,7 @@ const stateWarnings = (
 		liveProcessorItems: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
-		features: [],
+		ctx: { features: [] },
 		...noSubscriptionState,
 		...overrides,
 	});
@@ -718,6 +719,13 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 	});
 });
 
+const anchorResetContext = (requestedBillingCycleAnchor: number) => ({
+	currentEpochMs: 0,
+	billingCycleAnchorMs: "now" as const,
+	requestedBillingCycleAnchor,
+	stripeSubscription: stripeSubscription({ id: "sub_live", status: "active" }),
+});
+
 describe("setPlansPreviewToWarnings: live subscription changes", () => {
 	const liveSubscription = stripeSubscription({
 		id: "sub_live",
@@ -798,7 +806,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 		const resetAtMs = NOON_UTC + 10 * DAY_MS;
 
 		const warnings = stateWarnings({
-			requestedAnchorResetMs: resetAtMs,
+			billingContext: anchorResetContext(resetAtMs),
 			stripeBillingPlan: {
 				subscriptionScheduleAction: {
 					type: "create",
@@ -828,7 +836,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 	test("an anchor the billing plan never applies doesn't announce a cycle reset", () => {
 		expect(
 			stateWarnings({
-				requestedAnchorResetMs: NOON_UTC + 10 * DAY_MS,
+				billingContext: anchorResetContext(NOON_UTC + 10 * DAY_MS),
 				stripeBillingPlan: {},
 			}),
 		).toEqual([]);
@@ -905,49 +913,6 @@ describe("setPlansPreviewToWarnings: unbilled usage", () => {
 		expect(
 			stateWarnings({
 				unbilledUsageLineItems: [usageLineItem({ amount: 0 })],
-			}),
-		).toEqual([]);
-	});
-});
-
-describe("setPlansPreviewToWarnings: past_due subscription", () => {
-	const openInvoice = {
-		id: "in_retry",
-		number: "INV-0002",
-		amount_remaining: 2000,
-		currency: "usd",
-	} as Stripe.Invoice;
-
-	test("an open invoice on a past_due subscription is noted as still retried", () => {
-		expect(
-			stateWarnings({
-				billingContext: {
-					currentEpochMs: NOON_UTC,
-					billingCycleAnchorMs: "now",
-					stripeSubscription: stripeSubscription({ status: "past_due" }),
-				},
-				stripeBillingPlan: {},
-				liveOpenInvoices: [openInvoice],
-			}).map(withoutParts),
-		).toEqual([
-			{
-				type: "past_due_invoice_open",
-				severity: "info",
-				message: "Invoice INV-0002 for $20 is open; Stripe keeps retrying it.",
-			},
-		]);
-	});
-
-	test("an active subscription's open invoice isn't flagged", () => {
-		expect(
-			stateWarnings({
-				billingContext: {
-					currentEpochMs: NOON_UTC,
-					billingCycleAnchorMs: "now",
-					stripeSubscription: stripeSubscription({ status: "active" }),
-				},
-				stripeBillingPlan: {},
-				liveOpenInvoices: [openInvoice],
 			}),
 		).toEqual([]);
 	});

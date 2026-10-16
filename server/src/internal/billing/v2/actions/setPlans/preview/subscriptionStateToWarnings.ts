@@ -234,23 +234,6 @@ const openInvoiceWarnings = (openInvoices: Stripe.Invoice[]): Warning[] =>
 		]),
 	}));
 
-const pastDueInvoiceWarnings = ({
-	stripeSubscription,
-	liveOpenInvoices,
-}: {
-	stripeSubscription?: Stripe.Subscription;
-	liveOpenInvoices: Stripe.Invoice[];
-}): Warning[] =>
-	stripeSubscription?.status === "past_due"
-		? liveOpenInvoices.map((invoice) => ({
-				type: "past_due_invoice_open",
-				...warningText([
-					...describeInvoice(invoice),
-					plainText("is open; Stripe keeps retrying it."),
-				]),
-			}))
-		: [];
-
 const trialEndedWarning = ({
 	stripeSubscription,
 	trialContext,
@@ -276,13 +259,11 @@ export const subscriptionStateToWarnings = ({
 	billingContext,
 	stripeBillingPlan,
 	replacedOpenInvoices,
-	liveOpenInvoices,
 	lineItems,
 }: {
 	billingContext: SubscriptionWarningContext;
 	stripeBillingPlan: StripeBillingPlan;
 	replacedOpenInvoices: Stripe.Invoice[];
-	liveOpenInvoices: Stripe.Invoice[];
 	lineItems: LineItem[];
 }): Warning[] => {
 	const { replacedStripeSubscription } = billingContext;
@@ -303,10 +284,6 @@ export const subscriptionStateToWarnings = ({
 	return [
 		newSubscriptionWarning({ billingContext, stripeBillingPlan }),
 		...replacedWarnings,
-		...pastDueInvoiceWarnings({
-			stripeSubscription: billingContext.stripeSubscription,
-			liveOpenInvoices,
-		}),
 		trialEndedWarning(billingContext),
 		billingStartsLaterWarning({ billingContext, lineItems }),
 		replayedStartCycleResetWarning({ billingContext }),

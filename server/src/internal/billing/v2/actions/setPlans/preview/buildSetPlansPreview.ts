@@ -1,15 +1,9 @@
-import {
-	customerProductHasActiveStatus,
-	filterCustomerProductsByStripeSubscriptionId,
-	type SetPlansPreviewResponse,
-} from "@autumn/shared";
+import type { SetPlansPreviewResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
 import { currentSubscriptionTerms } from "./currentSubscriptionTerms";
-import { fetchPastDueOpenInvoices } from "./fetchPastDueOpenInvoices";
 import { fetchReplacedSubscriptionPreviewInputs } from "./fetchReplacedSubscriptionPreviewInputs";
 import { buildAutumnStripePriceIndex } from "./processorItems/buildAutumnStripePriceIndex";
 import { buildStripePriceLookup } from "./processorItems/price/buildStripePriceLookup";
@@ -37,7 +31,6 @@ export const buildSetPlansPreview = async ({
 		attachPreview,
 		stripePrices,
 		replacedSubscriptionInputs,
-		liveOpenInvoices,
 		subscriptionTerms,
 	] = await Promise.all([
 		billingPlanToAttachPreview({
@@ -58,7 +51,6 @@ export const buildSetPlansPreview = async ({
 				immediatePhaseTransition.outgoingCustomerProducts,
 			billedLineItems: billingPlan.autumn.lineItems ?? [],
 		}),
-		fetchPastDueOpenInvoices({ ctx, billingContext }),
 		currentSubscriptionTerms({ ctx, billingContext }),
 	]);
 	const processorItemContext: ProcessorItemContext = {
@@ -96,6 +88,10 @@ export const buildSetPlansPreview = async ({
 		removed_phases: review.removedPhases,
 		processor_changes: processorChanges,
 		warnings: setPlansPreviewToWarnings({
+			ctx,
+			billingContext,
+			stripeBillingPlan: billingPlan.stripe,
+			lineItems: billingPlan.autumn.lineItems,
 			phases: previewPhases,
 			liveProcessorItems: stripeSubscriptionToProcessorItems({
 				stripeSubscription: billingContext.stripeSubscription,
@@ -104,28 +100,7 @@ export const buildSetPlansPreview = async ({
 			withdrawnCustomerProducts: review.withdrawnStarts,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
-			requestedProrationBehavior: billingContext.requestedProrationBehavior,
-			requestedAnchorResetMs: billingContext.stripeSubscription
-				? getRequestedBillingCycleAnchorResetAt({
-						requestedBillingCycleAnchor:
-							billingContext.requestedBillingCycleAnchor,
-					})
-				: undefined,
-			features: ctx.features,
-			billingContext,
-			stripeBillingPlan: billingPlan.stripe,
 			...replacedSubscriptionInputs,
-			liveOpenInvoices,
-			lineItems: billingPlan.autumn.lineItems,
-			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
-			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
-			prorationOverride: billingContext.prorationOverride,
-			liveCustomerProducts: billingContext.stripeSubscription
-				? filterCustomerProductsByStripeSubscriptionId({
-						customerProducts: billingContext.fullCustomer.customer_products,
-						stripeSubscriptionId: billingContext.stripeSubscription.id,
-					}).filter(customerProductHasActiveStatus)
-				: [],
 		}),
 	};
 

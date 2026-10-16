@@ -1,22 +1,23 @@
 import {
-	type BillingBehavior,
 	boldText,
-	type Feature,
+	type CreateScheduleBillingContext,
+	customerProductHasActiveStatus,
 	type FullCusProduct,
+	filterCustomerProductsByStripeSubscriptionId,
 	findFeatureById,
 	type LineItem,
 	notNullish,
 	type ProcessorItem,
-	type ProrationBehaviorOverride,
 	plainText,
 	punctuationText,
 	type SetPlansPreviewBalanceChange,
 	type SetPlansPreviewPhase,
 	type SetPlansPreviewWarning,
 	type StripeBillingPlan,
-	type StripeSubscriptionScope,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { cycleResetRebillWarnings } from "./cycleResetRebillWarnings";
 import { liveSubscriptionChangeWarnings } from "./liveSubscriptionChangeWarnings";
 import { otherSubscriptionsWarnings } from "./otherSubscriptionsWarnings";
@@ -24,6 +25,7 @@ import {
 	type SubscriptionWarningContext,
 	subscriptionStateToWarnings,
 } from "./subscriptionStateToWarnings";
+import { unbilledPlansAddedWarnings } from "./unbilledPlansAddedWarnings";
 import { unbilledUsageWarnings } from "./unbilledUsageWarnings";
 import { warningText } from "./warningText";
 
@@ -33,7 +35,6 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_price_created",
 	"proration_disabled",
 	"new_stripe_subscription",
-	"past_due_invoice_open",
 	"other_subscriptions_unaffected",
 	"billing_starts_later",
 ];
@@ -91,46 +92,61 @@ const hasPendingQuantityChange = (customerProduct: FullCusProduct) =>
 		notNullish(option.upcoming_quantity),
 	);
 
+/** What the warnings read from the request: the subscription state plus the set_plans-only fields. */
+export type SetPlansWarningContext = SubscriptionWarningContext &
+	Partial<
+		Pick<
+			CreateScheduleBillingContext,
+			| "fullCustomer"
+			| "requestedBillingCycleAnchor"
+			| "prorationOverride"
+			| "stripeSubscriptionScope"
+		>
+	>;
+
 export const setPlansPreviewToWarnings = ({
+	ctx,
+	billingContext,
+	stripeBillingPlan,
+	lineItems = [],
 	phases,
 	liveProcessorItems,
 	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
-	requestedProrationBehavior,
-	requestedAnchorResetMs,
-	features,
-	billingContext,
-	stripeBillingPlan,
 	replacedOpenInvoices,
-	liveOpenInvoices,
 	unbilledUsageLineItems = [],
-	lineItems = [],
-	stripeSubscriptionScope,
-	resetsCycleNow = false,
-	prorationOverride,
-	liveCustomerProducts = [],
 }: {
+	ctx: Pick<AutumnContext, "features">;
+	billingContext: SetPlansWarningContext;
+	stripeBillingPlan: StripeBillingPlan;
+	/** The line items the immediate invoice bills. */
+	lineItems?: LineItem[];
 	phases: SetPlansPreviewPhase[];
 	liveProcessorItems: ProcessorItem[];
 	/** Saved scheduled plans the request withdraws; a re-timed or updated plan isn't one. */
 	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
-	requestedProrationBehavior?: BillingBehavior;
-	requestedAnchorResetMs: number | undefined;
-	features: Feature[];
-	billingContext: SubscriptionWarningContext;
-	stripeBillingPlan: StripeBillingPlan;
 	replacedOpenInvoices: Stripe.Invoice[];
-	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
-	/** The line items the immediate invoice bills. */
-	lineItems?: LineItem[];
-	stripeSubscriptionScope?: StripeSubscriptionScope;
-	resetsCycleNow?: boolean;
-	prorationOverride?: ProrationBehaviorOverride;
-	/** Plans live on the subscription before the request. */
-	liveCustomerProducts?: FullCusProduct[];
 }): SetPlansPreviewWarning[] => {
+	const {
+		stripeSubscription,
+		stripeSubscriptionScope,
+		requestedProrationBehavior,
+		currentEpochMs,
+	} = billingContext;
+	const customerProducts = billingContext.fullCustomer?.customer_products ?? [];
+	const requestedAnchorResetMs = stripeSubscription
+		? getRequestedBillingCycleAnchorResetAt({
+				requestedBillingCycleAnchor: billingContext.requestedBillingCycleAnchor,
+			})
+		: undefined;
+	const liveCustomerProducts = stripeSubscription
+		? filterCustomerProductsByStripeSubscriptionId({
+				customerProducts,
+				stripeSubscriptionId: stripeSubscription.id,
+			}).filter(customerProductHasActiveStatus)
+		: [];
 	const processorItems = phases.flatMap((phase) => phase.processor_items);
 	const balanceChanges = phases.flatMap((phase) => phase.balance_changes);
 
@@ -139,19 +155,18 @@ export const setPlansPreviewToWarnings = ({
 			billingContext,
 			stripeBillingPlan,
 			replacedOpenInvoices,
-			liveOpenInvoices,
 			lineItems,
 		}),
 		...liveSubscriptionChangeWarnings({
-			stripeSubscription: billingContext.stripeSubscription,
+			stripeSubscription,
 			stripeBillingPlan,
 			liveProcessorItems,
 			immediateItems: phases[0]?.processor_items ?? [],
 			requestedAnchorResetMs,
 		}),
 		...cycleResetRebillWarnings({
-			resetsCycleNow,
-			prorationOverride,
+			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
+			prorationOverride: billingContext.prorationOverride,
 			lineItems,
 			liveCustomerProducts,
 		}),
@@ -178,7 +193,10 @@ export const setPlansPreviewToWarnings = ({
 			type: "usage_reset" as const,
 			...warningText([
 				plainText("Usage for"),
-				boldText(findFeatureById({ features, featureId })?.name ?? featureId),
+				boldText(
+					findFeatureById({ features: ctx.features, featureId })?.name ??
+						featureId,
+				),
 				plainText("restarts from zero."),
 			]),
 		})),
@@ -208,6 +226,12 @@ export const setPlansPreviewToWarnings = ({
 					},
 				]
 			: []),
+		...unbilledPlansAddedWarnings({
+			stripeSubscriptionScope,
+			customerProducts,
+			immediatePhase: phases[0],
+			now: currentEpochMs,
+		}),
 		...otherSubscriptionsWarnings({ stripeSubscriptionScope }),
 	];
 

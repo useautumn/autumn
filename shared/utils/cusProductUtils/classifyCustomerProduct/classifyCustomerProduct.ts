@@ -262,14 +262,17 @@ export const isCustomerProductInStripeSubscriptionScope = ({
 			}),
 	);
 
-/** Free and billed on no Stripe subscription or schedule, so no single subscription owns it
- * (it may still be scoped to an entity). */
+/** Billed on no Stripe subscription or schedule, so no single subscription owns it. */
+export const isCustomerProductUnlinked = (customerProduct: FullCusProduct) =>
+	!customerProduct.subscription_ids?.length &&
+	!customerProduct.scheduled_ids?.length;
+
+/** Free and unlinked (it may still be scoped to an entity). */
 export const isCustomerProductUnlinkedFree = (
 	customerProduct: FullCusProduct,
 ) =>
 	isCustomerProductFree(customerProduct) &&
-	!customerProduct.subscription_ids?.length &&
-	!customerProduct.scheduled_ids?.length;
+	isCustomerProductUnlinked(customerProduct);
 
 /** Note: this does not CONFIRM that the subscription is active (might be canceled in Stripe...) */
 export const cusProductHasSubscription = ({
