@@ -13,6 +13,7 @@ import {
 	TabsTrigger,
 } from "@autumn/ui";
 import { ChipMultiSelect } from "./ChipMultiSelect";
+import { PrecedenceNotes } from "./PrecedenceNotes";
 import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
@@ -182,6 +183,21 @@ export const ApprovalRuleSheet = ({
 							);
 						}}
 					</form.Field>
+
+					<form.Subscribe selector={(state) => state.values}>
+						{({ effect, subjects, actions, enabled }) => (
+							<PrecedenceNotes
+								draft={{
+									id: rule?.id ?? null,
+									position: rule?.position ?? null,
+									effect,
+									subjects,
+									actions,
+									enabled,
+								}}
+							/>
+						)}
+					</form.Subscribe>
 
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
