@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAutumnClient } from "../../../src/autumnClient/createAutumnClient.js";
 import { createJournalForwarder } from "../../../src/journalForwarder/createJournalForwarder.js";
+import { finalize } from "../../../src/processor/actions/finalize/finalize.js";
+import type { FinalizeRequest } from "../../../src/processor/types/finalize.js";
 import { openSlots } from "../../../src/slots/openSlots.js";
 import { journalFilePath } from "../../../src/slots/slotFiles.js";
 import {
@@ -444,34 +446,39 @@ describe("a track Autumn refuses on its own", () => {
 	});
 });
 
+const finalizeRequest: FinalizeRequest = {
+	requestId: "atom_req_finalize",
+	occurredAt: 1_700_000_000_000,
+	params: {
+		customer_id: "cus_1",
+		lock_id: "lock_1",
+		action: "confirm",
+		override_value: 4,
+		properties: { model: "small" },
+	},
+	apiVersion: latestApiVersion,
+	movedFrom: null,
+};
+
+const lockOnSlot = (
+	processor: Awaited<ReturnType<typeof openForwardedSlot>>["processor"],
+) =>
+	processor.check({
+		request: {
+			...sendEvent(),
+			params: {
+				...sendEvent().params,
+				send_event: undefined,
+				lock: { enabled: true, lock_id: "lock_1" },
+			},
+		},
+	});
+
 describe("a finalize the Atom settled", () => {
 	test("is handed in after its lock as the lock it names: customer, lock, entity and feature from its row, never the row", async () => {
-		const { processor, journal } = await openForwardedSlot();
-		await processor.check({
-			request: {
-				...sendEvent(),
-				params: {
-					...sendEvent().params,
-					send_event: undefined,
-					lock: { enabled: true, lock_id: "lock_1" },
-				},
-			},
-		});
-		await processor.finalize({
-			request: {
-				requestId: "atom_req_finalize",
-				occurredAt: 1_700_000_000_000,
-				params: {
-					customer_id: "cus_1",
-					lock_id: "lock_1",
-					action: "confirm",
-					override_value: 4,
-					properties: { model: "small" },
-				},
-				apiVersion: latestApiVersion,
-				movedFrom: null,
-			},
-		});
+		const { ctx, processor, journal } = await openForwardedSlot();
+		await lockOnSlot(processor);
+		await finalize({ ctx, request: finalizeRequest });
 
 		await until(() => nothingUnsent({ journal }));
 		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1]);
@@ -485,6 +492,30 @@ describe("a finalize the Atom settled", () => {
 				lock_id: "lock_1",
 				entity_id: null,
 				feature_id: "messages",
+				finalValue: 4,
+				properties: { model: "small" },
+			},
+		]);
+	});
+});
+
+describe("a finalize the Atom left undecided", () => {
+	test("is handed in after its lock as the caller sent it: no entity or feature, for Autumn's own row to name", async () => {
+		const { processor, journal } = await openForwardedSlot();
+		await lockOnSlot(processor);
+		await processor.finalize({ request: finalizeRequest });
+
+		await until(() => nothingUnsent({ journal }));
+		expect(autumn.applied.map(({ seq }) => seq)).toEqual([1]);
+		expect(autumn.finalized).toEqual([]);
+		expect(autumn.undecided).toEqual([
+			{
+				writerId: journal.writerId,
+				seq: 2,
+				requestId: "atom_req_finalize",
+				occurredAt: 1_700_000_000_000,
+				customer_id: "cus_1",
+				lock_id: "lock_1",
 				finalValue: 4,
 				properties: { model: "small" },
 			},

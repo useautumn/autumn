@@ -21,5 +21,15 @@ export type AnswerableFinalize = {
 	properties: FinalizeCommand["properties"];
 };
 
+/**
+ * A finalize journaled as the caller sent it, for Autumn to decide behind the lock it names: the Atom read neither the
+ * lock nor the subject, so it names no entity or feature, and its view moves nothing until Autumn's push.
+ */
+export type UndecidedFinalizeCommand = AnswerableFinalize & {
+	type: "undecidedFinalize";
+	requestId: string;
+	occurredAt: number;
+};
+
 /** What the API answers a finalize with. */
 export type FinalizeResponse = { success: true };

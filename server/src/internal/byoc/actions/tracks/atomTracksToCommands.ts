@@ -6,21 +6,30 @@ import {
 	parseTrackCommand,
 	type TrackCommand,
 } from "@autumn/balance-engine";
-import type { AtomFinalize, AtomTracksAppendRequest } from "@autumn/byoc";
+import type {
+	AtomFinalize,
+	AtomTracksAppendRequest,
+	AtomUndecidedFinalize,
+} from "@autumn/byoc";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { featureToInternalFeatureId } from "@/internal/balances/balanceWorker/featureToInternalFeatureId.js";
 import type { AtomHonoEnv } from "../../types/atomHonoEnv.js";
 
 export type HandedInCommand = TrackCommand | AtomFinalizeCommand;
 
-/** An Atom's finalize names its lock as the API does; the worker settles Autumn's own row for it, never the Atom's copy. */
+/** The lock's entity and feature as the Atom named them when it decided the finalize; none when it left the decision to Autumn's own row. */
+type NamedLock = Pick<AtomFinalize, "entity_id" | "feature_id"> | null;
+
+/** An Atom's finalize names its lock as the API does, or not at all; the worker settles Autumn's own row for it, never the Atom's copy. */
 const finalizeToCommand = ({
 	ctx,
 	finalize,
+	named,
 	source,
 }: {
 	ctx: AutumnContext;
-	finalize: AtomFinalize;
+	finalize: AtomUndecidedFinalize;
+	named: NamedLock;
 	source: AtomSource;
 }): AtomFinalizeCommand =>
 	parseAtomFinalizeCommand({
@@ -34,15 +43,14 @@ const finalizeToCommand = ({
 				orgId: ctx.org.id,
 				env: ctx.env,
 				customerId: finalize.customer_id,
-				entityId: finalize.entity_id,
+				entityId: named?.entity_id ?? null,
 			},
 			org: orgToCommandOrg({ org: ctx.org }),
 			lockId: finalize.lock_id,
-			featureId: finalize.feature_id,
-			internalFeatureId: featureToInternalFeatureId({
-				ctx,
-				featureId: finalize.feature_id,
-			}),
+			featureId: named?.feature_id ?? null,
+			internalFeatureId: named
+				? featureToInternalFeatureId({ ctx, featureId: named.feature_id })
+				: null,
 			finalValue: finalize.finalValue,
 			properties: finalize.properties ?? null,
 			source,
@@ -70,6 +78,14 @@ export const atomTracksToCommands = ({
 				return finalizeToCommand({
 					ctx,
 					finalize: handedIn.finalize,
+					named: handedIn.finalize,
+					source,
+				});
+			if ("undecidedFinalize" in handedIn)
+				return finalizeToCommand({
+					ctx,
+					finalize: handedIn.undecidedFinalize,
+					named: null,
 					source,
 				});
 			return { ...parseTrackCommand({ input: handedIn.command }), source };

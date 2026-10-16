@@ -7,14 +7,15 @@ import type {
 
 const IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
-/** A check that deducts, as sent on the wire: `send_event` or a lock. */
-const isWriteCheck = ({
+/** A call that writes, as sent on the wire: a finalize, or a check with `send_event` or a lock. */
+const isWrite = ({
 	operationID,
 	body,
 }: {
 	operationID: string;
 	body: RequestInit["body"];
 }): boolean => {
+	if (operationID === "finalizeLock") return true;
 	if (operationID !== "check" || typeof body !== "string") return false;
 	try {
 		const sent: { send_event?: unknown; lock?: unknown } = JSON.parse(body);
@@ -25,7 +26,7 @@ const isWriteCheck = ({
 };
 
 /**
- * Under `useEdge`, a write check carries an Idempotency-Key: the caller's if set, else one made here once per call.
+ * Under `useEdge`, a write carries an Idempotency-Key: the caller's if set, else one made here once per call.
  * Every retry and the edge's fallback resend that same key, so Autumn applies the write once.
  */
 export class IdempotencyKeyHook implements BeforeCreateRequestHook {
@@ -36,7 +37,7 @@ export class IdempotencyKeyHook implements BeforeCreateRequestHook {
 		const options: EdgeSDKOptions = hookCtx.options;
 		if (!options.useEdge) return input;
 		if (
-			!isWriteCheck({
+			!isWrite({
 				operationID: hookCtx.operationID,
 				body: input.options?.body,
 			})

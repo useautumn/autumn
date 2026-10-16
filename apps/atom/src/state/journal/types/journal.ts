@@ -1,7 +1,11 @@
 import type { FinalizeCommand, TrackCommand } from "@autumn/balance-engine";
+import type { UndecidedFinalizeCommand } from "../../../processor/types/finalize.js";
 
-/** What the journal owes: the worker's track of a deduction granted here, or the finalize of a lock taken here. */
-export type JournaledCommand = TrackCommand | FinalizeCommand;
+/** What the journal owes: the worker's track of a deduction granted here, or the finalize of a lock taken here, settled here or left to Autumn. */
+export type JournaledCommand =
+	| TrackCommand
+	| FinalizeCommand
+	| UndecidedFinalizeCommand;
 
 /** A deduction the Atom granted and owes Autumn: the worker's own track command, with the Atom's bookkeeping beside it. */
 export type JournalEntry = {

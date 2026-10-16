@@ -2,8 +2,9 @@ import type { AtomTracksAppendRequest } from "@autumn/byoc";
 import type { JournalEntry } from "../state/journal/types/journal.js";
 
 /**
- * A journaled entry as Autumn takes it: a track as the worker's own command, a finalize as the lock it names. Autumn
- * settles its own row, so the row the Atom journaled for its replay never leaves it.
+ * A journaled entry as Autumn takes it: a track as the worker's own command, a finalize as the lock it names, an
+ * undecided one as the caller sent it. Autumn settles its own row, so the row the Atom journaled for its replay never
+ * leaves it.
  */
 export const journalEntryToHandIn = ({
 	writerId,
@@ -13,6 +14,19 @@ export const journalEntryToHandIn = ({
 	entry: JournalEntry;
 }): AtomTracksAppendRequest["tracks"][number] => {
 	if (command.type === "track") return { writerId, seq, command };
+	if (command.type === "undecidedFinalize")
+		return {
+			writerId,
+			seq,
+			undecidedFinalize: {
+				requestId: command.requestId,
+				occurredAt: command.occurredAt,
+				customer_id: command.customerId,
+				lock_id: command.lockId,
+				finalValue: command.finalValue,
+				properties: command.properties,
+			},
+		};
 	return {
 		writerId,
 		seq,
