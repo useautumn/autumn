@@ -70,5 +70,6 @@ export const createMigrationPageDb = ({
 			error: unknown = new Error("batch-migration: page database closed"),
 		) => controller.abort(error),
 		assertActive: () => controller.signal.throwIfAborted(),
+		signal: controller.signal,
 	};
 };

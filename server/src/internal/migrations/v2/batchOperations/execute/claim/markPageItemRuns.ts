@@ -13,6 +13,7 @@ export const markPageItemRuns = async ({
 	succeededInternalCustomerIds,
 	noUpdatesNeededInternalCustomerIds,
 	ineligibleInternalCustomerIds,
+	failedInternalCustomerIds = [],
 }: {
 	db: DrizzleCli;
 	migrationInternalId: string;
@@ -20,11 +21,13 @@ export const markPageItemRuns = async ({
 	succeededInternalCustomerIds: string[];
 	noUpdatesNeededInternalCustomerIds: string[];
 	ineligibleInternalCustomerIds: string[];
+	failedInternalCustomerIds?: string[];
 }): Promise<void> => {
 	const allIds = [
 		...succeededInternalCustomerIds,
 		...noUpdatesNeededInternalCustomerIds,
 		...ineligibleInternalCustomerIds,
+		...failedInternalCustomerIds,
 	];
 	if (allIds.length === 0) return;
 
@@ -32,10 +35,15 @@ export const markPageItemRuns = async ({
 		UPDATE migration_item_runs
 		SET status = CASE
 				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
-				THEN 'succeeded' ELSE 'skipped'
+				THEN 'succeeded'
+				WHEN item_id = ANY(${sql.param(failedInternalCustomerIds)}::text[])
+				THEN 'failed'
+				ELSE 'skipped'
 			END,
 			skip_reason = CASE
 				WHEN item_id = ANY(${sql.param(succeededInternalCustomerIds)}::text[])
+				THEN NULL
+				WHEN item_id = ANY(${sql.param(failedInternalCustomerIds)}::text[])
 				THEN NULL
 				WHEN item_id = ANY(${sql.param(noUpdatesNeededInternalCustomerIds)}::text[])
 				THEN ${MigrationItemRunSkipReason.NoUpdatesNeeded}

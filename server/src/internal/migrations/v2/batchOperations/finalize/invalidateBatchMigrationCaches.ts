@@ -2,7 +2,23 @@ import { orgToFeaturesByOrgEnv } from "@autumn/shared";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
-import type { BatchMigrationPageResult } from "../execute/types/batchMigrationExecutionTypes.js";
+import type {
+	BatchMigrationPageCustomer,
+	BatchMigrationPageResult,
+} from "../execute/types/batchMigrationExecutionTypes.js";
+
+const workerCurrentCustomerIdsOf = ({
+	pageResult,
+}: {
+	pageResult: BatchMigrationPageResult;
+}): Set<string> => {
+	const workerCurrentIds = new Set(pageResult.workerCurrentInternalIds ?? []);
+	return new Set(
+		[...pageResult.succeeded, ...(pageResult.failed ?? [])]
+			.map(({ internalId }) => internalId)
+			.filter((internalId) => workerCurrentIds.has(internalId)),
+	);
+};
 
 /** Migration writes are already committed when this runs, so a dropped
  *  invalidation is unrecoverable staleness rather than a retryable request. */
@@ -26,18 +42,25 @@ export const invalidateBatchMigrationCaches = async ({
 }): Promise<number> => {
 	// Org-scoped, so the per-customer callback below can return a fixed list.
 	const redisTargets = getRedisTargetsForCustomer({ org: ctx.org });
-	const customers = includeSkipped
-		? [...pageResult.succeeded, ...pageResult.skipped]
-		: pageResult.succeeded;
+	const customers = [
+		...pageResult.succeeded,
+		...(includeSkipped ? pageResult.skipped : []),
+		...(pageResult.failed ?? []),
+	];
+	const workerCurrentIds = workerCurrentCustomerIdsOf({ pageResult });
+	const toInvalidated = (customer: BatchMigrationPageCustomer) => ({
+		customerId: customer.id ?? customer.internalId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
 	const phases: Record<string, number> = {};
 	const startedAt = Date.now();
 
 	const invalidated = await batchInvalidateCachedFullSubjects({
-		customers: customers.map((customer) => ({
-			customerId: customer.id ?? customer.internalId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		})),
+		customers: customers.map(toInvalidated),
+		workerEvictCustomers: customers
+			.filter(({ internalId }) => !workerCurrentIds.has(internalId))
+			.map(toInvalidated),
 		featuresByOrgEnv: orgToFeaturesByOrgEnv({
 			org: ctx.org,
 			env: ctx.env,
@@ -56,6 +79,7 @@ export const invalidateBatchMigrationCaches = async ({
 	ctx.logger.info("batch-migration: page caches invalidated", {
 		data: {
 			customers: invalidated,
+			workerCurrent: workerCurrentIds.size,
 			includeSkipped,
 			totalMs: Date.now() - startedAt,
 			...phases,

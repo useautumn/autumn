@@ -76,7 +76,7 @@ export const buildBatchMigrationItemResponses = ({
 	});
 
 	return new Map(
-		pageResult.succeeded.map((customer) => {
+		[...pageResult.succeeded, ...(pageResult.failed ?? [])].map((customer) => {
 			const changes = toCustomerItemChanges({
 				items: itemsByCustomer.get(customer.internalId) ?? [],
 				entitlementLookup,

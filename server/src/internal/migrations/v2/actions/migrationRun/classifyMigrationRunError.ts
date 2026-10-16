@@ -32,6 +32,8 @@ const NAMED_ERROR_CODES: Record<string, MigrationRunErrorCode> = {
 		MigrationRunErrorCode.CacheInvalidationIncomplete,
 	[BatchMigrationErrorName.Stall]: MigrationRunErrorCode.TimedOut,
 	[BatchMigrationErrorName.PageLimit]: MigrationRunErrorCode.PageLimitExceeded,
+	[BatchMigrationErrorName.WorkerUnavailable]:
+		MigrationRunErrorCode.Interrupted,
 	TASK_RUN_CANCELLED: MigrationRunErrorCode.Canceled,
 	...Object.fromEntries(
 		TIMEOUT_TRIGGER_CODES.map((code) => [code, MigrationRunErrorCode.TimedOut]),

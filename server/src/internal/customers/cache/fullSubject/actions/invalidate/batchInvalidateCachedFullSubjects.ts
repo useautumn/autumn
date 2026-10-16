@@ -250,6 +250,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 
 export const batchInvalidateCachedFullSubjects = async ({
 	customers,
+	workerEvictCustomers = customers,
 	featuresByOrgEnv,
 	getRedisTargetsForCustomer,
 	maxAttempts = 1,
@@ -259,6 +260,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 	logger = baseLogger,
 }: {
 	customers: BatchInvalidateCustomer[];
+	workerEvictCustomers?: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	getRedisTargetsForCustomer: ({
 		customer,
@@ -298,7 +300,7 @@ export const batchInvalidateCachedFullSubjects = async ({
 	addPhase({ phase: "invalidate_marks_db", startedAt: marksStartedAt });
 
 	// The worker's copies go the same way, queued so the owners drop them in log order.
-	await queueBalanceWorkerEvicts({ customers });
+	await queueBalanceWorkerEvicts({ customers: workerEvictCustomers });
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {
