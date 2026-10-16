@@ -183,4 +183,27 @@ describe("PRD §8 rules in the editor", () => {
 	])("$name opens read-only", (rule) => {
 		expect(ruleToEditorValues({ rule }).editable).toBe(false);
 	});
+
+	test("an unanswered yes/no row is unfinished, not No", () => {
+		const { values } = ruleToEditorValues({ rule: enterpriseTrials });
+		const saved = editorValuesToParams({
+			values: {
+				...values,
+				groups: [
+					{
+						id: "g0",
+						rules: [
+							{
+								id: "r0",
+								field: "customer_has_paid",
+								operator: "is",
+								values: [],
+							},
+						],
+					},
+				],
+			},
+		});
+		expect(saved.ok).toBe(false);
+	});
 });
