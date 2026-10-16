@@ -1,6 +1,7 @@
 import { ExpandParamSchema } from "@api/common/expandParam";
 import { z } from "zod/v4";
 import { BillingPreviewChangeSchema } from "./billingPreviewChange";
+import { PreviewPermissionSchema } from "./previewPermission";
 import { RemoveLineSchema } from "./removeLine";
 
 export const BILLING_PREVIEW_RESPONSE_EXAMPLE = {
@@ -224,6 +225,11 @@ export const BillingPreviewResponseSchema =
 			internal: true,
 			description:
 				"Whether add_lines can add lines to what this request bills now.",
+		}),
+		permission: PreviewPermissionSchema.optional().meta({
+			internal: true,
+			description:
+				"Whether the org's approval rules allow this request for the member previewing it; absent when no rule applies.",
 		}),
 	});
 

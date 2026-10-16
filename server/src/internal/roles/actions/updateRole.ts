@@ -1,0 +1,50 @@
+import { AppEnv } from "@autumn/shared";
+import type {
+	ApiRole,
+	UpdateRoleParams,
+} from "@autumn/shared/api/roles/apiRole";
+import { clearApprovalRulesCache } from "@/external/redis/actions/approvalRulesCache/approvalRulesCache.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { handleBuiltInRoleErrors } from "../errors/handleBuiltInRoleErrors.js";
+import { handleRoleNameTakenErrors } from "../errors/handleRoleNameTakenErrors.js";
+import { handleRoleNotFoundErrors } from "../errors/handleRoleNotFoundErrors.js";
+import { withRoleNameConflictAsRoleExists } from "../errors/withRoleNameConflictAsRoleExists.js";
+import { roleRepo } from "../repos/index.js";
+import { customRoleToApiRole } from "../utils/customRoleToApiRole.js";
+
+/** Edits a custom role; renaming carries its members, invites and rule subjects along. */
+export const updateRole = async ({
+	ctx,
+	name,
+	params,
+}: {
+	ctx: AutumnContext;
+	name: string;
+	params: UpdateRoleParams;
+}): Promise<ApiRole> => {
+	const { db, org } = ctx;
+	handleBuiltInRoleErrors({ name });
+	handleRoleNotFoundErrors({
+		name,
+		role: await roleRepo.get({ db, orgId: org.id, name }),
+	});
+
+	const newName = params.name;
+	const isRename = newName !== undefined && newName !== name;
+	if (isRename) {
+		await handleRoleNameTakenErrors({ db, orgId: org.id, name: newName });
+	}
+
+	const role = handleRoleNotFoundErrors({
+		name,
+		role: await withRoleNameConflictAsRoleExists({
+			name: newName ?? name,
+			write: () => roleRepo.update({ db, orgId: org.id, name, params }),
+		}),
+	});
+	if (isRename) {
+		await clearApprovalRulesCache({ orgId: org.id, env: AppEnv.Live });
+	}
+	const usage = await roleRepo.getUsage({ db, orgId: org.id });
+	return customRoleToApiRole({ role, usage });
+};

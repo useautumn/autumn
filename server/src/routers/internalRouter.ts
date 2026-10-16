@@ -13,6 +13,7 @@ import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { accountRouter } from "../internal/account/accountRouter";
 import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalAnalyticsRouter } from "../internal/analytics/internalAnalyticsRouter";
+import { approvalsRouter } from "../internal/approvals/routes/approvalsRouter";
 import { chatRouter } from "../internal/chat/chatRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
 import { internalDevRouter } from "../internal/dev/devRouter";
@@ -25,6 +26,7 @@ import { slackConnectRouter } from "../internal/misc/slackConnect/slackConnectRo
 import { invoiceTemplateRouter } from "../internal/orgs/invoiceTemplates/invoiceTemplateRouter";
 import { internalOrgRouter } from "../internal/orgs/orgRouter";
 import { internalProductRouter } from "../internal/products/internalProductRouter";
+import { rolesRouter } from "../internal/roles/rolesRouter";
 import { workbenchRouter } from "../internal/workbench/workbenchRouter";
 
 export const internalRouter = new Hono<HonoEnv>();
@@ -57,6 +59,8 @@ internalRouter.route("/saved_views", savedViewsRouter);
 internalRouter.route("/query", internalAnalyticsRouter);
 internalRouter.route("", migrationRpcRouter);
 internalRouter.route("/workbench", workbenchRouter);
+internalRouter.route("/roles", rolesRouter);
+internalRouter.route("/approvals", approvalsRouter);
 
 // Autumn SDK handler (requires session auth)
 if (process.env.AUTUMN_SECRET_KEY) {

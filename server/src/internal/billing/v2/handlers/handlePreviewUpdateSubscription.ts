@@ -7,6 +7,8 @@ import {
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
+import { billingContextToUpdateAction } from "@/internal/approvals/facts/billing/billingContextToUpdateAction";
+import { billingPreviewPermissionFields } from "@/internal/approvals/preview/billingPreviewPermissionFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
@@ -47,11 +49,16 @@ export const handlePreviewUpdateSubscription = createRoute({
 		} = body;
 
 		if (!isSwitch && !liveUpdate) {
-			const pendingPreview = await previewPendingPlanIfAny({
-				ctx,
-				params: body,
-			});
-			if (pendingPreview) return c.json(pendingPreview, 200);
+			const pending = await previewPendingPlanIfAny({ ctx, params: body });
+			// The edit re-attaches the pending plan, but it's still the member's update.
+			if (pending) {
+				const permissionFields = await billingPreviewPermissionFields({
+					ctx,
+					...pending,
+					action: "billing.update_subscription",
+				});
+				return c.json({ ...pending.preview, ...permissionFields }, 200);
+			}
 		}
 
 		const { billingContext, billingPlan } =
@@ -75,7 +82,17 @@ export const handlePreviewUpdateSubscription = createRoute({
 			billingPlan,
 			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
+		// Rules don't decide collection-method switches, so their preview carries no verdict.
+		if (isSwitch) return c.json(previewResponse, 200);
 
-		return c.json(previewResponse, 200);
+		const permissionFields = await billingPreviewPermissionFields({
+			ctx,
+			billingContext,
+			billingPlan,
+			preview: previewResponse,
+			action: billingContextToUpdateAction({ billingContext }),
+		});
+
+		return c.json({ ...previewResponse, ...permissionFields }, 200);
 	},
 });

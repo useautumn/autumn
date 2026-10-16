@@ -4,6 +4,7 @@ import {
 } from "@autumn/shared";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkCustomerApproval } from "@/internal/approvals/enforce/checkCustomerApproval";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
@@ -28,6 +29,12 @@ export const deleteCustomer = async ({
 	if (!customer) {
 		throw new CustomerNotFoundError({ customerId: customer_id });
 	}
+
+	await checkCustomerApproval({
+		ctx,
+		action: "customers.delete",
+		customerId: customer.internal_id,
+	});
 
 	const response = {
 		customer,

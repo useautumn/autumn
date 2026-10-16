@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import { handleCheck } from "../api/check/handleCheck.js";
 import { handleBatchTrack } from "./handlers/handleBatchTrack.js";
 import { handleBatchTrackTokens } from "./handlers/handleBatchTrackTokens.js";
@@ -18,9 +19,17 @@ import { handleListBalancesV2 } from "./list/handlers/handleListBalancesV2.js";
 // Create a Hono app for products
 export const balancesRouter = new Hono<HonoEnv>();
 
-balancesRouter.post("/balances/create", ...handleCreateBalance);
+balancesRouter.post(
+	"/balances/create",
+	declareApprovalAction({ resolve: () => "balances.create" }),
+	...handleCreateBalance,
+);
 balancesRouter.get("/balances/list", ...handleListBalances);
-balancesRouter.post("/balances/update", ...handleUpdateBalance);
+balancesRouter.post(
+	"/balances/update",
+	declareApprovalAction({ resolve: () => "balances.update" }),
+	...handleUpdateBalance,
+);
 balancesRouter.post("/balances/recalculate", ...handleRecalculateBalance);
 balancesRouter.post(
 	"/balances/preview_recalculate",
@@ -40,9 +49,17 @@ balancesRouter.post("/check", ...handleCheck);
 balancesRouter.post("/usage", ...handleSetUsage);
 
 export const balancesRpcRouter = new Hono<HonoEnv>();
-balancesRpcRouter.post("/balances.create", ...handleCreateBalance);
+balancesRpcRouter.post(
+	"/balances.create",
+	declareApprovalAction({ resolve: () => "balances.create" }),
+	...handleCreateBalance,
+);
 balancesRpcRouter.post("/balances.list", ...handleListBalancesV2);
-balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
+balancesRpcRouter.post(
+	"/balances.update",
+	declareApprovalAction({ resolve: () => "balances.update" }),
+	...handleUpdateBalance,
+);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 balancesRpcRouter.post("/balances.recalculate", ...handleRecalculateBalance);
 balancesRpcRouter.post(

@@ -8,6 +8,8 @@ import {
 import { ms } from "@shared/utils/common/unixUtils";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
+
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachComputeErrors";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
@@ -47,6 +49,7 @@ export async function attach({
 	preview = false,
 	skipAutumnCheckout = false,
 	longLivedCheckout: existingLongLivedCheckout,
+	approvalAction = "billing.attach",
 
 	contextOverride,
 }: {
@@ -56,6 +59,8 @@ export async function attach({
 	skipAutumnCheckout?: boolean;
 	/** The link this attach opens a Stripe session for, so the session lives as long as the link. */
 	longLivedCheckout?: BillingContext["longLivedCheckout"];
+	/** A pending-plan edit re-attaches, but is checked as the update it is. */
+	approvalAction?: "billing.attach" | "billing.update_subscription";
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -142,6 +147,14 @@ export async function attach({
 		};
 	}
 
+	// 5. Approvals: log the decision, and block a deny when the org enforces approvals
+	await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan,
+		action: approvalAction,
+	});
+
 	const shouldCreateLongLivedCheckout =
 		params.long_lived_checkout &&
 		billingContext.checkoutMode === "stripe_checkout" &&
@@ -160,7 +173,7 @@ export async function attach({
 			existingLock: checkoutReservation,
 		});
 
-	// 5. Checkout session lock (skip for confirm flows)
+	// 6. Checkout session lock (skip for confirm flows)
 	if (!skipAutumnCheckout && !shouldCreateLongLivedCheckout) {
 		const cachedResult = await arbitrateCheckoutLock();
 		if (cachedResult) {
@@ -235,13 +248,13 @@ export async function attach({
 		? { id: longLivedCheckout.id, expiresAt: longLivedCheckout.expires_at }
 		: existingLongLivedCheckout;
 
-	// 6. Save request billing details first so tax resolves against the new location
+	// 7. Save request billing details first so tax resolves against the new location
 	billingContext.stripeCustomer = await applyBillingDetailsForBilling({
 		ctx,
 		billingContext,
 	});
 
-	// 7. Execute billing plan
+	// 8. Execute billing plan
 	const billingResult = await executeBillingPlan({
 		ctx,
 		billingContext,
@@ -254,7 +267,7 @@ export async function attach({
 		preserveSubjectCache({ ctx });
 	}
 
-	// 8. Publish the compute-time balance transition
+	// 9. Publish the compute-time balance transition
 	await publishBillingTransition({
 		ctx,
 		billingContext,

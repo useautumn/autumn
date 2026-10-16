@@ -34,12 +34,18 @@ const releaseClaim = async ({
 const executeStoredWrites = async ({
 	approval,
 	providerUserId,
+	actingUserId,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
+	actingUserId?: string;
 }): Promise<ApprovalRunResult | undefined> => {
 	try {
-		return await executeApprovalWrites({ approval, providerUserId });
+		return await executeApprovalWrites({
+			approval,
+			providerUserId,
+			actingUserId,
+		});
 	} catch (error) {
 		logger.error("[chat] Dead-session write execution failed", error, {
 			event: "leaf.approval_executor_failed",
@@ -52,9 +58,15 @@ const executeStoredWrites = async ({
 export const resolveApproval = async ({
 	approval,
 	providerUserId,
+	actingUserId,
+	rulesMustAllow,
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
+	/** The clicker's Autumn user; approval rules are checked against them. */
+	actingUserId?: string;
+	/** The clicker lacks the scope, so every step must be allowed by a rule. */
+	rulesMustAllow?: boolean;
 }): Promise<ApprovalRunResult> => {
 	if (approval.harness && approval.harness !== "eve") {
 		logger.error("[chat] Unsupported legacy approval harness", undefined, {
@@ -67,9 +79,15 @@ export const resolveApproval = async ({
 		);
 	}
 
-	if (surfaceRendersGroup(approval.provider ?? "")) {
+	// The guard is the only place rules can vouch for a clicker, so it always runs then.
+	if (rulesMustAllow || surfaceRendersGroup(approval.provider ?? "")) {
 		try {
-			const drifted = await guardApprovalDrift({ approval, providerUserId });
+			const drifted = await guardApprovalDrift({
+				approval,
+				providerUserId,
+				actingUserId,
+				rulesMustAllow,
+			});
 			if (drifted) return drifted;
 		} catch (error) {
 			// Nothing has executed when the guard throws (token mint / preview
@@ -83,7 +101,11 @@ export const resolveApproval = async ({
 		}
 	}
 
-	const executed = await executeStoredWrites({ approval, providerUserId });
+	const executed = await executeStoredWrites({
+		approval,
+		providerUserId,
+		actingUserId,
+	});
 	if (executed) return executed;
 
 	// The executor only returns undefined when it threw, and nothing ran — the

@@ -74,16 +74,8 @@ export const ensureInvitedSsoMembership = async ({
 		});
 		if (!pendingInvite) return null;
 
-		const role = pendingInvite.role ?? "member";
-		await tx.insert(member).values({
-			id: `mem_${crypto.randomUUID()}`,
-			organizationId,
-			userId,
-			role,
-			createdAt: new Date(),
-		});
-
-		await tx
+		// Claim the invite before joining: a role delete that cancelled it first wins.
+		const [claimed] = await tx
 			.update(invitation)
 			.set({ status: "accepted" })
 			.where(
@@ -91,7 +83,19 @@ export const ensureInvitedSsoMembership = async ({
 					eq(invitation.id, pendingInvite.id),
 					eq(invitation.status, "pending"),
 				),
-			);
+			)
+			.returning({ role: invitation.role });
+		if (!claimed) return null;
+
+		// The claimed row's role, not the earlier read: a role rename may have moved it.
+		const role = claimed.role ?? "member";
+		await tx.insert(member).values({
+			id: `mem_${crypto.randomUUID()}`,
+			organizationId,
+			userId,
+			role,
+			createdAt: new Date(),
+		});
 
 		return { organizationId, role };
 	});

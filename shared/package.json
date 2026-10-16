@@ -74,6 +74,36 @@
 			"types": "./api/approvals/editor/index.ts",
 			"import": "./api/approvals/editor/index.ts",
 			"default": "./api/approvals/editor/index.ts"
+		},
+		"./models/approvalModels/index": {
+			"types": "./models/approvalModels/index.ts",
+			"import": "./models/approvalModels/index.ts",
+			"default": "./models/approvalModels/index.ts"
+		},
+		"./api/roles/apiRole": {
+			"types": "./api/roles/apiRole.ts",
+			"import": "./api/roles/apiRole.ts",
+			"default": "./api/roles/apiRole.ts"
+		},
+		"./api/approvals/crud/approvalRuleVersion": {
+			"types": "./api/approvals/crud/approvalRuleVersion.ts",
+			"import": "./api/approvals/crud/approvalRuleVersion.ts",
+			"default": "./api/approvals/crud/approvalRuleVersion.ts"
+		},
+		"./utils/roleUtils/builtInRoles": {
+			"types": "./utils/roleUtils/builtInRoles.ts",
+			"import": "./utils/roleUtils/builtInRoles.ts",
+			"default": "./utils/roleUtils/builtInRoles.ts"
+		},
+		"./utils/roleUtils/roleAccessToScopes": {
+			"types": "./utils/roleUtils/roleAccessToScopes.ts",
+			"import": "./utils/roleUtils/roleAccessToScopes.ts",
+			"default": "./utils/roleUtils/roleAccessToScopes.ts"
+		},
+		"./utils/roleUtils/scopesToRoleAccess": {
+			"types": "./utils/roleUtils/scopesToRoleAccess.ts",
+			"import": "./utils/roleUtils/scopesToRoleAccess.ts",
+			"default": "./utils/roleUtils/scopesToRoleAccess.ts"
 		}
 	},
 	"author": "Recase Inc.",

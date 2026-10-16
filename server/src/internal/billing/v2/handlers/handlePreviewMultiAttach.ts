@@ -1,4 +1,9 @@
-import { AffectedResource, MultiAttachParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	MultiAttachParamsV0Schema,
+	Scopes,
+} from "@autumn/shared";
+import { billingPreviewPermissionFields } from "@/internal/approvals/preview/billingPreviewPermissionFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
@@ -29,6 +34,14 @@ export const handlePreviewMultiAttach = createRoute({
 			billingPlan,
 		});
 
-		return c.json(previewResponse, 200);
+		const permissionFields = await billingPreviewPermissionFields({
+			ctx,
+			billingContext,
+			billingPlan,
+			preview: previewResponse,
+			action: "billing.attach",
+		});
+
+		return c.json({ ...previewResponse, ...permissionFields }, 200);
 	},
 });

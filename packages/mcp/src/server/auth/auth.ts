@@ -24,6 +24,8 @@ export const autumnMcpAuthSchema = z.object({
 	serverURL: z.string().optional(),
 	xApiVersion: z.string().optional(),
 	failOpen: z.boolean().optional(),
+	/** The Slack clicker an approved write runs for; the API honours it only from Leaf's Slack token. */
+	approvalsActingUser: z.string().optional(),
 });
 
 export type AutumnMcpAuth = z.infer<typeof autumnMcpAuthSchema>;
@@ -77,5 +79,8 @@ export const createAutumnClient = (auth: AutumnMcpAuth) => ({
 		...(auth.failOpen === undefined
 			? {}
 			: { "fail-open": String(auth.failOpen) }),
+		...(auth.approvalsActingUser
+			? { "x-approvals-acting-user": auth.approvalsActingUser }
+			: {}),
 	},
 });

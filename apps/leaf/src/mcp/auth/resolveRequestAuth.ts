@@ -290,6 +290,7 @@ export const buildAuthForRequest = async ({
 			serverURL: flags["server-url"],
 			xApiVersion,
 			failOpen,
+			approvalsActingUser: headers.get("x-approvals-acting-user") ?? undefined,
 		};
 	}
 

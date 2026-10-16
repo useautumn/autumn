@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { declareApprovalAction } from "@/internal/approvals/enforce/access/declareApprovalAction.js";
 import type { HonoEnv } from "../../honoUtils/HonoEnv.js";
 import { handleCreateSecretKey } from "./handlers/handleCreateSecretKey.js";
 import { handleDeleteSecretKey } from "./handlers/handleDeleteSecretKey.js";
@@ -15,5 +16,9 @@ internalDevRouter.get(
 );
 internalDevRouter.get("/webhooks_portal", ...handleGetWebhooksPortal);
 internalDevRouter.get("/api_keys/last_used", ...handleGetApiKeysLastUsed);
-internalDevRouter.post("/api_key", ...handleCreateSecretKey);
+internalDevRouter.post(
+	"/api_key",
+	declareApprovalAction({ resolve: () => "api_keys.create" }),
+	...handleCreateSecretKey,
+);
 internalDevRouter.delete("/api_key/:key_id", ...handleDeleteSecretKey);
