@@ -291,6 +291,7 @@ function CreditNoteForm({
 								</div>
 							))}
 						</div>
+						<PermissionDenial section="amount" className="px-0" />
 					</Field>
 				)}
 

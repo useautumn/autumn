@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 
 export const DeleteCustomerDialog = ({
 	customer,
@@ -60,7 +60,7 @@ export const DeleteCustomerDialog = ({
 				navigateTo(`/customers`, navigate, env);
 			}
 		} catch (error) {
-			toast.error("Failed to delete customer");
+			toast.error(getBackendErr(error, "Failed to delete customer"));
 		} finally {
 			setLoadingStates({
 				deleteStripe: false,
