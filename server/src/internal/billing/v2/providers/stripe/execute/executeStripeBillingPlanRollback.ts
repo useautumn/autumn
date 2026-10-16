@@ -1,4 +1,8 @@
-import type { BillingContext, StripeBillingPlanResult } from "@autumn/shared";
+import {
+	type BillingContext,
+	type StripeBillingPlanResult,
+	stripeRefToId,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -35,6 +39,30 @@ const rollbackInvoiceItems = async ({
 	}
 	ctx.logger.info(
 		`[executeStripeBillingPlan] Deleted ${stripeInvoiceItems.length} invoice item(s) after later Stripe action failed`,
+	);
+};
+
+const restoreCreditBalanceSpentOnInvoice = async ({
+	ctx,
+	stripeCli,
+	stripeInvoice,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	stripeInvoice: Stripe.Invoice;
+}) => {
+	const creditSpent =
+		(stripeInvoice.ending_balance ?? 0) - stripeInvoice.starting_balance;
+	const stripeCustomerId = stripeRefToId(stripeInvoice.customer);
+	if (creditSpent <= 0 || !stripeCustomerId) return;
+
+	await stripeCli.customers.createBalanceTransaction(stripeCustomerId, {
+		amount: -creditSpent,
+		currency: stripeInvoice.currency,
+		description: `Restore credit applied to ${stripeInvoice.id} after later Stripe action failed`,
+	});
+	ctx.logger.info(
+		`[executeStripeBillingPlan] Restored ${creditSpent} credit balance spent on invoice ${stripeInvoice.id} after later Stripe action failed`,
 	);
 };
 
@@ -93,6 +121,13 @@ const rollbackInvoiceAction = async ({
 	const expandedInvoice = await stripeCli.invoices.retrieve(stripeInvoice.id, {
 		expand: ["payments.data.payment.payment_intent"],
 	});
+	await restoreCreditBalanceSpentOnInvoice({
+		ctx,
+		stripeCli,
+		stripeInvoice: expandedInvoice,
+	});
+	if (expandedInvoice.amount_paid === 0) return;
+
 	const charge = await resolveChargeFromInvoice({
 		stripeCli,
 		stripeInvoice: expandedInvoice,

@@ -108,6 +108,10 @@ export const executeStripeBillingPlan = async ({
 				billingContext,
 			});
 		} catch (error) {
+			ctx.logger.error(
+				"[executeStripeBillingPlan] Subscription action failed, rolling back",
+				{ error },
+			);
 			const rollbackError = await rollbackAfterSubscriptionFailure({
 				ctx,
 				billingContext,
