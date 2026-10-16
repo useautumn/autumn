@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleApprovalCan } from "../handlers/handleApprovalCan.js";
 import { handleCreateApprovalRule } from "../handlers/handleCreateApprovalRule.js";
 import { handleDeleteApprovalRule } from "../handlers/handleDeleteApprovalRule.js";
 import { handleGetApprovalRule } from "../handlers/handleGetApprovalRule.js";
@@ -15,3 +16,4 @@ approvalsRouter.get("/rules/:id", ...handleGetApprovalRule);
 approvalsRouter.patch("/rules/:id", ...handleUpdateApprovalRule);
 approvalsRouter.delete("/rules/:id", ...handleDeleteApprovalRule);
 approvalsRouter.get("/rules/:id/versions", ...handleListApprovalRuleVersions);
+approvalsRouter.get("/can", ...handleApprovalCan);
