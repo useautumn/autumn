@@ -4,6 +4,25 @@ import { FeatureType } from "../../models/featureModels/featureEnums.js";
 import { AllowanceType } from "../../models/productModels/entModels/entModels.js";
 import { entIntervalToValue } from "../intervalUtils.js";
 import { isEntityCusEnt } from "./cusEntUtils.js";
+import { calculateNextExpiry } from "./rolloverUtils/getRolloverUpdates.js";
+
+/** When the balance is lost: its expiry, or its reset unless the reset rolls it over (then the rollover's expiry). */
+const cusEntToLossAt = ({
+	cusEnt,
+}: {
+	cusEnt: FullCusEntWithFullCusProductView;
+}): number => {
+	const expiresAt = cusEnt.expires_at ?? Infinity;
+	if (!cusEnt.next_reset_at) return expiresAt;
+
+	const rollover = cusEnt.entitlement.rollover;
+	const rollsOver =
+		rollover && rollover.max !== 0 && rollover.max_percentage !== 0;
+	const resetLossAt = rollsOver
+		? (calculateNextExpiry(cusEnt.next_reset_at, rollover) ?? Infinity)
+		: cusEnt.next_reset_at;
+	return Math.min(expiresAt, resetLossAt);
+};
 
 export const sortCusEntsForDeduction = <
 	T extends FullCusEntWithFullCusProductView,
@@ -90,6 +109,14 @@ export const sortCusEntsForDeduction = <
 			bEnt.allowance_type === AllowanceType.Unlimited
 		) {
 			return 1;
+		}
+
+		if (!reverseOrder) {
+			const aLosesAt = cusEntToLossAt({ cusEnt: a });
+			const bLosesAt = cusEntToLossAt({ cusEnt: b });
+			if (aLosesAt !== bLosesAt) {
+				return aLosesAt - bLosesAt;
+			}
 		}
 
 		// If one has a next_reset_at, it should go first
