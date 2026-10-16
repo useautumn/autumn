@@ -4,9 +4,17 @@ import type { EventInsert } from "@autumn/shared";
 import { type EventsTinybird, TinybirdIngestError } from "@autumn/tinybird";
 import type {
 	StreamConsumer,
+	StreamReadSize,
 	StreamRecord,
 } from "../../stream/types/streamConsumer.js";
 import { recordToUsageEvent } from "./actions/recordToUsageEvent.js";
+
+/** 2,000 rows still cost one Tinybird request, one read and one mark (two inserts): under a third of 500's round trips per row.
+ *  A 5,000-record poll gives a hot partition two full slices a round, or lets several behind partitions land side by side. */
+const READ_SIZE: StreamReadSize = {
+	recordsPerPoll: 5_000,
+	recordsPerSlice: 2_000,
+};
 
 /**
  * Postgres is the ledger, Tinybird follows it. A slice inserts (a repeat is skipped by id), sends Tinybird only the
@@ -84,7 +92,7 @@ export function createUsageEventsConsumer({
 		});
 	}
 
-	return { name: "usage-events", handle };
+	return { name: "usage-events", readSize: READ_SIZE, handle };
 }
 
 function defaultNow(): Date {

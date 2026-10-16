@@ -37,6 +37,7 @@ type Step =
 function createFakeNative() {
 	const chunks: Step[][] = [];
 	const calls: string[] = [];
+	const consumeCounts: number[] = [];
 	const listeners = new Map<string, ((...args: never[]) => void)[]>();
 	const assignments: NativeTopicPartitionOffset[][] = [];
 	const current = new Map<number, NativeTopicPartition>();
@@ -108,7 +109,8 @@ function createFakeNative() {
 			calls.push(`consumeTimeout:${timeoutMs}`);
 		},
 		setDefaultIsTimeoutOnlyForFirstMessage() {},
-		consume(_count, done) {
+		consume(count, done) {
+			consumeCounts.push(count);
 			const held = gate.held;
 			if (held) {
 				gate.held = undefined;
@@ -211,6 +213,7 @@ function createFakeNative() {
 		factory,
 		chunks,
 		calls,
+		consumeCounts,
 		assignments,
 		seeks,
 		seekOutcomes,
@@ -284,6 +287,29 @@ describe("librdkafka consumer runner", () => {
 		await consumer.connect();
 		await consumer.subscribe({ topics: [topic] });
 		expect(fake.calls).toContain("consumeTimeout:0");
+		await consumer.disconnect();
+	});
+
+	// The balance worker sets no maxRecordsPerPoll: its polls must stay at the 500 records they always asked for.
+	test("a consumer that sets no maxRecordsPerPoll asks every poll for 500 records", async () => {
+		const { fake, consumer } = createRunner();
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic] });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.consumeCounts.length >= 2);
+		expect([...new Set(fake.consumeCounts)]).toEqual([500]);
+		await consumer.disconnect();
+	});
+
+	test("maxRecordsPerPoll is how many records every poll asks for", async () => {
+		const { fake, consumer } = createRunner({
+			config: { maxRecordsPerPoll: 5_000 },
+		});
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic] });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => fake.consumeCounts.length >= 2);
+		expect([...new Set(fake.consumeCounts)]).toEqual([5_000]);
 		await consumer.disconnect();
 	});
 

@@ -23,6 +23,7 @@ import {
 	identity,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { nativeConsumerConfigOf } from "../../../../../packages/kafka/src/client/librdkafka/consumer/nativeConsumerConfig.js";
+import { createUsageEventsConsumer } from "../../../src/consumers/usageEvents/usageEventsConsumer.js";
 import { createStreamConsumer } from "../../../src/stream/createStreamConsumer.js";
 import type {
 	StreamConsumer,
@@ -591,6 +592,59 @@ test("a job's consumer gives one poll's slices librdkafka's default 300 s before
 	expect(
 		nativeConsumerConfigOf({ config: groupConfig })["max.poll.interval.ms"],
 	).toBe(300_000);
+});
+
+/** Starts a job with no test override of its slice, so its own read size (or herald's default) is what runs. */
+const startSizedConsumer = async ({ job }: { job: StreamConsumer }) => {
+	const fake = createFakeKafka();
+	const consumer = createStreamConsumer({
+		ctx: { kafka: fake.kafka, logger: logger as never, onCrashed: () => {} },
+		config: { topic, groupIdPrefix: "local-herald" },
+		streamConsumer: job,
+	});
+	await consumer.start();
+	return fake;
+};
+
+const trackMessages = ({ count }: { count: number }) => {
+	const message = trackMessage({ offset: "0" });
+	return Array.from({ length: count }, (_, offset) => ({
+		...message,
+		offset: String(offset),
+	}));
+};
+
+test("usage-events asks each poll for 5,000 records and lands them 2,000 a slice", async () => {
+	const usageEvents = createUsageEventsConsumer({
+		ctx: { eventsDb: {} as never, eventsTinybird: null, logger },
+	});
+	const sliceSizes: number[] = [];
+	const { consumerConfigs, deliver } = await startSizedConsumer({
+		job: {
+			...usageEvents,
+			handle: async ({ records }) => {
+				sliceSizes.push(records.length);
+			},
+		},
+	});
+	await deliver({ records: trackMessages({ count: 4_001 }) });
+	expect(consumerConfigs[0]?.maxRecordsPerPoll).toBe(5_000);
+	expect(sliceSizes).toEqual([2_000, 2_000, 1]);
+});
+
+test("a job without a read size of its own polls and slices 500 records, as herald always has", async () => {
+	const sliceSizes: number[] = [];
+	const { consumerConfigs, deliver } = await startSizedConsumer({
+		job: {
+			name: "balance-webhooks",
+			handle: async ({ records }) => {
+				sliceSizes.push(records.length);
+			},
+		},
+	});
+	await deliver({ records: trackMessages({ count: 501 }) });
+	expect(consumerConfigs[0]?.maxRecordsPerPoll).toBe(500);
+	expect(sliceSizes).toEqual([500, 1]);
 });
 
 test("a slice that takes 10 s or more to land is logged with its job, partition and duration", async () => {
