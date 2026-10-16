@@ -30,28 +30,8 @@ export const previewPendingReattach = async ({
 	const enablesNow =
 		params.invoice_mode?.enable_plan_immediately === true &&
 		!isPlanEnabledOnFinalize({ billingContext: deferredData.billingContext });
-	if (enablesNow) {
-		const hasFuturePhases =
-			(deferredData.billingPlan.autumn.schedulePhases?.length ?? 0) > 1;
-		const pendingProductsWithPayment = customerProduct.metadata_id
-			? await CusProductService.getByMetadataId({
-					db: ctx.db,
-					metadataId: customerProduct.metadata_id,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					inStatuses: [CusProductStatus.Pending],
-				})
-			: [];
-		const hasSharedPendingPayment = pendingProductsWithPayment.length > 1;
-		if (hasFuturePhases || hasSharedPendingPayment) {
-			throw new RecaseError({
-				message:
-					"Cannot enable this pending plan immediately because it belongs to a scheduled set of plans. Enable this from set plans instead.",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-	}
+	const hasFuturePhases =
+		(deferredData.billingPlan.autumn.schedulePhases?.length ?? 0) > 1;
 
 	const reattachParams = buildPendingReattachParams({
 		ctx,
@@ -97,6 +77,27 @@ export const previewPendingReattach = async ({
 			replacementQuantities:
 				replacementPreview.billingContext?.featureQuantities ?? [],
 		});
+
+	if (rebills) {
+		const pendingProductsWithPayment = customerProduct.metadata_id
+			? await CusProductService.getByMetadataId({
+					db: ctx.db,
+					metadataId: customerProduct.metadata_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					inStatuses: [CusProductStatus.Pending],
+				})
+			: [];
+		const hasSharedPendingPayment = pendingProductsWithPayment.length > 1;
+		if (hasFuturePhases || hasSharedPendingPayment) {
+			throw new RecaseError({
+				message:
+					"Cannot enable this pending plan immediately because it belongs to a scheduled set of plans. Enable this from set plans instead.",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
 
 	return { attachParams, longLivedCheckout, replacementPreview, rebills };
 };

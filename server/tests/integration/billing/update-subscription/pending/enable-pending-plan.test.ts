@@ -226,7 +226,6 @@ test.concurrent(
 
 test.concurrent(
 	`${chalk.yellowBright("enable custom pending plan: activates it over a paid same-group predecessor")}`,
-	{ timeout: 90_000 },
 	async () => {
 		const live = products.pro({
 			id: "custom-live",
@@ -295,10 +294,7 @@ test.concurrent(
 		const endedSubscription = customerAfter.subscriptions.find(
 			(subscription) => subscription.plan_id === live.id,
 		);
-		expect(
-			endedSubscription === undefined ||
-				endedSubscription.status === "canceled",
-		).toBe(true);
+		expect(endedSubscription).toBeUndefined();
 	},
 );
 
