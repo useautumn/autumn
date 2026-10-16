@@ -14,6 +14,7 @@ import {
 	editorValuesToParams,
 	emptyEditorValues,
 	ruleToEditorValues,
+	whenValuesFor,
 } from "./ruleEditorValues";
 
 // Fields the sheet shows issues under; anything else (an unknown key) still needs to be seen.
@@ -47,9 +48,12 @@ export const useApprovalRuleForm = ({
 	const [serverIssues, setServerIssues] = useState<ApprovalRuleIssue[]>([]);
 
 	const form = useAppForm({
-		defaultValues: rule ? ruleToEditorValues({ rule }) : emptyEditorValues(),
+		defaultValues: rule
+			? ruleToEditorValues({ rule }).values
+			: emptyEditorValues(),
 		onSubmit: async ({ value }) => {
 			const result = editorValuesToParams({ values: value });
+			if (!result.ok) return;
 			setServerIssues([]);
 			try {
 				await save.mutateAsync({ id: rule?.id ?? null, params: result.params });
@@ -68,7 +72,7 @@ export const useApprovalRuleForm = ({
 			serverIssues.find((issue) => isUnder({ path: issue.path, field: path }))
 				?.message,
 		unplacedIssue: unplacedIssue({ issues: serverIssues }),
-		/** A different filter shape drops the old conditions; they wouldn't fit. */
+		/** A different filter shape starts the conditions over; old ones wouldn't fit. */
 		changeActions: ({
 			current,
 			actions,
@@ -77,7 +81,9 @@ export const useApprovalRuleForm = ({
 			actions: ApprovalAction[];
 		}) => {
 			if (ruleFilterKey({ actions }) !== ruleFilterKey({ actions: current })) {
-				form.setFieldValue("filter", null);
+				const { pinned, groups } = whenValuesFor({ actions });
+				form.setFieldValue("pinned", pinned);
+				form.setFieldValue("groups", groups);
 			}
 			form.setFieldValue("actions", actions);
 		},

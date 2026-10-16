@@ -15,7 +15,8 @@ import {
 import { ChipMultiSelect } from "./ChipMultiSelect";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
-import { areaLabel, ruleArea } from "./ruleActions";
+import { RuleWhenSection } from "./RuleWhenSection";
+import { areaLabel, ruleArea, ruleFilterKey } from "./ruleActions";
 import { useApprovalRuleForm } from "./useApprovalRuleForm";
 import {
 	subjectKey,
@@ -52,7 +53,7 @@ export const ApprovalRuleSheet = ({
 			// A save in flight closes this sheet when it lands, so it can't close another one.
 			onOpenChange={(next) => !isSaving && onOpenChange(next)}
 		>
-			<SheetContent side="right" className="!w-full !max-w-[30rem]">
+			<SheetContent side="right" className="!w-full !max-w-[34rem]">
 				<SheetHeader>
 					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
 					<SheetDescription>Billing → Approvals</SheetDescription>
@@ -151,6 +152,30 @@ export const ApprovalRuleSheet = ({
 							);
 						}}
 					</form.Field>
+
+					<form.Subscribe selector={(state) => state.values.actions}>
+						{(actions) => {
+							const shape = ruleFilterKey({ actions });
+							if (!shape) return null;
+							return (
+								<form.Field name="pinned">
+									{(pinned) => (
+										<form.Field name="groups">
+											{(groups) => (
+												<RuleWhenSection
+													shape={shape}
+													pinned={pinned.state.value}
+													groups={groups.state.value}
+													onPinnedChange={pinned.handleChange}
+													onGroupsChange={groups.handleChange}
+												/>
+											)}
+										</form.Field>
+									)}
+								</form.Field>
+							);
+						}}
+					</form.Subscribe>
 
 					<form.Field name="note">
 						{(field) => (

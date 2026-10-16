@@ -9,6 +9,7 @@ import {
 import {
 	editorValuesToParams,
 	emptyEditorValues,
+	withId,
 } from "@/views/settings/sections/approvals/editor/ruleEditorValues";
 
 const caption = (noun: string) =>
@@ -51,9 +52,20 @@ describe("editor who-only areas", () => {
 			name: " Developers create keys ",
 			subjects: [{ type: "role" as const, role_id: "developer" }],
 			actions: ["api_keys.create" as const],
-			filter: { customer: { id: "cus_1" } },
+			groups: [
+				withId({
+					rules: [
+						withId({
+							field: "customer" as const,
+							operator: "is" as const,
+							values: ["cus_1"],
+						}),
+					],
+				}),
+			],
 		};
 		const result = editorValuesToParams({ values });
+		if (!result.ok) throw new Error("expected a saved rule");
 		expect(result.params.name).toBe("Developers create keys");
 		expect(result.params.filter).toBeNull();
 	});

@@ -14,7 +14,7 @@ export type ChipOption = { value: string; label: string; icon?: ReactNode };
 
 /** A locked group shows as one muted row listing its options. */
 export type ChipOptionGroup = {
-	label: string;
+	label?: string;
 	options: ChipOption[];
 	locked?: boolean;
 };
@@ -81,8 +81,10 @@ export const ChipMultiSelect = ({
 				className="max-h-96 w-(--anchor-width)"
 			>
 				{menuGroups.map((group) => (
-					<DropdownMenuGroup key={group.label}>
-						<DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+					<DropdownMenuGroup key={group.label ?? "options"}>
+						{group.label && (
+							<DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+						)}
 						{group.options.map((option) => (
 							<DropdownMenuCheckboxItem
 								key={option.value}

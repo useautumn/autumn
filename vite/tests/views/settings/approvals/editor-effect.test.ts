@@ -27,7 +27,7 @@ const rule: ApprovalRule = {
 
 describe("editor effect", () => {
 	test("a new rule defaults to can't and saves its effect without a position", () => {
-		const { params } = editorValuesToParams({
+		const saved = editorValuesToParams({
 			values: {
 				...emptyEditorValues(),
 				name: "No trials",
@@ -35,6 +35,8 @@ describe("editor effect", () => {
 				actions: ["billing.attach"],
 			},
 		});
+		if (!saved.ok) throw new Error("expected a saved rule");
+		const { params } = saved;
 		expect(params.effect).toBe("block");
 		expect(params.filter).toBeNull();
 		expect(params).not.toHaveProperty("position");
@@ -42,10 +44,11 @@ describe("editor effect", () => {
 	});
 
 	test("editing keeps the stored effect and filter", () => {
-		const { params } = editorValuesToParams({
-			values: ruleToEditorValues({ rule }),
-		});
-		expect(params).toEqual({
+		const opened = ruleToEditorValues({ rule });
+		expect(opened.editable).toBe(true);
+		const saved = editorValuesToParams({ values: opened.values });
+		if (!saved.ok) throw new Error("expected a saved rule");
+		expect(saved.params).toEqual({
 			name: rule.name,
 			effect: "allow",
 			subjects: rule.subjects,
