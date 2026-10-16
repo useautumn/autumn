@@ -1,17 +1,14 @@
 import {
-	ACTIONS,
 	type ApprovalAction,
 	type BillingContext,
 	type BillingPlan,
-	ErrCode,
 	PermissionDeniedError,
-	RecaseError,
 	tryCatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateBillingApproval } from "@/internal/approvals/evaluate/evaluateBillingApproval";
 import { billingFactsToJson } from "@/internal/approvals/facts/billing/billingFactsToJson";
-import { scopesWereGrantedByRules } from "./access/routeApprovalAction";
+import { rejectRuleAdmittedRequest } from "./access/rejectRuleAdmittedRequest";
 import { logApprovalDecision } from "./logApprovalDecision";
 
 type CheckBillingApprovalParams = {
@@ -21,6 +18,8 @@ type CheckBillingApprovalParams = {
 	action: ApprovalAction;
 	/** As the action's preview passes it, so facts match that preview. */
 	nextCycleStripeSubscriptionId?: string;
+	/** False for a pre-check whose write is checked (and logged) again later. */
+	logDecision?: boolean;
 };
 
 const decideBillingApproval = async ({
@@ -29,6 +28,7 @@ const decideBillingApproval = async ({
 	billingPlan,
 	action,
 	nextCycleStripeSubscriptionId,
+	logDecision = true,
 	enforced,
 }: CheckBillingApprovalParams & { enforced: boolean }) => {
 	const approval = await evaluateBillingApproval({
@@ -40,29 +40,24 @@ const decideBillingApproval = async ({
 	});
 	const rulesDecide =
 		approval !== null && approval.verdict.verdict !== "fallback";
-	// Rules let this member past the route's scopes, so a request they don't decide is out of scope.
-	if (!rulesDecide && scopesWereGrantedByRules({ ctx })) {
-		throw new RecaseError({
-			message: `Insufficient scopes. Missing: ${ACTIONS[action].scope}`,
-			code: ErrCode.InsufficientScopes,
-			statusCode: 403,
-		});
-	}
+	if (!rulesDecide) rejectRuleAdmittedRequest({ ctx, action });
 	if (!approval) return;
 
 	const { principal, rules, verdict, facts } = approval;
 	// Exempt members and members no rule names keep today's checks, so there's nothing to log.
 	if (verdict.verdict === "fallback" || !facts) return;
 
-	await logApprovalDecision({
-		ctx,
-		principal,
-		action,
-		verdict,
-		rules,
-		facts: billingFactsToJson({ facts }),
-		enforced,
-	});
+	if (logDecision) {
+		await logApprovalDecision({
+			ctx,
+			principal,
+			action,
+			verdict,
+			rules,
+			facts: billingFactsToJson({ facts }),
+			enforced,
+		});
+	}
 
 	if (!enforced || verdict.verdict === "allow") return;
 	throw new PermissionDeniedError({
