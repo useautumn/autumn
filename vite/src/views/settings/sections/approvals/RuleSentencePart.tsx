@@ -1,6 +1,6 @@
-import type { RuleSubject } from "@autumn/shared";
 import { GlobeIcon, UserIcon, UsersIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import type { RuleSubject } from "./approvalsStub";
 import type { SentencePart } from "./buildRuleSentence";
 
 const SUBJECT_ICONS: Record<RuleSubject["type"], typeof UserIcon> = {

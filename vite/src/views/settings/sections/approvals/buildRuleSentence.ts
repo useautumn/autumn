@@ -1,13 +1,14 @@
 import {
 	ACTIONS,
-	type ApprovalAction,
+	APPROVAL_FILTER_FIELD_LABELS,
 	type ApprovalRule,
+	type ApprovalRuleEffect,
 	type RuleSubject,
-	WHEN_FIELD_LABELS,
-} from "@autumn/shared";
+} from "./approvalsStub";
 
 export type RuleLabels = {
 	member: (userId: string) => string;
+	role: (roleId: string) => string;
 	plan: (planId: string) => string;
 	feature: (featureId: string) => { name: string; unit: string };
 	money: (amount: number) => string;
@@ -27,24 +28,21 @@ type Filter = Record<string, unknown>;
 
 type Ctx = {
 	labels: RuleLabels;
-	/** S3's labels for the rule's `when` shape, keyed by dot path. */
+	effect: ApprovalRuleEffect;
 	fieldLabels: Record<string, string>;
-	/** The object the field sits in, e.g. the grant for `included_grant`'s unit. */
-	parent: Filter;
 	/** Dot path of the object being read, quantifiers left out, e.g. "incoming". */
 	path: string;
+	/** The object the field sits in, e.g. the grant for `included_grant`'s unit. */
+	parent: Filter;
 };
 
-type Format = (params: { value: unknown; ctx: Ctx }) => string;
+/** Formats one matcher operand; null means the list can't word it. */
+type Format = (params: { value: unknown; ctx: Ctx }) => string | null;
 
 type Field =
-	| {
-			kind: "match";
-			format: Format;
-			/** Keys the field reads from a nested object; the first holds the matcher. */
-			nested?: string[];
-	  }
-	| { kind: "each" };
+	| { kind: "match"; format: Format }
+	| { kind: "each" }
+	| { kind: "object"; none?: string; any?: string };
 
 const OPERATORS: Record<string, string> = {
 	$eq: "is",
@@ -57,12 +55,23 @@ const OPERATORS: Record<string, string> = {
 	$gte: "≥",
 };
 
-const TIMINGS: Record<string, string> = {
+const NEGATED: Record<string, string> = {
+	is: "is not",
+	"is any of": "is none of",
+};
+
+const ENUM_LABELS: Record<string, string> = {
 	cancel_end_of_cycle: "End of cycle",
 	cancel_immediately: "Immediately",
 	end_of_cycle: "End of cycle",
 	immediate: "Immediately",
+	now: "Reset now",
+	unchanged: "Unchanged",
+	custom: "Custom date",
 };
+
+/** Allow-rule caps on these optional amounts store an extra "or none" branch. */
+const CAPPED_FIELDS = new Set(["refund", "next_cycle"]);
 
 const CUSTOM: RuleCondition = {
 	field: "",
@@ -76,35 +85,43 @@ const isFilter = (value: unknown): value is Filter =>
 const hasNullField = (filter: Filter) =>
 	Object.values(filter).some((value) => value === null);
 
+const plural = ({ count, unit }: { count: number; unit: string }) =>
+	`${count} ${unit}${count === 1 ? "" : "s"}`;
+
 const yesNo: Format = ({ value }) => (value ? "Yes" : "No");
 const money: Format = ({ value, ctx }) => ctx.labels.money(Number(value));
-const timing: Format = ({ value }) => TIMINGS[String(value)] ?? String(value);
+const enumLabel: Format = ({ value }) =>
+	ENUM_LABELS[String(value)] ?? String(value);
+const duration: Format = ({ value }) =>
+	isFilter(value) && typeof value.length === "number"
+		? plural({ count: value.length, unit: String(value.unit) })
+		: null;
 
-const match = (format: Format, nested?: string[]): Field => ({
-	kind: "match",
-	format,
-	nested,
-});
-const each: Field = { kind: "each" };
+const match = (format: Format): Field => ({ kind: "match", format });
 
-/** How each `when` field's value reads; its label comes from S3's `WHEN_FIELD_LABELS`. */
+/** How each filter field's value reads; labels come from `APPROVAL_FILTER_FIELD_LABELS` by path. */
 const FIELDS: Record<string, Field> = {
 	paid: match(yesNo),
 	checkout: match(yesNo),
 	recurring: match(yesNo),
-	incoming: each,
-	outgoing: each,
-	discounts: each,
+	customized: match(yesNo),
+	has_paid: match(yesNo),
+	incoming: { kind: "each" },
+	outgoing: { kind: "each" },
+	discounts: { kind: "each" },
+	customer: { kind: "object" },
+	entity: { kind: "object", none: "customer", any: "any entity" },
+	free_trial: { kind: "object", none: "none", any: "any" },
+	refund: { kind: "object" },
+	next_cycle: { kind: "object" },
+	duration: match(duration),
 	plan_id: match(({ value, ctx }) => ctx.labels.plan(String(value))),
 	percent_off: match(({ value }) => `${value}%`),
-	free_trial: match(
-		({ value, ctx }) =>
-			`${value} ${ctx.parent.duration_type}${Number(value) === 1 ? "" : "s"}`,
-		["duration_length", "duration_type"],
-	),
-	cancel_action: match(timing),
-	plan_schedule: match(timing),
-	refund: match(money, ["amount"]),
+	cancel_action: match(enumLabel),
+	plan_schedule: match(enumLabel),
+	billing_cycle_anchor: match(enumLabel),
+	amount: match(money),
+	total: match(money),
 	feature_id: match(({ value, ctx }) => ctx.labels.feature(String(value)).name),
 	included_grant: match(({ value, ctx }) =>
 		[value, ctx.labels.feature(String(ctx.parent.feature_id)).unit]
@@ -125,19 +142,67 @@ const matcherConditions = ({
 	format: Format;
 	ctx: Ctx;
 }): RuleCondition[] => {
-	if (!isFilter(matcher)) {
-		return [
-			{ field: label, operator: "is", value: format({ value: matcher, ctx }) },
-		];
+	const entries = isFilter(matcher)
+		? Object.entries(matcher)
+		: [["$eq", matcher]];
+	const conditions = entries.map(([operator, operand]) => {
+		const values = [operand].flat().map((value) => format({ value, ctx }));
+		if (values.includes(null)) return CUSTOM;
+		return {
+			field: label,
+			operator: OPERATORS[String(operator)] ?? String(operator),
+			value: values.join(", "),
+		};
+	});
+	return conditions.includes(CUSTOM) ? [CUSTOM] : conditions;
+};
+
+/** Only the effect's quantifier is worded: `$every` for allow, `$some` for block, and `$none` for "is not" a plan. */
+const elementConditions = ({
+	value,
+	ctx,
+}: {
+	value: unknown;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	const [quantifier, ...others] = isFilter(value) ? Object.keys(value) : [];
+	const element = isFilter(value) ? value[quantifier] : null;
+	if (others.length > 0 || !isFilter(element)) return [CUSTOM];
+	if (quantifier === "$none") {
+		if (Object.keys(element).join() !== "plan_id") return [CUSTOM];
+		return filterConditions({ filter: element, ctx }).map((condition) =>
+			NEGATED[condition.operator]
+				? { ...condition, operator: NEGATED[condition.operator] }
+				: CUSTOM,
+		);
 	}
-	return Object.entries(matcher).map(([operator, operand]) => ({
-		field: label,
-		operator: OPERATORS[operator] ?? operator,
-		value: [operand]
-			.flat()
-			.map((value) => format({ value, ctx }))
-			.join(", "),
-	}));
+	const effectQuantifier = ctx.effect === "block" ? "$some" : "$every";
+	if (quantifier !== effectQuantifier) return [CUSTOM];
+	return filterConditions({ filter: element, ctx });
+};
+
+/** `null` and `{ $ne: null }` read as a phrase; otherwise every nested key must be worded. */
+const objectConditions = ({
+	field,
+	value,
+	label,
+	ctx,
+}: {
+	field: Extract<Field, { kind: "object" }>;
+	value: unknown;
+	label: string | undefined;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	const isAny =
+		isFilter(value) &&
+		Object.keys(value).join() === "$ne" &&
+		value.$ne === null;
+	const phrase = value === null ? field.none : isAny ? field.any : undefined;
+	if (phrase && label) return [{ field: label, operator: "is", value: phrase }];
+	if (!isFilter(value) || isAny || Object.keys(value).length === 0)
+		return [CUSTOM];
+	const conditions = filterConditions({ filter: value, ctx });
+	return conditions.includes(CUSTOM) ? [CUSTOM] : conditions;
 };
 
 const fieldConditions = ({
@@ -151,36 +216,19 @@ const fieldConditions = ({
 }): RuleCondition[] => {
 	const field = FIELDS[key];
 	const path = ctx.path ? `${ctx.path}.${key}` : key;
+	const label = ctx.fieldLabels[path];
+	const inField = { ...ctx, path };
 	if (!field) return [CUSTOM];
-	if (field.kind === "each") {
-		// Only `$every` is worded: "Incoming plan is Pro" must mean every incoming plan.
-		const isEvery = isFilter(value) && Object.keys(value).join() === "$every";
-		if (!isEvery || !isFilter(value.$every)) return [CUSTOM];
-		return filterConditions({ filter: value.$every, ctx: { ...ctx, path } });
+	if (field.kind === "each") return elementConditions({ value, ctx: inField });
+	if (field.kind === "object") {
+		return objectConditions({ field, value, label, ctx: inField });
 	}
-	const [matcherKey] = field.nested ?? [];
-	const label = ctx.fieldLabels[matcherKey ? `${path}.${matcherKey}` : path];
 	if (!label) return [CUSTOM];
-	if (!matcherKey) {
-		return matcherConditions({
-			label,
-			matcher: value,
-			format: field.format,
-			ctx,
-		});
-	}
-	const nestedKeys = new Set(field.nested);
-	const readsWholeObject =
-		isFilter(value) &&
-		Object.keys(value).every((key) => nestedKeys.has(key)) &&
-		field.nested?.every((key) => value[key] !== undefined) &&
-		field.nested.slice(1).every((key) => !isFilter(value[key]));
-	if (!readsWholeObject) return [CUSTOM];
 	return matcherConditions({
 		label,
-		matcher: value[matcherKey],
+		matcher: value,
 		format: field.format,
-		ctx: { ...ctx, parent: value },
+		ctx,
 	});
 };
 
@@ -198,7 +246,7 @@ const filterConditions = ({
 		return fieldConditions({ key, value, ctx: inFilter });
 	});
 
-/** `$or: [{ x: null }, { x: … }, …]` on one field is a cap that lets "no x" through; the editor shows its widest branch, stored last. */
+/** An allow rule's cap on an optional amount is `$or: [{ refund: null }, { refund: … }]`; it reads as its last branch. */
 const cappedConditions = ({
 	branches,
 	ctx,
@@ -206,11 +254,14 @@ const cappedConditions = ({
 	branches: unknown;
 	ctx: Ctx;
 }): RuleCondition[] => {
-	if (!Array.isArray(branches) || !branches.every(isFilter)) return [CUSTOM];
+	if (ctx.effect !== "allow" || !Array.isArray(branches)) return [CUSTOM];
+	if (!branches.every(isFilter)) return [CUSTOM];
 	const keys = new Set(branches.flatMap((branch) => Object.keys(branch)));
+	const [key] = keys;
 	const caps = branches.filter((branch) => !hasNullField(branch));
 	const isCap =
 		keys.size === 1 &&
+		CAPPED_FIELDS.has(key) &&
 		branches.every((branch) => Object.keys(branch).length === 1) &&
 		caps.length === branches.length - 1;
 	const widest = caps.at(-1);
@@ -219,20 +270,14 @@ const cappedConditions = ({
 };
 
 /** Top-level `$or` branches are the editor's OR groups, unless they're a single capped field. */
-const whenGroups = ({ when, ctx }: { when: Filter; ctx: Ctx }) => {
-	const { $or: branches, ...rest } = when;
+const filterGroups = ({ filter, ctx }: { filter: Filter; ctx: Ctx }) => {
+	const { $or: branches, ...rest } = filter;
 	const isGroups =
 		Array.isArray(branches) &&
 		Object.keys(rest).length === 0 &&
 		branches.every((branch) => isFilter(branch) && !hasNullField(branch));
-	const groups: Filter[] = isGroups ? branches : [when];
-	return groups.map((filter) => filterConditions({ filter, ctx }));
-};
-
-const actionText = (action: ApprovalAction) => {
-	const definition: { label: string; sentence_label?: string } =
-		ACTIONS[action];
-	return definition.sentence_label ?? definition.label;
+	const groups: Filter[] = isGroups ? branches : [filter];
+	return groups.map((group) => filterConditions({ filter: group, ctx }));
 };
 
 const subjectText = ({
@@ -243,9 +288,7 @@ const subjectText = ({
 	labels: RuleLabels;
 }) => {
 	if (subject.type === "everyone") return "Everyone";
-	if (subject.type === "role") {
-		return subject.role.charAt(0).toUpperCase() + subject.role.slice(1);
-	}
+	if (subject.type === "role") return labels.role(subject.role_id);
 	return labels.member(subject.user_id);
 };
 
@@ -255,24 +298,24 @@ const word = (text: string, key = text): SentencePart => ({
 	text,
 });
 
-const whenParts = ({
+const filterParts = ({
 	rule,
 	labels,
 }: {
 	rule: ApprovalRule;
 	labels: RuleLabels;
 }): SentencePart[] => {
-	const when: Filter | null = rule.when;
-	if (!when || Object.keys(when).length === 0) return [];
-	const area = ACTIONS[rule.actions[0]].when;
-	if (!area) return [];
-	const groups = whenGroups({
-		when,
+	const filter: Filter | null = rule.filter;
+	const shape = ACTIONS[rule.actions[0]]?.filter;
+	if (!filter || !shape || Object.keys(filter).length === 0) return [];
+	const groups = filterGroups({
+		filter,
 		ctx: {
 			labels,
-			fieldLabels: WHEN_FIELD_LABELS[area],
-			parent: when,
+			effect: rule.effect,
+			fieldLabels: APPROVAL_FILTER_FIELD_LABELS[shape],
 			path: "",
+			parent: filter,
 		},
 	});
 	return [
@@ -302,13 +345,13 @@ export const buildRuleSentence = ({
 			text: subjectText({ subject, labels }),
 		}),
 	),
-	word("can"),
+	word(rule.effect === "block" ? "can't" : "can", "effect"),
 	...rule.actions.map(
 		(action): SentencePart => ({
 			kind: "action",
 			key: action,
-			text: actionText(action),
+			text: ACTIONS[action].label,
 		}),
 	),
-	...whenParts({ rule, labels }),
+	...filterParts({ rule, labels }),
 ];

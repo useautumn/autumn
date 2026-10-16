@@ -1,21 +1,34 @@
-import type { ApprovalRule } from "@autumn/shared";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useToggleApprovalRule } from "@/hooks/queries/useApprovalRulesMutations";
 import { SettingsTable } from "../../SettingsTable";
 import { ApprovalRuleRow } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
+import type { ApprovalRule } from "./approvalsStub";
 import { useApprovalRuleRows } from "./useApprovalRuleRows";
 
 const COLUMNS = [
-	{ label: "Rule", width: "85%" },
+	{ label: "#", width: "5%" },
+	{ label: "Rule", width: "80%" },
 	{ label: "Enabled", width: "10%" },
 ];
 
-export const ApprovalRulesTable = ({ rules }: { rules: ApprovalRule[] }) => {
+export const ApprovalRulesTable = ({
+	rules,
+	canEdit,
+}: {
+	rules: ApprovalRule[];
+	canEdit: boolean;
+}) => {
 	const [filter, setFilter] = useState("");
 	const rows = useApprovalRuleRows({ rules, filter });
+	const toggle = useToggleApprovalRule();
 	const enabledCount = rules.filter((rule) => rule.enabled).length;
+	const enabledOf = (rule: ApprovalRule) =>
+		toggle.isPending && toggle.variables.id === rule.id
+			? toggle.variables.enabled
+			: rule.enabled;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -38,8 +51,16 @@ export const ApprovalRulesTable = ({ rules }: { rules: ApprovalRule[] }) => {
 			</div>
 			{rows.length > 0 ? (
 				<SettingsTable columns={COLUMNS}>
-					{rows.map(({ rule, parts }) => (
-						<ApprovalRuleRow key={rule.id} rule={rule} parts={parts} />
+					{rows.map(({ rule, parts, order }) => (
+						<ApprovalRuleRow
+							key={rule.id}
+							rule={rule}
+							parts={parts}
+							order={order}
+							enabled={enabledOf(rule)}
+							canToggle={canEdit && !toggle.isPending}
+							onToggle={(enabled) => toggle.mutate({ id: rule.id, enabled })}
+						/>
 					))}
 				</SettingsTable>
 			) : (

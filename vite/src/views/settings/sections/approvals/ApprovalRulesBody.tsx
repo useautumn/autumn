@@ -1,15 +1,17 @@
-import type { ApprovalRule } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
 import { ApprovalRulesTable } from "./ApprovalRulesTable";
+import type { ApprovalRule } from "./approvalsStub";
 
 /** The table, or why there isn't one: a failed load or no rules yet. */
 export const ApprovalRulesBody = ({
 	rules,
 	error,
+	canEdit,
 }: {
 	rules: ApprovalRule[];
 	error: unknown;
+	canEdit: boolean;
 }) => {
 	if (error) {
 		return (
@@ -27,5 +29,5 @@ export const ApprovalRulesBody = ({
 			/>
 		);
 	}
-	return <ApprovalRulesTable rules={rules} />;
+	return <ApprovalRulesTable rules={rules} canEdit={canEdit} />;
 };

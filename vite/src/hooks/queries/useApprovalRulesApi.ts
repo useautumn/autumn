@@ -1,13 +1,17 @@
-import type { ApprovalRule, CreateApprovalRuleParams } from "@autumn/shared";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type {
+	ApprovalRule,
+	ApprovalRuleUpdateParams,
+} from "@/views/settings/sections/approvals/approvalsStub";
 
 /** Rule routes always read and write live rules, whatever env the dashboard is in. */
 export const useApprovalRulesApi = () => {
 	const axiosInstance = useAxiosInstance();
 	return {
 		list: async () => {
-			const { data } = await axiosInstance.get<{ list: ApprovalRule[] }>(
-				"/approvals/rules",
+			const { data } = await axiosInstance.post<{ list: ApprovalRule[] }>(
+				"/approval_rules.list",
+				{},
 			);
 			return data;
 		},
@@ -16,11 +20,11 @@ export const useApprovalRulesApi = () => {
 			params,
 		}: {
 			id: string;
-			params: Partial<CreateApprovalRuleParams>;
+			params: ApprovalRuleUpdateParams;
 		}) => {
-			const { data } = await axiosInstance.patch<ApprovalRule>(
-				`/approvals/rules/${id}`,
-				params,
+			const { data } = await axiosInstance.post<ApprovalRule>(
+				"/approval_rules.update",
+				{ id, ...params },
 			);
 			return data;
 		},
