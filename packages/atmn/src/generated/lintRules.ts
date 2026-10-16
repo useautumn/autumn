@@ -1743,8 +1743,11 @@ export const LINT_RULES: LintRules = {
 		},
 	"plans.variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers":
 		{
-			required: ["creditCost"],
+			required: ["creditCost", "to"],
 			fields: {
+				to: {
+					exclusiveMinimum: 0,
+				},
 				creditCost: {
 					minimum: 0,
 				},

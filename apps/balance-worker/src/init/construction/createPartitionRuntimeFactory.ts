@@ -1,4 +1,7 @@
-import { createProducerSession } from "@autumn/kafka";
+import {
+	createProducerSession,
+	type KafkaProducerStatistics,
+} from "@autumn/kafka";
 import { createMutationPublisher } from "../../kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../kafka/createOwnershipPublisher.js";
 import { createWorkerProducer } from "../../kafka/createWorkerProducer.js";
@@ -8,6 +11,7 @@ import {
 } from "../../kafka/ownerEpochCell.js";
 import { commitSummaries } from "../../logging/commitSummaries.js";
 import { createPartitionCommitLogging } from "../../logging/createPartitionCommitLogging.js";
+import { kafkaBrokerStatistics } from "../../logging/kafkaBrokerStatistics.js";
 import { kafkaRequestTimings } from "../../logging/kafkaRequestTimings.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
 import { createPartitionRuntime } from "../../runtime/createPartitionRuntime.js";
@@ -56,8 +60,18 @@ export function createPartitionRuntimeFactory({
 		producedOffsets,
 		ownerEpoch: epochCell = createOwnerEpochCell(),
 	}: PartitionRuntimeFactoryInput): ConstructedPartitionRuntime {
+		function recordStatistics(statistics: KafkaProducerStatistics): void {
+			kafkaBrokerStatistics.record({
+				producer: `${topic}/${partition}`,
+				statistics,
+			});
+		}
 		const session = createProducerSession({
-			ctx: { kafka: ctx.kafka, onRequest: kafkaRequestTimings.record },
+			ctx: {
+				kafka: ctx.kafka,
+				onRequest: kafkaRequestTimings.record,
+				onStatistics: recordStatistics,
+			},
 			config: createWorkerProducerConfig({
 				deploymentEnvironment: config.deploymentEnvironment,
 				topic,

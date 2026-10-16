@@ -122,7 +122,7 @@ from autumn_sdk import Autumn
 
 
 with Autumn(
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -144,7 +144,7 @@ from autumn_sdk import Autumn
 async def main():
 
     async with Autumn(
-        x_api_version="2.5.0",
+        x_api_version="2.6.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
@@ -175,7 +175,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
 ) as autumn:
 
     res = autumn.check(customer_id="cus_123", feature_id="messages")
@@ -400,7 +400,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 
 with Autumn(
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -420,7 +420,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 with Autumn(
     retry_config=RetryConfig("backoff", BackoffStrategy(1, 50, 1.1, 100), False),
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -451,7 +451,7 @@ from autumn_sdk import Autumn, errors
 
 
 with Autumn(
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
     res = None
@@ -505,7 +505,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     server_url="https://api.useautumn.com",
-    x_api_version="2.5.0",
+    x_api_version="2.6.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -610,7 +610,7 @@ from autumn_sdk import Autumn
 def main():
 
     with Autumn(
-        x_api_version="2.5.0",
+        x_api_version="2.6.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...
@@ -620,7 +620,7 @@ def main():
 async def amain():
 
     async with Autumn(
-        x_api_version="2.5.0",
+        x_api_version="2.6.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...

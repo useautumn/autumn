@@ -89,7 +89,7 @@ For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -124,7 +124,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
 });
 
 async function run() {
@@ -1714,7 +1714,7 @@ To change the default retry strategy for a single API call, simply provide a ret
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1757,7 +1757,7 @@ const autumn = new Autumn({
     },
     retryConnectionErrors: false,
   },
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1794,7 +1794,7 @@ import * as models from "@useautumn/sdk";
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1853,7 +1853,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   serverURL: "https://api.useautumn.com",
-  xApiVersion: "2.5.0",
+  xApiVersion: "2.6.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

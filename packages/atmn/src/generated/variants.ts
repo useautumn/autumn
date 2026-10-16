@@ -179,30 +179,7 @@ export type Variant = {
 							/** Number of metered-feature units priced together. Defaults to one when omitted. */
 							billingUnits?: number;
 							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-							dimensions?: Record<
-								string,
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										tierBehavior: "graduated";
-										tiers: Array<{
-											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-											to: number | "inf";
-											/** Credits consumed per billing-unit group within this tier. */
-											creditCost: number;
-										}>;
-								  }
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										/** Credits consumed per billing-unit group when this dimension matches. */
-										creditCost: number;
-								  }
-							>;
+							dimensions?: Record<string, unknown>;
 							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 							multipliers?: Record<
 								string,
@@ -229,30 +206,7 @@ export type Variant = {
 							/** Number of metered-feature units priced together. Defaults to one when omitted. */
 							billingUnits?: number;
 							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-							dimensions?: Record<
-								string,
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										tierBehavior: "graduated";
-										tiers: Array<{
-											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-											to: number | "inf";
-											/** Credits consumed per billing-unit group within this tier. */
-											creditCost: number;
-										}>;
-								  }
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										/** Credits consumed per billing-unit group when this dimension matches. */
-										creditCost: number;
-								  }
-							>;
+							dimensions?: Record<string, unknown>;
 							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 							multipliers?: Record<
 								string,
@@ -417,30 +371,7 @@ export type Variant = {
 							/** Number of metered-feature units priced together. Defaults to one when omitted. */
 							billingUnits?: number;
 							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-							dimensions?: Record<
-								string,
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										tierBehavior: "graduated";
-										tiers: Array<{
-											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-											to: number | "inf";
-											/** Credits consumed per billing-unit group within this tier. */
-											creditCost: number;
-										}>;
-								  }
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										/** Credits consumed per billing-unit group when this dimension matches. */
-										creditCost: number;
-								  }
-							>;
+							dimensions?: Record<string, unknown>;
 							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 							multipliers?: Record<
 								string,
@@ -467,30 +398,7 @@ export type Variant = {
 							/** Number of metered-feature units priced together. Defaults to one when omitted. */
 							billingUnits?: number;
 							/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-							dimensions?: Record<
-								string,
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										tierBehavior: "graduated";
-										tiers: Array<{
-											/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-											to: number | "inf";
-											/** Credits consumed per billing-unit group within this tier. */
-											creditCost: number;
-										}>;
-								  }
-								| {
-										/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-										match: Record<string, string | number | boolean>;
-										/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-										priority?: number;
-										/** Credits consumed per billing-unit group when this dimension matches. */
-										creditCost: number;
-								  }
-							>;
+							dimensions?: Record<string, unknown>;
 							/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 							multipliers?: Record<
 								string,
@@ -808,30 +716,7 @@ export type Variant = {
 									/** Number of metered-feature units priced together. Defaults to one when omitted. */
 									billingUnits?: number;
 									/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-									dimensions?: Record<
-										string,
-										| {
-												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-												match: Record<string, string | number | boolean>;
-												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-												priority?: number;
-												tierBehavior: "graduated";
-												tiers: Array<{
-													/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-													to?: unknown;
-													/** Credits consumed per billing-unit group within this tier. */
-													creditCost: number;
-												}>;
-										  }
-										| {
-												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-												match: Record<string, string | number | boolean>;
-												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-												priority?: number;
-												/** Credits consumed per billing-unit group when this dimension matches. */
-												creditCost: number;
-										  }
-									>;
+									dimensions?: Record<string, unknown>;
 									/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 									multipliers?: Record<
 										string,
@@ -858,30 +743,7 @@ export type Variant = {
 									/** Number of metered-feature units priced together. Defaults to one when omitted. */
 									billingUnits?: number;
 									/** Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies. */
-									dimensions?: Record<
-										string,
-										| {
-												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-												match: Record<string, string | number | boolean>;
-												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-												priority?: number;
-												tierBehavior: "graduated";
-												tiers: Array<{
-													/** Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'. */
-													to?: unknown;
-													/** Credits consumed per billing-unit group within this tier. */
-													creditCost: number;
-												}>;
-										  }
-										| {
-												/** Event properties this entry applies to. Every key must equal the tracked property, compared as strings. */
-												match: Record<string, string | number | boolean>;
-												/** Breaks ties between dimensions that match the same number of keys. Higher wins. */
-												priority?: number;
-												/** Credits consumed per billing-unit group when this dimension matches. */
-												creditCost: number;
-										  }
-									>;
+									dimensions?: Record<string, unknown>;
 									/** Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed. */
 									multipliers?: Record<
 										string,

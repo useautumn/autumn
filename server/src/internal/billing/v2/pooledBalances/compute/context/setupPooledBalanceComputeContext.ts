@@ -14,6 +14,10 @@ import {
 	addPaidCustomerProductToPool,
 	isPaidSubscriptionPoolHost,
 } from "../utils/subscriptionPoolHost";
+import {
+	addLimitedSourceToPool,
+	isLimitedAdditiveSource,
+} from "../utils/unlimitedPoolShare";
 
 const clonePooledCustomerEntitlements = ({
 	customerEntitlements,
@@ -42,6 +46,24 @@ const competingContributionsOf = ({
 				(customerEntitlement) => {
 					const contribution = customerEntitlement.pooled_balance_contribution;
 					return contribution?.competes
+						? [[customerEntitlement.id, contribution] as const]
+						: [];
+				},
+			),
+		),
+	);
+
+const unlimitedShareContributionsOf = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}) =>
+	new Map(
+		customerProducts.flatMap((customerProduct) =>
+			(customerProduct.customer_entitlements ?? []).flatMap(
+				(customerEntitlement) => {
+					const contribution = customerEntitlement.pooled_balance_contribution;
+					return contribution?.unlimited && !contribution.competes
 						? [[customerEntitlement.id, contribution] as const]
 						: [];
 				},
@@ -78,6 +100,35 @@ const paidCustomerProductIdsByPoolIdOf = ({
 	return paidCustomerProductIdsByPoolId;
 };
 
+const addLimitedSources = ({
+	computeContext,
+	customerProducts,
+}: {
+	computeContext: PooledBalanceComputeContext;
+	customerProducts: FullCusProduct[];
+}) => {
+	for (const customerProduct of customerProducts) {
+		for (const customerEntitlement of customerProduct.customer_entitlements ??
+			[]) {
+			const contribution = customerEntitlement.pooled_balance_contribution;
+			if (
+				!contribution ||
+				!isLimitedAdditiveSource({
+					customerEntitlement,
+					competes: contribution.competes ?? false,
+				})
+			)
+				continue;
+			addLimitedSourceToPool({
+				computeContext,
+				poolId: contribution.pooled_balance_id,
+				customerEntitlementId: customerEntitlement.id,
+			});
+		}
+	}
+	return computeContext;
+};
+
 export const setupPooledBalanceComputeContext = ({
 	pooledCustomerEntitlements: inputPooledCustomerEntitlements,
 	customerProducts = [],
@@ -89,7 +140,7 @@ export const setupPooledBalanceComputeContext = ({
 		customerEntitlements: inputPooledCustomerEntitlements,
 	});
 
-	return {
+	const computeContext: PooledBalanceComputeContext = {
 		plan: emptyPooledBalancePlan(),
 		pooledCustomerEntitlements,
 		pooledCustomerEntitlementByPoolId: new Map(
@@ -116,5 +167,10 @@ export const setupPooledBalanceComputeContext = ({
 		paidCustomerProductIdsByPoolId: paidCustomerProductIdsByPoolIdOf({
 			customerProducts,
 		}),
+		limitedSourceIdsByPoolId: new Map(),
+		unlimitedShareContributionsBySourceId: unlimitedShareContributionsOf({
+			customerProducts,
+		}),
 	};
+	return addLimitedSources({ computeContext, customerProducts });
 };

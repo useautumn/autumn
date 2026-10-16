@@ -19,6 +19,9 @@ export function createProducer({
 	producer.onRequestTimings?.(function reportRequest(timing) {
 		scope.ctx.post({ kind: "request", event: { producerId, ...timing } });
 	});
+	producer.onStatistics?.(function reportStatistics(statistics) {
+		scope.ctx.post({ kind: "statistics", producerId, statistics });
+	});
 }
 
 export function connectProducer({

@@ -4,6 +4,63 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="October 16th 2026">
+  ## Edge cache (private preview)
+
+  The [edge cache](/documentation/edge-cache) runs in your own AWS account and answers `check` and `track` without leaving your network. Autumn stays the source of truth and pushes changes back to the cache. Set it up from **Settings → Edge cache** in the dashboard. Then pass `edgeURL` and `useEdge` to the TypeScript SDK, or `edge_url` and `use_edge` to the Python SDK (`autumn-sdk` 1.2.0). Calls fall back to Autumn if the cache is down — [#4600](https://github.com/useautumn/autumn/pull/4600), [#4840](https://github.com/useautumn/autumn/pull/4840), [#4917](https://github.com/useautumn/autumn/pull/4917)
+
+  ## Combine grants by sum, max or min
+
+  Features accept a new `combine` setting for grants of the same feature from several plans. `sum` (default) adds them up, `max` keeps the highest and `min` keeps the lowest. Set it from the feature sheet in the dashboard. See [combining grants](/documentation/concepts/features#combining-grants-from-several-plans) — [#4808](https://github.com/useautumn/autumn/pull/4808)
+
+  ## Add and remove invoice lines
+
+  [`billing.attach`](/api-reference/billing/attach), [`billing.update`](/api-reference/billing/billingUpdate) and set plans accept `add_lines` and `remove_lines`. They change only the invoice the request creates, never the subscription or later invoices. Preview lines include the `remove_lines` entry that removes them. In the dashboard, edit invoice lines straight from the pricing preview — [#4737](https://github.com/useautumn/autumn/pull/4737)
+
+  ## Invoice payment methods and collection method switching
+
+  `invoice_mode` and [`invoices.create`](/api-reference/invoices/createInvoice) accept `payment_method_types` to override your organization's defaults per request. The new [`invoices.update`](/api-reference/invoices/updateInvoice) endpoint changes payment methods on a draft or open invoice. You can also switch a subscription between charging automatically and invoicing from **Update subscription**. `invoice_mode.issue_method` now works on attach, update and set plans too. See [switching between invoicing and charging automatically](/documentation/customers/updating-subscriptions#switching-between-invoicing-and-charging-automatically) — [#4574](https://github.com/useautumn/autumn/pull/4574), [#4823](https://github.com/useautumn/autumn/pull/4823)
+
+  ## Volume tiers on usage-based items
+
+  Volume tiers now work on pay-per-use and allocated items, not just prepaid ones. Only usage past the included amount is billed, at the rate of the tier total usage reaches. The plan editor lets you edit volume tiers on usage-based items. See [volume-based tiers](/documentation/modelling-pricing/volume-based-tiers) — [#4623](https://github.com/useautumn/autumn/pull/4623)
+
+  ## API version 2.6.0
+
+  On API version `2.6.0`, [`balances.finalize`](/api-reference/balances/finalizeLock) requires the lock's `customer_id`. Older versions are unchanged — [#4958](https://github.com/useautumn/autumn/pull/4958), [#4975](https://github.com/useautumn/autumn/pull/4975)
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `proration_behavior: bill_difference` now bills the larger of the full-period difference and the prorated amount — [#4837](https://github.com/useautumn/autumn/pull/4837)
+      - [`events.aggregate`](/api-reference/events/aggregateEvents) accepts `measure: "count"` to count events instead of summing values — [#4584](https://github.com/useautumn/autumn/pull/4584)
+      - Free plans' credits pool with the customer's subscription pool — [#4912](https://github.com/useautumn/autumn/pull/4912)
+      - Credit rate card overrides merge into the credit system and can exclude features. The dashboard edits them as one rate card table, and the customer sheet shows each rate's source — [#4668](https://github.com/useautumn/autumn/pull/4668), [#4750](https://github.com/useautumn/autumn/pull/4750)
+      - Migrations show rate card changes for each plan item — [#4635](https://github.com/useautumn/autumn/pull/4635)
+      - Hover a plan's Custom badge to see how it differs from the catalog — [#4539](https://github.com/useautumn/autumn/pull/4539)
+      - The update sheet warns when a pending plan replaces the live plan. Editing a pending plan keeps its long-lived checkout link — [#4830](https://github.com/useautumn/autumn/pull/4830), [#4655](https://github.com/useautumn/autumn/pull/4655), [#4670](https://github.com/useautumn/autumn/pull/4670)
+      - The subscription sheet shows the collection method and payment methods — [#4632](https://github.com/useautumn/autumn/pull/4632)
+      - The dashboard loads much faster, with first visits under a second — [#4895](https://github.com/useautumn/autumn/pull/4895), [#4827](https://github.com/useautumn/autumn/pull/4827)
+      - The sidebar is restyled, the Logs detail pane is back, and the customers list has an Export button — [#4572](https://github.com/useautumn/autumn/pull/4572), [#4551](https://github.com/useautumn/autumn/pull/4551), [#4537](https://github.com/useautumn/autumn/pull/4537)
+      - Unclaimed keyless organizations can be claimed at any time — [#4797](https://github.com/useautumn/autumn/pull/4797)
+      - Invalid `balances.create` params return 400 with a reason. Concurrent Stripe customer creation returns 409 — [#4809](https://github.com/useautumn/autumn/pull/4809), [#4822](https://github.com/useautumn/autumn/pull/4822)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Usage is billed on the final invoice after a trial, and a trial that ends into `cancel_at` is invoiced — [#4903](https://github.com/useautumn/autumn/pull/4903), [#4745](https://github.com/useautumn/autumn/pull/4745)
+      - Renewals reach every customer on a shared Stripe subscription — [#4925](https://github.com/useautumn/autumn/pull/4925)
+      - Invoices whose subscription has ended reissue as standalone invoices — [#4820](https://github.com/useautumn/autumn/pull/4820)
+      - Next-cycle previews include scheduled plans and round to whole minor units. Tax previews work with third-party tax providers — [#4535](https://github.com/useautumn/autumn/pull/4535), [#4744](https://github.com/useautumn/autumn/pull/4744), [#4675](https://github.com/useautumn/autumn/pull/4675)
+      - `bill_difference` on a set plans cycle reset bills the full new cycle — [#4939](https://github.com/useautumn/autumn/pull/4939)
+      - Updating quantities for features the plan doesn't prepay returns 400 — [#4288](https://github.com/useautumn/autumn/pull/4288)
+      - RevenueCat product changes expire the replaced plan, and list pagination follows absolute URLs — [#4630](https://github.com/useautumn/autumn/pull/4630), [#4816](https://github.com/useautumn/autumn/pull/4816)
+      - Deleting a customer keeps a plan's catalog license links — [#4733](https://github.com/useautumn/autumn/pull/4733)
+      - Customer IDs with colons import correctly — [#4898](https://github.com/useautumn/autumn/pull/4898)
+      - Stripe Connect webhooks from the wrong mode are skipped — [#4804](https://github.com/useautumn/autumn/pull/4804)
+      - Invalid log timestamp filters return 400 — [#4815](https://github.com/useautumn/autumn/pull/4815)
+      - Plan editor number inputs handle paste, backspace and commas. The dashboard reloads once if a page fails to load after a deploy — [#4923](https://github.com/useautumn/autumn/pull/4923), [#4826](https://github.com/useautumn/autumn/pull/4826)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="October 12th 2026">
   ## API version 2.5.0: track is async by default
 
