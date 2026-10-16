@@ -17,6 +17,7 @@ const BANNER_WARNING_TYPES = new Set<SetPlansPreviewWarning["type"]>([
 	"subscription_recreated_backdated",
 	"cycle_reset_rebills_plans",
 	"cycle_reset_ignored",
+	"unbilled_plans_added",
 ]);
 
 type BannerLine = {

@@ -1049,7 +1049,7 @@ describe("buildInitialValues", () => {
 		]);
 	});
 
-	test("with a subscription in focus, hides paid plans billed on no subscription", () => {
+	test("with a subscription in focus, seeds paid plans billed on no subscription", () => {
 		const paidCustomerProduct = (id: string, productId: string) =>
 			makeCusProduct({
 				id,
@@ -1074,6 +1074,7 @@ describe("buildInitialValues", () => {
 
 		expect(result.phases[0].plans.map((plan) => plan.productId)).toEqual([
 			"prod_1",
+			"prod_2",
 		]);
 	});
 

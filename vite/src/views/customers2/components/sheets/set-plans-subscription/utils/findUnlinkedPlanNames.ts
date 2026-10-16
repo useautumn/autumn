@@ -1,11 +1,8 @@
-import {
-	type FullCusProduct,
-	isCustomerProductUnlinkedFree,
-} from "@autumn/shared";
+import { type FullCusProduct, isCustomerProductUnlinked } from "@autumn/shared";
 import { isLiveCustomerProduct } from "./collectLinkedStripeObjectIds";
 
-/** Free plans billed on no subscription, which every subscription's sheet includes. */
-export const findUnlinkedFreePlanNames = ({
+/** Plans billed on no subscription, which every subscription's sheet includes. */
+export const findUnlinkedPlanNames = ({
 	customerProducts,
 }: {
 	customerProducts: FullCusProduct[];
@@ -15,7 +12,7 @@ export const findUnlinkedFreePlanNames = ({
 			.filter(
 				(customerProduct) =>
 					isLiveCustomerProduct(customerProduct) &&
-					isCustomerProductUnlinkedFree(customerProduct),
+					isCustomerProductUnlinked(customerProduct),
 			)
 			.map(
 				(customerProduct) =>
