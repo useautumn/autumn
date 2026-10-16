@@ -1,5 +1,6 @@
 import { RecaseError } from "@autumn/shared";
 import Stripe from "stripe";
+import { isForeignKeyViolationError } from "@/db/dbUtils.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 
 export const STRIPE_WEBHOOK_REPLAY_MAX_ATTEMPTS = 30;
@@ -21,4 +22,14 @@ export const stripeWebhookErrorWouldRedeliver = ({
 	}
 	if (error instanceof RecaseError) return error.statusCode >= 500;
 	return true;
+};
+
+/** SQS replay is for transient 500s, not catalog FK poison pills. */
+export const stripeWebhookErrorShouldQueueReplay = ({
+	error,
+}: {
+	error: unknown;
+}): boolean => {
+	if (isForeignKeyViolationError({ error })) return false;
+	return stripeWebhookErrorWouldRedeliver({ error });
 };

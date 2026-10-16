@@ -12,7 +12,7 @@ import {
 	runStripeWebhookReplay,
 	StripeWebhookReplayInFlightError,
 } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
-import { stripeWebhookErrorWouldRedeliver } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
+import { stripeWebhookErrorShouldQueueReplay } from "@/external/stripe/webhookReplay/stripeWebhookErrorWouldRedeliver.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import {
@@ -138,7 +138,7 @@ export const shouldRetrySqsJobError = ({
 		case JobName.StripeWebhookReplay:
 			return (
 				error instanceof StripeWebhookReplayInFlightError ||
-				stripeWebhookErrorWouldRedeliver({ error })
+				stripeWebhookErrorShouldQueueReplay({ error })
 			);
 		default:
 			return false;
