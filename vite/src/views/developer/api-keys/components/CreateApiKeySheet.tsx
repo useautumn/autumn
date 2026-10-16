@@ -11,13 +11,13 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
-import { isPermissionDeniedError } from "@/components/forms/shared/permission/permissionDenialUtils";
+import { denialFromError } from "@/components/forms/shared/permission/resolvePermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useSession } from "@/lib/auth-client";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -91,13 +91,14 @@ export const CreateApiKeySheet = ({
 
 			setApiKey(api_key);
 		} catch (error: any) {
-			if (
-				error?.response?.status === 403 &&
-				!isPermissionDeniedError({ error })
-			) {
+			if (error?.response?.status === 403 && !denialFromError({ error })) {
 				toast.error("You can't grant scopes you don't have yourself.");
 			} else {
-				toast.error(getBackendErr(error, "Failed to create API key"));
+				toastWriteError({
+					error,
+					fallback: "Failed to create API key",
+					inlineDenials: false,
+				});
 			}
 		}
 

@@ -6,23 +6,18 @@ import {
 } from "@autumn/shared";
 import type { RoleOption } from "@/components/v2/selects/RoleSelect";
 
-// Mirrors ApiRole; import it from @autumn/shared/api/roles/apiRole once #4992 merges.
+import type { ApiRole } from "@/hooks/queries/useRolesQuery";
+
+export type { ApiRole };
 export type RoleAccess = "none" | "read" | "write";
 export type RoleAccessRecord = Record<ResourceType, RoleAccess>;
 
-export type ApiRole = {
-	name: string;
-	label: string;
-	built_in: boolean;
+export type RoleCreateBody = Pick<ApiRole, "id" | "name"> & {
 	access: RoleAccessRecord;
-	member_count: number;
-	rule_count: number;
-	created_at: number | null;
-	updated_at: number | null;
 };
-
-export type RoleBody = Pick<ApiRole, "name" | "label" | "access">;
-export type RoleFormValues = Pick<ApiRole, "label" | "access">;
+export type RoleUpdateBody = Pick<ApiRole, "id"> &
+	Partial<Pick<RoleCreateBody, "name" | "access">>;
+export type RoleFormValues = Pick<RoleCreateBody, "name" | "access">;
 
 const READ_ONLY_RESOURCES: readonly ResourceType[] = ["analytics"];
 
@@ -43,8 +38,12 @@ const buildAccess = (pick: (resource: ResourceType) => RoleAccess) =>
 		]),
 	) as RoleAccessRecord;
 
-const capRecord = ({ access }: { access: RoleAccessRecord }) =>
-	buildAccess((resource) => access[resource]);
+// The API's access map isn't keyed by ResourceType yet, so missing keys read as none.
+const capRecord = ({
+	access,
+}: {
+	access: Partial<Record<string, RoleAccess>>;
+}) => buildAccess((resource) => access[resource] ?? "none");
 
 export const emptyAccess = () => buildAccess(() => "none");
 
@@ -82,28 +81,41 @@ export const roleToFormValues = ({
 }: {
 	role: ApiRole | null;
 }): RoleFormValues => ({
-	label: role?.label ?? "",
-	access: role?.access ?? emptyAccess(),
+	name: role?.name ?? "",
+	access: role ? capRecord({ access: role.access }) : emptyAccess(),
 });
 
-const ROLE_NAME_MAX_LENGTH = 63;
+const ROLE_ID_MAX_LENGTH = 63;
 
-export const labelToName = ({ label }: { label: string }) =>
-	label
+/** Ids are fixed at create, so this only runs for new roles. */
+export const nameToRoleId = ({ name }: { name: string }) =>
+	name
 		.trim()
 		.toLowerCase()
 		.replace(/[^a-z0-9\s_]/g, "")
 		.replace(/\s+/g, "_")
 		.replace(/^_+/, "")
-		.slice(0, ROLE_NAME_MAX_LENGTH);
+		.slice(0, ROLE_ID_MAX_LENGTH);
 
-export const formValuesToRoleBody = ({
+export const formValuesToCreateBody = ({
 	values,
 }: {
 	values: RoleFormValues;
-}): RoleBody => ({
-	name: labelToName({ label: values.label }),
-	label: values.label.trim(),
+}): RoleCreateBody => ({
+	id: nameToRoleId({ name: values.name }),
+	name: values.name.trim(),
+	access: capRecord({ access: values.access }),
+});
+
+export const formValuesToUpdateBody = ({
+	role,
+	values,
+}: {
+	role: ApiRole;
+	values: RoleFormValues;
+}): RoleUpdateBody => ({
+	id: role.id,
+	name: values.name.trim(),
 	access: capRecord({ access: values.access }),
 });
 
@@ -126,10 +138,11 @@ const listResources = ({ resources }: { resources: ResourceType[] }) => {
 };
 
 export const summarizeAccess = ({
-	access,
+	access: rawAccess,
 }: {
-	access: RoleAccessRecord;
+	access: Partial<Record<string, RoleAccess>>;
 }): string => {
+	const access = capRecord({ access: rawAccess });
 	const written = RESOURCES.filter((resource) => access[resource] === "write");
 	if (
 		RESOURCES.every(
@@ -145,22 +158,19 @@ export const summarizeAccess = ({
 	return "No access";
 };
 
-export const RULE_EXEMPT_ROLES = ["owner", "admin"];
-
 export const summarizeRules = ({ role }: { role: ApiRole }) => {
-	if (RULE_EXEMPT_ROLES.includes(role.name)) return "Skips rules";
 	if (role.rule_count === 0) return "No rules";
 	return role.rule_count === 1 ? "1 rule" : `${role.rule_count} rules`;
 };
 
-/** A deleted role's members still carry its slug, so fall back to the raw name. */
-export const roleLabel = ({
+/** A deleted role's members still carry its id, so fall back to the raw id. */
+export const roleName = ({
 	roles,
-	name,
+	roleId,
 }: {
 	roles: ApiRole[];
-	name: string;
-}) => roles.find((role) => role.name === name)?.label ?? name;
+	roleId: string;
+}) => roles.find((role) => role.id === roleId)?.name ?? roleId;
 
 export const memberRoleOptions = ({
 	roles,
@@ -170,9 +180,9 @@ export const memberRoleOptions = ({
 	allowOwner: boolean;
 }): RoleOption[] =>
 	roles
-		.filter((role) => allowOwner || role.name !== "owner")
+		.filter((role) => allowOwner || role.id !== "owner")
 		.map((role) => ({
-			value: role.name,
-			label: role.label,
+			value: role.id,
+			label: role.name,
 			description: summarizeAccess({ access: role.access }),
 		}));

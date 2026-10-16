@@ -3,14 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import {
 	canDoAllows,
 	fetchCanDo,
-} from "@/components/forms/shared/permission/permissionDenialUtils";
+} from "@/components/forms/shared/permission/canDo";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const canDoQueryKey = (action: ApprovalAction) =>
 	["approvals-can", action] as const;
 
-/** Whether the member can start `action`; true until `/approvals/can` answers or if it fails. */
+/** Whether the member can start `action`; true until `approvals.can` answers or if it fails. */
 export const useCanDo = (action: ApprovalAction) => {
 	const axios = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();

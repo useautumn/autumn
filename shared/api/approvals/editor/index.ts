@@ -1,3 +1,3 @@
 export * from "./editorFields";
-export * from "./rowsToWhen";
-export * from "./whenToRows";
+export * from "./ruleFilterToRows";
+export * from "./ruleRowsToFilter";

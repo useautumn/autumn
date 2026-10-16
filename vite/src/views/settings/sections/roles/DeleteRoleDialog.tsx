@@ -33,13 +33,13 @@ export const DeleteRoleDialog = ({
 				<DialogTitle>Delete role</DialogTitle>
 				<DialogDescription className="break-words">
 					Delete{" "}
-					<span className="font-medium text-foreground">{role?.label}</span>?
+					<span className="font-medium text-foreground">{role?.name}</span>?
 					This can't be undone.
 				</DialogDescription>
 			</DialogHeader>
 			{inUseCount !== null && (
 				<p className="text-sm text-destructive">
-					{role?.label} is assigned to {memberCopy({ count: inUseCount })}. Move
+					{role?.name} is assigned to {memberCopy({ count: inUseCount })}. Move
 					them to another role, then delete it.
 				</p>
 			)}

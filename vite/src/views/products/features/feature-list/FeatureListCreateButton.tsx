@@ -6,7 +6,7 @@ import { useCanDo } from "@/hooks/queries/useCanDo";
 import CreateFeatureSheet from "../components/CreateFeatureSheet";
 
 export function FeatureListCreateButton() {
-	const canCreate = useCanDo(APPROVAL_OPENERS.editFeatures);
+	const canCreate = useCanDo(APPROVAL_OPENERS.createFeature);
 	const [open, setOpen] = useState(false);
 
 	useHotkeys(

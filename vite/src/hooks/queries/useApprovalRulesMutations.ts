@@ -1,4 +1,5 @@
 import type {
+	ApprovalRule,
 	ApprovalRuleIssue,
 	CreateApprovalRuleParams,
 } from "@autumn/shared";
@@ -7,6 +8,7 @@ import { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { getBackendErr } from "@/utils/genUtils";
+import { sortRulesByIds } from "@/views/settings/sections/approvals/moveRule";
 import { useApprovalRulesApi } from "./useApprovalRulesApi";
 import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
 
@@ -14,9 +16,10 @@ import { APPROVAL_RULES_KEY } from "./useApprovalRulesQuery";
 export const invalidRuleIssues = ({ error }: { error: unknown }) => {
 	if (!(error instanceof AxiosError)) return null;
 	const body = error.response?.data as
-		| { code?: string; issues?: ApprovalRuleIssue[] }
+		| { code?: string; details?: { issues?: ApprovalRuleIssue[] } }
 		| undefined;
-	return body?.code === "invalid_approval_rule" ? (body.issues ?? []) : null;
+	if (body?.code !== "invalid_approval_rule") return null;
+	return body.details?.issues ?? [];
 };
 
 const useInvalidateApprovalRules = () => {
@@ -31,7 +34,7 @@ export const useToggleApprovalRule = () => {
 	const invalidate = useInvalidateApprovalRules();
 	return useMutation({
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-			api.update({ id, params: { enabled } }),
+			api.update({ id, enabled }),
 		onSettled: invalidate,
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to update rule")),
@@ -49,7 +52,7 @@ export const useSaveApprovalRule = () => {
 		}: {
 			id: string | null;
 			params: CreateApprovalRuleParams;
-		}) => (id ? api.update({ id, params }) : api.create({ params })),
+		}) => (id ? api.update({ id, ...params }) : api.create(params)),
 		// Awaiting the refetch keeps the sheet open until the list shows the change.
 		onSuccess: async (_rule, { id }) => {
 			toast.success(id ? "Rule updated" : "Rule created");
@@ -73,5 +76,35 @@ export const useDeleteApprovalRule = () => {
 		},
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to delete rule")),
+	});
+};
+
+/** Moves rows at once and rolls back if the server refuses the order. */
+export const useReorderApprovalRules = () => {
+	const api = useApprovalRulesApi();
+	const queryClient = useQueryClient();
+	const buildKey = useQueryKeyFactory();
+	const queryKey = buildKey(APPROVAL_RULES_KEY);
+	return useMutation({
+		mutationFn: ({ ids }: { ids: string[] }) => api.reorder({ ids }),
+		onMutate: async ({ ids }) => {
+			await queryClient.cancelQueries({ queryKey });
+			const previous = queryClient.getQueryData<{ list: ApprovalRule[] }>(
+				queryKey,
+			);
+			if (previous) {
+				queryClient.setQueryData(queryKey, {
+					list: sortRulesByIds({ rules: previous.list, ids }),
+				});
+			}
+			return { previous };
+		},
+		onError: (error, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(queryKey, context.previous);
+			}
+			toast.error(getBackendErr(error, "Failed to reorder rules"));
+		},
+		onSettled: () => queryClient.invalidateQueries({ queryKey }),
 	});
 };

@@ -7,10 +7,12 @@ import {
 	accessToScopes,
 	canEditRole,
 	emptyAccess,
-	formValuesToRoleBody,
+	formValuesToCreateBody,
+	formValuesToUpdateBody,
 	memberRoleOptions,
+	nameToRoleId,
 	type RoleAccessRecord,
-	roleLabel,
+	roleName,
 	roleToFormValues,
 	scopesToAccess,
 	summarizeAccess,
@@ -18,8 +20,8 @@ import {
 } from "@/views/settings/sections/roles/roleAccess";
 import { getRoleInUseCount } from "@/views/settings/sections/roles/roleErrors";
 
-// Mirrors RoleNameSchema in D4's shared/api/roles/apiRole.ts.
-const D4_ROLE_NAME = /^[a-z0-9][a-z0-9_-]{0,62}$/;
+// Role id pattern from the D4 roles contract.
+const ROLE_ID = /^[a-z0-9][a-z0-9_-]{0,62}$/;
 
 const access = (overrides: Partial<RoleAccessRecord>): RoleAccessRecord => ({
 	...emptyAccess(),
@@ -27,14 +29,12 @@ const access = (overrides: Partial<RoleAccessRecord>): RoleAccessRecord => ({
 });
 
 const role = (overrides: Partial<ApiRole>): ApiRole => ({
-	name: "support",
-	label: "Support",
+	id: "support",
+	name: "Support",
 	built_in: false,
 	access: access({ balances: "write" }),
 	member_count: 0,
 	rule_count: 0,
-	created_at: 1,
-	updated_at: 1,
 	...overrides,
 });
 
@@ -85,8 +85,8 @@ describe("analytics is capped at read", () => {
 	});
 
 	test("a role body never carries analytics write", () => {
-		const body = formValuesToRoleBody({
-			values: { label: "Ops", access: access({ analytics: "write" }) },
+		const body = formValuesToCreateBody({
+			values: { name: "Ops", access: access({ analytics: "write" }) },
 		});
 		expect(body.access.analytics).toBe("read");
 	});
@@ -103,27 +103,39 @@ describe("built-in roles are read-only", () => {
 
 describe("form values ⇄ role", () => {
 	test.each([
-		{ label: "Support", name: "support" },
-		{ label: "  Finance team ", name: "finance_team" },
-		{ label: "R&D ops", name: "rd_ops" },
-		{ label: "_ops team", name: "ops_team" },
-		{ label: "a".repeat(80), name: "a".repeat(63) },
-	])("label '$label' → name '$name'", ({ label, name }) => {
-		expect(name).toMatch(D4_ROLE_NAME);
-		const body = formValuesToRoleBody({
-			values: { label, access: emptyAccess() },
-		});
-		expect(body).toEqual({ name, label: label.trim(), access: emptyAccess() });
+		{ name: "Support", id: "support" },
+		{ name: "  Finance team ", id: "finance_team" },
+		{ name: "R&D ops", id: "rd_ops" },
+		{ name: "_ops team", id: "ops_team" },
+		{ name: "a".repeat(80), id: "a".repeat(63) },
+	])("name '$name' → id '$id'", ({ name, id }) => {
+		expect(id).toMatch(ROLE_ID);
+		expect(nameToRoleId({ name })).toBe(id);
+		expect(
+			formValuesToCreateBody({ values: { name, access: emptyAccess() } }),
+		).toEqual({ id, name: name.trim(), access: emptyAccess() });
 	});
 
-	test("an existing role seeds the form and round-trips", () => {
-		const existing = role({ access: access({ customers: "write" }) });
-		const values = roleToFormValues({ role: existing });
-		expect(values).toEqual({ label: "Support", access: existing.access });
-		expect(formValuesToRoleBody({ values })).toEqual({
-			name: existing.name,
-			label: existing.label,
-			access: existing.access,
+	test("an update sends the current id and leaves it alone", () => {
+		const roleAccess = access({ balances: "write" });
+		const existing = role({
+			id: "support",
+			name: "Support",
+			access: roleAccess,
+		});
+		const values = { name: "Customer support", access: roleAccess };
+		expect(formValuesToUpdateBody({ role: existing, values })).toEqual({
+			id: "support",
+			name: "Customer support",
+			access: roleAccess,
+		});
+	});
+
+	test("an existing role seeds the form", () => {
+		const roleAccess = access({ customers: "write" });
+		expect(roleToFormValues({ role: role({ access: roleAccess }) })).toEqual({
+			name: "Support",
+			access: roleAccess,
 		});
 	});
 
@@ -136,7 +148,7 @@ describe("form values ⇄ role", () => {
 
 	test("a new role starts with no access", () => {
 		expect(roleToFormValues({ role: null })).toEqual({
-			label: "",
+			name: "",
 			access: emptyAccess(),
 		});
 	});
@@ -173,13 +185,12 @@ describe("access summary", () => {
 
 describe("approval rules column", () => {
 	test.each([
-		{ name: "owner", rule_count: 0, summary: "Skips rules" },
-		{ name: "admin", rule_count: 3, summary: "Skips rules" },
-		{ name: "support", rule_count: 0, summary: "No rules" },
-		{ name: "support", rule_count: 1, summary: "1 rule" },
-		{ name: "sales", rule_count: 2, summary: "2 rules" },
-	])("$name with $rule_count → $summary", ({ name, rule_count, summary }) => {
-		expect(summarizeRules({ role: role({ name, rule_count }) })).toBe(summary);
+		{ id: "owner", rule_count: 0, summary: "No rules" },
+		{ id: "admin", rule_count: 3, summary: "3 rules" },
+		{ id: "support", rule_count: 1, summary: "1 rule" },
+		{ id: "sales", rule_count: 2, summary: "2 rules" },
+	])("$id with $rule_count → $summary", ({ id, rule_count, summary }) => {
+		expect(summarizeRules({ role: role({ id, rule_count }) })).toBe(summary);
 	});
 });
 
@@ -212,17 +223,17 @@ describe("delete errors", () => {
 
 describe("member role select", () => {
 	const roles = [
-		role({ name: "owner", label: "Owner", built_in: true }),
-		role({ name: "admin", label: "Admin", built_in: true }),
-		role({ name: "key_accounts", label: "Key accounts" }),
+		role({ id: "owner", name: "Owner", built_in: true }),
+		role({ id: "admin", name: "Admin", built_in: true }),
+		role({ id: "key_accounts", name: "Key accounts" }),
 	];
 
 	test.each([
-		{ name: "owner", label: "Owner" },
-		{ name: "key_accounts", label: "Key accounts" },
-		{ name: "deleted_role", label: "deleted_role" },
-	])("$name shows '$label'", ({ name, label }) => {
-		expect(roleLabel({ roles, name })).toBe(label);
+		{ roleId: "owner", name: "Owner" },
+		{ roleId: "key_accounts", name: "Key accounts" },
+		{ roleId: "deleted_role", name: "deleted_role" },
+	])("$roleId shows '$name'", ({ roleId, name }) => {
+		expect(roleName({ roles, roleId })).toBe(name);
 	});
 
 	test.each([

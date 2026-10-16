@@ -4,20 +4,37 @@
  * the retry. Other errors render nothing.
  */
 
-import { describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { describe, expect, mock, test } from "bun:test";
 import type { ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
-import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
-import {
-	type PermissionDenial as Denial,
-	violationsInSection,
-} from "@/components/forms/shared/permission/permissionDenialUtils";
-import {
-	BALANCE_DENIAL_SECTIONS,
-	BALANCE_WRITE_KEY,
-} from "@/views/customers2/components/sheets/useBalanceWrite";
+import type { PermissionDenial as Denial } from "@/components/forms/shared/permission/permissionSchemas";
+import { restoreQueryClientContext } from "../../../utils/restoreQueryClientContext";
+
+await restoreQueryClientContext();
+
+mock.module("@/hooks/queries/useRolesQuery", () => ({
+	useRolesQuery: () => ({
+		roles: [{ id: "finance", name: "Finance" }],
+		isLoading: false,
+		error: null,
+	}),
+}));
+
+const { QueryClient, QueryClientProvider } = await import(
+	"@tanstack/react-query"
+);
+const { renderToStaticMarkup } = await import("react-dom/server");
+const { violationsInSection } = await import(
+	"@/components/forms/shared/permission/billingDenialSections"
+);
+const { PermissionDenial } = await import(
+	"@/components/forms/shared/permission/PermissionDenial"
+);
+const { PermissionDenialProvider } = await import(
+	"@/components/forms/shared/permission/PermissionDenialContext"
+);
+const { BALANCE_DENIAL_SECTIONS, BALANCE_WRITE_KEY } = await import(
+	"@/views/customers2/components/sheets/useBalanceWrite"
+);
 
 const denial: Denial = {
 	message: "Sales can grant up to 50 AI credits.",
@@ -25,8 +42,9 @@ const denial: Denial = {
 		{
 			field: "included_grant",
 			label: "Amount",
-			limit: "at most 50",
-			actual: "200",
+			operator: "≤",
+			limit: 50,
+			actual: 200,
 		},
 		{
 			field: "feature_id",
@@ -44,7 +62,16 @@ const permissionDenied = {
 	isAxiosError: true,
 	response: {
 		status: 403,
-		data: { code: "permission_denied", env: "live", ...denial },
+		data: {
+			code: "permission_denied",
+			env: "live",
+			message: denial.message,
+			details: {
+				violations: denial.violations,
+				decided_by: denial.decided_by,
+				allowed_roles: denial.allowed_roles,
+			},
+		},
 	},
 };
 
@@ -111,11 +138,11 @@ describe("a failed balance write", () => {
 				</>
 			),
 		});
-		expect(html).toContain("Amount: limit at most 50, you entered 200");
+		expect(html).toContain("Amount ≤ 50 (this request: 200)");
 		expect(html).toContain("Sales grants");
 		expect(html).toContain(denial.message);
-		expect(html).toContain("Ask an owner, admin or finance");
-		expect(html).not.toContain("Feature: limit");
+		expect(html).toContain("Ask someone with the Finance role");
+		expect(html).not.toContain("Feature");
 	});
 
 	test("any other error renders nothing", () => {

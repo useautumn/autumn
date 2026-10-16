@@ -4,8 +4,8 @@ import { BILLING_MUTATION_KEY } from "../hooks/useBillingMutation";
 import {
 	BILLING_DENIAL_SECTIONS,
 	type PermissionSections,
-	resolvePermissionDenial,
-} from "./permissionDenialUtils";
+} from "./billingDenialSections";
+import { resolvePermissionDenial } from "./resolvePermissionDenial";
 
 type PermissionDenialValue =
 	| (NonNullable<ReturnType<typeof resolvePermissionDenial>> & {

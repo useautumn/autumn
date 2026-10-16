@@ -1,8 +1,8 @@
 import type { ApprovalRule } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
-import type { RuleRowActions } from "./ApprovalRuleRow";
 import { ApprovalRulesEmpty } from "./ApprovalRulesEmpty";
 import { ApprovalRulesTable } from "./ApprovalRulesTable";
+import type { RuleRowActions } from "./RuleRowMenu";
 
 /** The table, or why there isn't one: a failed load or no rules yet. */
 export const ApprovalRulesBody = ({

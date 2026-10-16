@@ -23,7 +23,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
 import { PermissionLock } from "@/components/forms/shared/permission/PermissionLock";
-import { CREDIT_NOTE_WRITE_KEY } from "@/components/forms/shared/permission/permissionDenialUtils";
 import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import {
 	SheetBody,
@@ -37,6 +36,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { CREDIT_NOTE_WRITE_KEY } from "./creditNoteWrite";
 
 type CreditMode = "amount" | "lines";
 

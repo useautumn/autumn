@@ -1,4 +1,4 @@
-import type { WhenKey } from "@autumn/shared";
+import type { ApprovalFilterKey } from "@autumn/shared";
 import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { cn } from "@/lib/utils";
 import { AddButton } from "@/views/migrations/migration/shared/AddButton";
@@ -15,7 +15,7 @@ const groupLabel = (index: number) => (index === 0 ? "When" : "Or");
 
 /** OR groups of AND rows. One group sits flat under "When"; several each get a card. */
 export const RuleWhenSection = ({
-	area,
+	shape,
 	pinned,
 	groups,
 	issues,
@@ -23,7 +23,7 @@ export const RuleWhenSection = ({
 	onPinnedChange,
 	onGroupsChange,
 }: {
-	area: WhenKey;
+	shape: ApprovalFilterKey;
 	pinned: RuleRow | null;
 	groups: Groups;
 	issues: EditorRowIssue[];
@@ -31,7 +31,7 @@ export const RuleWhenSection = ({
 	onPinnedChange: (row: RuleRow) => void;
 	onGroupsChange: (groups: Groups) => void;
 }) => {
-	const registry = ruleFieldRegistry({ area });
+	const registry = ruleFieldRegistry({ shape });
 	const isSplit = groups.length > 1;
 	const newRow = () =>
 		withId(registry.createRow({ path: registry.defaultPath }));
@@ -62,7 +62,7 @@ export const RuleWhenSection = ({
 			{pinned && (
 				<PinnedFeatureRow
 					row={pinned}
-					label={fieldLabel({ area, field: pinned.field })}
+					label={fieldLabel({ shape, field: pinned.field })}
 					issue={pinnedIssue?.message}
 					onChange={onPinnedChange}
 				/>

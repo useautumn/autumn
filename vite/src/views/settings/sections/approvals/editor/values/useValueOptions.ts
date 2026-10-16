@@ -1,8 +1,7 @@
-import { ResetInterval } from "@autumn/shared";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { AppEnv, ResetInterval } from "@autumn/shared";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { TIMINGS } from "../../buildRuleSentence";
+import { ENUM_LABELS } from "../../buildRuleSentence";
+import { useApprovalsCatalog } from "../../useApprovalsCatalog";
 import type { ChipOption } from "../ChipMultiSelect";
 
 const ENUM_VALUES = {
@@ -11,10 +10,11 @@ const ENUM_VALUES = {
 	proration_behavior: ["prorate_immediately", "none", "bill_difference"],
 	cancel_action: ["cancel_end_of_cycle", "cancel_immediately"],
 	reset_interval: Object.values(ResetInterval) as string[],
+	billing_cycle_anchor: ["now", "unchanged", "custom"],
 };
 
 const LABELS: Record<string, string> = {
-	...TIMINGS,
+	...ENUM_LABELS,
 	semi_annual: "Semi-annual",
 	one_off: "One-off",
 };
@@ -39,10 +39,12 @@ const toOption = ({ id, name }: { id: string; name?: string | null }) => ({
 const enumOptions = (values: string[]) =>
 	values.map((value) => ({ value, label: enumLabel(value) }));
 
-const useFeatureOptions = () => useFeaturesQuery().features.map(toOption);
-const useRewardOptions = () => useRewardsQuery().rewards.map(toOption);
+const useFeatureOptions = () => useApprovalsCatalog().features.map(toOption);
+// Rules are live, like the plan and feature options from useApprovalsCatalog.
+const useRewardOptions = () =>
+	useRewardsQuery({ env: AppEnv.Live }).rewards.map(toOption);
 const usePlanOptions = () => {
-	const { products } = useProductsQuery();
+	const { products } = useApprovalsCatalog();
 	return [...new Map(products.map((plan) => [plan.id, plan])).values()].map(
 		toOption,
 	);

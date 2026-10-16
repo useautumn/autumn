@@ -1,8 +1,9 @@
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
-import { isPermissionDeniedError } from "./permissionDenialUtils";
+import { formatDenialToast } from "./formatDenial";
+import { denialFromError } from "./resolvePermissionDenial";
 
-/** Toasts a failed write, except a rules denial when the sheet renders it inline. */
+/** Toasts a failed write; a rules denial names its rule, or stays silent when the sheet renders it inline. */
 export const toastWriteError = ({
 	error,
 	fallback,
@@ -12,6 +13,11 @@ export const toastWriteError = ({
 	fallback: string;
 	inlineDenials?: boolean;
 }) => {
-	if (inlineDenials && isPermissionDeniedError({ error })) return;
-	toast.error(getBackendErr(error, fallback));
+	const denial = denialFromError({ error });
+	if (!denial) {
+		toast.error(getBackendErr(error, fallback));
+		return;
+	}
+	if (inlineDenials) return;
+	toast.error(formatDenialToast({ denial }));
 };

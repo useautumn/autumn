@@ -3,9 +3,12 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 } from "../../../../utils/productUtils/classifyProduct/classifyProductUtils.js";
-import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
-import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
+import { pricesAndEntitlementsToBasePriceAndEntitlementPrices } from "../../../../utils/productUtils/entitlementPriceUtils/convertEntitlementPrice/pricesAndEntitlementsToBasePriceAndEntitlementPrices.js";
+import { stringMatcherMatches } from "../../../common/filters/match/index.js";
+import { numberMatcherMatches } from "../../../common/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
+import { basePriceFilterMatches } from "./basePriceFilterMatches.js";
+import { itemFilterMatchesEntitlementPrices } from "./itemFilterMatchesEntitlementPrices.js";
 
 export const planFilterMatchesProduct = ({
 	filter,
@@ -60,13 +63,24 @@ export const planFilterMatchesProduct = ({
 		return false;
 	}
 
-	const unsupported = ["price", "item"] as const;
-	for (const key of unsupported) {
-		if ((filter as Record<string, unknown>)[key] !== undefined) {
-			throw new Error(
-				`planFilterMatchesProduct: filter.${key} not supported in JS matcher yet`,
-			);
-		}
+	if (
+		filter.price !== undefined &&
+		!basePriceFilterMatches({ filter: filter.price, prices: product.prices })
+	) {
+		return false;
+	}
+
+	if (filter.item !== undefined) {
+		const { entitlementPrices } =
+			pricesAndEntitlementsToBasePriceAndEntitlementPrices({
+				prices: product.prices,
+				entitlements: product.entitlements,
+			});
+		const itemsMatch = itemFilterMatchesEntitlementPrices({
+			filter: filter.item,
+			entitlementPrices,
+		});
+		if (!itemsMatch) return false;
 	}
 
 	return true;

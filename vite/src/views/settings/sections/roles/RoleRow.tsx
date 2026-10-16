@@ -36,7 +36,7 @@ export const RoleRow = ({
 		<TableRow className={SETTINGS_ROW_CLASS}>
 			<TableCell className="pl-4">
 				<div className="flex items-center gap-2">
-					<span className="font-medium text-foreground">{role.label}</span>
+					<span className="font-medium text-foreground">{role.name}</span>
 					{role.built_in && <LabelTag label="Built-in" />}
 				</div>
 			</TableCell>
@@ -57,7 +57,7 @@ export const RoleRow = ({
 									size="icon"
 									iconOrientation="center"
 									icon={<EllipsisVertical />}
-									aria-label={`${role.label} actions`}
+									aria-label={`${role.name} actions`}
 									className="!size-5 rounded-lg hover:bg-interactive-secondary-hover"
 								/>
 							}

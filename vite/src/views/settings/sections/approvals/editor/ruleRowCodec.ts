@@ -1,3 +1,4 @@
+import type { DurationBound } from "@autumn/shared";
 import {
 	EDITOR_FIELDS,
 	type EditorField,
@@ -5,7 +6,6 @@ import {
 	type EditorRow,
 	type EditorRowValue,
 	type PlanSelection,
-	type TrialDuration,
 } from "@autumn/shared/api/approvals/editor/index";
 import type { FilterRow } from "@/components/filters/types";
 import { makePlanKey, parsePlanKey } from "@/lib/planSelectionKeys";
@@ -16,6 +16,7 @@ export type RuleRow = FilterRow<EditorField, EditorOperator>;
 // Fields whose input the operators alone don't tell apart.
 const NAMED_INPUTS: Partial<Record<EditorField, string>> = {
 	customer: "customer",
+	entity: "feature",
 	discount: "reward",
 	reward: "reward",
 	feature: "feature",
@@ -98,14 +99,14 @@ const decodeValue = ({ field, operator, values }: RuleRow): EditorRowValue => {
 				return values.length > 0 ? values.map(toPlan) : null;
 			return first ? toPlan(first) : null;
 		case "yes_no":
-			return first === "true";
+			return first === undefined ? null : first === "true";
 		case "trial": {
 			const length = toNumber(first);
 			return length === null
 				? null
 				: {
 						length,
-						unit: (second || DEFAULT_TRIAL_UNIT) as TrialDuration["unit"],
+						unit: (second || DEFAULT_TRIAL_UNIT) as DurationBound["unit"],
 					};
 		}
 		case "quantity": {
@@ -129,7 +130,7 @@ const encodeValue = ({ field, value }: EditorRow): string[] => {
 				return makePlanKey({ planId: plan_id, version });
 			});
 		case "trial": {
-			const { length, unit } = value as TrialDuration;
+			const { length, unit } = value as DurationBound;
 			return [String(length), unit];
 		}
 		case "quantity": {

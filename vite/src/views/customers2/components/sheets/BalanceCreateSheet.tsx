@@ -52,6 +52,9 @@ const RESET_INTERVAL_LABELS: Record<string, string> = {
 	[ResetInterval.Year]: "Year",
 };
 
+// Fields hidden for non-metered features; a stale value can still be sent and denied.
+const METERED_ONLY_SECTIONS = ["grant", "reset", "expires"];
+
 export function BalanceCreateSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const { customer, refetch } = useCusQuery();
@@ -224,6 +227,14 @@ export function BalanceCreateSheet() {
 									value={balanceId}
 									onChange={(e) => setBalanceId(e.target.value)}
 								/>
+								{!isMetered &&
+									METERED_ONLY_SECTIONS.map((section) => (
+										<PermissionDenial
+											key={section}
+											section={section}
+											className="px-0"
+										/>
+									))}
 							</div>
 
 							{isMetered && (
@@ -259,6 +270,9 @@ export function BalanceCreateSheet() {
 										</IconCheckbox>
 									</div>
 									<PermissionDenial section="grant" className="px-0" />
+									{unlimited && (
+										<PermissionDenial section="reset" className="px-0" />
+									)}
 								</div>
 							)}
 

@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { Button, Skeleton } from "@autumn/ui";
 import { useApprovalRulesQuery } from "@/hooks/queries/useApprovalRulesQuery";
 import { useEnv } from "@/utils/envUtils";
+import { useCurrentMembership } from "@/views/main-sidebar/org-dropdown/hooks/useCurrentMembership";
 import { SettingsSection } from "../SettingsSection";
 import { ApprovalRulesList } from "./approvals/ApprovalRulesList";
 import { ApprovalRuleSheet } from "./approvals/editor/ApprovalRuleSheet";
@@ -11,20 +12,23 @@ import { useRuleDialogs } from "./approvals/editor/useRuleDialogs";
 export const ApprovalsSection = () => {
 	const { rules, isLoading, error } = useApprovalRulesQuery();
 	const env = useEnv();
+	const { isAdmin } = useCurrentMembership();
 	const dialogs = useRuleDialogs();
 
 	return (
 		<SettingsSection
 			title="Approvals"
-			description="Who can make changes, and when. Rules only allow."
+			description="Who can or can't make billing changes, and when."
 			actions={
-				<Button
-					variant="primary"
-					size="sm"
-					onClick={() => dialogs.openEditor({ rule: null })}
-				>
-					New rule
-				</Button>
+				isAdmin && (
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => dialogs.openEditor({ rule: null })}
+					>
+						New rule
+					</Button>
+				)
 			}
 		>
 			{isLoading ? (
@@ -35,7 +39,8 @@ export const ApprovalsSection = () => {
 					error={error}
 					isSandbox={env === AppEnv.Sandbox}
 					rowActions={{
-						onEdit: (rule) => dialogs.openEditor({ rule }),
+						canEdit: isAdmin,
+						onOpen: (rule) => dialogs.openEditor({ rule }),
 						onDelete: (rule) => dialogs.openDelete({ rule }),
 					}}
 				/>
@@ -43,6 +48,7 @@ export const ApprovalsSection = () => {
 			<ApprovalRuleSheet
 				key={dialogs.nonce}
 				rule={dialogs.rule}
+				canEdit={isAdmin}
 				open={dialogs.dialog === "editor"}
 				onOpenChange={dialogs.setOpen}
 			/>

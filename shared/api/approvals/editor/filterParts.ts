@@ -33,7 +33,6 @@ export const NEGATED_NUMBER_OPERATORS: Record<string, string> = {
 	gte: "lt",
 };
 
-/** Caps (<, ≤) on something optional also pass when it's absent. */
 export const isCapOperator = (operator: string) =>
 	operator === "lt" || operator === "lte";
 
@@ -72,6 +71,7 @@ const toSelection = ({ plan_id, version }: PlanSelection): PlanSelection =>
 const isPlanSelection = (value: unknown): value is PlanSelection =>
 	isPlainObject(value) &&
 	typeof value.plan_id === "string" &&
+	value.plan_id !== "" &&
 	(value.version === undefined || typeof value.version === "number");
 
 /**
@@ -89,7 +89,7 @@ export const toPlanFilter = (value: unknown) => {
 	return { $or: value.map(toSelection) };
 };
 
-export const isPlanBranches = (branches: unknown) =>
+const isPlanBranches = (branches: unknown) =>
 	Array.isArray(branches) &&
 	branches.every((branch) => isPlainObject(branch) && "plan_id" in branch);
 
@@ -115,9 +115,15 @@ export const planSelectionsOf = (
 export const fromPlanFilter = (filter: unknown) =>
 	planSelectionsOf(filter)[0] ?? null;
 
+/** `{ $ne: null }` / `{ $eq: null }`: matches by presence alone, so nothing merges into it. */
+const isNullMatcher = (value: Filter) =>
+	Object.entries(value).every(
+		([key, inner]) => (key === "$ne" || key === "$eq") && inner === null,
+	);
+
 // `{}` is a value ("has no plan"), not a container to merge into.
 const isMergeable = (value: unknown): value is Filter =>
-	isPlainObject(value) && !isEmptyObject(value);
+	isPlainObject(value) && !isEmptyObject(value) && !isNullMatcher(value);
 
 /** `{ a: { b: leaf } }` from `["a", "b"]`. */
 export const at = (path: string[], leaf: unknown): Filter =>
@@ -129,15 +135,21 @@ export const get = (value: unknown, path: string[]) =>
 		value,
 	);
 
-// "Some plan is X" and "some plan is Y" aren't one plan that's both, and the same goes for none.
-const EXISTENTIAL_QUANTIFIERS = ["$some", "$none"];
+/**
+ * "No plan is X" and "no plan is Y" aren't "no plan is both", and each
+ * customer plan check stands alone ("has A", "has B"), so these never merge.
+ */
+const keepsApart = ({ key, parent }: { key: string; parent?: string }) =>
+	key === "$none" || parent === "plan";
 
 const deepMerge = ({
 	base,
 	addition,
+	parent,
 }: {
 	base: Filter;
 	addition: Filter;
+	parent?: string;
 }): Filter | null => {
 	const merged = { ...base };
 	for (const [key, value] of Object.entries(addition)) {
@@ -147,9 +159,9 @@ const deepMerge = ({
 		} else if (
 			isMergeable(current) &&
 			isMergeable(value) &&
-			!EXISTENTIAL_QUANTIFIERS.includes(key)
+			!keepsApart({ key, parent })
 		) {
-			const inner = deepMerge({ base: current, addition: value });
+			const inner = deepMerge({ base: current, addition: value, parent: key });
 			if (!inner) return null;
 			merged[key] = inner;
 		} else {
@@ -160,8 +172,9 @@ const deepMerge = ({
 };
 
 /**
- * Merges one row's filter into its group's. A row that sets something already
- * set is kept whole as an `$and` entry, so no condition is ever overwritten.
+ * Merges one row's filter into its group's, so rows on one plan share an
+ * element. A row that sets something already set is kept whole as an `$and`
+ * entry, so no condition is ever overwritten.
  */
 export const mergeFilters = ({
 	base,

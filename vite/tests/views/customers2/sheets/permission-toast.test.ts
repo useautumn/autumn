@@ -19,9 +19,11 @@ const permissionDenied = {
 			code: "permission_denied",
 			env: "live",
 			message: "Sales can grant up to 50 credits.",
-			violations: [],
-			decided_by: { level: "role", rule_id: "apr_1", rule_name: "Sales" },
-			allowed_roles: [],
+			details: {
+				violations: [],
+				decided_by: { level: "role", rule_id: "apr_1", rule_name: "Sales" },
+				allowed_roles: [],
+			},
 		},
 	},
 };

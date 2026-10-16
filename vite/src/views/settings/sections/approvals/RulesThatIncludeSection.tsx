@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { useIsSettingsTabEnabled } from "@/views/settings/SettingsView";
-import { RULE_EXEMPT_ROLES } from "../roles/roleAccess";
 import { RulesThatIncludeBody } from "./RulesThatIncludeBody";
 import type { RuleAudience } from "./rulesThatInclude";
 
@@ -11,18 +10,15 @@ import type { RuleAudience } from "./rulesThatInclude";
 export const RulesThatIncludeSection = ({
 	audience,
 	name,
-	roleLabel = null,
+	roleName = null,
 }: {
 	audience: RuleAudience;
 	name: string;
-	roleLabel?: string | null;
+	roleName?: string | null;
 }) => {
 	const env = useEnv();
 	const isTabEnabled = useIsSettingsTabEnabled();
 	if (!isTabEnabled("approvals")) return null;
-
-	const exempt =
-		audience.role !== null && RULE_EXEMPT_ROLES.includes(audience.role);
 
 	return (
 		<section className="flex flex-col gap-2.5">
@@ -38,19 +34,14 @@ export const RulesThatIncludeSection = ({
 					<ArrowUpRightIcon className="size-3" />
 				</Link>
 			</div>
-			{exempt ? (
-				<p className="text-subtle text-xs">
-					Owners and Admins are never limited by approval rules.
-				</p>
-			) : (
-				<RulesThatIncludeBody
-					audience={audience}
-					name={name}
-					roleLabel={roleLabel}
-				/>
-			)}
+			<RulesThatIncludeBody
+				audience={audience}
+				name={name}
+				roleName={roleName}
+			/>
 			<p className="text-subtle text-xs">
-				Read only. Edit rules in Billing → Approvals.
+				The most specific rule that matches decides; within a level, later rules
+				win. Read only. Edit rules in Billing → Approvals.
 			</p>
 		</section>
 	);

@@ -15,21 +15,19 @@ import {
 	accessError,
 	accessToScopes,
 	canEditRole,
-	formValuesToRoleBody,
-	labelToName,
-	type RoleBody,
+	nameToRoleId,
+	type RoleFormValues,
 	roleToFormValues,
 	scopesToAccess,
 } from "./roleAccess";
 
-const LabelSchema = z
-	.string()
-	.trim()
-	.min(1, "Name is required")
-	.refine(
-		(label) => labelToName({ label }).length > 0,
-		"Use at least one letter or number",
-	);
+const NameSchema = z.string().trim().min(1, "Name is required");
+
+// The id is derived once, at create, and never changes after.
+const NewRoleNameSchema = NameSchema.refine(
+	(name) => nameToRoleId({ name }).length > 0,
+	"Use at least one letter or number",
+);
 
 const sheetTitle = ({
 	role,
@@ -40,7 +38,7 @@ const sheetTitle = ({
 }) => {
 	if (!role) return "New role";
 	if (editable) return "Edit role";
-	return role.label;
+	return role.name;
 };
 
 export const RoleFormSheet = ({
@@ -54,15 +52,14 @@ export const RoleFormSheet = ({
 	role: ApiRole | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	onSubmit: (params: { body: RoleBody }) => void;
+	onSubmit: (params: { values: RoleFormValues }) => void;
 	isSaving: boolean;
 	readOnly: boolean;
 }) => {
 	const editable = !readOnly && (!role || canEditRole({ role }));
 	const form = useAppForm({
 		defaultValues: roleToFormValues({ role }),
-		onSubmit: ({ value }) =>
-			onSubmit({ body: formValuesToRoleBody({ values: value }) }),
+		onSubmit: ({ value }) => onSubmit({ values: value }),
 	});
 
 	return (
@@ -82,12 +79,16 @@ export const RoleFormSheet = ({
 
 				<div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
 					{editable && (
-						<form.AppField name="label" validators={{ onSubmit: LabelSchema }}>
+						<form.AppField
+							name="name"
+							validators={{ onSubmit: role ? NameSchema : NewRoleNameSchema }}
+						>
 							{(field) => (
 								<field.TextField
 									label="Name"
 									type="text"
 									placeholder="Account managers"
+									textAfter={role ? `ID: ${role.id}` : undefined}
 								/>
 							)}
 						</form.AppField>
@@ -118,8 +119,8 @@ export const RoleFormSheet = ({
 					</form.Field>
 					{role && (
 						<RulesThatIncludeSection
-							audience={{ type: "role", role: role.name }}
-							name={role.label}
+							audience={{ type: "role", roleId: role.id }}
+							name={role.name}
 						/>
 					)}
 				</div>

@@ -1,70 +1,83 @@
 /**
- * Contract: the invoice, reward, customer and catalog areas offer exactly the
- * rows on the "When fields by area" board, and each row round-trips (S5 · E5b–e).
+ * Contract: the invoice, reward, customer and catalog shapes offer exactly the
+ * rows on the "When fields by area" board, and each row round-trips under
+ * both effects (moved here from U7).
  */
 
 import { describe, expect, test } from "bun:test";
-import type { WhenKey } from "@autumn/shared";
+import type {
+	ApprovalFilterKey,
+	ApprovalRuleEffect as RuleEffect,
+} from "@autumn/shared";
 import {
 	EDITOR_FIELDS,
-	rowsToWhen,
-	whenToRows,
+	type EditorRow,
+	ruleFilterToRows,
+	ruleRowsToFilter,
 } from "@autumn/shared/api/approvals/editor/index.js";
 
 const CUSTOMER_ROWS = {
 	customer: ["is", "is_not", "is_any_of", "is_none_of"],
 	customer_plan: ["has", "doesnt_have", "has_none"],
+	customer_has_paid: ["is"],
 };
 const MONEY = ["eq", "ne", "lt", "lte", "gt", "gte"];
 const ID = ["is", "is_not", "is_any_of", "is_none_of"];
+const EFFECTS: RuleEffect[] = ["allow", "block"];
 
-const BOARD: Partial<Record<WhenKey, Record<string, string[]>>> = {
+const BOARD: Partial<Record<ApprovalFilterKey, Record<string, string[]>>> = {
 	invoice: { ...CUSTOMER_ROWS, total: MONEY, refund: MONEY },
-	reward_apply: { ...CUSTOMER_ROWS, reward: ID },
-	customer: CUSTOMER_ROWS,
-	catalog_plan: { plan: ID },
-	catalog_feature: { feature: ID },
+	reward_redeem: { ...CUSTOMER_ROWS, reward: ID },
+	customer_change: CUSTOMER_ROWS,
+	plan: { plan: ID },
+	feature: { feature: ID },
 };
 
-describe("area When fields match the board", () => {
-	test.each(Object.entries(BOARD))("%s", (area, rows) => {
-		expect<unknown>(EDITOR_FIELDS[area as WhenKey]).toEqual(rows);
+const CASES: [ApprovalFilterKey, string, string, unknown, unknown][] = [
+	["invoice", "total", "lte", 100, { total: { $lte: 100 } }],
+	[
+		"reward_redeem",
+		"reward",
+		"is_none_of",
+		["launch20"],
+		{ reward_id: { $nin: ["launch20"] } },
+	],
+	["plan", "plan", "is", "enterprise", { plan_id: "enterprise" }],
+	[
+		"feature",
+		"feature",
+		"is_any_of",
+		["ai_credits", "messages"],
+		{ feature_id: { $in: ["ai_credits", "messages"] } },
+	],
+	[
+		"customer_change",
+		"customer",
+		"is",
+		"acme",
+		{ customer: { customer_id: "acme" } },
+	],
+];
+
+describe("shape fields match the board", () => {
+	test.each(Object.entries(BOARD))("%s", (shape, rows) => {
+		expect<unknown>(EDITOR_FIELDS[shape as ApprovalFilterKey]).toEqual(rows);
 	});
 
-	test.each<[WhenKey, string, string, unknown, unknown]>([
-		["invoice", "total", "lte", 100, { total: { $lte: 100 } }],
-		[
-			"reward_apply",
-			"reward",
-			"is_none_of",
-			["launch20"],
-			{ reward_id: { $nin: ["launch20"] } },
-		],
-		["catalog_plan", "plan", "is", "enterprise", { plan_id: "enterprise" }],
-		[
-			"catalog_feature",
-			"feature",
-			"is_any_of",
-			["ai_credits", "messages"],
-			{ feature_id: { $in: ["ai_credits", "messages"] } },
-		],
-		[
-			"customer",
-			"customer",
-			"is",
-			"acme",
-			{ customer: { customer_id: "acme" } },
-		],
-	])("%s · %s %s round-trips", (area, field, operator, value, when) => {
-		const row = { field, operator, value } as never;
-		expect<unknown>(rowsToWhen({ area, groups: [[row]] })).toEqual({
-			ok: true,
-			when,
-		});
-		expect(whenToRows({ area, when })).toEqual({
-			editable: true,
-			pinned: null,
-			groups: [[row]],
-		});
-	});
+	test.each(
+		EFFECTS.flatMap((effect) => CASES.map((c) => [effect, ...c] as const)),
+	)(
+		"%s · %s · %s %s round-trips",
+		(effect, shape, field, operator, value, filter) => {
+			const row = { field, operator, value } as EditorRow;
+			expect<unknown>(
+				ruleRowsToFilter({ shape, effect, groups: [[row]] }),
+			).toEqual({ ok: true, filter });
+			expect(ruleFilterToRows({ shape, effect, filter })).toEqual({
+				editable: true,
+				pinned: null,
+				groups: [[row]],
+			});
+		},
+	);
 });

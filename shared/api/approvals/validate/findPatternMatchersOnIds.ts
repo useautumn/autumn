@@ -1,4 +1,4 @@
-import type { ApprovalRuleIssue, WhenEntry } from "./types";
+import type { ApprovalRuleIssue, FilterEntry } from "./types";
 
 const ID_FIELD_LABELS: Record<string, string> = {
 	customer_id: "Customer",
@@ -21,7 +21,7 @@ const patternOperatorOf = ({ value }: { value: unknown }) =>
 export const findPatternMatchersOnIds = ({
 	entries,
 }: {
-	entries: WhenEntry[];
+	entries: FilterEntry[];
 }): ApprovalRuleIssue[] =>
 	entries.flatMap((entry) => {
 		const fieldLabel = ID_FIELD_LABELS[entry.key];

@@ -5,13 +5,13 @@ import type {
 } from "@autumn/shared";
 import { Sheet, SheetContent } from "@autumn/ui";
 import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
-import {
-	CREDIT_NOTE_DENIAL_SECTIONS,
-	CREDIT_NOTE_WRITE_KEY,
-} from "@/components/forms/shared/permission/permissionDenialUtils";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
+import {
+	CREDIT_NOTE_DENIAL_SECTIONS,
+	CREDIT_NOTE_WRITE_KEY,
+} from "@/views/customers2/components/sheets/creditNoteWrite";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";

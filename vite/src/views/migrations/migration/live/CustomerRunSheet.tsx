@@ -22,8 +22,10 @@ import {
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { SheetBody } from "@/components/v2/sheets/SharedSheetComponents";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { navigateTo } from "@/utils/genUtils";
@@ -125,6 +127,8 @@ export function CustomerRunSheet({
 	const lastActionRef = useRef<"dry" | "live" | null>(null);
 
 	const prevRunningRef = useRef(isRunning);
+	const canRun = useCanDo(APPROVAL_OPENERS.runMigration);
+	const runLocked = isRunInProgress || !canRun;
 	useEffect(() => {
 		if (prevRunningRef.current && !isRunning) lastActionRef.current = null;
 		prevRunningRef.current = isRunning;
@@ -135,13 +139,13 @@ export function CustomerRunSheet({
 	);
 
 	const handleDryRun = () => {
-		if (isRunInProgress) return;
+		if (runLocked) return;
 		lastActionRef.current = "dry";
 		onTriggerRun({ dryRun: true, only: [customerId] });
 	};
 
 	const handleLiveRun = () => {
-		if (isRunInProgress) return;
+		if (runLocked) return;
 		setIsRunDialogOpen(false);
 		lastActionRef.current = "live";
 		onTriggerRun({ dryRun: false, only: [customerId] });
@@ -279,7 +283,7 @@ export function CustomerRunSheet({
 					className="w-full"
 					onClick={handleDryRun}
 					isLoading={isRunning && lastActionRef.current === "dry"}
-					disabled={hasSuccessfulLiveRun || isRunInProgress}
+					disabled={hasSuccessfulLiveRun || runLocked}
 				>
 					<EyeIcon size={14} />
 					Dry Run
@@ -289,7 +293,7 @@ export function CustomerRunSheet({
 					metaShortcut="enter"
 					className="w-full"
 					onClick={() => setIsRunDialogOpen(true)}
-					disabled={hasSuccessfulLiveRun || isRunInProgress || isRunDialogOpen}
+					disabled={hasSuccessfulLiveRun || runLocked || isRunDialogOpen}
 				>
 					<PlayIcon size={14} weight="fill" />
 					Run
@@ -325,7 +329,7 @@ export function CustomerRunSheet({
 							metaShortcut="enter"
 							onClick={handleLiveRun}
 							isLoading={isRunning && lastActionRef.current === "live"}
-							disabled={!isRunDialogOpen || isRunInProgress}
+							disabled={!isRunDialogOpen || runLocked}
 						>
 							<PlayIcon size={14} weight="fill" />
 							Run

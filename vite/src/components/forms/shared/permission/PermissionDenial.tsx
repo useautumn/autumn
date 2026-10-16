@@ -1,13 +1,14 @@
 import { Alert, AlertDescription, AlertTitle } from "@autumn/ui";
 import { cn } from "@autumn/ui/lib/utils";
 import { ProhibitIcon } from "@phosphor-icons/react";
-import { usePermissionDenial } from "./PermissionDenialContext";
+import { violationsInSection } from "./billingDenialSections";
 import {
 	formatAskRoles,
 	formatDecidedBy,
 	formatViolation,
-	violationsInSection,
-} from "./permissionDenialUtils";
+} from "./formatDenial";
+import { usePermissionDenial } from "./PermissionDenialContext";
+import { useRoleName } from "./useRoleName";
 
 /** A section's violations under its fields; `summary` adds the rule, its note and who can approve. */
 export function PermissionDenial({
@@ -18,6 +19,7 @@ export function PermissionDenial({
 	className?: string;
 }) {
 	const resolved = usePermissionDenial();
+	const roleName = useRoleName();
 	if (!resolved) return null;
 
 	const { denial, sections } = resolved;
@@ -50,7 +52,7 @@ export function PermissionDenial({
 				{violations}
 				<p>{denial.message}</p>
 				<p className="text-xs text-tertiary-foreground">
-					{formatDecidedBy({ denial })}. {formatAskRoles({ denial })}.
+					{formatDecidedBy({ denial })}. {formatAskRoles({ denial, roleName })}.
 				</p>
 			</AlertDescription>
 		</Alert>

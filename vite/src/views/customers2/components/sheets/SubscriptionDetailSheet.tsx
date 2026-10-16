@@ -67,7 +67,7 @@ export function SubscriptionDetailSheet() {
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
 	const canDoCancel = useCanDo("billing.cancel");
 	const canDoUncancel = useCanDo("billing.uncancel");
-	const canDoUpdate = useCanDo("billing.update_subscription");
+	const canDoUpdate = useCanDo("billing.update");
 
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });

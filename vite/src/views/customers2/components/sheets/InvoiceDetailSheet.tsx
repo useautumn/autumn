@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { AdminHover } from "@/components/general/AdminHover";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -37,7 +38,6 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeInvoiceLink,
@@ -141,7 +141,11 @@ export function InvoiceDetailSheet({
 			await refreshCustomer();
 		},
 		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to void invoice"));
+			toastWriteError({
+				error,
+				fallback: "Failed to void invoice",
+				inlineDenials: false,
+			});
 		},
 	});
 
@@ -153,7 +157,11 @@ export function InvoiceDetailSheet({
 			await refreshCustomer();
 		},
 		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to mark invoice as paid"));
+			toastWriteError({
+				error,
+				fallback: "Failed to mark invoice as paid",
+				inlineDenials: false,
+			});
 		},
 	});
 
@@ -165,7 +173,11 @@ export function InvoiceDetailSheet({
 			await refreshCustomer();
 		},
 		onError: (error) => {
-			toast.error(getBackendErr(error, "Failed to finalize invoice"));
+			toastWriteError({
+				error,
+				fallback: "Failed to finalize invoice",
+				inlineDenials: false,
+			});
 		},
 	});
 

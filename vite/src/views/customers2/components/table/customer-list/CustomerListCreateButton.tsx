@@ -17,10 +17,11 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { useCanDo } from "@/hooks/queries/useCanDo";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { navigateTo } from "@/utils/genUtils";
 
 export function CustomerListCreateButton() {
 	const canCreate = useCanDo(APPROVAL_OPENERS.createCustomer);
@@ -66,7 +67,11 @@ export function CustomerListCreateButton() {
 			}
 			toast.success("Customer created successfully");
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create customer"));
+			toastWriteError({
+				error,
+				fallback: "Failed to create customer",
+				inlineDenials: false,
+			});
 		}
 		setIsLoading(false);
 	};

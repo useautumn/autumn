@@ -10,16 +10,16 @@ const Caption = ({ children }: { children: string }) => (
 export const RulesThatIncludeBody = ({
 	audience,
 	name,
-	roleLabel,
+	roleName,
 }: {
 	audience: RuleAudience;
 	name: string;
-	roleLabel: string | null;
+	roleName: string | null;
 }) => {
 	const { items, isLoading, error } = useRulesThatInclude({
 		audience,
 		name,
-		roleLabel,
+		roleName,
 	});
 
 	if (isLoading) return null;

@@ -57,7 +57,7 @@ export function CustomerActions() {
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const canEditCustomer = useCanDo(APPROVAL_OPENERS.editCustomer);
-	const canApplyReward = useCanDo(APPROVAL_OPENERS.applyReward);
+	const canApplyReward = useCanDo(APPROVAL_OPENERS.redeemReward);
 	const canDeleteCustomer = useCanDo(APPROVAL_OPENERS.deleteCustomer);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();

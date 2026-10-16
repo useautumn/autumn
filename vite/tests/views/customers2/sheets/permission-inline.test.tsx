@@ -1,81 +1,112 @@
 /**
- * Contract (approvals-api-schema §3): a deny verdict on a billing preview
- * disables submit and puts each violation on its field; no field or an allow
- * verdict leaves the sheet as it is today. A 403 `permission_denied` on submit
- * renders the same way.
+ * Contract (PRD §3, decisions 7 and 14): an enforced deny on a billing preview
+ * disables submit and puts each matched condition on its field; a shadow-mode
+ * deny, an allow or no `permission` leaves the sheet as it is. A 403
+ * `permission_denied` reads its rule from `details` and never locks the retry.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { BillingFooter } from "@/components/forms/shared/BillingFooter";
-import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
-import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
-import {
-	formatViolation,
-	resolvePermissionDenial,
-	violationsInSection,
-} from "@/components/forms/shared/permission/permissionDenialUtils";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
+import type { PermissionDenial as Denial } from "@/components/forms/shared/permission/permissionSchemas";
+import { restoreQueryClientContext } from "../../../utils/restoreQueryClientContext";
 
-const denyPermission = {
-	verdict: "deny",
-	message: "Sales can approve trials up to 31 days that never charge.",
+await restoreQueryClientContext();
+
+mock.module("@/hooks/queries/useRolesQuery", () => ({
+	useRolesQuery: () => ({
+		roles: [{ id: "finance", name: "Finance" }],
+		isLoading: false,
+		error: null,
+	}),
+}));
+
+const { QueryClient, QueryClientProvider } = await import(
+	"@tanstack/react-query"
+);
+const { renderToStaticMarkup } = await import("react-dom/server");
+const { BillingFooter } = await import(
+	"@/components/forms/shared/BillingFooter"
+);
+const { PermissionDenial } = await import(
+	"@/components/forms/shared/permission/PermissionDenial"
+);
+const { PermissionDenialProvider } = await import(
+	"@/components/forms/shared/permission/PermissionDenialContext"
+);
+const { resolvePermissionDenial } = await import(
+	"@/components/forms/shared/permission/resolvePermissionDenial"
+);
+const { violationsInSection } = await import(
+	"@/components/forms/shared/permission/billingDenialSections"
+);
+const { formatAskRoles, formatViolation } = await import(
+	"@/components/forms/shared/permission/formatDenial"
+);
+
+const denial: Denial = {
+	message: "Only Finance gives trials on Enterprise.",
 	violations: [
 		{
-			field: "incoming[0].free_trial",
-			label: "Free trial",
-			limit: "31 days",
-			actual: "45 days",
+			field: "incoming[0].plan_id",
+			label: "Plan",
+			operator: "is",
+			limit: "Enterprise",
+			actual: "Enterprise",
 		},
 		{
-			field: "discounts[1].percent_off",
-			label: "Percent off",
-			limit: "at most 20%",
-			actual: "30%",
+			field: "billing_cycle_anchor",
+			label: "Billing cycle anchor",
+			operator: "is",
+			limit: "custom",
+			actual: "custom",
 		},
-		{ field: "paid", label: "Charges customer", limit: false, actual: true },
+		{
+			field: "entity",
+			label: "Entity",
+			operator: "is",
+			limit: "seats",
+			actual: "seats",
+		},
+		{ field: "paid", label: "Charges customer", limit: true, actual: true },
 	],
 	decided_by: { level: "role", rule_id: "apr_1", rule_name: "Sales trials" },
-	allowed_roles: ["finance", "owner", "admin"],
+	allowed_roles: ["finance"],
 };
 
-const deniedPreview = { total: 99, permission: denyPermission };
-const allowedPreview = {
-	total: 0,
-	permission: { verdict: "allow", decided_by: null },
-};
-const allowedByRulePreview = {
+const enforcedDeny = {
 	total: 99,
-	permission: {
-		verdict: "allow",
-		decided_by: {
-			level: "role",
-			rule_id: "apr_2",
-			rule_name: "Finance changes",
-		},
-	},
+	permission: { verdict: "deny", enforced: true, ...denial },
 };
-const noRulePreview = { total: 99 };
+const shadowDeny = {
+	total: 99,
+	permission: { verdict: "deny", enforced: false, ...denial },
+};
+const allowed = {
+	total: 99,
+	permission: { verdict: "allow", enforced: true, decided_by: null },
+};
+const noRule = { total: 99 };
 
-const permissionDeniedError = {
+const forbidden = (data: object) => ({
 	isAxiosError: true,
-	response: {
-		status: 403,
-		data: {
-			code: "permission_denied",
-			env: "live",
-			...denyPermission,
-		},
+	response: { status: 403, data },
+});
+const permissionDenied = forbidden({
+	code: "permission_denied",
+	message: denial.message,
+	env: "live",
+	details: {
+		violations: denial.violations,
+		decided_by: denial.decided_by,
+		allowed_roles: denial.allowed_roles,
 	},
-};
+});
 
 const render = ({
 	preview,
 	children,
 }: {
 	preview: unknown;
-	children: ReactNode;
+	children: React.ReactNode;
 }) =>
 	renderToStaticMarkup(
 		<QueryClientProvider client={new QueryClient()}>
@@ -93,75 +124,99 @@ const footer = () => (
 
 describe("resolvePermissionDenial", () => {
 	test.each([
-		["a missing field", noRulePreview, null, null],
-		["an allow verdict", allowedPreview, null, null],
-		["an allow decided by a rule", allowedByRulePreview, null, null],
+		["no permission", noRule, null],
+		["an allow", allowed, null],
+		["a shadow-mode deny", shadowDeny, null],
+		["a non-permission 403", noRule, forbidden({ code: "forbidden" })],
 		[
-			"a non-permission 403",
-			noRulePreview,
-			{ response: { status: 403, data: { code: "forbidden" } } },
-			null,
+			"a 403 with fields at the top level",
+			noRule,
+			forbidden({ code: "permission_denied", env: "live", ...denial }),
 		],
-	])("%s is not a denial", (_name, preview, error, expected) => {
-		expect(resolvePermissionDenial({ preview, error })).toBe(expected);
+	])("%s is not a denial", (_name, preview, error) => {
+		expect(resolvePermissionDenial({ preview, error })).toBeNull();
 	});
 
-	test("a denied preview locks submit", () => {
+	test("an enforced deny locks submit", () => {
 		const resolved = resolvePermissionDenial({
-			preview: deniedPreview,
+			preview: enforcedDeny,
 			error: null,
 		});
 		expect(resolved?.locksSubmit).toBe(true);
 		expect(resolved?.denial.decided_by.rule_name).toBe("Sales trials");
 	});
 
-	test("a 403 on submit shows the denial without locking the retry", () => {
+	test("a 403 reads details and leaves the retry enabled", () => {
 		const resolved = resolvePermissionDenial({
-			preview: noRulePreview,
-			error: permissionDeniedError,
+			preview: noRule,
+			error: permissionDenied,
 		});
 		expect(resolved?.locksSubmit).toBe(false);
-		expect(resolved?.denial.violations).toHaveLength(3);
+		expect(resolved?.denial.message).toBe(denial.message);
+		expect(resolved?.denial.violations).toHaveLength(4);
+	});
+
+	test("a numeric limit still parses", () => {
+		const preview = {
+			permission: {
+				...enforcedDeny.permission,
+				violations: [
+					{
+						field: "total",
+						label: "Total",
+						operator: "≥",
+						limit: 500,
+						actual: 900,
+					},
+				],
+			},
+		};
+		expect(resolvePermissionDenial({ preview, error: null })).not.toBeNull();
 	});
 });
 
 describe("violations on their fields", () => {
-	const denial = resolvePermissionDenial({
-		preview: deniedPreview,
-		error: null,
-	})?.denial;
-	if (!denial) throw new Error("expected a denial");
-
 	test.each([
-		["plan", ["Free trial"]],
-		["options", ["Percent off"]],
+		["plan", ["Plan", "Entity"]],
+		["options", ["Billing cycle anchor"]],
 		["summary", ["Charges customer"]],
-	] as const)("%s section holds %p", (section, labels) => {
+	] as const)("%s holds %p", (section, labels) => {
 		expect(
 			violationsInSection({ denial, section }).map(({ label }) => label),
 		).toEqual([...labels]);
 	});
 
 	test.each([
+		["a matched block condition", denial.violations[0], "Plan is Enterprise"],
 		[
-			denyPermission.violations[0],
-			"Free trial: limit 31 days, you entered 45 days",
+			"a condition the request went past",
+			{
+				field: "total",
+				label: "Total",
+				operator: "≥",
+				limit: 500,
+				actual: 900,
+			},
+			"Total ≥ 500 (this request: 900)",
 		],
-		[
-			denyPermission.violations[2],
-			"Charges customer: limit no, you entered yes",
-		],
-	])("formats %p", (violation, expected) => {
+		["no operator", denial.violations[3], "Charges customer: yes"],
+	])("formats %s", (_name, violation, expected) => {
 		expect(formatViolation({ violation })).toBe(expected);
 	});
+});
 
-	test("a field section renders only its violations", () => {
-		const html = render({
-			preview: deniedPreview,
-			children: <PermissionDenial section="plan" />,
-		});
-		expect(html).toContain("Free trial: limit 31 days, you entered 45 days");
-		expect(html).not.toContain("Percent off");
+describe("who to ask", () => {
+	const roleName = (id: string) =>
+		({ finance: "Finance", sales: "Sales" })[id] ?? id;
+
+	test.each([
+		[["finance"], "Ask someone with the Finance role"],
+		[["finance", "sales"], "Ask someone with the Finance or Sales role"],
+		[[], "Ask an owner or admin to change this rule"],
+	])("%p", (allowed_roles, expected) => {
+		expect(
+			formatAskRoles({ denial: { ...denial, allowed_roles }, roleName }),
+		).toBe(expected);
 	});
 });
 
@@ -175,22 +230,49 @@ describe("billing footer", () => {
 		if (stubWindow) globalThis.window = stubWindow;
 	});
 
-	test("a denied preview disables submit and shows the summary", () => {
-		const html = render({ preview: deniedPreview, children: footer() });
+	test("an enforced deny disables submit and shows the summary", () => {
+		const html = render({ preview: enforcedDeny, children: footer() });
 		expect(html).toContain("<fieldset disabled=");
 		expect(html).toContain("Sales trials");
-		expect(html).toContain(denyPermission.message);
-		expect(html).toContain("Charges customer: limit no, you entered yes");
-		expect(html).toContain("Ask an owner, admin or finance");
+		expect(html).toContain(denial.message);
+		expect(html).toContain("Charges customer: yes");
+		expect(html).toContain("Ask someone with the Finance role");
 	});
 
 	test.each([
-		["a missing field", noRulePreview],
-		["an allow verdict", allowedPreview],
-		["an allow decided by a rule", allowedByRulePreview],
+		["no permission", noRule],
+		["an allow", allowed],
+		["a shadow-mode deny", shadowDeny],
 	])("%s leaves the footer unchanged", (_name, preview) => {
 		expect(render({ preview, children: footer() })).toBe(
 			renderToStaticMarkup(footer()),
 		);
+	});
+
+	test("an enforced deny leaves the invoice stage reachable", () => {
+		const html = render({
+			preview: enforcedDeny,
+			children: (
+				<BillingFooter
+					layout="stacked"
+					invoiceAction={<button type="button">Send an invoice</button>}
+				>
+					<button type="button">Attach</button>
+				</BillingFooter>
+			),
+		});
+		const locked = html.slice(html.indexOf("<fieldset disabled="));
+		expect(locked).toContain("Attach");
+		expect(locked).not.toContain("Send an invoice");
+		expect(html).toContain("Send an invoice");
+	});
+
+	test("a field section renders only its violations", () => {
+		const html = render({
+			preview: enforcedDeny,
+			children: <PermissionDenial section="options" />,
+		});
+		expect(html).toContain("Billing cycle anchor is custom");
+		expect(html).not.toContain("Plan is Enterprise");
 	});
 });

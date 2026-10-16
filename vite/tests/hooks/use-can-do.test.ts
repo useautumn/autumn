@@ -1,7 +1,7 @@
 /**
- * Contract (approvals-api-schema §R, E3): `GET /approvals/can` gates the
- * buttons that open billing sheets. `exempt` and `none` count as allowed, and
- * an unanswered check never hides a button.
+ * Contract (PRD decisions 5 and 13): `POST /approvals.can { action }` gates the
+ * buttons that open billing sheets on `can` alone. `blocked` and `none` hide
+ * them; an unanswered or failed check never does.
  */
 
 import { describe, expect, mock, test } from "bun:test";
@@ -26,40 +26,41 @@ const { renderToStaticMarkup } = await import("react-dom/server");
 const { QueryClient, QueryClientProvider } = await import(
 	"@tanstack/react-query"
 );
-const { canDoAllows } = await import(
-	"@/components/forms/shared/permission/permissionDenialUtils"
+const { canDoAllows, fetchCanDo } = await import(
+	"@/components/forms/shared/permission/canDo"
 );
 const { canDoQueryKey } = await import("@/hooks/queries/useCanDo");
 const { AttachProductSheetTrigger } = await import(
 	"@/views/customers2/components/table/customer-products/AttachProductSheetTrigger"
 );
 
-type CanDo = { can: boolean; reason: "rule" | "scope" | "exempt" | "none" };
+type CanDo = { can: boolean; reason: "scope" | "blocked" | "none" };
 
 describe("canDoAllows gates on can alone", () => {
 	test.each([
-		[
-			"enforced: a rule lets a member without billing:write",
-			{ can: true, reason: "rule" },
-			true,
-		],
-		["scope allows", { can: true, reason: "scope" }, true],
-		["exempt (owner, admin, sandbox)", { can: true, reason: "exempt" }, true],
-		[
-			"enforced: a rule covers the member but doesn't allow",
-			{ can: false, reason: "rule" },
-			false,
-		],
-		[
-			"no billing:write and no rule decided",
-			{ can: false, reason: "scope" },
-			false,
-		],
-		["no rule applies and no scope", { can: false, reason: "none" }, false],
+		["the scope allows", { can: true, reason: "scope" }, true],
+		["a rule always blocks", { can: false, reason: "blocked" }, false],
+		["no scope", { can: false, reason: "none" }, false],
 		["not answered", undefined, true],
 	] as const)("%s", (_name, response, expected) => {
 		expect(canDoAllows({ response })).toBe(expected);
 	});
+});
+
+test("fetchCanDo posts approvals.can with the action in the body", async () => {
+	const calls: unknown[][] = [];
+	const axios = {
+		post: async (...args: unknown[]) => {
+			calls.push(args);
+			return { data: { can: true, reason: "scope" } };
+		},
+	};
+	const response = await fetchCanDo({
+		axios: axios as never,
+		action: "billing.attach",
+	});
+	expect(calls).toEqual([["/approvals.can", { action: "billing.attach" }]]);
+	expect(response).toEqual({ can: true, reason: "scope" });
 });
 
 const renderTrigger = ({
@@ -95,9 +96,8 @@ const renderTrigger = ({
 	);
 };
 
-// Enforced orgs only: a rule grants the action past the coarse scope.
-const allowed: CanDo = { can: true, reason: "rule" };
-const denied: CanDo = { can: false, reason: "scope" };
+const allowed: CanDo = { can: true, reason: "scope" };
+const blocked: CanDo = { can: false, reason: "blocked" };
 
 describe("attach trigger", () => {
 	test("shows attach and set plans when both are allowed", () => {
@@ -106,25 +106,21 @@ describe("attach trigger", () => {
 		expect(html).toContain('aria-label="More plan actions"');
 	});
 
-	test("hides set plans when only set plans is denied", () => {
-		const html = renderTrigger({ attach: allowed, setPlans: denied });
+	test("hides set plans when only set plans is blocked", () => {
+		const html = renderTrigger({ attach: allowed, setPlans: blocked });
 		expect(html).toContain("Attach Plan");
 		expect(html).not.toContain('aria-label="More plan actions"');
 	});
 
-	test("keeps set plans alone when only attach is denied", () => {
-		const html = renderTrigger({ attach: denied, setPlans: allowed });
+	test("keeps set plans alone when only attach is blocked", () => {
+		const html = renderTrigger({ attach: blocked, setPlans: allowed });
 		expect(html).not.toContain("Attach Plan");
 		expect(html).toContain("Set Plans");
 	});
 
-	test("hides the trigger for an unruled member without the scope", () => {
-		const unruled: CanDo = { can: false, reason: "none" };
-		expect(renderTrigger({ attach: unruled, setPlans: unruled })).toBe("");
-	});
-
-	test("hides the trigger when both are denied", () => {
-		expect(renderTrigger({ attach: denied, setPlans: denied })).toBe("");
+	test("hides the trigger without the scope", () => {
+		const none: CanDo = { can: false, reason: "none" };
+		expect(renderTrigger({ attach: none, setPlans: none })).toBe("");
 	});
 
 	test("keeps both while the check hasn't answered", () => {
@@ -133,10 +129,10 @@ describe("attach trigger", () => {
 		expect(html).toContain('aria-label="More plan actions"');
 	});
 
-	test("a failed refresh after a denial shows the actions again", () => {
+	test("a failed refresh after a block shows the actions again", () => {
 		const html = renderTrigger({
-			attach: denied,
-			setPlans: denied,
+			attach: blocked,
+			setPlans: blocked,
 			failedRefresh: true,
 		});
 		expect(html).toContain("Attach Plan");

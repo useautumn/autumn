@@ -8,6 +8,8 @@ import {
 import { Copy, EllipsisVerticalIcon, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { APPROVAL_OPENERS } from "@/components/forms/shared/permission/approvalOpeners";
+import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
@@ -21,6 +23,12 @@ export const PlanToolbar = () => {
 	const navigate = useNavigate();
 	const product = useProductStore((s) => s.product);
 	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const canCopy = useCanDo(APPROVAL_OPENERS.createPlan);
+	const canDelete = useCanDo(
+		product.archived
+			? APPROVAL_OPENERS.updatePlan
+			: APPROVAL_OPENERS.deletePlan,
+	);
 
 	return (
 		<>
@@ -55,34 +63,38 @@ export const PlanToolbar = () => {
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					<LinkLicenseMenuItem />
-					<DropdownMenuItem
-						className="flex items-center text-xs"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							setDropdownOpen(false);
-							setCopyOpen(true);
-						}}
-					>
-						<div className="flex items-center gap-2">
-							<Copy size={12} className="text-tertiary-foreground" />
-							Copy
-						</div>
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						className="flex items-center text-xs"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							setDropdownOpen(false);
-							setDeleteOpen(true);
-						}}
-					>
-						<div className="flex items-center gap-2">
-							<Trash2 size={12} className="text-tertiary-foreground" />
-							Delete Plan
-						</div>
-					</DropdownMenuItem>
+					{canCopy && (
+						<DropdownMenuItem
+							className="flex items-center text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								setCopyOpen(true);
+							}}
+						>
+							<div className="flex items-center gap-2">
+								<Copy size={12} className="text-tertiary-foreground" />
+								Copy
+							</div>
+						</DropdownMenuItem>
+					)}
+					{canDelete && (
+						<DropdownMenuItem
+							className="flex items-center text-xs"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								setDeleteOpen(true);
+							}}
+						>
+							<div className="flex items-center gap-2">
+								<Trash2 size={12} className="text-tertiary-foreground" />
+								Delete Plan
+							</div>
+						</DropdownMenuItem>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</>

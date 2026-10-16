@@ -1,4 +1,5 @@
-import type { WhenKey } from "../schemas/when/whenSchemas";
+import type { DurationBound } from "../../common/filters/durationMatcher";
+import type { ApprovalFilterKey } from "../schemas/filters/approvalFilterShapes";
 
 const ID_OPERATORS = ["is", "is_not", "is_any_of", "is_none_of"] as const;
 const NUMBER_OPERATORS = ["eq", "ne", "lt", "lte", "gt", "gte"] as const;
@@ -8,12 +9,27 @@ const IS = ["is"] as const;
 const customerFields = {
 	customer: ID_OPERATORS,
 	customer_plan: ["has", "doesnt_have", "has_none"],
+	customer_has_paid: IS,
 } as const;
 
-/** The "When fields by area" board: area → field → operators, in board order. */
+const ENTITY_OPERATORS = [
+	"is_customer",
+	"is_entity",
+	"is_any_of",
+	"is_none_of",
+] as const;
+
+const uncancelFields = {
+	...customerFields,
+	entity: ENTITY_OPERATORS,
+	outgoing_plan: ID_OPERATORS,
+} as const;
+
+/** The "When fields by area" board: filter shape → field → operators, in board order. */
 export const EDITOR_FIELDS = {
 	billing_change: {
 		...customerFields,
+		entity: ENTITY_OPERATORS,
 		paid: IS,
 		checkout: IS,
 		total: NUMBER_OPERATORS,
@@ -24,7 +40,7 @@ export const EDITOR_FIELDS = {
 		incoming_paid: IS,
 		incoming_recurring: IS,
 		incoming_addon: IS,
-		free_trial: ["lt", "lte", "gt", "gte", "has_none"],
+		free_trial: ["lt", "lte", "eq", "gte", "gt", "has_none", "has_any"],
 		trial_card_required: IS,
 		trial_on_end: ENUM_OPERATORS,
 		feature_quantity: NUMBER_OPERATORS,
@@ -34,15 +50,18 @@ export const EDITOR_FIELDS = {
 		discount_amount_off: NUMBER_OPERATORS,
 		plan_schedule: ENUM_OPERATORS,
 		proration_behavior: ENUM_OPERATORS,
+		billing_cycle_anchor: ENUM_OPERATORS,
 		starts_at: IS,
 		invoice_mode: IS,
 	},
 	billing_cancel: {
 		...customerFields,
+		entity: ENTITY_OPERATORS,
 		cancel_action: ENUM_OPERATORS,
 		outgoing_plan: ID_OPERATORS,
 		refund: NUMBER_OPERATORS,
 	},
+	billing_uncancel: uncancelFields,
 	invoice: {
 		...customerFields,
 		total: NUMBER_OPERATORS,
@@ -64,35 +83,47 @@ export const EDITOR_FIELDS = {
 		usage: NUMBER_OPERATORS,
 		included_grant: NUMBER_OPERATORS,
 	},
-	reward_apply: { ...customerFields, reward: ID_OPERATORS },
-	customer: customerFields,
-	catalog_plan: { plan: ID_OPERATORS },
-	catalog_feature: { feature: ID_OPERATORS },
-} as const satisfies Record<WhenKey, Record<string, readonly string[]>>;
+	reward_redeem: { ...customerFields, reward: ID_OPERATORS },
+	customer_change: customerFields,
+	plan: { plan: ID_OPERATORS },
+	feature: { feature: ID_OPERATORS },
+} as const satisfies Record<
+	ApprovalFilterKey,
+	Record<string, readonly string[]>
+>;
 
-type AreaFields<Area extends WhenKey> = (typeof EDITOR_FIELDS)[Area];
+/** Operators that are complete on their own; their row's value is null. */
+export const VALUELESS_OPERATORS: readonly string[] = [
+	"has_none",
+	"has_any",
+	"is_customer",
+	"is_entity",
+];
+
+type ShapeFields<Shape extends ApprovalFilterKey> =
+	(typeof EDITOR_FIELDS)[Shape];
 
 export type EditorField = {
-	[Area in WhenKey]: keyof AreaFields<Area>;
-}[WhenKey];
+	[Shape in ApprovalFilterKey]: keyof ShapeFields<Shape>;
+}[ApprovalFilterKey];
 
 type OperatorsOf<Operators> = Operators extends readonly (infer Operator)[]
 	? Operator
 	: never;
 
 export type EditorOperator = {
-	[Area in WhenKey]: OperatorsOf<AreaFields<Area>[keyof AreaFields<Area>]>;
-}[WhenKey];
+	[Shape in ApprovalFilterKey]: OperatorsOf<
+		ShapeFields<Shape>[keyof ShapeFields<Shape>]
+	>;
+}[ApprovalFilterKey];
 
 /** A plan picker's choice; no `version` means any version. */
 export type PlanSelection = { plan_id: string; version?: number };
-export type TrialUnit = "day" | "month" | "year";
-export type TrialDuration = { length: number; unit: TrialUnit };
 export type FeatureQuantity = { feature_id: string; quantity: number };
 
 /**
- * `*_any_of` / `*_none_of` take arrays, `has_none` takes null; `starts_at` and
- * `expires_at` take a number of days.
+ * `*_any_of` / `*_none_of` take arrays, valueless operators take null;
+ * `starts_at` and `expires_at` take a number of days.
  */
 export type EditorRowValue =
 	| string
@@ -101,10 +132,11 @@ export type EditorRowValue =
 	| boolean
 	| PlanSelection
 	| PlanSelection[]
-	| TrialDuration
+	| DurationBound
 	| FeatureQuantity
 	| null;
 
+/** Rows carry no effect; only the stored filter depends on it. */
 export type EditorRow = {
 	field: EditorField;
 	operator: EditorOperator;
@@ -115,7 +147,7 @@ export type EditorRow = {
 export type EditorGroup = EditorRow[];
 
 /** Fields set once for the whole rule, above its groups: Balances amounts are in the Feature's unit. */
-export const PINNED_FIELDS: Partial<Record<WhenKey, EditorField>> = {
+export const PINNED_FIELDS: Partial<Record<ApprovalFilterKey, EditorField>> = {
 	balance_create: "feature",
 	balance_update: "feature",
 };

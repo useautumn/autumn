@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import CreateProductSheet from "../CreateProductSheet";
 
 export function ProductListCreateButton({ className }: { className?: string }) {
-	const canCreate = useCanDo(APPROVAL_OPENERS.editPlans);
+	const canCreate = useCanDo(APPROVAL_OPENERS.createPlan);
 	const [createPlanOpen, setCreatePlanOpen] = useState(false);
 
 	useHotkeys(

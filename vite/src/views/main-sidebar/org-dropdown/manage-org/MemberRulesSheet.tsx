@@ -9,7 +9,7 @@ import {
 } from "@autumn/ui";
 import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { RulesThatIncludeSection } from "@/views/settings/sections/approvals/RulesThatIncludeSection";
-import { roleLabel } from "@/views/settings/sections/roles/roleAccess";
+import { roleName } from "@/views/settings/sections/roles/roleAccess";
 
 /** A member's role and the approval rules that include them, read only. */
 export const MemberRulesSheet = ({
@@ -25,7 +25,7 @@ export const MemberRulesSheet = ({
 	const { user } = membership;
 	const role = membership.member.role || null;
 	const name = user.name || user.email;
-	const label = role ? roleLabel({ roles, name: role }) : null;
+	const label = role ? roleName({ roles, roleId: role }) : null;
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -47,9 +47,9 @@ export const MemberRulesSheet = ({
 						</span>
 					</div>
 					<RulesThatIncludeSection
-						audience={{ type: "user", userId: user.id, role }}
+						audience={{ type: "user", userId: user.id, roleId: role }}
 						name={user.name?.split(" ")[0] || name}
-						roleLabel={label}
+						roleName={label}
 					/>
 				</div>
 				<div className="mt-auto flex border-t px-4 pt-4 pb-4">

@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import type { PermissionSections } from "@/components/forms/shared/permission/permissionDenialUtils";
+import type { PermissionSections } from "@/components/forms/shared/permission/billingDenialSections";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 /** Lets the balance sheets read their latest failed write; gcTime 0 drops it once the sheet unmounts. */

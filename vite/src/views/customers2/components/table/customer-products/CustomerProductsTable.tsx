@@ -145,7 +145,7 @@ export function CustomerProductsTable() {
 	};
 
 	const canCancel = useCanDo("billing.cancel");
-	const canUpdate = useCanDo("billing.update_subscription");
+	const canUpdate = useCanDo("billing.update");
 	const canUncancel = useCanDo("billing.uncancel");
 
 	const handleUpdateClick = (product: FullCusProduct) => {

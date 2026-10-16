@@ -11,11 +11,11 @@ import { useApprovalRuleLabels } from "./useApprovalRuleLabels";
 export const useRulesThatInclude = ({
 	audience,
 	name,
-	roleLabel,
+	roleName,
 }: {
 	audience: RuleAudience;
 	name: string;
-	roleLabel: string | null;
+	roleName: string | null;
 }) => {
 	const { rules, isLoading, error } = useApprovalRulesQuery();
 	const labels = useApprovalRuleLabels();
@@ -23,7 +23,7 @@ export const useRulesThatInclude = ({
 	const items = rulesThatInclude({ rules, audience }).map(({ rule, via }) => ({
 		rule,
 		parts: buildRuleSentence({ rule, labels }),
-		caption: includedViaText({ name, roleLabel, via }),
+		caption: includedViaText({ name, roleName, via }),
 	}));
 
 	return { items, isLoading, error };
