@@ -290,6 +290,7 @@ export const COLLECTIONS: Readonly<Record<string, CollectionSpec>> = {
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tierBehavior",
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers",
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers.creditCost",
+			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.dimensions.*.tiers.to",
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.excluded",
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.meteredFeatureId",
 			"variants.customize.upsertLicenses.customize.addItems.featureOverride.creditSchema.multipliers.*.match",

@@ -8,6 +8,7 @@ import type { RingSignal } from "../../../threads/ring/types/ringSignal.js";
 import type { SendAck } from "../frames/ackFrame.js";
 import type {
 	RequestListener,
+	StatisticsListener,
 	ThreadedProducersConfig,
 } from "./threadedProducers.js";
 
@@ -32,6 +33,7 @@ export type ThreadedProducersScope = {
 	/** Every request awaiting its ack, by request id. */
 	pending: Map<number, (ack: SendAck) => void>;
 	requestListeners: Map<number, Set<RequestListener>>;
+	statisticsListeners: Map<number, Set<StatisticsListener>>;
 	/** Settles when the thread has disconnected its producers or exited. */
 	stopped: ReturnType<typeof Promise.withResolvers<void>>;
 	state: {

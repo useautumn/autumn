@@ -31,6 +31,7 @@ export {
 } from "./client/librdkafka/consumer/runnerErrors.js";
 export { createKafka } from "./client/librdkafka/createKafka.js";
 export type {
+	KafkaBrokerStatistics,
 	KafkaClientConfig,
 	KafkaCommitMode,
 	KafkaLogSink,
@@ -38,6 +39,7 @@ export type {
 	KafkaProducer,
 	KafkaProducerClient,
 	KafkaProducerFactory,
+	KafkaProducerStatistics,
 	KafkaRequestTiming,
 	KafkaSaslCredentials,
 	KafkaSender,

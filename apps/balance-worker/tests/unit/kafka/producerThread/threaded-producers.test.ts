@@ -7,6 +7,7 @@ import {
 	isRetriableKafkaError,
 	KafkaBatchNotCommittedError,
 	type KafkaProducerClient,
+	type KafkaProducerStatistics,
 	KafkaTransactionStateUnknownError,
 	sendIdempotentBatch,
 } from "@autumn/kafka";
@@ -346,6 +347,45 @@ describe("threaded producers", () => {
 						pendingMs: 1,
 					},
 				]);
+				await session.disconnect();
+			},
+		});
+	});
+
+	test("statistics windows reach a producer session's onStatistics, as the in-thread client's do", async () => {
+		await withThread({
+			run: async (remote) => {
+				const windows: KafkaProducerStatistics[] = [];
+				const session = createProducerSession({
+					ctx: {
+						kafka: remote,
+						onStatistics: (statistics) => windows.push(statistics),
+					},
+					config: {
+						transactionalId: "unused",
+						mode: "idempotent",
+						limits: {
+							retryCount: 1,
+							initialRetryTimeMs: 1,
+							maxRetryTimeMs: 1,
+							transactionTimeoutMs: 1000,
+						},
+					},
+				});
+				await session.connect();
+				await session.fence();
+				await session.send({
+					topic: "t",
+					messages: [{ key: "k", value: "v", partition: 0 }],
+				});
+				const deadline = Date.now() + 1000;
+				while (windows.length === 0 && Date.now() < deadline)
+					await Bun.sleep(5);
+				expect(windows[0]?.brokers[0]).toMatchObject({
+					broker: "fake:9092/1",
+					waitRespCount: 1,
+					stalled: true,
+				});
 				await session.disconnect();
 			},
 		});

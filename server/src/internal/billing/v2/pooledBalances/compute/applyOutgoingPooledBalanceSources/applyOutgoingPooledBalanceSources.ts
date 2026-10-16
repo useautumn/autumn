@@ -69,6 +69,9 @@ export const applyOutgoingPooledBalanceSources = ({
 		computeContext.paidCustomerProductIdsByPoolId
 			.get(contribution.pooled_balance_id)
 			?.delete(customerProduct.id);
+		computeContext.limitedSourceIdsByPoolId
+			.get(contribution.pooled_balance_id)
+			?.delete(contributionCustomerEntitlement.id);
 		if (!convertingToCompeting)
 			computeContext.pooledBalanceIdsWithReplacedContributions.add(
 				contribution.pooled_balance_id,

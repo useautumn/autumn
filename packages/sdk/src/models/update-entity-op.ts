@@ -11,6 +11,10 @@ import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
+import {
+  CreditDimensionUnion,
+  CreditDimensionUnion$inboundSchema,
+} from "./credit-dimension-union.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
@@ -476,63 +480,6 @@ export const UpdateEntityCombine = {
  */
 export type UpdateEntityCombine = OpenEnum<typeof UpdateEntityCombine>;
 
-export type UpdateEntityDimensions6 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateEntityDimensionsToEnum3 = {
-  Inf: "inf",
-} as const;
-export type UpdateEntityDimensionsToEnum3 = ClosedEnum<
-  typeof UpdateEntityDimensionsToEnum3
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateEntityDimensionsToUnion3 =
-  | number
-  | UpdateEntityDimensionsToEnum3;
-
-export type UpdateEntityDimensionsTier3 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateEntityDimensionsToEnum3;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateEntityDimensions5 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateEntityDimensionsTier3>;
-};
-
-export type UpdateEntityDimensionsUnion3 =
-  | UpdateEntityDimensions5
-  | UpdateEntityDimensions6;
-
 export type UpdateEntityMultipliers3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -557,9 +504,7 @@ export type UpdateEntityCreditSchema3 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: UpdateEntityDimensions5 | UpdateEntityDimensions6;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -569,63 +514,6 @@ export type UpdateEntityCreditSchema3 = {
    */
   creditCost: number;
 };
-
-export type UpdateEntityDimensions4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateEntityDimensionsToEnum2 = {
-  Inf: "inf",
-} as const;
-export type UpdateEntityDimensionsToEnum2 = ClosedEnum<
-  typeof UpdateEntityDimensionsToEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateEntityDimensionsToUnion2 =
-  | number
-  | UpdateEntityDimensionsToEnum2;
-
-export type UpdateEntityDimensionsTier2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateEntityDimensionsToEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateEntityDimensions3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateEntityDimensionsTier2>;
-};
-
-export type UpdateEntityDimensionsUnion2 =
-  | UpdateEntityDimensions3
-  | UpdateEntityDimensions4;
 
 export type UpdateEntityMultipliers2 = {
   /**
@@ -654,9 +542,7 @@ export type UpdateEntityCreditSchema2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: UpdateEntityDimensions3 | UpdateEntityDimensions4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -666,63 +552,6 @@ export type UpdateEntityCreditSchema2 = {
    */
   creditCost: number;
 };
-
-export type UpdateEntityDimensions2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateEntityDimensionsToEnum1 = {
-  Inf: "inf",
-} as const;
-export type UpdateEntityDimensionsToEnum1 = ClosedEnum<
-  typeof UpdateEntityDimensionsToEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateEntityDimensionsToUnion1 =
-  | number
-  | UpdateEntityDimensionsToEnum1;
-
-export type UpdateEntityDimensionsTier1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateEntityDimensionsToEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateEntityDimensions1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateEntityDimensionsTier1>;
-};
-
-export type UpdateEntityDimensionsUnion1 =
-  | UpdateEntityDimensions1
-  | UpdateEntityDimensions2;
 
 export type UpdateEntityMultipliers1 = {
   /**
@@ -772,9 +601,7 @@ export type UpdateEntityCreditSchema1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]: UpdateEntityDimensions1 | UpdateEntityDimensions2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -1917,130 +1744,6 @@ export const UpdateEntityCombine$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityCombine);
 
 /** @internal */
-export const UpdateEntityDimensions6$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions6,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensions6FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions6, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions6$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions6' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsToEnum3$inboundSchema: z.ZodMiniEnum<
-  typeof UpdateEntityDimensionsToEnum3
-> = z.enum(UpdateEntityDimensionsToEnum3);
-
-/** @internal */
-export const UpdateEntityDimensionsToUnion3$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsToUnion3,
-  unknown
-> = smartUnion([types.number(), UpdateEntityDimensionsToEnum3$inboundSchema]);
-
-export function updateEntityDimensionsToUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsToUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsToUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsToUnion3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsTier3$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsTier3,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateEntityDimensionsToEnum3$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensionsTier3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsTier3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsTier3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsTier3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensions5$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions5,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier3$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateEntityDimensions5FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions5, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions5$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions5' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsUnion3$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsUnion3,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateEntityDimensions5$inboundSchema),
-  z.lazy(() => UpdateEntityDimensions6$inboundSchema),
-]);
-
-export function updateEntityDimensionsUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsUnion3' from JSON`,
-  );
-}
-
-/** @internal */
 export const UpdateEntityMultipliers3$inboundSchema: z.ZodMiniType<
   UpdateEntityMultipliers3,
   unknown
@@ -2068,17 +1771,15 @@ export const UpdateEntityCreditSchema3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateEntityDimensions5$inboundSchema),
-        z.lazy(() => UpdateEntityDimensions6$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => UpdateEntityMultipliers3$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => UpdateEntityMultipliers3$inboundSchema),
+      ),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2097,130 +1798,6 @@ export function updateEntityCreditSchema3FromJSON(
     jsonString,
     (x) => UpdateEntityCreditSchema3$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateEntityCreditSchema3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensions4$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions4,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensions4FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions4, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions4$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions4' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsToEnum2$inboundSchema: z.ZodMiniEnum<
-  typeof UpdateEntityDimensionsToEnum2
-> = z.enum(UpdateEntityDimensionsToEnum2);
-
-/** @internal */
-export const UpdateEntityDimensionsToUnion2$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsToUnion2,
-  unknown
-> = smartUnion([types.number(), UpdateEntityDimensionsToEnum2$inboundSchema]);
-
-export function updateEntityDimensionsToUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsToUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsToUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsToUnion2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsTier2$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsTier2,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateEntityDimensionsToEnum2$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensionsTier2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsTier2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsTier2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsTier2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensions3$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions3,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier2$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateEntityDimensions3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsUnion2$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsUnion2,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateEntityDimensions3$inboundSchema),
-  z.lazy(() => UpdateEntityDimensions4$inboundSchema),
-]);
-
-export function updateEntityDimensionsUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsUnion2' from JSON`,
   );
 }
 
@@ -2252,17 +1829,15 @@ export const UpdateEntityCreditSchema2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateEntityDimensions3$inboundSchema),
-        z.lazy(() => UpdateEntityDimensions4$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => UpdateEntityMultipliers2$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => UpdateEntityMultipliers2$inboundSchema),
+      ),
+    ),
     credit_cost: types.number(),
   }),
   z.transform((v) => {
@@ -2281,130 +1856,6 @@ export function updateEntityCreditSchema2FromJSON(
     jsonString,
     (x) => UpdateEntityCreditSchema2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateEntityCreditSchema2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensions2$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions2,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensions2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsToEnum1$inboundSchema: z.ZodMiniEnum<
-  typeof UpdateEntityDimensionsToEnum1
-> = z.enum(UpdateEntityDimensionsToEnum1);
-
-/** @internal */
-export const UpdateEntityDimensionsToUnion1$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsToUnion1,
-  unknown
-> = smartUnion([types.number(), UpdateEntityDimensionsToEnum1$inboundSchema]);
-
-export function updateEntityDimensionsToUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsToUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsToUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsToUnion1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsTier1$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsTier1,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateEntityDimensionsToEnum1$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateEntityDimensionsTier1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsTier1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsTier1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsTier1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensions1$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensions1,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(z.lazy(() => UpdateEntityDimensionsTier1$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateEntityDimensions1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensions1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensions1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensions1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateEntityDimensionsUnion1$inboundSchema: z.ZodMiniType<
-  UpdateEntityDimensionsUnion1,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateEntityDimensions1$inboundSchema),
-  z.lazy(() => UpdateEntityDimensions2$inboundSchema),
-]);
-
-export function updateEntityDimensionsUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateEntityDimensionsUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateEntityDimensionsUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateEntityDimensionsUnion1' from JSON`,
   );
 }
 
@@ -2483,17 +1934,15 @@ export const UpdateEntityCreditSchema1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateEntityDimensions1$inboundSchema),
-        z.lazy(() => UpdateEntityDimensions2$inboundSchema),
-      ]),
-    )),
-    multipliers: types.optional(z.record(
-      z.string(),
-      z.lazy(() => UpdateEntityMultipliers1$inboundSchema),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
+    multipliers: types.optional(
+      z.record(
+        z.string(),
+        z.lazy(() => UpdateEntityMultipliers1$inboundSchema),
+      ),
+    ),
     tier_behavior: types.literal("graduated"),
     tiers: z.array(z.lazy(() => UpdateEntityTier$inboundSchema)),
   }),

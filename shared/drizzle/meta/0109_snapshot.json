@@ -1,5 +1,5 @@
 {
-  "id": "f7b73c6a-af69-46ab-8b00-c75868b74e71",
+  "id": "27612300-7ac1-471f-b3dd-8db41536f87c",
   "prevId": "2cc0b24a-2031-4f7a-921e-b215043a65df",
   "version": "7",
   "dialect": "postgresql",
@@ -536,13 +536,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "volume_size_gib": {
-          "name": "volume_size_gib",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 20
-        },
         "network": {
           "name": "network",
           "type": "jsonb",
@@ -975,6 +968,21 @@
               "expression": "internal_customer_id",
               "isExpression": false,
               "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_balance_locks_internal_customer_id_c": {
+          "name": "idx_balance_locks_internal_customer_id_c",
+          "columns": [
+            {
+              "expression": "\"internal_customer_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],

@@ -39,6 +39,7 @@ import {
 import { createEventLoopStallMonitor } from "../logging/eventLoopStalls/createEventLoopStallMonitor.js";
 import { readMemorySignals } from "../logging/eventLoopStalls/readMemorySignals.js";
 import { syncSections } from "../logging/eventLoopStalls/syncSections.js";
+import { kafkaBrokerStatistics } from "../logging/kafkaBrokerStatistics.js";
 import {
 	createKafkaRequestReporter,
 	kafkaRequestTimings,
@@ -437,7 +438,11 @@ export async function createBalanceWorker({
 			},
 		});
 		const kafkaRequestReporter = createKafkaRequestReporter({
-			ctx: { logger: dependencies.logger, timings: kafkaRequestTimings },
+			ctx: {
+				logger: dependencies.logger,
+				timings: kafkaRequestTimings,
+				brokers: kafkaBrokerStatistics,
+			},
 			config: {
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				endpoint: address.endpoint,

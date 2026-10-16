@@ -27,6 +27,13 @@ export type PooledBalanceComputeContext = {
 	competingContributionsBySourceId: Map<string, DbPooledBalanceContribution>;
 	/** Paid recurring customer products feeding each pool, kept current as plans leave and join; free sources prefer these pools. */
 	paidCustomerProductIdsByPoolId: Map<string, Set<string>>;
+	/** Limited additive grants feeding each pool, kept current as plans leave and join; only these pools can host an unlimited share. */
+	limitedSourceIdsByPoolId: Map<string, Set<string>>;
+	/** Unlimited additive shares as the customer held them before this transition, by source customer entitlement. */
+	unlimitedShareContributionsBySourceId: Map<
+		string,
+		DbPooledBalanceContribution
+	>;
 };
 
 export type PooledBalanceLifecycle = Pick<
