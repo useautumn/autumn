@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
@@ -32,6 +33,7 @@ export function CopyPlansButton({ pricingConfig }: CopyPlansButtonProps) {
 	const { org, mutate: mutateOrg } = useOrg();
 	const { products: existingProducts, refetch: refetchProducts } =
 		useProductsQuery();
+	const { refetch: refetchFeatures } = useFeaturesQuery();
 
 	const [copyDialogOpen, setCopyDialogOpen] = useState(false);
 	const [copyState, setCopyState] = useState<CopyState>({ status: "idle" });
@@ -60,7 +62,7 @@ export function CopyPlansButton({ pricingConfig }: CopyPlansButtonProps) {
 			});
 
 			toast.success("Plans copied successfully");
-			await refetchProducts();
+			await Promise.all([refetchProducts(), refetchFeatures()]);
 
 			// Mark org as onboarded
 			if (!org?.onboarded) {
