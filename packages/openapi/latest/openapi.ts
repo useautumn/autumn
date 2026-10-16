@@ -1,4 +1,5 @@
 import { writeFileSync } from "node:fs";
+import { ApprovalRuleFilterSchema } from "@api/approvals/schemas/filters/approvalFilterShapes.js";
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import { ExtEventsAggregateParamsSchema } from "@api/events/aggregate/eventsAggregateParams.js";
 import {
@@ -159,6 +160,15 @@ async function generateOpenApiDocument({
 			},
 			CreditDimension: {
 				schema: ApiCreditDimensionSchema,
+				strategy: "output",
+			},
+			// Every rule route carries the filter; inlined, each copy is thousands of lines.
+			ApprovalRuleFilter: {
+				schema: ApprovalRuleFilterSchema,
+				strategy: "input",
+			},
+			ApprovalRuleFilterOutput: {
+				schema: ApprovalRuleFilterSchema,
 				strategy: "output",
 			},
 		},

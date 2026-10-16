@@ -1,0 +1,1 @@
+export const listRolesJsDoc = `Lists the organization's roles: built-in roles first, then custom roles by name. Use a role's \`id\` as \`role_id\` in an approval rule's subjects. Roles are managed in the dashboard.`;
