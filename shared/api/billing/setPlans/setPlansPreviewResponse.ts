@@ -138,6 +138,7 @@ export const SetPlansPreviewWarningTypeSchema = z.enum([
 	"cycle_reset_ignored",
 	"cycle_reset_rebills_plans",
 	"other_subscriptions_unaffected",
+	"unbilled_plans_added",
 	"billing_starts_later",
 	"subscription_recreated_backdated",
 ]);

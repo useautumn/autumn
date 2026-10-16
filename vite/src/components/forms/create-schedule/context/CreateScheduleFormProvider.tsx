@@ -178,6 +178,7 @@ export function CreateScheduleFormProvider({
 				customerProducts: fullCustomer?.customer_products ?? [],
 				stripeSubscriptionId,
 				stripeScheduleId,
+				unlinkedPlans: "all",
 			}),
 		[fullCustomer?.customer_products, stripeSubscriptionId, stripeScheduleId],
 	);
