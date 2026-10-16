@@ -22,7 +22,11 @@ export const DeleteRuleDialog = ({
 	const remove = useDeleteApprovalRule();
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog
+			open={open}
+			// A delete in flight closes this dialog when it lands, so it can't close another one.
+			onOpenChange={(next) => !remove.isPending && onOpenChange(next)}
+		>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
 					<DialogTitle>Delete rule</DialogTitle>
