@@ -58,6 +58,7 @@ export const ApprovalRuleSheet = ({
 	const {
 		form,
 		readOnly,
+		showsRows,
 		isSaving,
 		serverIssue,
 		filterError,
@@ -201,7 +202,7 @@ export const ApprovalRuleSheet = ({
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
 							const shape = ruleFilterKey({ actions });
-							if (!shape || readOnly === "shape") return null;
+							if (!shape || !showsRows) return null;
 							return (
 								<form.Field name="pinned">
 									{(pinned) => (

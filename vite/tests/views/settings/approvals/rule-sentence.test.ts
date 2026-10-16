@@ -490,6 +490,11 @@ describe("rule sentence: conditions", () => {
 			"Sales can Attach when Custom condition or Charges customer is Yes",
 		],
 		[
+			"a null operand stays custom instead of reading as zero or No",
+			{ filter: { total: { $ne: null }, paid: null } },
+			"Sales can Attach when Custom condition and Custom condition",
+		],
+		[
 			"a shape the list can't word yet",
 			{ filter: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",

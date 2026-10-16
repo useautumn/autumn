@@ -82,6 +82,8 @@ export const useApprovalRuleForm = ({
 	return {
 		form,
 		readOnly: readOnlyReason({ canEdit, editable: opened.editable }),
+		/** False when the stored filter can't be shown as rows, whoever is looking. */
+		showsRows: opened.editable,
 		isSaving: save.isPending,
 		serverIssue,
 		filterError: issues.server.find(
