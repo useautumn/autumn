@@ -10,6 +10,7 @@ import { handleUnknownFeatureQuantityErrors } from "@/internal/billing/v2/action
 import { buildPendingReattachParams } from "@/internal/billing/v2/execute/pendingCustomerProducts/buildPendingReattachParams";
 import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/pendingCustomerProducts/getPendingPlanLongLivedCheckout";
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
+import { isPlanEnabledOnFinalize } from "@/internal/billing/v2/utils/billingContext/isPlanEnabledOnFinalize";
 
 /** Previews the pending plan re-attached with the edit, and whether that needs a new payment. */
 export const previewPendingReattach = async ({
@@ -58,13 +59,18 @@ export const previewPendingReattach = async ({
 			params,
 		});
 
-	const rebills = pendingPlanRebills({
-		ctx,
-		customerProduct,
-		replacementProduct,
-		replacementQuantities:
-			replacementPreview.billingContext?.featureQuantities ?? [],
-	});
+	const enablesNow =
+		params.invoice_mode?.enable_plan_immediately === true &&
+		!isPlanEnabledOnFinalize({ billingContext: deferredData.billingContext });
+	const rebills =
+		enablesNow ||
+		pendingPlanRebills({
+			ctx,
+			customerProduct,
+			replacementProduct,
+			replacementQuantities:
+				replacementPreview.billingContext?.featureQuantities ?? [],
+		});
 
 	return { attachParams, longLivedCheckout, replacementPreview, rebills };
 };

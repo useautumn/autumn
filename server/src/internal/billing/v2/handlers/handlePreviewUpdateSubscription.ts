@@ -10,6 +10,7 @@ import {
 import { billingActions } from "@/internal/billing/v2/actions";
 import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
+import { enablesPendingPlan } from "@/internal/billing/v2/execute/pendingCustomerProducts/enablesPendingPlan";
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { previewPendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/previewPendingPlanIfAny";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
@@ -30,9 +31,11 @@ export const handlePreviewUpdateSubscription = createRoute({
 			ctx,
 			params: body,
 		});
+		const shouldEnablePendingPlan = enablesPendingPlan({ params: body });
 
 		// A switch bills nothing now: validate it like billing.update does, then preview the unchanged plan.
-		const isSwitch = !liveUpdate && isCollectionMethodSwitch(body);
+		const isSwitch =
+			!liveUpdate && !shouldEnablePendingPlan && isCollectionMethodSwitch(body);
 		if (isSwitch) {
 			const switchContext = await setupSwitchCollectionMethodContext({
 				ctx,

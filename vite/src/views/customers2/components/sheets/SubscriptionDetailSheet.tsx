@@ -461,20 +461,42 @@ export function SubscriptionDetailSheet() {
 								variant="secondary"
 								className="flex-1"
 								onClick={() =>
-									setSheet({ type: "subscription-cancel", itemId })
+									setSheet({
+										type: "subscription-cancel",
+										itemId,
+										...(isPending && {
+											data: { cancelAction: "cancel_immediately" },
+										}),
+									})
 								}
 							>
-								{isScheduled ? "Cancel Scheduled Plan" : "Cancel Subscription"}
+								{isPending
+									? "Cancel Pending Plan"
+									: isScheduled
+										? "Cancel Scheduled Plan"
+										: "Cancel Subscription"}
 							</Button>
 						))}
-					{canUpdate && (
+					{isPending ? (
 						<Button
 							variant="primary"
 							className="flex-1"
-							onClick={handleUpdateSubscription}
+							onClick={() =>
+								setSheet({ type: "subscription-enable-now", itemId })
+							}
 						>
-							Update Subscription
+							Enable now
 						</Button>
+					) : (
+						canUpdate && (
+							<Button
+								variant="primary"
+								className="flex-1"
+								onClick={handleUpdateSubscription}
+							>
+								Update Subscription
+							</Button>
+						)
 					)}
 				</div>
 			)}

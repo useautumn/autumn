@@ -1,4 +1,5 @@
 import {
+	type CancelAction,
 	CusProductStatus,
 	cp,
 	type FullCusProduct,
@@ -106,6 +107,9 @@ export function SubscriptionCancelSheet() {
 	const approvalSeed = approvalSeedFromSheetData(sheetData);
 	const onApplied = useSettleApprovalOnApply();
 	const { customer } = useCusQuery();
+	const requestedCancelAction = sheetData?.cancelAction as
+		| CancelAction
+		| undefined;
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { prepaidItems } = usePrepaidItems({ product: productV2 });
@@ -133,9 +137,9 @@ export function SubscriptionCancelSheet() {
 	// const hasSubscription =
 	// 	cusProduct?.subscription_ids && cusProduct.subscription_ids.length > 0;
 	const { valid: isFreeOrOneOff } = cp(cusProduct).free().or.oneOff();
-	const defaultCancelAction = isFreeOrOneOff
-		? "cancel_immediately"
-		: "cancel_end_of_cycle";
+	const defaultCancelAction =
+		requestedCancelAction ??
+		(isFreeOrOneOff ? "cancel_immediately" : "cancel_end_of_cycle");
 
 	if (!cusProduct) {
 		return (

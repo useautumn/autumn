@@ -8,6 +8,7 @@ import {
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { enablesPendingPlan } from "@/internal/billing/v2/execute/pendingCustomerProducts/enablesPendingPlan";
 import { pendingReplacementToLiveUpdate } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingReplacementToLiveUpdate";
 import { updatePendingPlanIfAny } from "@/internal/billing/v2/execute/pendingCustomerProducts/updatePendingPlanIfAny";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -45,8 +46,13 @@ export const handleUpdateSubscription = createRoute({
 			ctx,
 			params: body,
 		});
+		const shouldEnablePendingPlan = enablesPendingPlan({ params: body });
 
-		if (!liveUpdate && isCollectionMethodSwitch(body)) {
+		if (
+			!liveUpdate &&
+			!shouldEnablePendingPlan &&
+			isCollectionMethodSwitch(body)
+		) {
 			return c.json(
 				await billingActions.switchCollectionMethod({ ctx, params: body }),
 				200,
