@@ -1444,6 +1444,31 @@ export const customerStoriesData: CustomerStory[] = [
 		author: { name: "Gregor Žunič", title: "Co-Founder at Browser Use" },
 	},
 	{
+		slug: "runable",
+		name: "Runable",
+		href: "/blog/how-runable-prices-an-ai-agent-for-1-7-million-users",
+		linkLabel: "How Runable prices an AI agent",
+		logo: "/images/logos/runable-wordmark.svg",
+		iconLogo: "/images/logos/icons/runable.svg",
+		logoClassName: "scale-90",
+		accent: "#8297FF",
+		surface: "#3E4E9B",
+		textOn: "light",
+		founderImage: "/images/customers/runable-saksham.png",
+		headline: {
+			lead: "Runable evolved pricing for 1.7M users",
+			emphasis: "without rebuilding billing.",
+		},
+		stats: [
+			{ value: "1.7M", label: "Users served" },
+			{ value: "1.3M", label: "Balance checks / day" },
+			{ value: "5", label: "Engineers avoided" },
+		],
+		quote:
+			"Autumn's infrastructure has allowed us to focus on what matters, which is making Runable better with every iteration.",
+		author: { name: "Saksham Sarda", title: "Co-Founder at Runable" },
+	},
+	{
 		slug: "t3-chat",
 		name: "T3.chat",
 		href: "/blog/working-with-t3-chat-on-a-new-way-of-pricing",
@@ -1470,7 +1495,7 @@ export const customerStoriesData: CustomerStory[] = [
 	},
 ];
 
-const FEATURED_STORY_SLUGS = ["mintlify", "firecrawl", "t3-chat"];
+const FEATURED_STORY_SLUGS = ["mintlify", "firecrawl", "runable", "t3-chat"];
 
 export const featuredCustomerStories: CustomerStory[] =
 	FEATURED_STORY_SLUGS.map((slug) => {
