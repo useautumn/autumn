@@ -1,0 +1,1 @@
+ALTER TABLE "atom_deployments" ADD COLUMN IF NOT EXISTS "volume_size_gib" integer DEFAULT 20 NOT NULL;

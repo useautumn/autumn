@@ -100,15 +100,17 @@ const AtomCheckRow = ({ check }: { check: AtomCheck }) => (
 	</div>
 );
 
-/** Where the first checks land: a quiet wait until one does, in the same box the checks then fill. */
+/** Where the first checks land: a quiet wait until the Atom counts one, in the same box the checks then fill. */
 const AtomCheckList = ({
 	isConnected,
+	firstCheckSeenAt,
 	checks,
 }: {
 	isConnected: boolean;
+	firstCheckSeenAt: number | null;
 	checks: AtomCheck[];
 }) => {
-	if (checks.length === 0)
+	if (firstCheckSeenAt === null)
 		return (
 			<div
 				className={cn(
@@ -126,6 +128,22 @@ const AtomCheckList = ({
 					{isConnected
 						? "Run the snippet from your app"
 						: "Checks show here once it does"}
+				</span>
+			</div>
+		);
+	// Only sampled checks are logged, so the Atom can count one that none here show.
+	if (checks.length === 0)
+		return (
+			<div
+				className={cn(
+					CHECKS_HEIGHT_CLASS,
+					"flex items-center justify-center gap-3 rounded-md border px-3",
+				)}
+			>
+				<StatusChipIcon tone="green" glyph="check" />
+				<span className="text-foreground">Checks are reaching your Atom</span>
+				<span className="text-tertiary-foreground">
+					First at {format(firstCheckSeenAt, "HH:mm:ss")}
 				</span>
 			</div>
 		);
@@ -147,10 +165,12 @@ const AtomCheckList = ({
 export const AtomFirstChecks = ({
 	endpointUrl,
 	isConnected,
+	firstCheckSeenAt,
 	checks,
 }: {
 	endpointUrl: string | null;
 	isConnected: boolean;
+	firstCheckSeenAt: number | null;
 	checks: AtomCheck[];
 }) => (
 	<div
@@ -160,7 +180,7 @@ export const AtomFirstChecks = ({
 		)}
 	>
 		<span className="flex h-5 items-center gap-2 font-medium text-foreground">
-			{checks.length > 0 ? (
+			{firstCheckSeenAt !== null ? (
 				<>
 					<StatusChipIcon tone="green" glyph="check" />
 					First check received
@@ -174,6 +194,10 @@ export const AtomFirstChecks = ({
 		) : (
 			<Skeleton className="h-[330px] w-full" />
 		)}
-		<AtomCheckList isConnected={isConnected} checks={checks} />
+		<AtomCheckList
+			isConnected={isConnected}
+			firstCheckSeenAt={firstCheckSeenAt}
+			checks={checks}
+		/>
 	</div>
 );
