@@ -75,6 +75,7 @@ import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { flushBalanceBatchingManagers } from "./internal/balances/utils/flushBalanceBatchingManagers.js";
+import { getBalanceCandidateSource } from "./internal/customers/balanceCandidates/getBalanceCandidateSource.js";
 import { getSqsJobs } from "./queue/getSqsJobs.js";
 import { shutdownSqsSendBatchers } from "./queue/queueUtils.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -132,7 +133,8 @@ const init = async ({
 	// an early rejection would otherwise hit the fatal unhandledRejection exit.
 	void redisWarmup.catch(() => {});
 
-	// Pay the MotherDuck handshake at boot, not inside the first balance sort.
+	// Pick the balance-sort backend once at boot; pay the MotherDuck handshake here too.
+	getBalanceCandidateSource();
 	prewarmMotherDuckResolver();
 
 	await startAllEdgeConfigPolling({ logger });

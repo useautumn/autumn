@@ -10,22 +10,19 @@ import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import {
-	getMotherDuckResolverDb,
-	isMotherDuckConfigured,
-	runMdWithTimeout,
-} from "@/external/motherduck/initMotherDuck.js";
-import { buildSearchPredicates } from "./CusSearchService.js";
-import { getCursorPredicateSql } from "./cursorPaginatedFullCusQuery.js";
-import {
 	balanceThresholdSql,
-	basisExprSql,
-	basisValueOf,
-	getDeflationExceptionRows,
-	liveCusEntPredicate,
-	passesBalanceFilter,
 	thresholdRequiresFiniteRows,
 	unlimitedPassesThreshold,
-	unlimitedUsedSumSql,
+} from "./balanceCandidates/balanceTotalsSql.js";
+import { getBalanceCandidateSource } from "./balanceCandidates/getBalanceCandidateSource.js";
+import type { ThresholdMatch } from "./balanceCandidates/types/balanceCandidateSource.js";
+import { buildSearchPredicates } from "./CusSearchService.js";
+import { getCursorPredicateSql } from "./cursorPaginatedFullCusQuery.js";
+import { liveCusEntPredicate, unlimitedUsedSumSql } from "./liveCusEntSql.js";
+import {
+	basisValueOf,
+	getDeflationExceptionRows,
+	passesBalanceFilter,
 } from "./resolveByFeatureBalanceSort.js";
 
 /** Above this many lake matches the candidate IN-list stops being viable and
@@ -33,14 +30,6 @@ import {
 const SPARSE_CANDIDATE_CAP = 25_000;
 const PAGE_SCAN_BATCH = 200;
 const MAX_TOPUP_ITERATIONS = 4;
-
-const rowsOf = <T>(result: unknown): T[] => {
-	if (Array.isArray(result)) return result as T[];
-	if (result && typeof result === "object" && "rows" in result) {
-		return (result as { rows: T[] }).rows;
-	}
-	return [];
-};
 
 /** Exact remaining balance per candidate (live definition); absent = no live
  * rows. Request-level predicates are NOT applied here — the paging query owns
@@ -112,16 +101,8 @@ const exactRemainingByCustomer = async ({
 	);
 };
 
-type LakeMatch = {
-	/** Lake-side match count for the threshold (approximate: 5-min staleness). */
-	matchCount: number;
-	/** Full candidate id set, or null when the match set is too large for the
-	 * IN-list path. */
-	candidateIds: string[] | null;
-};
-
-/** Lake match count + candidate ids for the threshold, or null when the lake
- * is unavailable. */
+/** Candidate-source match count + ids for the threshold, or null when the
+ * source is unavailable (dense walk takes over). */
 const getLakeMatch = async ({
 	db,
 	orgId,
@@ -134,67 +115,37 @@ const getLakeMatch = async ({
 	env: AppEnv;
 	internalFeatureId: string;
 	balance: BalanceFilter;
-}): Promise<LakeMatch | null> => {
-	if (!isMotherDuckConfigured()) return null;
+}): Promise<ThresholdMatch | null> => {
+	const source = getBalanceCandidateSource();
+	if (!source.isAvailable()) return null;
 
 	try {
-		const md = await getMotherDuckResolverDb();
-		const thresholdSql = balanceThresholdSql({
-			totalExpr: basisExprSql(balance.basis),
-			op: balance.op,
-			value: balance.value,
+		const match = await source.matchThreshold({
+			db,
+			orgId,
+			env,
+			internalFeatureId,
+			balance,
+			candidateCap: SPARSE_CANDIDATE_CAP,
 		});
-		const matchWhere = unlimitedPassesThreshold(balance)
-			? sql`internal_feature_id = ${internalFeatureId} AND (${thresholdSql} OR is_unlimited)`
-			: sql`internal_feature_id = ${internalFeatureId} AND ${thresholdSql}${
-					thresholdRequiresFiniteRows(balance)
-						? sql` AND finite_rows > 0`
-						: sql``
-				}`;
-
-		const countRows = rowsOf<{ n: number | string }>(
-			await runMdWithTimeout({
-				label: "balance-filter count",
-				run: () =>
-					md.execute(
-						sql`SELECT COUNT(*) AS n FROM main.ce_balance_totals WHERE ${matchWhere}`,
-					),
-			}),
-		);
-		const matchCount = Number(countRows[0]?.n ?? Number.POSITIVE_INFINITY);
-		if (!Number.isFinite(matchCount)) return null;
-		if (matchCount > SPARSE_CANDIDATE_CAP) {
-			return { matchCount, candidateIds: null };
-		}
-
-		const idRows = rowsOf<{ internal_customer_id: string }>(
-			await runMdWithTimeout({
-				label: "balance-filter candidates",
-				run: () =>
-					md.execute(
-						sql`SELECT internal_customer_id FROM main.ce_balance_totals WHERE ${matchWhere}`,
-					),
-			}),
-		);
-		const candidateIds = new Set(idRows.map((row) => row.internal_customer_id));
+		if (match?.candidateIds == null) return match;
 
 		// Deflated customers (lake under-reports) can truly pass a ">" threshold
 		// the lake missed — always in the candidate room, verified exactly below.
-		if (balance.op === ">") {
-			const exceptionRows = await getDeflationExceptionRows({
-				db,
-				orgId,
-				env,
-				internalFeatureId,
-				basis: balance.basis,
-			});
-			for (const row of exceptionRows) candidateIds.add(row.internalId);
-		}
-
-		return { matchCount, candidateIds: [...candidateIds] };
+		if (balance.op !== ">" || source.ranksExactly) return match;
+		const candidateIds = new Set(match.candidateIds);
+		const exceptionRows = await getDeflationExceptionRows({
+			db,
+			orgId,
+			env,
+			internalFeatureId,
+			basis: balance.basis,
+		});
+		for (const row of exceptionRows) candidateIds.add(row.internalId);
+		return { matchCount: match.matchCount, candidateIds: [...candidateIds] };
 	} catch (error) {
 		logger.warn(
-			`[balanceFilter] lake candidate path unavailable, using dense walk: ${error}`,
+			`[balanceFilter] ${source.backend} candidate path unavailable, using dense walk: ${error}`,
 		);
 		return null;
 	}
