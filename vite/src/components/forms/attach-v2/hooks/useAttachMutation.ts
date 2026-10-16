@@ -33,6 +33,7 @@ export function useAttachMutation({
 		buildRequestBody,
 		successMessage: "Product attached successfully",
 		errorMessage: "Failed to attach product",
+		inlineDenials: true,
 		onApplied,
 		onCheckoutRedirect,
 		onSuccess,
