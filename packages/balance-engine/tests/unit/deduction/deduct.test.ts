@@ -4,6 +4,7 @@ import {
 	BillWhen,
 	CusProductStatus,
 	PriceType,
+	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import type {
 	CommandOrg,
@@ -292,6 +293,54 @@ describe("deduct", () => {
 			expect(outcome.deltas.map((delta) => delta.id)).toEqual([
 				"expiring_grant",
 			]);
+		},
+	);
+
+	test.concurrent(
+		"a plan that rolls over is lost when its rollover expires, so an expiring grant drains first",
+		() => {
+			const day = 24 * 60 * 60 * 1000;
+			const state = createSubjectState({
+				identity,
+				customerProducts: [createCustomerProduct()],
+				customerEntitlements: [
+					{
+						...createCustomerEntitlement({ id: "plan_monthly", balance: 100 }),
+						next_reset_at: occurredAt + 9 * day,
+					},
+					{
+						...createCustomerEntitlement({ id: "grant", balance: 100 }),
+						expires_at: occurredAt + 36 * day,
+					},
+				],
+				rollovers: [],
+				usageWindows: [],
+			});
+			const drainedFirst = ({ rollsOver }: { rollsOver: boolean }) => {
+				const fullSubject = createSubjectFor({ state });
+				for (const customerProduct of fullSubject.customer_products) {
+					for (const customerEntitlement of customerProduct.customer_entitlements) {
+						if (customerEntitlement.id !== "plan_monthly") continue;
+						customerEntitlement.entitlement = {
+							...customerEntitlement.entitlement,
+							rollover: rollsOver
+								? {
+										max: null,
+										duration: RolloverExpiryDurationType.Month,
+										length: 1,
+									}
+								: null,
+						};
+					}
+				}
+				return deduct({
+					fullSubject,
+					request: createDeductionRequest({ org, value: 5 }),
+				}).deltas.map((delta) => delta.id);
+			};
+
+			expect(drainedFirst({ rollsOver: false })).toEqual(["plan_monthly"]);
+			expect(drainedFirst({ rollsOver: true })).toEqual(["grant"]);
 		},
 	);
 
