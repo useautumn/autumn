@@ -3,7 +3,6 @@ import { BYOC_CACHE_MACHINES } from "@autumn/shared";
 import {
 	atomActiveCustomersLabel,
 	atomChecksPerSecondLabel,
-	atomRecommendedVolumeGib,
 } from "../../../src/views/settings/sections/components/atom/atomMachineCapacity";
 import { atomMachineLabel } from "../../../src/views/settings/sections/components/atom/atomMachineDisplay";
 
@@ -37,17 +36,6 @@ describe("each Atom size's capacity", () => {
 			Medium: "25k",
 			Large: "~50k",
 			XL: "~100k",
-		});
-	});
-
-	test("storage is recommended at 20 GiB up to Medium and 50 GiB for Large and XL", () => {
-		expect(byLabel(atomRecommendedVolumeGib)).toEqual({
-			XXS: 20,
-			XS: 20,
-			Small: 20,
-			Medium: 20,
-			Large: 50,
-			XL: 50,
 		});
 	});
 });

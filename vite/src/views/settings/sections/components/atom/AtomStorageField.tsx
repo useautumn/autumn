@@ -1,7 +1,5 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { AtomFieldRow } from "./AtomFieldRow";
 import { AtomCustomVolumeInput, AtomVolumeOption } from "./AtomVolumeOptions";
-import { ATOM_STORAGE_RECOMMENDATION_NOTE } from "./atomMachineCapacity";
 import {
 	ATOM_STORAGE_PER_GIB_LABEL,
 	type AtomVolumeChoice,
@@ -22,13 +20,10 @@ const optionCaption = (gib: number | null) =>
 export const AtomStorageField = ({
 	choice,
 	size,
-	recommendedGib,
 	onChange,
 }: {
 	choice: AtomVolumeChoice;
 	size: AtomVolumeSize;
-	/** The preset the selected machine's customers fit; marked, never chosen for the org. */
-	recommendedGib: number;
 	onChange: (choice: AtomVolumeChoice) => void;
 }) => {
 	const isCustom = choice.presetGib === null;
@@ -40,20 +35,6 @@ export const AtomStorageField = ({
 						key={gib}
 						label={`${gib} GiB`}
 						caption={optionCaption(gib)}
-						badge={
-							gib === recommendedGib && (
-								<Tooltip>
-									<TooltipTrigger asChild>
-										<span className="text-[11px] font-normal text-tertiary-foreground">
-											Recommended
-										</span>
-									</TooltipTrigger>
-									<TooltipContent className="max-w-72">
-										{ATOM_STORAGE_RECOMMENDATION_NOTE}
-									</TooltipContent>
-								</Tooltip>
-							)
-						}
 						isSelected={choice.presetGib === gib}
 						onSelect={() => onChange({ ...choice, presetGib: gib })}
 						className={OPTION_CLASS}

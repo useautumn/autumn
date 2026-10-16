@@ -1,10 +1,9 @@
 import { Input } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
-/** One size to pick, as a toggle; a badge beside its label and a caption line under it when given. */
+/** One size to pick, as a toggle; a caption line under its label when given. */
 export const AtomVolumeOption = ({
 	label,
-	badge,
 	caption,
 	isSelected,
 	onSelect,
@@ -12,7 +11,6 @@ export const AtomVolumeOption = ({
 	className,
 }: {
 	label: string;
-	badge?: React.ReactNode;
 	caption?: string;
 	isSelected: boolean;
 	onSelect: () => void;
@@ -31,9 +29,8 @@ export const AtomVolumeOption = ({
 			className,
 		)}
 	>
-		<span className="flex items-baseline gap-1.5 whitespace-nowrap text-[13px] leading-[18px] font-medium text-foreground">
+		<span className="text-[13px] leading-[18px] font-medium text-foreground">
 			{label}
-			{badge}
 		</span>
 		{caption && (
 			<span className="text-[11px] leading-4 text-tertiary-foreground">
