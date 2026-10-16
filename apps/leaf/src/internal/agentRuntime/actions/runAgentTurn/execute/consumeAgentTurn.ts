@@ -265,6 +265,7 @@ const settleExhaustedTurn = ({
 	// here would contradict the answer the user just got.
 	if (emittedSettledTurn && !partialText)
 		return { declined: true, kind: "silent" };
+	if (!activity.sawActivity()) return { kind: "unreachable" };
 	if (!partialText) throw new Error(AGENT_UNREACHABLE_MESSAGE);
 	closeReasoningOutput({ onReasoning, progress });
 	return { kind: "answered", text: partialText };

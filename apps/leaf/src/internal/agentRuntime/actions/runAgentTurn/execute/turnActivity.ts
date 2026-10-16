@@ -6,6 +6,7 @@ export type TurnActivity = {
 	childStarted: () => void;
 	msSinceActivity: () => number;
 	msSinceStart: () => number;
+	sawActivity: () => boolean;
 	touch: () => void;
 };
 
@@ -13,6 +14,7 @@ export const createTurnActivity = (): TurnActivity => {
 	const startedAt = Date.now();
 	let lastActivityAt = startedAt;
 	let children = 0;
+	let touched = false;
 	return {
 		activeChildren: () => children,
 		childFinished: () => {
@@ -25,7 +27,9 @@ export const createTurnActivity = (): TurnActivity => {
 		},
 		msSinceActivity: () => Date.now() - lastActivityAt,
 		msSinceStart: () => Date.now() - startedAt,
+		sawActivity: () => touched,
 		touch: () => {
+			touched = true;
 			lastActivityAt = Date.now();
 		},
 	};
