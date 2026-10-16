@@ -43,6 +43,7 @@ export const buildPendingReattachParams = ({
 			customerProduct,
 		}),
 		version: params.version,
+		billing_cycle_anchor: enablesNow ? params.billing_cycle_anchor : undefined,
 		enable_plan_immediately: enablesNow || billingContext.enablePlanImmediately,
 		invoice_mode: (invoiceMode || enablesNow) && {
 			enabled: true,

@@ -5,7 +5,8 @@ import type {
 } from "@autumn/shared";
 import { cp, LATEST_VERSION } from "@autumn/shared";
 import { Button } from "@autumn/ui";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { BillingCycleAnchorConfigRow } from "@/components/forms/shared/BillingCycleAnchorConfigRow";
 import { useBillingMutation } from "@/components/forms/shared/hooks/useBillingMutation";
 import { PreviewSection } from "@/components/forms/shared/PreviewSection";
 import { BILLING_OPERATIONS } from "@/components/forms/shared/utils/billingOperations";
@@ -26,6 +27,7 @@ export function EnablePendingPlanSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const [resetBillingCycle, setResetBillingCycle] = useState(false);
 
 	const requestBody = useMemo<UpdateSubscriptionV1ParamsInput | null>(() => {
 		if (!customer || !cusProduct) return null;
@@ -39,8 +41,9 @@ export function EnablePendingPlanSheet() {
 				enabled: true,
 				enable_plan_immediately: true,
 			},
+			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
 		};
-	}, [customer, cusProduct, productV2]);
+	}, [customer, cusProduct, productV2, resetBillingCycle]);
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		requestBody,
@@ -107,6 +110,20 @@ export function EnablePendingPlanSheet() {
 					</div>
 				)}
 			</SheetSection>
+
+			{replacementPlan && (
+				<SheetSection>
+					<BillingCycleAnchorConfigRow
+						enabled={resetBillingCycle}
+						mode="now"
+						customAnchor={null}
+						allowCustomAnchor={false}
+						onEnabledChange={setResetBillingCycle}
+						onModeChange={() => {}}
+						onCustomAnchorChange={() => {}}
+					/>
+				</SheetSection>
+			)}
 
 			<PreviewSection previewQuery={previewQuery} includeNextCycle={false} />
 

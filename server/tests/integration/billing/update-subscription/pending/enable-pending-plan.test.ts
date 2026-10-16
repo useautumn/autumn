@@ -10,6 +10,10 @@ import {
 	stripeToAtmnAmount,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import {
+	calculateProratedDiff,
+	calculateResetBillingCycleNowTotal,
+} from "@tests/integration/billing/utils/proration";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -459,5 +463,77 @@ test.concurrent(
 			liveRow!.subscription_ids![0]!,
 		);
 		expect(stripeSubscription.collection_method).toBe("send_invoice");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("enable pending plan: resets the billing cycle when asked, prorates by default")}`,
+	async () => {
+		const customerId = "enable-pending-reset-cycle";
+		const live = products.pro({
+			id: "reset-live",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const pendingPlan = products.premium({
+			id: "reset-pending",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const { autumnV2_2, ctx, customer, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [live, pendingPlan] }),
+			],
+			actions: [
+				s.billing.attach({ productId: live.id }),
+				s.advanceTestClock({ days: 14 }),
+			],
+		});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pendingPlan.id,
+			invoice_mode: { enabled: true, issue_method: "send" },
+		});
+		const pending = await loadPending({
+			ctx,
+			internalCustomerId: customer!.internal_id,
+		});
+		const enable = enablePending({
+			customerId,
+			pendingId: pending.id,
+			planId: pendingPlan.id,
+		});
+
+		const proratedPreview =
+			await autumnV2_2.subscriptions.previewUpdate(enable);
+		expect(proratedPreview.total).toBeCloseTo(
+			await calculateProratedDiff({
+				customerId,
+				advancedTo,
+				oldAmount: 20,
+				newAmount: 50,
+			}),
+			0,
+		);
+
+		const resetTotal = await calculateResetBillingCycleNowTotal({
+			customerId,
+			advancedTo,
+			oldAmount: 20,
+			newAmount: 50,
+		});
+		const reset = { ...enable, billing_cycle_anchor: "now" as const };
+		const resetPreview = await autumnV2_2.subscriptions.previewUpdate(reset);
+		expect(resetPreview.total).toBeCloseTo(resetTotal, 0);
+
+		const result = await autumnV2_2.subscriptions.update(reset);
+		expect(result.invoice?.status).toBe("open");
+		expect(result.invoice?.total).toBeCloseTo(resetTotal, 0);
+		const [active] = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId: customer!.internal_id,
+			inStatuses: [CusProductStatus.Active],
+		});
+		expect(active!.product.id).toBe(pendingPlan.id);
 	},
 );
