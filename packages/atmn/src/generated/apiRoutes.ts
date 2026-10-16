@@ -21,7 +21,7 @@ export type ApiRoute = {
 };
 
 /** The x-api-version every request carries: the spec's default. */
-export const API_VERSION = "2.5.0";
+export const API_VERSION = "2.6.0";
 
 export const API_ROUTES: readonly ApiRoute[] = [
 	{
@@ -2929,6 +2929,13 @@ export const API_ROUTES: readonly ApiRoute[] = [
 				required: false,
 				description:
 					"Additional properties to attach to this finalize lock event.",
+			},
+			{
+				name: "customer_id",
+				type: "string",
+				required: true,
+				description:
+					"The customer the lock belongs to. A lock of any other customer is not found.",
 			},
 		],
 	},

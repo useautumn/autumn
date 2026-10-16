@@ -10,6 +10,15 @@ import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
+import {
+  CreditDimensionInputUnion,
+  CreditDimensionInputUnion$Outbound,
+  CreditDimensionInputUnion$outboundSchema,
+} from "./credit-dimension-input-union.js";
+import {
+  CreditDimensionUnion,
+  CreditDimensionUnion$inboundSchema,
+} from "./credit-dimension-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type UpdateFeatureGlobals = {
@@ -55,68 +64,7 @@ export type UpdateFeatureDisplayRequestBody = {
   plural: string;
 };
 
-export type UpdateFeatureDimensionsMatch4 = string | number | boolean;
-
-export type UpdateFeatureDimensionsRequestBody4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsMatch3 = string | number | boolean;
-
-export const UpdateFeatureDimensionsToRequestBodyEnum2 = {
-  Inf: "inf",
-} as const;
-export type UpdateFeatureDimensionsToRequestBodyEnum2 = ClosedEnum<
-  typeof UpdateFeatureDimensionsToRequestBodyEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateFeatureDimensionsToRequestBodyUnion2 =
-  | number
-  | UpdateFeatureDimensionsToRequestBodyEnum2;
-
-export type UpdateFeatureDimensionsTierRequestBody2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateFeatureDimensionsToRequestBodyEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsRequestBody3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierRequestBody2>;
-};
-
-export type UpdateFeatureDimensionsRequestBodyUnion2 =
-  | UpdateFeatureDimensionsRequestBody3
-  | UpdateFeatureDimensionsRequestBody4;
-
-export type UpdateFeatureMultipliersMatch2 = string | number | boolean;
+export type UpdateFeatureMatch2 = string | number | boolean;
 
 export type UpdateFeatureMultipliersRequestBody2 = {
   /**
@@ -145,11 +93,7 @@ export type UpdateFeatureCreditSchemaRequestBody2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsRequestBody3
-      | UpdateFeatureDimensionsRequestBody4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -162,68 +106,7 @@ export type UpdateFeatureCreditSchemaRequestBody2 = {
   creditCost: number;
 };
 
-export type UpdateFeatureDimensionsMatch2 = string | number | boolean;
-
-export type UpdateFeatureDimensionsRequestBody2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsMatch1 = string | number | boolean;
-
-export const UpdateFeatureDimensionsToRequestBodyEnum1 = {
-  Inf: "inf",
-} as const;
-export type UpdateFeatureDimensionsToRequestBodyEnum1 = ClosedEnum<
-  typeof UpdateFeatureDimensionsToRequestBodyEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateFeatureDimensionsToRequestBodyUnion1 =
-  | number
-  | UpdateFeatureDimensionsToRequestBodyEnum1;
-
-export type UpdateFeatureDimensionsTierRequestBody1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateFeatureDimensionsToRequestBodyEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsRequestBody1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string | number | boolean };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierRequestBody1>;
-};
-
-export type UpdateFeatureDimensionsRequestBodyUnion1 =
-  | UpdateFeatureDimensionsRequestBody1
-  | UpdateFeatureDimensionsRequestBody2;
-
-export type UpdateFeatureMultipliersMatch1 = string | number | boolean;
+export type UpdateFeatureMatch1 = string | number | boolean;
 
 export type UpdateFeatureMultipliersRequestBody1 = {
   /**
@@ -277,11 +160,7 @@ export type UpdateFeatureCreditSchemaRequestBody1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsRequestBody1
-      | UpdateFeatureDimensionsRequestBody2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -400,63 +279,6 @@ export type UpdateFeatureCombineResponse = OpenEnum<
   typeof UpdateFeatureCombineResponse
 >;
 
-export type UpdateFeatureDimensionsResponse6 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateFeatureDimensionsToResponseEnum3 = {
-  Inf: "inf",
-} as const;
-export type UpdateFeatureDimensionsToResponseEnum3 = ClosedEnum<
-  typeof UpdateFeatureDimensionsToResponseEnum3
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateFeatureDimensionsToResponseUnion3 =
-  | number
-  | UpdateFeatureDimensionsToResponseEnum3;
-
-export type UpdateFeatureDimensionsTierResponse3 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateFeatureDimensionsToResponseEnum3;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsResponse5 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierResponse3>;
-};
-
-export type UpdateFeatureDimensionsResponseUnion3 =
-  | UpdateFeatureDimensionsResponse5
-  | UpdateFeatureDimensionsResponse6;
-
 export type UpdateFeatureMultipliersResponse3 = {
   /**
    * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
@@ -481,11 +303,7 @@ export type UpdateFeatureCreditSchemaResponse3 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsResponse5
-      | UpdateFeatureDimensionsResponse6;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -495,63 +313,6 @@ export type UpdateFeatureCreditSchemaResponse3 = {
    */
   creditCost: number;
 };
-
-export type UpdateFeatureDimensionsResponse4 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateFeatureDimensionsToResponseEnum2 = {
-  Inf: "inf",
-} as const;
-export type UpdateFeatureDimensionsToResponseEnum2 = ClosedEnum<
-  typeof UpdateFeatureDimensionsToResponseEnum2
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateFeatureDimensionsToResponseUnion2 =
-  | number
-  | UpdateFeatureDimensionsToResponseEnum2;
-
-export type UpdateFeatureDimensionsTierResponse2 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateFeatureDimensionsToResponseEnum2;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsResponse3 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierResponse2>;
-};
-
-export type UpdateFeatureDimensionsResponseUnion2 =
-  | UpdateFeatureDimensionsResponse3
-  | UpdateFeatureDimensionsResponse4;
 
 export type UpdateFeatureMultipliersResponse2 = {
   /**
@@ -580,11 +341,7 @@ export type UpdateFeatureCreditSchemaResponse2 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsResponse3
-      | UpdateFeatureDimensionsResponse4;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -594,63 +351,6 @@ export type UpdateFeatureCreditSchemaResponse2 = {
    */
   creditCost: number;
 };
-
-export type UpdateFeatureDimensionsResponse2 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  /**
-   * Credits consumed per billing-unit group when this dimension matches.
-   */
-  creditCost: number;
-};
-
-export const UpdateFeatureDimensionsToResponseEnum1 = {
-  Inf: "inf",
-} as const;
-export type UpdateFeatureDimensionsToResponseEnum1 = ClosedEnum<
-  typeof UpdateFeatureDimensionsToResponseEnum1
->;
-
-/**
- * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
- */
-export type UpdateFeatureDimensionsToResponseUnion1 =
-  | number
-  | UpdateFeatureDimensionsToResponseEnum1;
-
-export type UpdateFeatureDimensionsTierResponse1 = {
-  /**
-   * Inclusive upper usage boundary for this graduated tier. The final tier must be 'inf'.
-   */
-  to: number | UpdateFeatureDimensionsToResponseEnum1;
-  /**
-   * Credits consumed per billing-unit group within this tier.
-   */
-  creditCost: number;
-};
-
-export type UpdateFeatureDimensionsResponse1 = {
-  /**
-   * Event properties this entry applies to. Every key must equal the tracked property, compared as strings.
-   */
-  match: { [k: string]: string };
-  /**
-   * Breaks ties between dimensions that match the same number of keys. Higher wins.
-   */
-  priority?: number | undefined;
-  tierBehavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierResponse1>;
-};
-
-export type UpdateFeatureDimensionsResponseUnion1 =
-  | UpdateFeatureDimensionsResponse1
-  | UpdateFeatureDimensionsResponse2;
 
 export type UpdateFeatureMultipliersResponse1 = {
   /**
@@ -702,11 +402,7 @@ export type UpdateFeatureCreditSchemaResponse1 = {
   /**
    * Named rates chosen by event properties. The most specific match sets the rate; with no match the item's own rate applies.
    */
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsResponse1
-      | UpdateFeatureDimensionsResponse2;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionUnion } | undefined;
   /**
    * Named adjustments chosen by event properties. Every match applies: factors multiply, then adds are summed.
    */
@@ -868,232 +564,19 @@ export function updateFeatureDisplayRequestBodyToJSON(
 }
 
 /** @internal */
-export type UpdateFeatureDimensionsMatch4$Outbound = string | number | boolean;
+export type UpdateFeatureMatch2$Outbound = string | number | boolean;
 
 /** @internal */
-export const UpdateFeatureDimensionsMatch4$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsMatch4$Outbound,
-  UpdateFeatureDimensionsMatch4
+export const UpdateFeatureMatch2$outboundSchema: z.ZodMiniType<
+  UpdateFeatureMatch2$Outbound,
+  UpdateFeatureMatch2
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function updateFeatureDimensionsMatch4ToJSON(
-  updateFeatureDimensionsMatch4: UpdateFeatureDimensionsMatch4,
+export function updateFeatureMatch2ToJSON(
+  updateFeatureMatch2: UpdateFeatureMatch2,
 ): string {
   return JSON.stringify(
-    UpdateFeatureDimensionsMatch4$outboundSchema.parse(
-      updateFeatureDimensionsMatch4,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBody4$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBody4$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsRequestBody4$Outbound,
-  UpdateFeatureDimensionsRequestBody4
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsRequestBody4ToJSON(
-  updateFeatureDimensionsRequestBody4: UpdateFeatureDimensionsRequestBody4,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBody4$outboundSchema.parse(
-      updateFeatureDimensionsRequestBody4,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsMatch3$Outbound = string | number | boolean;
-
-/** @internal */
-export const UpdateFeatureDimensionsMatch3$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsMatch3$Outbound,
-  UpdateFeatureDimensionsMatch3
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function updateFeatureDimensionsMatch3ToJSON(
-  updateFeatureDimensionsMatch3: UpdateFeatureDimensionsMatch3,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsMatch3$outboundSchema.parse(
-      updateFeatureDimensionsMatch3,
-    ),
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsToRequestBodyEnum2$outboundSchema:
-  z.ZodMiniEnum<typeof UpdateFeatureDimensionsToRequestBodyEnum2> = z.enum(
-    UpdateFeatureDimensionsToRequestBodyEnum2,
-  );
-
-/** @internal */
-export type UpdateFeatureDimensionsToRequestBodyUnion2$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const UpdateFeatureDimensionsToRequestBodyUnion2$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsToRequestBodyUnion2$Outbound,
-    UpdateFeatureDimensionsToRequestBodyUnion2
-  > = smartUnion([
-    z.number(),
-    UpdateFeatureDimensionsToRequestBodyEnum2$outboundSchema,
-  ]);
-
-export function updateFeatureDimensionsToRequestBodyUnion2ToJSON(
-  updateFeatureDimensionsToRequestBodyUnion2:
-    UpdateFeatureDimensionsToRequestBodyUnion2,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsToRequestBodyUnion2$outboundSchema.parse(
-      updateFeatureDimensionsToRequestBodyUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsTierRequestBody2$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsTierRequestBody2$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsTierRequestBody2$Outbound,
-    UpdateFeatureDimensionsTierRequestBody2
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        UpdateFeatureDimensionsToRequestBodyEnum2$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function updateFeatureDimensionsTierRequestBody2ToJSON(
-  updateFeatureDimensionsTierRequestBody2:
-    UpdateFeatureDimensionsTierRequestBody2,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsTierRequestBody2$outboundSchema.parse(
-      updateFeatureDimensionsTierRequestBody2,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBody3$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierRequestBody2$Outbound>;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBody3$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsRequestBody3$Outbound,
-  UpdateFeatureDimensionsRequestBody3
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => UpdateFeatureDimensionsTierRequestBody2$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsRequestBody3ToJSON(
-  updateFeatureDimensionsRequestBody3: UpdateFeatureDimensionsRequestBody3,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBody3$outboundSchema.parse(
-      updateFeatureDimensionsRequestBody3,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBodyUnion2$Outbound =
-  | UpdateFeatureDimensionsRequestBody3$Outbound
-  | UpdateFeatureDimensionsRequestBody4$Outbound;
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBodyUnion2$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsRequestBodyUnion2$Outbound,
-    UpdateFeatureDimensionsRequestBodyUnion2
-  > = smartUnion([
-    z.lazy(() => UpdateFeatureDimensionsRequestBody3$outboundSchema),
-    z.lazy(() => UpdateFeatureDimensionsRequestBody4$outboundSchema),
-  ]);
-
-export function updateFeatureDimensionsRequestBodyUnion2ToJSON(
-  updateFeatureDimensionsRequestBodyUnion2:
-    UpdateFeatureDimensionsRequestBodyUnion2,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBodyUnion2$outboundSchema.parse(
-      updateFeatureDimensionsRequestBodyUnion2,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureMultipliersMatch2$Outbound = string | number | boolean;
-
-/** @internal */
-export const UpdateFeatureMultipliersMatch2$outboundSchema: z.ZodMiniType<
-  UpdateFeatureMultipliersMatch2$Outbound,
-  UpdateFeatureMultipliersMatch2
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function updateFeatureMultipliersMatch2ToJSON(
-  updateFeatureMultipliersMatch2: UpdateFeatureMultipliersMatch2,
-): string {
-  return JSON.stringify(
-    UpdateFeatureMultipliersMatch2$outboundSchema.parse(
-      updateFeatureMultipliersMatch2,
-    ),
+    UpdateFeatureMatch2$outboundSchema.parse(updateFeatureMatch2),
   );
 }
 
@@ -1131,11 +614,7 @@ export function updateFeatureMultipliersRequestBody2ToJSON(
 export type UpdateFeatureCreditSchemaRequestBody2$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsRequestBody3$Outbound
-      | UpdateFeatureDimensionsRequestBody4$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?:
     | { [k: string]: UpdateFeatureMultipliersRequestBody2$Outbound }
     | undefined;
@@ -1151,13 +630,9 @@ export const UpdateFeatureCreditSchemaRequestBody2$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => UpdateFeatureDimensionsRequestBody3$outboundSchema),
-          z.lazy(() => UpdateFeatureDimensionsRequestBody4$outboundSchema),
-        ]),
-      )),
+      dimensions: z.optional(
+        z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+      ),
       multipliers: z.optional(z.record(
         z.string(),
         z.lazy(() => UpdateFeatureMultipliersRequestBody2$outboundSchema),
@@ -1184,232 +659,19 @@ export function updateFeatureCreditSchemaRequestBody2ToJSON(
 }
 
 /** @internal */
-export type UpdateFeatureDimensionsMatch2$Outbound = string | number | boolean;
+export type UpdateFeatureMatch1$Outbound = string | number | boolean;
 
 /** @internal */
-export const UpdateFeatureDimensionsMatch2$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsMatch2$Outbound,
-  UpdateFeatureDimensionsMatch2
+export const UpdateFeatureMatch1$outboundSchema: z.ZodMiniType<
+  UpdateFeatureMatch1$Outbound,
+  UpdateFeatureMatch1
 > = smartUnion([z.string(), z.number(), z.boolean()]);
 
-export function updateFeatureDimensionsMatch2ToJSON(
-  updateFeatureDimensionsMatch2: UpdateFeatureDimensionsMatch2,
+export function updateFeatureMatch1ToJSON(
+  updateFeatureMatch1: UpdateFeatureMatch1,
 ): string {
   return JSON.stringify(
-    UpdateFeatureDimensionsMatch2$outboundSchema.parse(
-      updateFeatureDimensionsMatch2,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBody2$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  credit_cost: number;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBody2$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsRequestBody2$Outbound,
-  UpdateFeatureDimensionsRequestBody2
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    creditCost: z.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      creditCost: "credit_cost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsRequestBody2ToJSON(
-  updateFeatureDimensionsRequestBody2: UpdateFeatureDimensionsRequestBody2,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBody2$outboundSchema.parse(
-      updateFeatureDimensionsRequestBody2,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsMatch1$Outbound = string | number | boolean;
-
-/** @internal */
-export const UpdateFeatureDimensionsMatch1$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsMatch1$Outbound,
-  UpdateFeatureDimensionsMatch1
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function updateFeatureDimensionsMatch1ToJSON(
-  updateFeatureDimensionsMatch1: UpdateFeatureDimensionsMatch1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsMatch1$outboundSchema.parse(
-      updateFeatureDimensionsMatch1,
-    ),
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsToRequestBodyEnum1$outboundSchema:
-  z.ZodMiniEnum<typeof UpdateFeatureDimensionsToRequestBodyEnum1> = z.enum(
-    UpdateFeatureDimensionsToRequestBodyEnum1,
-  );
-
-/** @internal */
-export type UpdateFeatureDimensionsToRequestBodyUnion1$Outbound =
-  | number
-  | string;
-
-/** @internal */
-export const UpdateFeatureDimensionsToRequestBodyUnion1$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsToRequestBodyUnion1$Outbound,
-    UpdateFeatureDimensionsToRequestBodyUnion1
-  > = smartUnion([
-    z.number(),
-    UpdateFeatureDimensionsToRequestBodyEnum1$outboundSchema,
-  ]);
-
-export function updateFeatureDimensionsToRequestBodyUnion1ToJSON(
-  updateFeatureDimensionsToRequestBodyUnion1:
-    UpdateFeatureDimensionsToRequestBodyUnion1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsToRequestBodyUnion1$outboundSchema.parse(
-      updateFeatureDimensionsToRequestBodyUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsTierRequestBody1$Outbound = {
-  to: number | string;
-  credit_cost: number;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsTierRequestBody1$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsTierRequestBody1$Outbound,
-    UpdateFeatureDimensionsTierRequestBody1
-  > = z.pipe(
-    z.object({
-      to: smartUnion([
-        z.number(),
-        UpdateFeatureDimensionsToRequestBodyEnum1$outboundSchema,
-      ]),
-      creditCost: z.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        creditCost: "credit_cost",
-      });
-    }),
-  );
-
-export function updateFeatureDimensionsTierRequestBody1ToJSON(
-  updateFeatureDimensionsTierRequestBody1:
-    UpdateFeatureDimensionsTierRequestBody1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsTierRequestBody1$outboundSchema.parse(
-      updateFeatureDimensionsTierRequestBody1,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBody1$Outbound = {
-  match: { [k: string]: string | number | boolean };
-  priority?: number | undefined;
-  tier_behavior: "graduated";
-  tiers: Array<UpdateFeatureDimensionsTierRequestBody1$Outbound>;
-};
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBody1$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsRequestBody1$Outbound,
-  UpdateFeatureDimensionsRequestBody1
-> = z.pipe(
-  z.object({
-    match: z.record(
-      z.string(),
-      smartUnion([z.string(), z.number(), z.boolean()]),
-    ),
-    priority: z.optional(z.int()),
-    tierBehavior: z.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => UpdateFeatureDimensionsTierRequestBody1$outboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      tierBehavior: "tier_behavior",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsRequestBody1ToJSON(
-  updateFeatureDimensionsRequestBody1: UpdateFeatureDimensionsRequestBody1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBody1$outboundSchema.parse(
-      updateFeatureDimensionsRequestBody1,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureDimensionsRequestBodyUnion1$Outbound =
-  | UpdateFeatureDimensionsRequestBody1$Outbound
-  | UpdateFeatureDimensionsRequestBody2$Outbound;
-
-/** @internal */
-export const UpdateFeatureDimensionsRequestBodyUnion1$outboundSchema:
-  z.ZodMiniType<
-    UpdateFeatureDimensionsRequestBodyUnion1$Outbound,
-    UpdateFeatureDimensionsRequestBodyUnion1
-  > = smartUnion([
-    z.lazy(() => UpdateFeatureDimensionsRequestBody1$outboundSchema),
-    z.lazy(() => UpdateFeatureDimensionsRequestBody2$outboundSchema),
-  ]);
-
-export function updateFeatureDimensionsRequestBodyUnion1ToJSON(
-  updateFeatureDimensionsRequestBodyUnion1:
-    UpdateFeatureDimensionsRequestBodyUnion1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureDimensionsRequestBodyUnion1$outboundSchema.parse(
-      updateFeatureDimensionsRequestBodyUnion1,
-    ),
-  );
-}
-
-/** @internal */
-export type UpdateFeatureMultipliersMatch1$Outbound = string | number | boolean;
-
-/** @internal */
-export const UpdateFeatureMultipliersMatch1$outboundSchema: z.ZodMiniType<
-  UpdateFeatureMultipliersMatch1$Outbound,
-  UpdateFeatureMultipliersMatch1
-> = smartUnion([z.string(), z.number(), z.boolean()]);
-
-export function updateFeatureMultipliersMatch1ToJSON(
-  updateFeatureMultipliersMatch1: UpdateFeatureMultipliersMatch1,
-): string {
-  return JSON.stringify(
-    UpdateFeatureMultipliersMatch1$outboundSchema.parse(
-      updateFeatureMultipliersMatch1,
-    ),
+    UpdateFeatureMatch1$outboundSchema.parse(updateFeatureMatch1),
   );
 }
 
@@ -1503,11 +765,7 @@ export function updateFeatureTierRequestBodyToJSON(
 export type UpdateFeatureCreditSchemaRequestBody1$Outbound = {
   metered_feature_id: string;
   billing_units?: number | undefined;
-  dimensions?: {
-    [k: string]:
-      | UpdateFeatureDimensionsRequestBody1$Outbound
-      | UpdateFeatureDimensionsRequestBody2$Outbound;
-  } | undefined;
+  dimensions?: { [k: string]: CreditDimensionInputUnion$Outbound } | undefined;
   multipliers?:
     | { [k: string]: UpdateFeatureMultipliersRequestBody1$Outbound }
     | undefined;
@@ -1524,13 +782,9 @@ export const UpdateFeatureCreditSchemaRequestBody1$outboundSchema:
     z.object({
       meteredFeatureId: z.string(),
       billingUnits: z.optional(z.number()),
-      dimensions: z.optional(z.record(
-        z.string(),
-        smartUnion([
-          z.lazy(() => UpdateFeatureDimensionsRequestBody1$outboundSchema),
-          z.lazy(() => UpdateFeatureDimensionsRequestBody2$outboundSchema),
-        ]),
-      )),
+      dimensions: z.optional(
+        z.record(z.string(), CreditDimensionInputUnion$outboundSchema),
+      ),
       multipliers: z.optional(z.record(
         z.string(),
         z.lazy(() => UpdateFeatureMultipliersRequestBody1$outboundSchema),
@@ -1740,142 +994,6 @@ export const UpdateFeatureCombineResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateFeatureCombineResponse);
 
 /** @internal */
-export const UpdateFeatureDimensionsResponse6$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse6,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse6FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse6, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse6$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse6' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseEnum3$inboundSchema:
-  z.ZodMiniEnum<typeof UpdateFeatureDimensionsToResponseEnum3> = z.enum(
-    UpdateFeatureDimensionsToResponseEnum3,
-  );
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseUnion3$inboundSchema:
-  z.ZodMiniType<UpdateFeatureDimensionsToResponseUnion3, unknown> = smartUnion([
-    types.number(),
-    UpdateFeatureDimensionsToResponseEnum3$inboundSchema,
-  ]);
-
-export function updateFeatureDimensionsToResponseUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<
-  UpdateFeatureDimensionsToResponseUnion3,
-  SDKValidationError
-> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsToResponseUnion3$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'UpdateFeatureDimensionsToResponseUnion3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsTierResponse3$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsTierResponse3,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateFeatureDimensionsToResponseEnum3$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsTierResponse3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsTierResponse3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsTierResponse3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsTierResponse3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponse5$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse5,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => UpdateFeatureDimensionsTierResponse3$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse5FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse5, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse5$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse5' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponseUnion3$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponseUnion3,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateFeatureDimensionsResponse5$inboundSchema),
-  z.lazy(() => UpdateFeatureDimensionsResponse6$inboundSchema),
-]);
-
-export function updateFeatureDimensionsResponseUnion3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponseUnion3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsResponseUnion3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponseUnion3' from JSON`,
-  );
-}
-
-/** @internal */
 export const UpdateFeatureMultipliersResponse3$inboundSchema: z.ZodMiniType<
   UpdateFeatureMultipliersResponse3,
   unknown
@@ -1903,13 +1021,9 @@ export const UpdateFeatureCreditSchemaResponse3$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.literal(""),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateFeatureDimensionsResponse5$inboundSchema),
-        z.lazy(() => UpdateFeatureDimensionsResponse6$inboundSchema),
-      ]),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
     multipliers: types.optional(z.record(
       z.string(),
       z.lazy(() => UpdateFeatureMultipliersResponse3$inboundSchema),
@@ -1933,142 +1047,6 @@ export function updateFeatureCreditSchemaResponse3FromJSON(
     (x) =>
       UpdateFeatureCreditSchemaResponse3$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateFeatureCreditSchemaResponse3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponse4$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse4,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse4FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse4, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse4$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse4' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseEnum2$inboundSchema:
-  z.ZodMiniEnum<typeof UpdateFeatureDimensionsToResponseEnum2> = z.enum(
-    UpdateFeatureDimensionsToResponseEnum2,
-  );
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseUnion2$inboundSchema:
-  z.ZodMiniType<UpdateFeatureDimensionsToResponseUnion2, unknown> = smartUnion([
-    types.number(),
-    UpdateFeatureDimensionsToResponseEnum2$inboundSchema,
-  ]);
-
-export function updateFeatureDimensionsToResponseUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<
-  UpdateFeatureDimensionsToResponseUnion2,
-  SDKValidationError
-> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsToResponseUnion2$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'UpdateFeatureDimensionsToResponseUnion2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsTierResponse2$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsTierResponse2,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateFeatureDimensionsToResponseEnum2$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsTierResponse2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsTierResponse2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsTierResponse2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsTierResponse2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponse3$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse3,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => UpdateFeatureDimensionsTierResponse2$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse3FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse3, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse3$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse3' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponseUnion2$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponseUnion2,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateFeatureDimensionsResponse3$inboundSchema),
-  z.lazy(() => UpdateFeatureDimensionsResponse4$inboundSchema),
-]);
-
-export function updateFeatureDimensionsResponseUnion2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponseUnion2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsResponseUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponseUnion2' from JSON`,
   );
 }
 
@@ -2100,13 +1078,9 @@ export const UpdateFeatureCreditSchemaResponse2$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateFeatureDimensionsResponse3$inboundSchema),
-        z.lazy(() => UpdateFeatureDimensionsResponse4$inboundSchema),
-      ]),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
     multipliers: types.optional(z.record(
       z.string(),
       z.lazy(() => UpdateFeatureMultipliersResponse2$inboundSchema),
@@ -2130,142 +1104,6 @@ export function updateFeatureCreditSchemaResponse2FromJSON(
     (x) =>
       UpdateFeatureCreditSchemaResponse2$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'UpdateFeatureCreditSchemaResponse2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponse2$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse2,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse2FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse2, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse2' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseEnum1$inboundSchema:
-  z.ZodMiniEnum<typeof UpdateFeatureDimensionsToResponseEnum1> = z.enum(
-    UpdateFeatureDimensionsToResponseEnum1,
-  );
-
-/** @internal */
-export const UpdateFeatureDimensionsToResponseUnion1$inboundSchema:
-  z.ZodMiniType<UpdateFeatureDimensionsToResponseUnion1, unknown> = smartUnion([
-    types.number(),
-    UpdateFeatureDimensionsToResponseEnum1$inboundSchema,
-  ]);
-
-export function updateFeatureDimensionsToResponseUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<
-  UpdateFeatureDimensionsToResponseUnion1,
-  SDKValidationError
-> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsToResponseUnion1$inboundSchema.parse(
-        JSON.parse(x),
-      ),
-    `Failed to parse 'UpdateFeatureDimensionsToResponseUnion1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsTierResponse1$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsTierResponse1,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([
-      types.number(),
-      UpdateFeatureDimensionsToResponseEnum1$inboundSchema,
-    ]),
-    credit_cost: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "credit_cost": "creditCost",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsTierResponse1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsTierResponse1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsTierResponse1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsTierResponse1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponse1$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponse1,
-  unknown
-> = z.pipe(
-  z.object({
-    match: z.record(z.string(), types.string()),
-    priority: types.optional(types.number()),
-    tier_behavior: types.literal("graduated"),
-    tiers: z.array(
-      z.lazy(() => UpdateFeatureDimensionsTierResponse1$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-    });
-  }),
-);
-
-export function updateFeatureDimensionsResponse1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponse1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateFeatureDimensionsResponse1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponse1' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateFeatureDimensionsResponseUnion1$inboundSchema: z.ZodMiniType<
-  UpdateFeatureDimensionsResponseUnion1,
-  unknown
-> = smartUnion([
-  z.lazy(() => UpdateFeatureDimensionsResponse1$inboundSchema),
-  z.lazy(() => UpdateFeatureDimensionsResponse2$inboundSchema),
-]);
-
-export function updateFeatureDimensionsResponseUnion1FromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateFeatureDimensionsResponseUnion1, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      UpdateFeatureDimensionsResponseUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateFeatureDimensionsResponseUnion1' from JSON`,
   );
 }
 
@@ -2344,13 +1182,9 @@ export const UpdateFeatureCreditSchemaResponse1$inboundSchema: z.ZodMiniType<
   z.object({
     metered_feature_id: types.string(),
     billing_units: types.optional(types.number()),
-    dimensions: types.optional(z.record(
-      z.string(),
-      smartUnion([
-        z.lazy(() => UpdateFeatureDimensionsResponse1$inboundSchema),
-        z.lazy(() => UpdateFeatureDimensionsResponse2$inboundSchema),
-      ]),
-    )),
+    dimensions: types.optional(
+      z.record(z.string(), CreditDimensionUnion$inboundSchema),
+    ),
     multipliers: types.optional(z.record(
       z.string(),
       z.lazy(() => UpdateFeatureMultipliersResponse1$inboundSchema),
