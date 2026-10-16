@@ -1,17 +1,17 @@
 import { isPlainObject } from "../schemas/isPlainObject";
-import type { WhenEntry } from "./types";
+import type { FilterEntry } from "./types";
 
-/** Every object entry in a `when` filter, at any depth, with its path from `when`. */
-export const listWhenEntries = ({
+/** Every object entry in a filter, at any depth, with its path from `filter`. */
+export const listFilterEntries = ({
 	value,
-	path = ["when"],
+	path = ["filter"],
 }: {
 	value: unknown;
 	path?: (string | number)[];
-}): WhenEntry[] => {
+}): FilterEntry[] => {
 	if (Array.isArray(value)) {
 		return value.flatMap((item, index) =>
-			listWhenEntries({ value: item, path: [...path, index] }),
+			listFilterEntries({ value: item, path: [...path, index] }),
 		);
 	}
 	if (!isPlainObject(value)) return [];
@@ -20,7 +20,7 @@ export const listWhenEntries = ({
 		const childPath = [...path, key];
 		return [
 			{ path: childPath, key, value: child },
-			...listWhenEntries({ value: child, path: childPath }),
+			...listFilterEntries({ value: child, path: childPath }),
 		];
 	});
 };

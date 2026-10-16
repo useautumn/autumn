@@ -1,7 +1,7 @@
 /**
  * S5 contract: every effect × shape × field × operator in `EDITOR_FIELDS`
  * (the When fields board) converts rows → filter → rows unchanged, and the
- * filter parses against its shape with no `$every` in a block rule.
+ * filter passes S3's validator for that effect.
  *
  * Red (before):  `ruleRowsToFilter` / `ruleFilterToRows` don't exist.
  * Green (after): each cell round-trips; rows that can't be stored report an issue.
@@ -9,18 +9,24 @@
 
 import { describe, expect, test } from "bun:test";
 import {
+	ACTIONS,
+	type ApprovalAction,
 	type ApprovalFilterKey,
-	buildApprovalFilterSchema,
+	type ApprovalRuleFilter,
+	type ApprovalRuleEffect as RuleEffect,
+	validateApprovalRule,
+} from "@autumn/shared";
+import {
 	EDITOR_FIELDS,
 	type EditorField,
 	type EditorGroup,
 	type EditorRow,
 	PINNED_FIELDS,
-	type RuleEffect,
 	ruleFilterToRows,
 	ruleRowsToFilter,
 	VALUELESS_OPERATORS,
 } from "@autumn/shared/api/approvals/editor/index.js";
+import { rules } from "@tests/utils/fixtures/rules.js";
 
 /** Per field: the value for a single-value operator, then a second for "any of" / "none of". */
 const SAMPLES: Record<EditorField, unknown[]> = {
@@ -126,21 +132,18 @@ const stored = (input: {
 	return result.filter;
 };
 
-const keysIn = (value: unknown): string[] =>
-	value && typeof value === "object"
-		? Object.entries(value).flatMap(([key, inner]) => [key, ...keysIn(inner)])
-		: [];
-
-// Swap for S3's validateApprovalRule once S3 freezes; this is its shape and effect check.
 const expectValid = (
 	shape: ApprovalFilterKey,
 	effect: RuleEffect,
-	filter: unknown,
+	filter: ApprovalRuleFilter | null,
 ) => {
-	expect(
-		buildApprovalFilterSchema({ key: shape }).safeParse(filter).success,
-	).toBe(true);
-	if (effect === "block") expect(keysIn(filter)).not.toContain("$every");
+	const action = (Object.keys(ACTIONS) as ApprovalAction[]).find(
+		(key) => ACTIONS[key].filter === shape,
+	);
+	const result = validateApprovalRule({
+		rule: rules[effect]({ actions: [action as ApprovalAction], filter }),
+	});
+	expect(result.ok ? [] : result.issues).toEqual([]);
 };
 
 const expectRoundTrip = ({
@@ -290,7 +293,7 @@ describe("rows that set the same condition are ANDed, never overwritten", () => 
 			pinned: null,
 			groups: [readsBack],
 		});
-		expectValid(shape, effect, filter);
+		expectValid(shape, effect, filter as ApprovalRuleFilter);
 	});
 });
 
@@ -478,6 +481,6 @@ describe("incoming plan rows that set the same condition are ANDed", () => {
 			pinned: null,
 			groups: [readsBack],
 		});
-		expectValid(shape, effect, filter);
+		expectValid(shape, effect, filter as ApprovalRuleFilter);
 	});
 });
