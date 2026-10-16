@@ -3,6 +3,20 @@ export type SubjectLoadGate = {
 	snapshot(): { running: number; queued: number };
 };
 
+/** The caller that queued this load stopped waiting before a slot freed, so it never ran. */
+export class SubjectLoadShedError extends Error {
+	constructor() {
+		super("Subject load shed: its caller's deadline passed while it queued");
+		this.name = "SubjectLoadShedError";
+	}
+}
+
+type Waiter = { admit: () => void; shed: () => void };
+
+/**
+ * Newest first: past capacity a FIFO queue makes every caller wait out everyone ahead and miss its deadline,
+ * where LIFO still answers as many as the slots can serve. A queued load is dropped at its caller's deadline.
+ */
 export function createSubjectLoadGate({
 	config,
 	ctx = {},
@@ -11,10 +25,12 @@ export function createSubjectLoadGate({
 	ctx?: {
 		now?: () => number;
 		onAdmit?: (params: { waitMs: number }) => void;
+		/** When the caller queuing a load stops waiting, on `performance.now()`'s clock; undefined never sheds. */
+		readDeadline?: () => number | undefined;
 	};
 }): SubjectLoadGate {
 	const now = ctx.now ?? (() => performance.now());
-	const waiting: (() => void)[] = [];
+	const waiting: Waiter[] = [];
 	let running = 0;
 
 	function admit(): Promise<void> {
@@ -25,17 +41,32 @@ export function createSubjectLoadGate({
 			reportWait();
 			return Promise.resolve();
 		}
-		return new Promise<void>((resolve) => {
-			waiting.push(() => {
-				reportWait();
-				resolve();
-			});
+		const expiresAt = ctx.readDeadline?.();
+		return new Promise<void>((resolve, reject) => {
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			const waiter: Waiter = {
+				admit: () => {
+					clearTimeout(timer);
+					reportWait();
+					resolve();
+				},
+				shed: () => {
+					waiting.splice(waiting.indexOf(waiter), 1);
+					reject(new SubjectLoadShedError());
+				},
+			};
+			waiting.push(waiter);
+			if (expiresAt !== undefined)
+				timer = setTimeout(
+					waiter.shed,
+					Math.max(expiresAt - performance.now(), 0),
+				);
 		});
 	}
 
 	function release(): void {
-		const next = waiting.shift();
-		if (next) next();
+		const next = waiting.pop();
+		if (next) next.admit();
 		else running -= 1;
 	}
 

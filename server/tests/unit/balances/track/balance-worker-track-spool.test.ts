@@ -4,11 +4,6 @@ import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { BALANCE_WORKER_TRACK_SPOOL_HEDGE_MS } from "@autumn/env/balanceWorkerConstants";
 import type { TrackParams } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
-import {
-	KafkaJSConnectionError,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-} from "kafkajs";
 import { runBalanceWorkerAsyncTrack } from "@/internal/balances/track/balanceWorker/runBalanceWorkerAsyncTrack.js";
 import * as claimKey from "@/internal/misc/idempotency/actions/checkIdempotencyKey.js";
 import * as releaseKey from "@/internal/misc/idempotency/actions/releaseIdempotencyKey.js";
@@ -47,38 +42,26 @@ afterAll(() => {
 		process.env.TRACK_ASYNC_STANDARD_SQS_QUEUE_URL = previousStandardQueueUrl;
 });
 
-/** What kafkajs throws once its own retries run out on a dropped broker connection (Oct 15). */
+/** What librdkafka fails a send with once a dropped broker connection outlasts its message timeout. */
 const connectionClosed = () =>
-	new KafkaJSNumberOfRetriesExceeded(
-		// kafkajs's typings omit KafkaJSConnectionClosedError; this is its shape.
-		Object.assign(new KafkaJSConnectionError("Closed connection"), {
-			name: "KafkaJSConnectionClosedError",
-		}),
-		{ retryCount: 3, retryTime: 900 },
-	);
+	Object.assign(new Error("Local: Message timed out"), {
+		code: -192,
+		isRetriable: true,
+	});
 
-/** What kafkajs throws while a partition's leadership is moving. */
+/** What librdkafka reports while a partition's leadership is moving. */
 const notLeader = () =>
-	new KafkaJSNumberOfRetriesExceeded(
-		new KafkaJSProtocolError(
-			Object.assign(
-				new Error("This server is not the leader for that topic-partition"),
-				{ type: "NOT_LEADER_FOR_PARTITION", code: 6, retriable: true },
-			),
-		),
-		{ retryCount: 3, retryTime: 900 },
-	);
+	Object.assign(new Error("Broker: Not leader for partition"), {
+		code: 6,
+		isRetriable: true,
+	});
 
 /** A broker refusal no retry fixes. */
 const messageTooLarge = () =>
-	new KafkaJSProtocolError(
-		Object.assign(
-			new Error(
-				"The request included a message larger than the max message size",
-			),
-			{ type: "MESSAGE_TOO_LARGE", code: 10, retriable: false },
-		),
-	);
+	Object.assign(new Error("Broker: Message size too large"), {
+		code: 10,
+		isRetriable: false,
+	});
 
 type AttemptOutcome = "ack" | "hang" | Error;
 

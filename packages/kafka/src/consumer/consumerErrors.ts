@@ -1,4 +1,6 @@
-import { KafkaJSNonRetriableError, KafkaJSProtocolError } from "kafkajs";
+import { LIBRDKAFKA_ERROR_CODES } from "@autumn/librdkafka";
+import { hasKafkaErrorCode } from "../client/kafkaErrorClassification.js";
+import { KafkaConsumerNotRunningError } from "../client/librdkafka/consumer/runnerErrors.js";
 
 export class KafkaPartitionOffsetsNotFoundError extends Error {
 	constructor({ topic, partition }: { topic: string; partition: number }) {
@@ -7,53 +9,42 @@ export class KafkaPartitionOffsetsNotFoundError extends Error {
 	}
 }
 
-const CONSUMER_GROUP_GONE_MESSAGE = "Consumer group was not initialized";
-
-/** kafkajs refuses to pause, resume or seek once its consumer group is gone: the runner crashed and is
- *  rejoining, or the consumer was stopped. Either way the partition is being reassigned and there is
- *  nothing left to steer, so the refusal is not a failure of the partition being steered. */
+/** Pause, resume or seek on a consumer whose group is gone: it was stopped or crashed. The partition is
+ *  being reassigned, so there is nothing left to steer and the refusal is not the partition's failure. */
 export function isConsumerGroupGoneError({
 	cause,
 }: {
 	cause: unknown;
 }): boolean {
-	return (
-		cause instanceof KafkaJSNonRetriableError &&
-		cause.message.includes(CONSUMER_GROUP_GONE_MESSAGE)
-	);
+	return cause instanceof KafkaConsumerNotRunningError;
 }
 
-const ACCESS_REFUSAL_TYPES = new Set([
-	"TOPIC_AUTHORIZATION_FAILED",
-	"GROUP_AUTHORIZATION_FAILED",
-	"CLUSTER_AUTHORIZATION_FAILED",
-	"TRANSACTIONAL_ID_AUTHORIZATION_FAILED",
-	"SASL_AUTHENTICATION_FAILED",
+const ACCESS_REFUSAL_CODES: ReadonlySet<number> = new Set([
+	LIBRDKAFKA_ERROR_CODES.ERR_TOPIC_AUTHORIZATION_FAILED,
+	LIBRDKAFKA_ERROR_CODES.ERR_GROUP_AUTHORIZATION_FAILED,
+	LIBRDKAFKA_ERROR_CODES.ERR_CLUSTER_AUTHORIZATION_FAILED,
+	LIBRDKAFKA_ERROR_CODES.ERR_TRANSACTIONAL_ID_AUTHORIZATION_FAILED,
+	LIBRDKAFKA_ERROR_CODES.ERR_SASL_AUTHENTICATION_FAILED,
+	LIBRDKAFKA_ERROR_CODES.ERR__AUTHENTICATION,
 ]);
 
 /** The broker refused this client's identity: an authorization verdict on a group, topic or the
- *  cluster, or a failed SASL authentication. kafkajs marks these non-retriable and gives up the
- *  group for good, but a verdict is the broker's to change: prod has refused a healthy fleet
- *  twice and taken it back within minutes, with no policy or role changed in between. */
+ *  cluster, or a failed SASL authentication. A verdict is the broker's to change: prod has refused a
+ *  healthy fleet and taken it back within minutes, with no policy or role changed in between. */
 export function isKafkaAccessRefusal({ cause }: { cause: unknown }): boolean {
-	const seen = new Set<unknown>();
-	let current = cause;
-	while (
-		typeof current === "object" &&
-		current !== null &&
-		!seen.has(current)
-	) {
-		if (isAccessRefusalError(current)) return true;
-		seen.add(current);
-		if (!("cause" in current)) return false;
-		current = current.cause;
-	}
-	return false;
+	return hasKafkaErrorCode({ cause, codes: ACCESS_REFUSAL_CODES });
 }
 
-function isAccessRefusalError(error: object): boolean {
-	if (error instanceof KafkaJSProtocolError)
-		return ACCESS_REFUSAL_TYPES.has(error.type);
-	if (!(error instanceof Error)) return false;
-	return error.name === "KafkaJSSASLAuthenticationError";
+const GROUP_CHURN_CODES: ReadonlySet<number> = new Set([
+	LIBRDKAFKA_ERROR_CODES.ERR_ILLEGAL_GENERATION,
+	LIBRDKAFKA_ERROR_CODES.ERR_REBALANCE_IN_PROGRESS,
+	LIBRDKAFKA_ERROR_CODES.ERR_UNKNOWN_MEMBER_ID,
+	LIBRDKAFKA_ERROR_CODES.ERR_FENCED_MEMBER_EPOCH,
+	LIBRDKAFKA_ERROR_CODES.ERR_STALE_MEMBER_EPOCH,
+]);
+
+/** The group moved on without this member: a stale generation or member epoch, an unknown member, or a
+ *  rebalance under way. librdkafka rejoins by itself, so a crash carrying one is waited out, not exited on. */
+export function isKafkaGroupChurn({ cause }: { cause: unknown }): boolean {
+	return hasKafkaErrorCode({ cause, codes: GROUP_CHURN_CODES });
 }

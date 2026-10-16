@@ -5,8 +5,19 @@ export {
 export { createKafkaClient } from "./client/createKafkaClient.js";
 export { createKafkaTransport } from "./client/createKafkaTransport.js";
 export {
+	hasKafkaErrorCode,
+	isKafkaProtocolError,
+	isRetriableKafkaError,
+	kafkaErrorChainOf,
+	kafkaErrorCodeOf,
+	kafkaProtocolErrorTypeOf,
+} from "./client/kafkaErrorClassification.js";
+export {
 	InvalidKafkaOffsetError,
 	KafkaBatchNotCommittedError,
+	KafkaDeliveryReportOverdueError,
+	KafkaPartialDeliveryError,
+	KafkaPartitionOffsetsUnansweredError,
 	KafkaTopicPartitionsUnavailableError,
 	KafkaTransactionStateUnknownError,
 } from "./client/kafkaErrors.js";
@@ -14,15 +25,15 @@ export {
 	metadataToBaseOffset,
 	parseKafkaOffset,
 } from "./client/kafkaOffsetUtils.js";
-export type { KafkaTokenInfo } from "./client/mskTokenInfo.js";
 export {
-	createSettledAdmin,
-	isEmptyTopicMetadataFailure,
-	KafkaWithSettledTopicOffsets,
-	type TopicOffsetsRetry,
-} from "./client/settledTopicOffsets.js";
+	KafkaConsumerLeaseLostError,
+	KafkaConsumerNotRunningError,
+} from "./client/librdkafka/consumer/runnerErrors.js";
+export { createKafka } from "./client/librdkafka/createKafka.js";
 export type {
+	KafkaClientConfig,
 	KafkaCommitMode,
+	KafkaLogSink,
 	KafkaOffsetCommit,
 	KafkaProducer,
 	KafkaProducerClient,
@@ -39,19 +50,49 @@ export type {
 	KafkaIdempotentProducerLimits,
 	KafkaProducerLimits,
 } from "./client/types/kafkaLimits.js";
+export type {
+	Admin,
+	Batch,
+	CompressionType,
+	Consumer,
+	ConsumerConfig,
+	ConsumerCrashEvent,
+	ConsumerEndBatchProcessEvent,
+	ConsumerFetchEvent,
+	ConsumerGroupJoinEvent,
+	ConsumerRebalancingEvent,
+	ConsumerRunConfig,
+	EachBatchHandler,
+	EachBatchPayload,
+	EachMessageHandler,
+	EachMessagePayload,
+	GroupProtocol,
+	IHeaders,
+	ITopicMetadata,
+	Kafka,
+	KafkaMessage,
+	Message,
+	OffsetsByTopicPartition,
+	Producer,
+	ProducerConfig,
+	ProducerRecord,
+	RecordMetadata,
+	TopicOffsets,
+	TopicPartitionOffset,
+	Transaction,
+} from "./client/types/kafkaWire.js";
+export {
+	CompressionTypes,
+	ConsumerEventNames,
+} from "./client/types/kafkaWire.js";
 export {
 	isConsumerGroupGoneError,
 	isKafkaAccessRefusal,
+	isKafkaGroupChurn,
 	KafkaPartitionOffsetsNotFoundError,
 } from "./consumer/consumerErrors.js";
-export { coPartitionedAssigner } from "./consumer/coPartitionedAssigner.js";
 export { createProgressTracker } from "./consumer/createProgressTracker.js";
 export { createTopicConsumer } from "./consumer/createTopicConsumer.js";
-export {
-	balancePartitions,
-	createLoadAwareAssigner,
-	type PartitionLoadSource,
-} from "./consumer/loadAwareAssigner.js";
 export {
 	readPartitionLogRange,
 	readPartitionOffsetAtTimestamp,
@@ -106,7 +147,6 @@ export { createProducerSession } from "./producer/createProducerSession.js";
 export {
 	createIdempotentProducerConfig,
 	createProducerConfig,
-	explicitPartitioner,
 	partitionProducerTransactionalIdOf,
 } from "./producer/producerConfig.js";
 export { isKafkaProducerFencingCause } from "./producer/producerErrors.js";

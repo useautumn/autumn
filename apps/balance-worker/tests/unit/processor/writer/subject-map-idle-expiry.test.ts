@@ -208,7 +208,6 @@ describe("partition writer idle expiry", () => {
 				AWS_REGION: "us-east-1",
 			}),
 			endpoint: "http://127.0.0.1:8082",
-			groupId: "workers",
 		});
 
 		expect(config.writerLimits.subjectIdleExpiryMs).toBe(

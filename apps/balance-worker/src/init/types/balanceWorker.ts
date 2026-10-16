@@ -1,10 +1,9 @@
 import type { CatalogCache } from "@autumn/catalog-lru";
 import type { DynamoClient, IdempotencyKeyStore } from "@autumn/dynamodb";
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
-import type { CatalogInvalidationConsumer } from "@autumn/kafka";
+import type { Admin, CatalogInvalidationConsumer, Kafka } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PostgresClient } from "@autumn/postgres";
-import type { Admin, Kafka } from "kafkajs";
 import type { PartitionCheckpointSource } from "../../checkpoint/partitionCheckpointSource.js";
 import type { WorkerEdgeConfigs } from "../../edgeConfig/createWorkerEdgeConfigs.js";
 import type {

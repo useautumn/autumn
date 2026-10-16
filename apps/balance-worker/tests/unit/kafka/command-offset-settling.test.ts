@@ -119,7 +119,7 @@ function createAppender({
 				},
 			},
 		},
-		config: { commandTopic: "commands", groupId: "workers" },
+		config: { commandTopic: "commands" },
 	});
 }
 
@@ -297,7 +297,7 @@ test("landing outside a batch needs the consumer group's committer", async () =>
 	const clock = createClock();
 	const appender = createMutationPublisher({
 		ctx: { producer: fakes.producer, settle: clock.timing },
-		config: { commandTopic: "commands", groupId: "workers" },
+		config: { commandTopic: "commands" },
 	});
 	await expect(
 		appender.commitCommandOffset({ topic, partition, nextOffset: 7n }),

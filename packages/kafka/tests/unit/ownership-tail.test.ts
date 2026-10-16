@@ -1,6 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import type { ConsumerConfig, ConsumerRunConfig } from "kafkajs";
 import type { KafkaConsumerClient } from "../../src/consumer/types/consumer.js";
+import type { ConsumerConfig, ConsumerRunConfig } from "../../src/kafka.js";
 import {
 	createOwnershipTail,
 	ownershipTailStartTimeoutMs,
@@ -123,7 +123,7 @@ function createFakeTailKafka({
 		function isEmpty(): boolean {
 			return messages.length === 0;
 		}
-		function offsetLag(): string {
+		function _offsetLag(): string {
 			return "0";
 		}
 		function pauseBatch(): () => void {
@@ -150,8 +150,6 @@ function createFakeTailKafka({
 				firstOffset,
 				lastOffset,
 				isEmpty,
-				offsetLag,
-				offsetLagLow: offsetLag,
 			},
 			resolveOffset,
 			heartbeat,

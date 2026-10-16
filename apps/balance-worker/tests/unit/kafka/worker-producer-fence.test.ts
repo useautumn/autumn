@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { KafkaProducerSession } from "@autumn/kafka";
-import type { ProducerRecord, RecordMetadata } from "kafkajs";
+import type {
+	KafkaProducerSession,
+	ProducerRecord,
+	RecordMetadata,
+} from "@autumn/kafka";
 import { createWorkerProducer } from "../../../src/kafka/createWorkerProducer.js";
 import {
 	OwnedPartitionLogDivergedError,

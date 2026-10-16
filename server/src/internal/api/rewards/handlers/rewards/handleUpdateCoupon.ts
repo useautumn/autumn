@@ -119,7 +119,11 @@ export const handleUpdateCoupon = createRoute({
 		// in Stripe fails the update while the existing coupon is still intact.
 		if (willRecreateStripeCoupon) {
 			await initRewardStripePrices({ ctx, prices });
-			await validateCouponStripeProductScope({ ctx, prices });
+			await validateCouponStripeProductScope({
+				ctx,
+				reward: updatedReward,
+				prices,
+			});
 			resolveCouponStripeProductIds({ reward: updatedReward, prices });
 		}
 

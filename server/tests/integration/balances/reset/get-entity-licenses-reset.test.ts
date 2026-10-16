@@ -22,12 +22,14 @@ import {
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { and, eq, isNotNull } from "drizzle-orm";
 import { evictBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/evictBalanceWorkerCustomer.js";
+import { flushBalanceWorkerCustomer } from "@/internal/balances/balanceWorker/flushBalanceWorkerCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
@@ -182,6 +184,10 @@ test.concurrent(
 		);
 		expect(after.balances[TestFeature.Messages].usage).toBe(0);
 
+		// Postgres trails the worker by its lingering apply: land the customer's writes before reading the rows.
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
+
 		// next_reset_at advanced exactly per the naive calendar walk (the
 		// Stripe-anchor clamp only ever raises it, and the parent's anchor
 		// cannot exceed one interval from the planted value).
@@ -237,6 +243,7 @@ test.concurrent(
 			cusProductId: parentCusProduct?.id ?? "",
 			updates: { status: CusProductStatus.Expired },
 		});
+		await evictBalanceWorkerCustomer({ ctx, customerId });
 
 		// Entity fetch must NOT lazy-reset the seat: the inherited (expired)
 		// parent status gates it out of the candidate set.
@@ -244,6 +251,8 @@ test.concurrent(
 			skip_cache: "true",
 		});
 
+		if (isBalanceWorkerRoute())
+			await flushBalanceWorkerCustomer({ ctx, customerId });
 		const [seatCusEntAfter] = await ctx.db
 			.select()
 			.from(customerEntitlements)

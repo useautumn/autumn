@@ -1,5 +1,5 @@
+import type { Admin } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Admin } from "kafkajs";
 
 const NO_COMMITTED_OFFSET = "-1";
 

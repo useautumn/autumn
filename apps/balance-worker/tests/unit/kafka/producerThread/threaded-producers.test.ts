@@ -1,13 +1,15 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import {
+	CompressionTypes,
 	createProducerSession,
 	isKafkaProducerFencingCause,
+	isKafkaProtocolError,
+	isRetriableKafkaError,
 	KafkaBatchNotCommittedError,
 	type KafkaProducerClient,
 	KafkaTransactionStateUnknownError,
 	sendIdempotentBatch,
 } from "@autumn/kafka";
-import { CompressionTypes, KafkaJSError, KafkaJSProtocolError } from "kafkajs";
 import { createThreadedProducers } from "../../../../src/kafka/producerThread/createThreadedProducers.js";
 import * as threadProducer from "../../../../src/kafka/producerThread/producers/createThreadProducer.js";
 import type { ThreadedProducersScope } from "../../../../src/kafka/producerThread/types/threadedProducersScope.js";
@@ -152,21 +154,21 @@ describe("threaded producers", () => {
 		}
 	});
 
-	test("a producer's config, record bytes, partition, headers, acks and compression reach the producer thread unchanged", async () => {
+	test("a producer's config, record bytes, partition, headers and acks reach the producer thread unchanged; compression is the producer's", async () => {
 		await withThread({
 			run: async (remote) => {
 				const producer = remote.producer({
 					idempotent: true,
 					maxInFlightRequests: 2,
 					retry: { retries: 3, initialRetryTime: 5, maxRetryTime: 50 },
-					createPartitioner: () => () => 0,
+					compression: CompressionTypes.GZIP,
 				});
 				await producer.connect();
 				const headers = { ownerEpoch: "12" };
 				const metadata = await senderOf(producer)({
 					topic: "echo",
 					acks: -1,
-					compression: CompressionTypes.GZIP,
+					compression: CompressionTypes.Snappy,
 					messages: [
 						{
 							key: Buffer.from("k1"),
@@ -187,10 +189,11 @@ describe("threaded producers", () => {
 					idempotent: true,
 					maxInFlightRequests: 2,
 					retry: { retries: 3, initialRetryTime: 5, maxRetryTime: 50 },
-					createPartitioner: "function",
+					compression: CompressionTypes.GZIP,
 				});
 				expect(echo.acks).toBe(-1);
-				expect(echo.compression).toBe(CompressionTypes.GZIP);
+				// librdkafka compresses per producer; a send's own codec is not honoured, so it does not cross.
+				expect(echo.compression).toBeUndefined();
 				expect(echo.messages).toEqual([
 					{ key: "k1", value: "v1", partition: 3, headers },
 					{ key: "k2", value: "v2", partition: 3, headers },
@@ -220,7 +223,7 @@ describe("threaded producers", () => {
 		});
 	});
 
-	test("a broker refusal comes back as a KafkaJSProtocolError, so the batch is known to be uncommitted", async () => {
+	test("a broker refusal comes back with its code, so the batch is known to be uncommitted", async () => {
 		await withThread({
 			run: async (remote) => {
 				const producer = remote.producer({ idempotent: true });
@@ -238,17 +241,18 @@ describe("threaded producers", () => {
 					caught = cause;
 				}
 				expect(caught).toBeInstanceOf(KafkaBatchNotCommittedError);
-				const cause = (caught as KafkaBatchNotCommittedError)
-					.cause as KafkaJSProtocolError;
-				expect(cause).toBeInstanceOf(KafkaJSProtocolError);
-				expect(cause.type).toBe("INVALID_TOPIC_EXCEPTION");
-				expect(cause.code).toBe(17);
-				expect(cause.retriable).toBe(false);
+				const cause = (caught as KafkaBatchNotCommittedError).cause;
+				expect(isKafkaProtocolError({ cause })).toBe(true);
+				expect(cause).toMatchObject({
+					name: "KafkaJSProtocolError",
+					code: 17,
+					retriable: false,
+				});
 			},
 		});
 	});
 
-	test("retries exhausted come back as a KafkaJSError whose cause still names the fencing code", async () => {
+	test("librdkafka's fencing comes back as an unknown outcome that still reads as fencing", async () => {
 		await withThread({
 			run: async (remote) => {
 				const producer = remote.producer({ idempotent: true });
@@ -268,15 +272,14 @@ describe("threaded producers", () => {
 				expect(caught).toBeInstanceOf(KafkaTransactionStateUnknownError);
 				const cause = (caught as KafkaTransactionStateUnknownError)
 					.cause as Error;
-				expect(cause).toBeInstanceOf(KafkaJSError);
-				expect(cause).not.toBeInstanceOf(KafkaJSProtocolError);
-				expect(cause.name).toBe("KafkaJSNumberOfRetriesExceeded");
+				expect(isKafkaProtocolError({ cause })).toBe(false);
+				expect(cause).toMatchObject({ name: "KafkaJSError", code: -144 });
 				expect(isKafkaProducerFencingCause({ cause })).toBe(true);
 			},
 		});
 	});
 
-	test("retries exhausted in a leader election cross the thread as an unknown append that parks only its partition", async () => {
+	test("a send timed out through a leader election crosses the thread as an unknown append that parks only its partition", async () => {
 		await withThread({
 			run: async (remote) => {
 				const producer = remote.producer({ idempotent: true });
@@ -291,9 +294,9 @@ describe("threaded producers", () => {
 					}),
 				);
 				expect(caught).toBeInstanceOf(KafkaTransactionStateUnknownError);
-				expect(((caught as Error).cause as Error).name).toBe(
-					"KafkaJSNumberOfRetriesExceeded",
-				);
+				const cause = (caught as Error).cause;
+				expect(cause).toMatchObject({ code: -192, retriable: true });
+				expect(isRetriableKafkaError(cause)).toBe(true);
 				const recovery = new OwnedPartitionRecoveryRequiredError({
 					topic: "electing",
 					partition: 0,
@@ -415,8 +418,8 @@ describe("threaded producers", () => {
 				} catch (cause) {
 					caught = cause;
 				}
-				expect(caught).toBeInstanceOf(KafkaJSError);
-				expect(caught).not.toBeInstanceOf(KafkaJSProtocolError);
+				expect(caught).toBeInstanceOf(Error);
+				expect(isKafkaProtocolError({ cause: caught })).toBe(false);
 				expect(causes).toHaveLength(1);
 				expect(causes[0]).toContain("Producer thread exited with code 7");
 				const later = (await rejectionOf(
@@ -449,7 +452,7 @@ describe("threaded producers", () => {
 				);
 				const disconnected = producer.disconnect();
 				const late = (await rejectionOf(senderOf(producer)(record))) as Error;
-				expect(late).toBeInstanceOf(KafkaJSError);
+				expect(late.name).toBe("ProducerThreadError");
 				expect(late.message).toBe("The producer is disconnected");
 				await disconnected;
 				const outcomes = await Promise.race([

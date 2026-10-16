@@ -1,0 +1,73 @@
+diff --git a/src/workers.h b/src/workers.h
+--- a/src/workers.h
++++ b/src/workers.h
+@@ -593,7 +593,8 @@
+   const bool m_is_match_types_set;
+   std::vector<rd_kafka_consumer_group_type_t> m_match_types;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -614,7 +615,8 @@
+   std::vector<std::string> m_groups;
+   const bool m_include_authorized_operations;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -635,7 +637,8 @@
+   rd_kafka_DeleteGroup_t **m_group_list;
+   size_t m_group_cnt;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -659,7 +662,8 @@
+   size_t m_req_cnt;
+   const bool m_require_stable_offsets;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -682,7 +686,8 @@
+   size_t m_del_records_cnt;
+   const int m_operation_timeout_ms;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -704,7 +709,8 @@
+   rd_kafka_TopicCollection_t *m_topics;
+   const bool m_include_authorized_operations;
+   const int m_timeout_ms;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ /**
+@@ -726,7 +732,8 @@
+   rd_kafka_topic_partition_list_t *m_partitions;
+   const int m_timeout_ms;
+   const rd_kafka_IsolationLevel_t m_isolation_level;
+-  rd_kafka_event_t *m_event_response;
++  // Destroyed by the destructor; an admin call that fails before polling never sets it.
++  rd_kafka_event_t *m_event_response = nullptr;
+ };
+ 
+ }  // namespace Workers

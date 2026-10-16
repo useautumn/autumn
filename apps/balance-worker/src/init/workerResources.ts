@@ -5,10 +5,9 @@ import { createCatalogCache } from "@autumn/catalog-lru";
 import { createIdempotencyKeyStore } from "@autumn/dynamodb";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import {
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
-	type KafkaTokenInfo,
-	KafkaWithSettledTopicOffsets,
 	meteringIdentityToPartition,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
@@ -70,20 +69,6 @@ export const WORKER_KAFKA_PRODUCER_LIMITS = {
 	retryCount: 2,
 };
 
-/** Every token a client presents, so a broker's refusal can be read against the key and lifetime it was shown. */
-export function logWorkerKafkaToken({
-	logger,
-	info,
-}: {
-	logger?: Pick<AutumnLogger, "info">;
-	info: KafkaTokenInfo;
-}): void {
-	logger?.info(
-		{ event: "balance_worker.kafka_token", data: info },
-		`Kafka token signed with key …${info.keyIdSuffix ?? "?"}; expires ${info.expiresAt}`,
-	);
-}
-
 export async function openWorkerResources({
 	ctx: dependencies = {},
 	config,
@@ -100,20 +85,16 @@ export async function openWorkerResources({
 	bootstrap: WorkerBootstrapConfig;
 }): Promise<WorkerResources> {
 	const { env } = config;
-	function logKafkaToken(info: KafkaTokenInfo): void {
-		logWorkerKafkaToken({ logger: dependencies.logger, info });
-	}
-	const kafka = new KafkaWithSettledTopicOffsets(
+	const kafka = createKafka(
 		createKafkaClient({
 			clientId: `balance-worker-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
-				region: env.AWS_REGION,
 				sasl: env.KAFKA_SASL,
-				onToken: logKafkaToken,
 			}),
 			limits: WORKER_KAFKA_CLIENT_LIMITS,
+			groupProtocol: env.KAFKA_GROUP_PROTOCOL,
 		}),
 	);
 	const admin = kafka.admin();

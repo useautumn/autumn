@@ -11,13 +11,13 @@ import {
 	type PartitionOwner,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import { Kafka, logLevel } from "kafkajs";
 import { createBalanceWorker } from "../../../src/init/createBalanceWorker.js";
 import {
 	createCustomerEntitlement,
 	createInitializeMutation,
 	createState,
 } from "../../fixtures/mutations.js";
+import { createTestKafka } from "../../fixtures/testKafka.js";
 
 function ignoreLog(): void {}
 
@@ -55,18 +55,19 @@ describe("Real balance worker HTTP service", () => {
 			BALANCE_WORKER_GROUP_ID: id,
 			BALANCE_WORKER_PARTITION_COUNT: 1,
 		};
-		const kafka = new Kafka({
-			clientId: id,
-			brokers: env.KAFKA_BROKERS,
-			logLevel: logLevel.NOTHING,
-		});
+		const kafka = createTestKafka({ clientId: id, brokers: env.KAFKA_BROKERS });
 		const admin = kafka.admin();
 		await admin.connect();
 		await admin.createTopics({
-			waitForLeaders: true,
 			topics: [
 				{ topic, numPartitions: 1, replicationFactor: 1 },
 				{ topic: commands, numPartitions: 1, replicationFactor: 1 },
+				// The worker refuses to start without its catalog invalidation topic.
+				{
+					topic: `${id}-catalog-invalidations`,
+					numPartitions: 1,
+					replicationFactor: 1,
+				},
 				{
 					topic: owners,
 					numPartitions: 1,
@@ -127,7 +128,8 @@ describe("Real balance worker HTTP service", () => {
 			).toEqual({ status: "alive" });
 			await routing.start();
 			let owner: PartitionOwner | undefined;
-			for (let attempt = 0; attempt < 100 && !owner; attempt++) {
+			// A lone worker claims only after the handoff's claim-silence window (3s) past its own `ready`.
+			for (let attempt = 0; attempt < 500 && !owner; attempt++) {
 				await routing.refresh();
 				owner = routing.findOwner({ partition: 0 });
 				if (!owner) await Bun.sleep(20);
@@ -217,7 +219,9 @@ describe("Real balance worker HTTP service", () => {
 		} finally {
 			await service.stop();
 			await routing.stop();
-			await admin.deleteTopics({ topics: [topic, owners, commands] });
+			await admin.deleteTopics({
+				topics: [topic, owners, commands, `${id}-catalog-invalidations`],
+			});
 			await admin.disconnect();
 			rmSync(directory, { recursive: true, force: true });
 		}

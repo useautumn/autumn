@@ -1,0 +1,17 @@
+diff --git a/deps/librdkafka/src/rdkafka_partition.c b/deps/librdkafka/src/rdkafka_partition.c
+--- a/deps/librdkafka/src/rdkafka_partition.c
++++ b/deps/librdkafka/src/rdkafka_partition.c
+@@ -4224,9 +4224,10 @@
+             rd_kafka_partition_leader_query_eonce_timeout_cb,
+             rko->rko_u.leaders.eonce);
+ 
+-        if (rd_kafka_topic_partition_list_query_leaders_async_worker(rko) ==
+-            RD_KAFKA_OP_RES_HANDLED)
+-                rd_kafka_op_destroy(rko); /* Reply queue already disabled */
++        /* Run the first pass on the main thread too. Run inline, it races a
++         * metadata cache update that triggers the eonce it just registered:
++         * both threads reply and both destroy the rko. */
++        rd_kafka_q_enq(rk->rk_ops, rko);
+ }
+ 
+ 

@@ -39,7 +39,7 @@ const pause = ({ ms, stop }: { ms: number; stop: AbortSignal }) =>
 
 /**
  * Sends the append again after each retriable Kafka failure until it acks, the deadline passes, or `stop` says SQS
- * holds the track. kafkajs refreshes the producer's metadata in a failed send's error path, so each retry finds the new leader.
+ * holds the track. librdkafka refreshes the leader on a failed send, so each retry finds the new one.
  */
 export async function appendWithRetries({
 	ctx,

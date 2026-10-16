@@ -1,12 +1,11 @@
-/** A kafkajs record as send-frame parts: what is shared across its messages is written once. */
-import type { Producer } from "kafkajs";
+/** A producer record as send-frame parts: what is shared across its messages is written once. */
+import type { ProducerRecord } from "@autumn/kafka";
 import type {
 	SendMessageMeta,
 	SendMeta,
 	SendRecord,
 } from "../frames/sendFrame.js";
 
-type ProducerRecord = Parameters<Producer["send"]>[0];
 type ProducerRecordMessage = ProducerRecord["messages"][number];
 
 const encoder = new TextEncoder();
@@ -55,8 +54,6 @@ function sendMetaOf({
 		count: record.messages.length,
 	};
 	if (record.acks !== undefined) meta.acks = record.acks;
-	if (record.compression !== undefined) meta.compression = record.compression;
-	if (record.timeout !== undefined) meta.timeout = record.timeout;
 	const shared = record.messages.every(
 		(message) =>
 			message.partition === first.partition &&

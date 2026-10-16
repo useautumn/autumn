@@ -22,11 +22,12 @@ export const createWorkerContext = async ({
 		env?: AppEnv;
 		customerId?: string;
 		requestId?: string;
+		idempotencyKey?: string;
 	};
 	logger: Logger;
 	skipCache?: boolean;
 }) => {
-	const { orgId, env, customerId, requestId } = payload;
+	const { orgId, env, customerId, requestId, idempotencyKey } = payload;
 	if (!orgId || !env) return;
 
 	// Fetch org with features once for all items. A missing org means it was
@@ -81,6 +82,7 @@ export const createWorkerContext = async ({
 		redisV2: resolveRedisV2({ customerId }),
 
 		id: requestId || generateId("job"),
+		idempotencyKey,
 		timestamp: Date.now(),
 		isPublic: false,
 		authType: AuthType.Worker,

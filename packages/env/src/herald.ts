@@ -4,6 +4,7 @@ import {
 } from "./balanceWorker/balanceWorkerDeployment.js";
 import { brokerList } from "./balanceWorker/primitives.js";
 import { createKafkaAuthEnv } from "./kafkaAuth.js";
+import { createKafkaGroupProtocolEnv } from "./kafkaGroupProtocol.js";
 import { isStagingEnv } from "./staging.js";
 
 const LOCAL_KAFKA_BROKERS = "127.0.0.1:19092";
@@ -44,6 +45,7 @@ export function createHeraldEnv(
 			token: runtimeEnv.TINYBIRD_US_EAST_TOKEN,
 		}),
 		...createKafkaAuthEnv({ runtimeEnv, serviceUser: "HERALD" }),
+		...createKafkaGroupProtocolEnv({ runtimeEnv }),
 		KAFKA_BROKERS: brokerList.parse(
 			runtimeEnv.KAFKA_BROKERS ?? LOCAL_KAFKA_BROKERS,
 		),

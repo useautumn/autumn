@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { KafkaProducerClient } from "@autumn/kafka";
-import {
-	KafkaJSProtocolError,
-	type ProducerConfig,
-	type ProducerRecord,
-	type RecordMetadata,
-} from "kafkajs";
+import type {
+	KafkaProducerClient,
+	ProducerConfig,
+	ProducerRecord,
+	RecordMetadata,
+} from "@autumn/kafka";
 import {
 	ACK_FRAME,
 	decodeAckFrame,
@@ -60,13 +59,10 @@ function loopHarness() {
 				sent.push({ config, record });
 				if (record.topic === "gated") await gate.promise;
 				if (record.topic === "refuse")
-					throw new KafkaJSProtocolError(
-						Object.assign(new Error("invalid topic"), {
-							type: "INVALID_TOPIC_EXCEPTION",
-							code: 17,
-							retriable: false,
-						}),
-					);
+					throw Object.assign(new Error("invalid topic"), {
+						code: 17,
+						retriable: false,
+					});
 				return [
 					{
 						topicName: record.topic,
@@ -168,12 +164,12 @@ function loopHarness() {
 		config = { idempotent: true },
 	}: {
 		producerId: number;
-		config?: ProducerConfig & { explicitPartitioner?: boolean };
+		config?: ProducerConfig;
 	}): Promise<void> {
 		loop.receive({
 			kind: "create",
 			producerId,
-			config: { explicitPartitioner: false, ...config },
+			config,
 		});
 		loop.receive({ kind: "connect", producerId, reqId: 1000 + producerId });
 		await postedOf("done");
@@ -267,7 +263,7 @@ describe("producer loop", () => {
 		h.loop.receive({ kind: "stop" });
 	});
 
-	test("a broker refusal is acked as a protocol error, so the decide thread knows nothing was appended", async () => {
+	test("a broker refusal is acked with its code and verdict, so the decide thread knows nothing was appended", async () => {
 		const h = loopHarness();
 		await h.open({ producerId: 1 });
 		h.viaRing(
@@ -280,7 +276,7 @@ describe("producer loop", () => {
 		const [ack] = await h.acksFor(1);
 		expect(ack?.ack).toMatchObject({
 			ok: false,
-			error: { kind: "protocol", type: "INVALID_TOPIC_EXCEPTION", code: 17 },
+			error: { code: 17, retriable: false },
 		});
 		h.loop.receive({ kind: "stop" });
 	});
@@ -302,7 +298,7 @@ describe("producer loop", () => {
 			expect(ack).toMatchObject({
 				ok: false,
 				error: {
-					kind: "other",
+					name: "ProducerThreadError",
 					message: expect.stringContaining("disconnected"),
 				},
 			});
@@ -316,7 +312,7 @@ describe("producer loop", () => {
 		h.loop.receive({
 			kind: "create",
 			producerId: 2,
-			config: { transactionalId: "refuse-connect", explicitPartitioner: false },
+			config: { transactionalId: "refuse-connect" },
 		});
 		h.loop.receive({ kind: "connect", producerId: 2, reqId: 9 });
 		const [failed] = await h.postedOf("failed");

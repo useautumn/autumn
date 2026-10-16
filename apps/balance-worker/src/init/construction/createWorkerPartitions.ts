@@ -179,7 +179,7 @@ export function createWorkerPartitions({
 		steer(pauseTopic);
 	}
 
-	/** A group that is gone, because kafkajs crashed its runner and is rejoining, leaves nothing to steer. */
+	/** A group that is gone, because the consumer crashed and is rejoining, leaves nothing to steer. */
 	function steer(run: () => void): void {
 		try {
 			run();
@@ -254,7 +254,7 @@ export function createWorkerPartitions({
 	}: {
 		topic: string;
 	}): Promise<WorkerPartitionHighWatermarks> {
-		// The commands topic has its own admin: kafkajs admins sharing topics overwrite each other's metadata mid-read.
+		// The commands topic keeps its own admin, a holdover from the old client's shared-metadata bug.
 		const partitionOffsets =
 			topic === config.commandTopic && commandTopicOffsets
 				? commandTopicOffsets

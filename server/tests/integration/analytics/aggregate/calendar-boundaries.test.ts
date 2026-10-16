@@ -64,7 +64,12 @@ for (const { timezone, midnightMinute } of [
 					simple = await pipes.aggregateSimple(params);
 				} while (simple.data.length === 0 && Date.now() < deadline);
 				expect(simple.data).toEqual([
-					{ period, event_name: TestFeature.Messages, total_value: 11 },
+					{
+						period,
+						event_name: TestFeature.Messages,
+						total_value: 11,
+						event_count: 1,
+					},
 				]);
 				expect(
 					generateAllPeriods({

@@ -11,9 +11,9 @@ import type { CatalogCache } from "@autumn/catalog-lru";
 import type { HeraldEnv } from "@autumn/env/herald";
 import {
 	type CatalogInvalidationConsumer,
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
-	KafkaWithSettledTopicOffsets,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { EventsDb, PostgresClient } from "@autumn/postgres";
@@ -74,13 +74,12 @@ export function createHerald({
 }): Herald {
 	const { env } = config;
 	logUnknownInput({ logger: ctx.logger });
-	const kafka = new KafkaWithSettledTopicOffsets(
+	const kafka = createKafka(
 		createKafkaClient({
 			clientId: `herald-${crypto.randomUUID()}`,
 			brokers: env.KAFKA_BROKERS,
 			transport: createKafkaTransport({
 				authMode: env.KAFKA_AUTH_MODE,
-				region: env.AWS_REGION,
 				sasl: env.KAFKA_SASL,
 			}),
 			limits: {
@@ -90,6 +89,7 @@ export function createHerald({
 				initialRetryTimeMs: 100,
 				maxRetryTimeMs: 1000,
 			},
+			groupProtocol: env.KAFKA_GROUP_PROTOCOL,
 		}),
 	);
 	const admin = kafka.admin();
