@@ -15,7 +15,10 @@ import type {
 	PooledBalanceLifecycle,
 } from "../types/pooledBalanceComputeTypes";
 import { resolvePooledBalanceResetCycleAnchor } from "../utils/resolvePooledBalanceResetCycleAnchor";
-import { findSubscriptionPoolHost } from "../utils/subscriptionPoolHost";
+import {
+	findSubscriptionPoolHost,
+	runsWithoutStripeSubscription,
+} from "../utils/subscriptionPoolHost";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
 
 const getResetMode = ({
@@ -161,6 +164,24 @@ const resolveResetCycleAnchor = ({
 	});
 };
 
+/** Free plans and trials Autumn runs have no subscription cycle of their own to keep. */
+const canJoinSubscriptionPool = ({
+	customerProduct,
+	resetMode,
+	competes,
+}: {
+	customerProduct: FullCusProduct;
+	resetMode: PooledBalanceResetMode;
+	competes: boolean;
+}) => {
+	if (customerProduct.customer_license_link_id || competes) return false;
+	if (resetMode === PooledBalanceResetMode.Lazy) return true;
+	return (
+		resetMode === PooledBalanceResetMode.Subscription &&
+		runsWithoutStripeSubscription({ customerProduct })
+	);
+};
+
 export const computePooledBalanceLifecycle = ({
 	computeContext,
 	customerEntitlement,
@@ -190,12 +211,13 @@ export const computePooledBalanceLifecycle = ({
 
 	const resetMode = getResetMode({ customerProduct, interval });
 
-	const subscriptionPoolHost =
-		resetMode === PooledBalanceResetMode.Lazy &&
-		!customerProduct.customer_license_link_id &&
-		!competes
-			? findSubscriptionPoolHost({ computeContext, customerEntitlement })
-			: undefined;
+	const subscriptionPoolHost = canJoinSubscriptionPool({
+		customerProduct,
+		resetMode,
+		competes,
+	})
+		? findSubscriptionPoolHost({ computeContext, customerEntitlement })
+		: undefined;
 	if (subscriptionPoolHost) {
 		const { pooled_balance: hostPool } = subscriptionPoolHost;
 		return {
