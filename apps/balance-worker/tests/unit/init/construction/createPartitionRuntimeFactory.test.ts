@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseTrackCommand } from "@autumn/balance-engine";
-import type { KafkaProducerClient } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
+import type { KafkaProducerClient, ProducerConfig } from "@autumn/kafka";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
 import { commitSummaries } from "../../../../src/logging/commitSummaries.js";

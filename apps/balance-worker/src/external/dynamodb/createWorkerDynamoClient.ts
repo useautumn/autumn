@@ -38,7 +38,7 @@ export function createWorkerDynamoClient({
 	const credentials = workerDynamoCredentialsOf({ env });
 	return createDynamoClient({
 		config: {
-			// The table lives beside the admin bucket; MSK auth may leave AWS_REGION unset locally.
+			// The table lives beside the admin bucket; AWS_REGION may be unset locally.
 			region: env.AWS_REGION ?? env.S3_REGION,
 			endpoint: env.DYNAMODB_ENDPOINT,
 			...(credentials && { credentials }),

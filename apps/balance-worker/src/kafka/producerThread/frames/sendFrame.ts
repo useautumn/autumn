@@ -19,9 +19,8 @@ export type SendMeta = {
 	/** The producer's send order; the thread dispatches in it whichever way a payload travelled. */
 	seq: number;
 	topic: string;
-	acks?: number;
-	compression?: number;
-	timeout?: number;
+	/** The producer config fixes compression and the delivery timeout; a send only restates its acks. */
+	acks?: -1;
 	/** Every record's partition and headers when they are all the same; otherwise `messages` lists them. */
 	shared?: SendMessageMeta;
 	messages?: SendMessageMeta[];

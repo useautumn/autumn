@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import type { EvictCommand, TrackCommand } from "@autumn/balance-engine";
 import type { CommandAppend } from "@autumn/kafka";
 import { meteringIdentityToPartition } from "@autumn/kafka/partitioning";
-import { createBalanceWorkerClient } from "../src/balanceWorkerClient.js";
+import {
+	BalanceWorkerClientError,
+	createBalanceWorkerClient,
+} from "../src/balanceWorkerClient.js";
 
 const partitionCount = 8;
 
@@ -176,5 +179,29 @@ test("a caller's own signal aborts the wait with an abort, not a deadline", asyn
 	await expect(pending).rejects.toMatchObject({
 		code: "ABORTED",
 		outcome: "unknown",
+	});
+});
+
+test("a driver failure is a command-log failure with an unknown outcome, keeping the driver's error as its cause", async () => {
+	const driverError = Object.assign(new Error("Local: Message timed out"), {
+		code: -192,
+		isRetriable: true,
+	});
+	const client = createBalanceWorkerClient({
+		ctx: {
+			owners: { findOwner: () => undefined, refresh: async () => undefined },
+			http: { postJson: async () => ({ status: 500, body: null }) },
+			commandLog: { append: async () => Promise.reject(driverError) },
+		},
+		config: { partitionCount, timeoutMs: 1_000 },
+	});
+	const failure = await client.queue
+		.track({ commands: [trackFor({ customerId: "a" })] })
+		.catch((error: unknown) => error);
+	expect(failure).toBeInstanceOf(BalanceWorkerClientError);
+	expect(failure).toMatchObject({
+		code: "COMMAND_LOG_UNAVAILABLE",
+		outcome: "unknown",
+		cause: driverError,
 	});
 });

@@ -1,21 +1,20 @@
 /**
  * A producer thread whose broker is scripted by topic name, so the threaded producers can be tested without Kafka:
  *  echo     → metadata whose logAppendTime carries the record the producer received, as JSON
- *  refuse   → a KafkaJSProtocolError (the broker refused; nothing appended)
- *  fenced   → retries exhausted around INVALID_PRODUCER_EPOCH (fate unknown, fencing cause)
- *  electing → retries exhausted around LEADER_NOT_AVAILABLE (fate unknown, a leader election)
+ *  refuse   → a broker refusal (INVALID_TOPIC_EXCEPTION; nothing appended)
+ *  fenced   → librdkafka's own fencing (ERR__FENCED; fate unknown)
+ *  electing → a send that timed out through a leader election (ERR__MSG_TIMED_OUT, retriable; fate unknown)
  *  crash    → the thread exits
  *  anything else → one metadata entry with a per-partition base offset
  * A clientId of "bad-client" makes the thread fail to start; "scram-client" starts only with its SCRAM credentials.
  */
-import type { KafkaProducerClient } from "@autumn/kafka";
-import {
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-	type ProducerConfig,
-	type ProducerRecord,
-	type RecordMetadata,
-} from "kafkajs";
+import type {
+	KafkaProducerClient,
+	KafkaRequestTiming,
+	ProducerConfig,
+	ProducerRecord,
+	RecordMetadata,
+} from "@autumn/kafka";
 import { startProducerLoop } from "../../../../src/kafka/producerThread/startProducerLoop.js";
 import type {
 	DecideToProducerMessage,
@@ -24,20 +23,23 @@ import type {
 
 declare var self: Worker;
 
-type Listener = (event: { payload: Record<string, unknown> }) => void;
+type Listener = (timing: KafkaRequestTiming) => void;
 
-function protocolError({
+/** What Confluent's shim throws: librdkafka's code and verdict on the error itself. */
+function librdkafkaError({
+	name,
 	message,
-	type,
 	code,
+	retriable,
 }: {
+	name: string;
 	message: string;
-	type: string;
 	code: number;
-}): KafkaJSProtocolError {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error(message), { type, code, retriable: false }),
-	);
+	retriable: boolean;
+}): Error {
+	const error = Object.assign(new Error(message), { code, retriable });
+	error.name = name;
+	return error;
 }
 
 function fakeProducer({
@@ -51,7 +53,7 @@ function fakeProducer({
 
 	function echoOf({ record }: { record: ProducerRecord }): string {
 		return JSON.stringify({
-			config: { ...config, createPartitioner: typeof config.createPartitioner },
+			config,
 			acks: record.acks,
 			compression: record.compression,
 			messages: record.messages.map((message) => ({
@@ -67,40 +69,34 @@ function fakeProducer({
 		if (!connected) throw new Error("fake producer: not connected");
 		for (const listener of listeners)
 			listener({
-				payload: {
-					apiName: "Produce",
-					broker: "fake:9092",
-					duration: 3,
-					pendingDuration: 1,
-				},
+				apiName: "Produce",
+				broker: "fake:9092",
+				durationMs: 3,
+				pendingMs: 1,
 			});
 		if (record.topic === "crash") process.exit(7);
 		if (record.topic === "refuse")
-			throw protocolError({
+			throw librdkafkaError({
+				name: "KafkaJSProtocolError",
 				message:
 					"The request attempted to perform an operation on an invalid topic",
-				type: "INVALID_TOPIC_EXCEPTION",
 				code: 17,
+				retriable: false,
 			});
 		if (record.topic === "fenced")
-			throw new KafkaJSNumberOfRetriesExceeded(
-				protocolError({
-					message: "Producer attempted an operation with an old epoch",
-					type: "INVALID_PRODUCER_EPOCH",
-					code: 47,
-				}),
-				{ retryCount: 2, retryTime: 100 },
-			);
+			throw librdkafkaError({
+				name: "KafkaJSError",
+				message: "Local: This instance has been fenced by a newer instance",
+				code: -144,
+				retriable: false,
+			});
 		if (record.topic === "electing")
-			throw new KafkaJSNumberOfRetriesExceeded(
-				protocolError({
-					message:
-						"There is no leader for this topic-partition as we are in the middle of a leadership election",
-					type: "LEADER_NOT_AVAILABLE",
-					code: 5,
-				}),
-				{ retryCount: 10, retryTime: 2500 },
-			);
+			throw librdkafkaError({
+				name: "KafkaJSError",
+				message: "Local: Message timed out",
+				code: -192,
+				retriable: true,
+			});
 		const partition = record.messages[0]?.partition ?? 0;
 		const slot = `${record.topic}/${partition}`;
 		const baseOffset = offsets.get(slot) ?? 0;
@@ -127,11 +123,9 @@ function fakeProducer({
 		},
 		send,
 		transaction: () => Promise.reject(new Error("no transactions")),
-		on: ((_: string, listener: Listener) => {
+		onRequestTimings(listener: Listener) {
 			listeners.add(listener);
-			return () => listeners.delete(listener);
-		}) as unknown as KafkaProducerClient["on"],
-		events: { REQUEST: "producer.network.request" },
+		},
 	};
 }
 

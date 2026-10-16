@@ -6,5 +6,5 @@ import type { PartitionProcessor } from "../../processor/types/partitionProcesso
 export type ConsumeContext = {
 	processor: PartitionProcessor;
 	idempotencyKeys: IdempotencyKeyStore;
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 };

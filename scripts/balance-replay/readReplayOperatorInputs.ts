@@ -4,7 +4,6 @@ import {
 	REPLAY_STAGING_DEPLOYMENT,
 	REPLAY_STAGING_OWNERSHIP_TOPIC,
 	REPLAY_STAGING_PARTITION_COUNT,
-	REPLAY_STAGING_REGION,
 	REPLAY_STAGING_SASL_MECHANISM,
 } from "@server/internal/balances/replay/targets/replayStagingTargetContracts.js";
 
@@ -67,7 +66,7 @@ export function readReplayKafkaSasl({
 	};
 }
 
-/** The deployment, topic, partition count and region are pinned constants: the
+/** The deployment, topic and partition count are pinned constants: the
  *  command line cannot point the replay at another cluster. */
 export function buildReplayStagingTargetInput({
 	databaseUrl,
@@ -80,7 +79,6 @@ export function buildReplayStagingTargetInput({
 		deployment: REPLAY_STAGING_DEPLOYMENT,
 		topic: REPLAY_STAGING_OWNERSHIP_TOPIC,
 		partitionCount: REPLAY_STAGING_PARTITION_COUNT,
-		region: REPLAY_STAGING_REGION,
 	};
 }
 

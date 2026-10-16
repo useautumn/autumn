@@ -297,7 +297,8 @@ async function awaitHandoffClaim({
 	}
 	const signal = AbortSignal.any([entry.handoffAbort.signal, timeout.signal]);
 	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
-	const claim = entry.publication.awaitClaim({ signal });
+	const readyAt = Date.now();
+	const claim = entry.publication.awaitClaim({ signal, afterReadyAt: readyAt });
 	const draining = entry.publication.awaitDraining({ signal });
 	const foreignClaim = entry.publication.awaitForeignClaim({ signal });
 	void Promise.allSettled([claim, draining, foreignClaim]);
@@ -321,7 +322,7 @@ async function awaitHandoffClaim({
 	void draining.then(holdForDrain, noop);
 	void foreignClaim.then(restartSilence, noop);
 	try {
-		await entry.publication.announceReady();
+		await entry.publication.announceReady({ readyAt });
 		const { routeEpoch } = await claim;
 		entry.claimAttempted = true;
 		entry.claimed = true;

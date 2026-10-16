@@ -1,7 +1,7 @@
 import {
+	createKafka,
 	createKafkaClient,
 	createKafkaTransport,
-	KafkaWithSettledTopicOffsets,
 } from "@autumn/kafka";
 import type {
 	BalanceWorkerKafka,
@@ -13,14 +13,14 @@ export function createBalanceWorkerKafka({
 	clientId,
 	brokers,
 	authMode,
-	region,
 	sasl,
+	groupProtocol,
 }: BalanceWorkerKafkaConfig): BalanceWorkerKafka {
-	return new KafkaWithSettledTopicOffsets(
+	return createKafka(
 		createKafkaClient({
 			clientId,
 			brokers,
-			transport: createKafkaTransport({ authMode, region, sasl }),
+			transport: createKafkaTransport({ authMode, sasl }),
 			limits: {
 				connectionTimeoutMs: 3_000,
 				requestTimeoutMs: 10_000,
@@ -28,6 +28,7 @@ export function createBalanceWorkerKafka({
 				initialRetryTimeMs: 100,
 				maxRetryTimeMs: 1_000,
 			},
+			groupProtocol,
 		}),
 	);
 }

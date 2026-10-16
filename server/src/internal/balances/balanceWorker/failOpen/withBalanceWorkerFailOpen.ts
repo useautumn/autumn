@@ -17,6 +17,13 @@ export type BalanceWorkerFailOpenReason =
 	| "org_rate_limit"
 	| WorkerFailOpenReason;
 
+/** A fail-open the worker never took: only an unconfirmed command may have applied. */
+export const isUnsubmittedFailOpen = ({
+	reason,
+}: {
+	reason: BalanceWorkerFailOpenReason;
+}): boolean => reason !== "balance_worker_result_unknown";
+
 /**
  * Runs a worker request; `fallback` answers instead when the org is over its
  * rate cap, or when the worker was unreachable, shed the command as overloaded,

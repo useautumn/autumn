@@ -16,7 +16,6 @@ function timingsOf(overrides: Record<string, string>) {
 	return balanceWorkerEnvToRuntimeConfig({
 		env,
 		endpoint: "http://127.0.0.1:8082",
-		groupId: env.BALANCE_WORKER_GROUP_ID,
 	}).timings;
 }
 

@@ -78,6 +78,7 @@ export const closeStoreFixture = ({
 };
 
 import {
+	type Consumer,
 	createProducerSession,
 	type KafkaConsumerClient,
 	type KafkaProducerClient,
@@ -86,7 +87,6 @@ import {
 	type ProgressTracker,
 	serializeMeteringRecord,
 } from "@autumn/kafka";
-import type { Consumer } from "kafkajs";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
 import type {

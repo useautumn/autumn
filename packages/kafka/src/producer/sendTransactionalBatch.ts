@@ -1,9 +1,7 @@
 import {
-	CompressionTypes,
-	KafkaJSError,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-} from "kafkajs";
+	isKafkaProtocolError,
+	isRetriableKafkaError as isRetriableError,
+} from "../client/kafkaErrorClassification.js";
 import {
 	KafkaBatchNotCommittedError,
 	KafkaTransactionStateUnknownError,
@@ -41,7 +39,7 @@ async function abortTransaction({
  * batch straight away. The coordinator answers CONCURRENT_TRANSACTIONS while it
  * is still finishing the producer's previous transaction; a broker being
  * replaced answers NOT_LEADER_OR_FOLLOWER until leadership has moved; a
- * coordinator on the move answers NOT_COORDINATOR. kafkajs marks all of these
+ * coordinator on the move answers NOT_COORDINATOR. librdkafka marks all of these
  * retriable and retries a few times itself; when it gives up, nothing of the
  * new transaction has been kept, because the batch is aborted before it is
  * reported here. So the transaction is begun again after a short, fixed wait,
@@ -83,19 +81,17 @@ export function transactionRetryWithin({
 	return { ...DEFAULT_TRANSACTION_RETRY, deadlineMs };
 }
 
+const CONCURRENT_TRANSACTIONS: ReadonlySet<string> = new Set([
+	"CONCURRENT_TRANSACTIONS",
+]);
+
 export function isConcurrentTransactionsError(cause: unknown): boolean {
-	return (
-		cause instanceof KafkaJSProtocolError &&
-		cause.type === "CONCURRENT_TRANSACTIONS"
-	);
+	return isKafkaProtocolError({ cause, types: CONCURRENT_TRANSACTIONS });
 }
 
-/** kafkajs takes retriability from the protocol's error table, and keeps the
- *  original refusal as the cause of the error it throws once its own retries run out. */
+/** librdkafka's own verdict on the refusal it gave up on. */
 export function isRetriableKafkaError(cause: unknown): boolean {
-	if (cause instanceof KafkaJSNumberOfRetriesExceeded)
-		return isRetriableKafkaError(cause.cause);
-	return cause instanceof KafkaJSError && cause.retriable === true;
+	return isRetriableError(cause);
 }
 
 export async function sendTransactionalBatch({
@@ -152,7 +148,6 @@ export async function sendTransactionalBatch({
 			topic,
 			messages: partitionMessages,
 			acks: -1,
-			compression: CompressionTypes.GZIP,
 		});
 		const baseOffset = metadataToBaseOffset({ metadata, topic, partition });
 		if (offsets) await transaction.sendOffsets(offsets);

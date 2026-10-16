@@ -2,6 +2,7 @@ import { fullSubjectToMutationSubject } from "../../common/usageEvent/fullSubjec
 import { LockNotFoundError } from "../../errors.js";
 import type { SubjectStateMutation } from "../../models/mutation/subjectStateMutation.js";
 import type { WorkerFullSubject } from "../../models/subject/workerFullSubject.js";
+import { findOpenLockById } from "../../utils/subjectStateUtils/openLockIndex.js";
 import { assertCommandSupported } from "../common/assertCommandSupported.js";
 import type { ConfirmExpiredLockCommand } from "./types/confirmExpiredLockCommand.js";
 
@@ -17,9 +18,9 @@ export const computeConfirmExpiredLock = ({
 	const { lock } = command;
 
 	// A lock finalized since the sweep read it is simply gone; nothing is written for it.
-	const isOpen = fullSubject.open_locks.some(
-		(openLock) => openLock.id === lock.id,
-	);
+	const isOpen =
+		findOpenLockById({ openLocks: fullSubject.open_locks, id: lock.id }) !==
+		null;
 	if (!isOpen) throw new LockNotFoundError({ lockId: lock.lock_id });
 
 	return {

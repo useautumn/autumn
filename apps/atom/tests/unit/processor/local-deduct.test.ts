@@ -2,11 +2,14 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseTrackCommand } from "@autumn/balance-engine";
+import { parseTrackCommand, type TrackCommand } from "@autumn/balance-engine";
 import { FeatureType } from "@autumn/shared";
 import type { CheckRequest } from "../../../src/processor/types/check.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
-import type { Journal } from "../../../src/state/journal/types/journal.js";
+import type {
+	Journal,
+	JournaledCommand,
+} from "../../../src/state/journal/types/journal.js";
 import type { StoredSubject } from "../../../src/state/types/storedSubject.js";
 import {
 	checkRequestFor,
@@ -17,6 +20,11 @@ import {
 	trackRequestFor,
 } from "../utils/atomFixtures.js";
 import { openSlotProcessor } from "../utils/journalFixtures.js";
+
+const trackOf = (command: JournaledCommand | undefined): TrackCommand => {
+	if (command?.type !== "track") throw new Error("Expected a journaled track");
+	return command;
+};
 
 const cleanups: (() => void)[] = [];
 afterEach(() => {
@@ -79,7 +87,7 @@ describe("a send_event check the Atom deducts itself", () => {
 		expect(
 			journal
 				.owed({ customerId: "cus_1" })
-				.map(({ seq, command }) => [seq, command.commandId]),
+				.map(({ seq, command }) => [seq, trackOf(command).commandId]),
 		).toEqual([
 			[1, "atom_req_1"],
 			[2, "atom_req_2"],
@@ -120,9 +128,9 @@ describe("a send_event check the Atom deducts itself", () => {
 			request: sendEvent({ params: { skip_event: true } }),
 		});
 
-		expect(journal.owed({ customerId: "cus_1" })[0]?.command.usageEvent).toBe(
-			null,
-		);
+		expect(
+			trackOf(journal.owed({ customerId: "cus_1" })[0]?.command).usageEvent,
+		).toBe(null);
 	});
 
 	test("a send_event past the balance is refused and journals nothing", async () => {
@@ -222,7 +230,7 @@ describe("a track the Atom deducts itself", () => {
 			usageEvent: { name: "messages", idempotencyKey: "evt_1", id: null },
 			idempotency: { key: "track:evt_1", ttlMs: 30 * 60_000 },
 		});
-		expect(entry?.command.enforceOverdueBlock).not.toBe(true);
+		expect(trackOf(entry?.command).enforceOverdueBlock).not.toBe(true);
 	});
 
 	test("without a body key claims nothing at Autumn: the seq is what refuses a resend", async () => {

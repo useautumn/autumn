@@ -18,15 +18,8 @@ for (const [name, createEnv, service] of services) {
 	const username = `KAFKA_SASL_USERNAME_${service}`;
 	const password = `KAFKA_SASL_PASSWORD_${service}`;
 	describe(`${name} Kafka authentication`, () => {
-		test("defaults to MSK IAM without a deployment auth setting", () => {
-			expect(createEnv({ ...brokers, AWS_REGION: "us-east-1" })).toHaveProperty(
-				"KAFKA_AUTH_MODE",
-				"msk_iam",
-			);
-		});
-
-		test("does not fall back to plaintext when the default IAM region is missing", () => {
-			expect(() => createEnv(brokers)).toThrow("requires AWS_REGION");
+		test("requires an explicit auth mode rather than guessing one", () => {
+			expect(() => createEnv(brokers)).toThrow("KAFKA_AUTH_MODE is required");
 		});
 
 		test("accepts explicit unauthenticated mode without AWS configuration", () => {
@@ -36,33 +29,7 @@ for (const [name, createEnv, service] of services) {
 			);
 		});
 
-		test("preserves IAM mode and its normalized signing region", () => {
-			expect(
-				createEnv({
-					...brokers,
-					KAFKA_AUTH_MODE: "msk_iam",
-					AWS_REGION: " us-east-1 ",
-				}),
-			).toMatchObject({
-				KAFKA_AUTH_MODE: "msk_iam",
-				AWS_REGION: "us-east-1",
-			});
-		});
-
-		test.each([undefined, "", " "])(
-			"rejects IAM mode without a signing region: %j",
-			(region) => {
-				expect(() =>
-					createEnv({
-						...brokers,
-						KAFKA_AUTH_MODE: "msk_iam",
-						AWS_REGION: region,
-					}),
-				).toThrow("requires AWS_REGION");
-			},
-		);
-
-		test("SCRAM carries its credentials, defaults to SHA-256 and needs no AWS region", () => {
+		test("SCRAM carries its credentials and defaults to SHA-256", () => {
 			expect(
 				createEnv({
 					...brokers,
@@ -147,7 +114,7 @@ for (const [name, createEnv, service] of services) {
 			expect(
 				createEnv({
 					...brokers,
-					AWS_REGION: "us-east-1",
+					KAFKA_AUTH_MODE: "none",
 					[username]: "user",
 					[password]: "secret",
 				}),
@@ -181,14 +148,13 @@ for (const [name, createEnv, service] of services) {
 			});
 		});
 
-		test.each(["iam", "msk", "MSK_IAM", "", " "])(
+		test.each(["msk_iam", "iam", "PLAIN", "", " "])(
 			"rejects an unknown auth mode instead of falling back to plaintext: %j",
 			(mode) => {
 				expect(() =>
 					createEnv({
 						...brokers,
 						KAFKA_AUTH_MODE: mode,
-						AWS_REGION: "us-east-1",
 					}),
 				).toThrow("KAFKA_AUTH_MODE");
 			},

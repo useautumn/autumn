@@ -1,14 +1,24 @@
 // Exits once every local-ownership partition holds its preparing → ready → claimed records.
-const { Kafka, logLevel } = await import(
-	Bun.resolveSync("kafkajs", "/app/apps/balance-worker/")
+const { createKafka, createKafkaClient } = await import(
+	Bun.resolveSync("@autumn/kafka", "/app/apps/balance-worker/")
 );
 
 const partitions = 4;
-const admin = new Kafka({
-	clientId: "qa-ownership-ready",
-	brokers: ["127.0.0.1:19092"],
-	logLevel: logLevel.NOTHING,
-}).admin();
+const admin = createKafka(
+	createKafkaClient({
+		clientId: "qa-ownership-ready",
+		brokers: ["127.0.0.1:19092"],
+		transport: {},
+		limits: {
+			connectionTimeoutMs: 3_000,
+			requestTimeoutMs: 5_000,
+			retryCount: 1,
+			initialRetryTimeMs: 100,
+			maxRetryTimeMs: 500,
+		},
+		logSink: { error() {}, warn() {}, info() {}, debug() {} },
+	}),
+).admin();
 await admin.connect();
 
 while (true) {
