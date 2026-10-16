@@ -18,7 +18,7 @@ import {
 	partitionKeyOf,
 } from "./types/runnerState.js";
 
-/** At most this many records per partition reach one `eachBatch`, the most our handlers commit at once. */
+/** Records one poll hands out across every assigned partition, unless the consumer sets `maxRecordsPerPoll`. */
 export const MAX_RECORDS_PER_CONSUME = 500;
 /** The wait after a poll that found nothing: the most a record or a rebalance waits to be served. */
 export const IDLE_POLL_MS = 5;
@@ -115,7 +115,10 @@ async function consumeChunk({
 	}
 	scope.state.lastPollAt = performance.now();
 	try {
-		native.consume(MAX_RECORDS_PER_CONSUME, consumed);
+		native.consume(
+			scope.config.maxRecordsPerPoll ?? MAX_RECORDS_PER_CONSUME,
+			consumed,
+		);
 	} catch (cause) {
 		done.resolve(cause as NativeKafkaError);
 	}

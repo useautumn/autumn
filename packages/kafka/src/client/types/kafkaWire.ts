@@ -204,6 +204,8 @@ export type ConsumerConfig = {
 	rebalanceTimeout?: number;
 	/** Turns on librdkafka statistics; an idle consumer then reports a fetch whenever its leaders answered one. */
 	statisticsIntervalMs?: number;
+	/** Records one poll hands out across every assigned partition, all landed before the next poll. Defaults to 500. */
+	maxRecordsPerPoll?: number;
 	retry?: {
 		/** False ends the consumer after a failed batch instead of rewinding to the last commit. */
 		restartOnFailure?: (error: Error) => Promise<boolean>;
