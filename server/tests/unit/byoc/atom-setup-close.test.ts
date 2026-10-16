@@ -48,6 +48,7 @@ const awaitingTeardown: AtomDeployment = {
 	doneStages: [],
 	removedStages: [],
 	error: null,
+	update: null,
 };
 
 /** A deployer reporting `found` on every read, and an in-memory record; `calls` is the order things happened in. */

@@ -422,3 +422,74 @@ describe("growing an Atom's volume on alien", () => {
 		await expect(grow).rejects.toThrow("not running");
 	});
 });
+
+describe("an Atom's latest update on alien", () => {
+	const withUpdate = (latest: Record<string, unknown>): AlienDeployment => ({
+		...deploymentIn("running"),
+		updateState: { active: null, next: null, latest },
+	});
+	const findWith = (deployment: AlienDeployment) =>
+		createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deployment,
+				byGroup: deployment,
+			}),
+		}).find({ deploymentGroupId: "dg_1", deploymentId: "dep_1" });
+
+	test("a grow alien is applying reads as applying, with when it was asked for", async () => {
+		const found = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "applying",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: null,
+			}),
+		);
+		expect(found?.update).toEqual({
+			status: "applying",
+			requested_at: Date.parse("2026-10-16T12:00:00Z"),
+			completed_at: null,
+			error: null,
+		});
+	});
+
+	test("a queued grow reads as requested, and a superseded one as succeeded", async () => {
+		const queued = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "queued",
+				requestedAt: "2026-10-16T12:00:00Z",
+			}),
+		);
+		const superseded = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "superseded",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: "2026-10-16T12:02:00Z",
+			}),
+		);
+		expect(queued?.update?.status).toBe("requested");
+		expect(superseded?.update?.status).toBe("succeeded");
+	});
+
+	test("a failed grow carries alien's reason", async () => {
+		const found = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "failed",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: "2026-10-16T12:01:00Z",
+				actionRequired: "Volume modification rate limit reached",
+			}),
+		);
+		expect(found?.update).toMatchObject({
+			status: "failed",
+			error: "Volume modification rate limit reached",
+		});
+	});
+
+	test("no update state reads as no update", async () => {
+		expect((await findWith(deploymentIn("running")))?.update).toBeNull();
+	});
+});

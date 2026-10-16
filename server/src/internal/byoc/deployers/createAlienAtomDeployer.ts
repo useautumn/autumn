@@ -4,9 +4,11 @@ import {
 	type AlienDeployment,
 	type AlienFixedPools,
 	type AlienNetwork,
+	type AlienUpdateOperation,
 	deploymentToErrorMessage,
 	deploymentToPoolMachine,
 	deploymentToPublicEndpointUrl,
+	deploymentToUpdate,
 	deploymentToVolumeSizeGib,
 	hasDeploymentFailed,
 	isDeploymentAwaitingTeardown,
@@ -16,6 +18,7 @@ import {
 } from "@autumn/alien";
 import { getAutumnEnv } from "@autumn/env";
 import {
+	type ApiAtomUpdate,
 	BYOC_CACHE_REPLICAS,
 	type ByocCacheMachine,
 	type ByocCacheNetwork,
@@ -174,6 +177,38 @@ const findAlienDeployment = async ({
 	return ctx.alienClient.findDeployment({ deploymentGroupId });
 };
 
+const UPDATE_STATUSES: Record<
+	AlienUpdateOperation["status"],
+	ApiAtomUpdate["status"]
+> = {
+	blocked: "requested",
+	queued: "requested",
+	applying: "applying",
+	succeeded: "succeeded",
+	superseded: "succeeded",
+	failed: "failed",
+};
+
+/** alien's current update in the API's words; a failure carries alien's reason. */
+const alienDeploymentToUpdate = ({
+	deployment,
+}: {
+	deployment: AlienDeployment;
+}): ApiAtomUpdate | null => {
+	const update = deploymentToUpdate({ deployment });
+	if (!update) return null;
+	const status = UPDATE_STATUSES[update.status];
+	return {
+		status,
+		requested_at: Date.parse(update.requestedAt),
+		completed_at: update.completedAt ? Date.parse(update.completedAt) : null,
+		error:
+			status === "failed"
+				? (update.actionRequired ?? deploymentToErrorMessage({ deployment }))
+				: null,
+	};
+};
+
 const alienDeploymentToAtom = ({
 	deployment,
 }: {
@@ -201,6 +236,7 @@ const alienDeploymentToAtom = ({
 			endpointUrl,
 		}),
 		error: deploymentToErrorMessage({ deployment }),
+		update: alienDeploymentToUpdate({ deployment }),
 	};
 };
 

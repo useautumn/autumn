@@ -80,6 +80,7 @@ const findStackAtom = async ({
 		doneStages: Object.values(ByocCacheStage),
 		removedStages: [],
 		error: null,
+		update: null,
 	};
 };
 

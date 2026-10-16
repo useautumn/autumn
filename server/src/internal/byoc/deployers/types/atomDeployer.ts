@@ -1,4 +1,5 @@
 import type {
+	ApiAtomUpdate,
 	ByocCacheMachine,
 	ByocCacheNetwork,
 	ByocCacheStage,
@@ -21,6 +22,8 @@ export type AtomDeployment = {
 	removedStages: ByocCacheStage[];
 	/** Why the deploy or teardown stopped, in the runner's words. */
 	error: string | null;
+	/** The latest change applied to the running deployment, e.g. a storage grow; null when the runner reports none. */
+	update: ApiAtomUpdate | null;
 };
 
 export type AtomSetup = {

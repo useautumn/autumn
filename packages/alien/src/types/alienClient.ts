@@ -12,6 +12,8 @@ export type AlienDeployment = {
 	stackState?: unknown;
 	/** The settings the deployment runs with; read its machines with `deploymentToPoolMachine`. */
 	stackSettings?: unknown;
+	/** alien's durable update operations; read the current one with `deploymentToUpdate`. */
+	updateState?: unknown;
 };
 
 /** Fixed-size compute pools by name: each runs `machines` of one EC2 `machine` type. */

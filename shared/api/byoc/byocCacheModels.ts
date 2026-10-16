@@ -191,6 +191,28 @@ export const IncreaseByocCacheStorageParamsSchema = AtomIdParamsSchema.extend({
 	),
 });
 
+export const ApiAtomUpdateSchema = z
+	.object({
+		status: z
+			.enum(["requested", "applying", "succeeded", "failed"])
+			.describe("Where the change stands in your cloud."),
+		requested_at: z.number().describe("When it was asked for, ms since epoch."),
+		completed_at: z
+			.number()
+			.nullable()
+			.describe("When it finished, once it has."),
+		error: z.string().nullable().describe("Why it stopped, once it failed."),
+	})
+	.describe(
+		"The latest change to the Atom's deployment, such as growing its storage.",
+	);
+
+export const GetAtomUpdateParamsSchema = AtomIdParamsSchema;
+
+export const GetAtomUpdateResponseSchema = z.object({
+	update: ApiAtomUpdateSchema.nullable(),
+});
+
 export const CreateByocCacheResponseSchema = ApiByocCacheSchema.extend({
 	setup_url: z
 		.string()
@@ -275,6 +297,8 @@ export type CreateByocCacheResponse = z.infer<
 export type GetByocCacheResponse = z.infer<typeof GetByocCacheResponseSchema>;
 export type CreateByocCacheParams = z.infer<typeof CreateByocCacheParamsSchema>;
 export type ResizeByocCacheParams = z.infer<typeof ResizeByocCacheParamsSchema>;
+export type ApiAtomUpdate = z.infer<typeof ApiAtomUpdateSchema>;
+export type GetAtomUpdateResponse = z.infer<typeof GetAtomUpdateResponseSchema>;
 export type IncreaseByocCacheStorageParams = z.infer<
 	typeof IncreaseByocCacheStorageParamsSchema
 >;
