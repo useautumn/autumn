@@ -5,6 +5,8 @@ import {
 } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkRouteApproval } from "@/internal/approvals/enforce/checkRouteApproval";
+import { createBalanceParamsToFacts } from "@/internal/approvals/facts/balances/createBalanceParamsToFacts";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion";
 import { validateCreateBalanceParams } from "@/internal/balances/createBalance/validateCreateBalance";
 import { getSubjectFullCustomer } from "@/internal/balances/utils/getSubjectFullCustomer.js";
@@ -34,6 +36,16 @@ export const handleCreateBalance = createRoute({
 			feature,
 			params: createBalanceParams,
 			fullCustomer,
+		});
+
+		await checkRouteApproval({
+			ctx,
+			action: "balances.create",
+			buildFacts: async () =>
+				createBalanceParamsToFacts({
+					fullCustomer,
+					params: createBalanceParams,
+				}),
 		});
 
 		const { newEntitlement, newCustomerEntitlement } =

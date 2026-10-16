@@ -7,7 +7,10 @@ import {
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkRouteApproval } from "@/internal/approvals/enforce/checkRouteApproval";
+import { updateBalanceParamsToFacts } from "@/internal/approvals/facts/balances/updateBalanceParamsToFacts";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
+import { getSubjectFullCustomer } from "@/internal/balances/utils/getSubjectFullCustomer.js";
 
 export const handleUpdateBalance = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -32,6 +35,21 @@ export const handleUpdateBalance = createRoute({
 				statusCode: 400,
 			});
 		}
+
+		await checkRouteApproval({
+			ctx,
+			action: "balances.update",
+			buildFacts: async () =>
+				updateBalanceParamsToFacts({
+					fullCustomer: await getSubjectFullCustomer({
+						ctx,
+						customerId: params.customer_id,
+						entityId: params.entity_id,
+						source: "handleUpdateBalance",
+					}),
+					params,
+				}),
+		});
 
 		const targetBalance = params.remaining ?? params.current_balance;
 
