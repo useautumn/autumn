@@ -29,14 +29,14 @@ describe("each Atom size's capacity", () => {
 		});
 	});
 
-	test("active customers are plain, with a dagger where they are extrapolated", () => {
+	test("active customers are round numbers, with ~ where they are extrapolated", () => {
 		expect(byLabel(atomActiveCustomersLabel)).toEqual({
 			XXS: "250",
 			XS: "1.5k",
-			Small: "6k",
-			Medium: "26k",
-			Large: "53k†",
-			XL: "113k†",
+			Small: "5k",
+			Medium: "25k",
+			Large: "~50k",
+			XL: "~100k",
 		});
 	});
 

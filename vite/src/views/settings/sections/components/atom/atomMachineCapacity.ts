@@ -33,25 +33,25 @@ export const ATOM_MACHINE_CAPACITY: Record<
 	},
 	"c8g.large": {
 		checksPerSecond: 800,
-		activeCustomers: 6_000,
+		activeCustomers: 5_000,
 		isCustomerEstimate: false,
 		recommendedVolumeGib: 20,
 	},
 	"c8g.xlarge": {
 		checksPerSecond: 8_000,
-		activeCustomers: 26_000,
+		activeCustomers: 25_000,
 		isCustomerEstimate: false,
 		recommendedVolumeGib: 20,
 	},
 	"c8g.2xlarge": {
 		checksPerSecond: 14_000,
-		activeCustomers: 53_000,
+		activeCustomers: 50_000,
 		isCustomerEstimate: true,
 		recommendedVolumeGib: 50,
 	},
 	"c8g.4xlarge": {
 		checksPerSecond: 16_000,
-		activeCustomers: 113_000,
+		activeCustomers: 100_000,
 		isCustomerEstimate: true,
 		recommendedVolumeGib: 50,
 	},
@@ -61,7 +61,7 @@ export const ATOM_ACTIVE_CUSTOMERS_NOTE =
 	"Customers checking or tracking at the same time. Your total customers isn't capped.";
 
 export const ATOM_CAPACITY_FOOTNOTE =
-	"Measured on our benchmarks; † estimated. Capacity varies with workload.";
+	"Measured on our benchmarks; ~ estimated. Capacity varies with workload.";
 
 export const ATOM_STORAGE_RECOMMENDATION_NOTE =
 	"Estimate, not a quota. Based on a measured 21.6–21.7 KB per subject, allowing for 10 subject/entity rows per customer and rounding up to 256 KiB/customer. Adds a fixed 2 GiB for journals, WAL, catalog and filesystem overhead. Presets target ≤60% use, below the 80% eviction threshold. More entities, larger balances or heavier writes may need more storage.";
@@ -74,11 +74,11 @@ const compactCount = (count: number) =>
 export const atomChecksPerSecondLabel = (machine: ByocCacheMachine) =>
 	`~${compactCount(ATOM_MACHINE_CAPACITY[machine.instanceType].checksPerSecond)}`;
 
-/** e.g. `26k`, or `53k†` when extrapolated. */
+/** e.g. `25k`, or `~50k` when extrapolated. */
 export const atomActiveCustomersLabel = (machine: ByocCacheMachine) => {
 	const { activeCustomers, isCustomerEstimate } =
 		ATOM_MACHINE_CAPACITY[machine.instanceType];
-	return `${compactCount(activeCustomers)}${isCustomerEstimate ? "†" : ""}`;
+	return `${isCustomerEstimate ? "~" : ""}${compactCount(activeCustomers)}`;
 };
 
 export const atomRecommendedVolumeGib = (machine: ByocCacheMachine) =>
