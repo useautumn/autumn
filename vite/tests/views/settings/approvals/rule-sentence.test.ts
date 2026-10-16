@@ -495,6 +495,25 @@ describe("rule sentence: conditions", () => {
 			"Sales can Attach when Custom condition and Custom condition",
 		],
 		[
+			"a zero limit keeps its number",
+			{
+				subjects: [everyone],
+				actions: ["balances.create"],
+				filter: { feature_id: "messages", included_grant: { $lte: 0 } },
+			},
+			"Everyone can Grant credits when Feature is Messages and Amount ≤ 0 messages",
+		],
+		[
+			"an empty matcher stays custom",
+			{ filter: { total: {} } },
+			"Sales can Attach when Custom condition",
+		],
+		[
+			"an empty element stays custom",
+			{ filter: { incoming: { $every: {} } } },
+			"Sales can Attach when Custom condition",
+		],
+		[
 			"a shape the list can't word yet",
 			{ filter: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",

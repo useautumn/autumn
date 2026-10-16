@@ -126,7 +126,7 @@ const FIELDS: Record<string, Field> = {
 	feature_id: match(({ value, ctx }) => ctx.labels.feature(String(value)).name),
 	included_grant: match(({ value, ctx }) =>
 		[value, ctx.labels.feature(String(ctx.parent.feature_id)).unit]
-			.filter(Boolean)
+			.filter((part) => part !== "")
 			.join(" "),
 	),
 };
@@ -146,6 +146,7 @@ const matcherConditions = ({
 	const entries = isFilter(matcher)
 		? Object.entries(matcher)
 		: [["$eq", matcher]];
+	if (entries.length === 0) return [CUSTOM];
 	const conditions = entries.map(([operator, operand]) => {
 		const values = [operand]
 			.flat()
@@ -241,13 +242,15 @@ const filterConditions = ({
 }: {
 	filter: Filter;
 	ctx: Ctx;
-}): RuleCondition[] =>
-	Object.entries(filter).flatMap(([key, value]) => {
+}): RuleCondition[] => {
+	if (Object.keys(filter).length === 0) return [CUSTOM];
+	return Object.entries(filter).flatMap(([key, value]) => {
 		const inFilter = { ...ctx, parent: filter };
 		if (key === "$or")
 			return cappedConditions({ branches: value, ctx: inFilter });
 		return fieldConditions({ key, value, ctx: inFilter });
 	});
+};
 
 /** An allow rule's cap on an optional amount is `$or: [{ refund: null }, { refund: … }]`; it reads as its last branch. */
 const cappedConditions = ({
@@ -280,11 +283,7 @@ const filterGroups = ({ filter, ctx }: { filter: Filter; ctx: Ctx }) => {
 		Object.keys(rest).length === 0 &&
 		branches.every((branch) => isFilter(branch) && !hasNullField(branch));
 	const groups: Filter[] = isGroups ? branches : [filter];
-	return groups.map((group) =>
-		Object.keys(group).length === 0
-			? [CUSTOM]
-			: filterConditions({ filter: group, ctx }),
-	);
+	return groups.map((group) => filterConditions({ filter: group, ctx }));
 };
 
 const subjectText = ({
