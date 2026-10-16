@@ -10,6 +10,10 @@ import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	expireOrphanedPools,
+	removeEntityPoolContributions,
+} from "@/internal/billing/v2/pooledBalances/execute/expireOrphanedEntityPools";
 import { markCustomersUpdatedAtByInternalIds } from "@/internal/customers/customerLsns/markCustomerUpdatedAt.js";
 import RecaseError from "@/utils/errorUtils.js";
 
@@ -280,16 +284,33 @@ export class EntityService {
 		orgId: string;
 		env: string;
 	}) {
-		const results = await db
-			.delete(entities)
-			.where(
-				and(
-					inArray(entities.internal_id, internalIds),
-					eq(entities.org_id, orgId),
-					eq(entities.env, env),
-				),
-			)
-			.returning();
+		const entityScope = and(
+			inArray(entities.internal_id, internalIds),
+			eq(entities.org_id, orgId),
+			eq(entities.env, env),
+		);
+
+		// The entity's products stop feeding customer pools here; pools left with
+		// no contributor must expire too, or they keep resetting every cycle.
+		const results = await db.transaction(async (tx) => {
+			const txDb = tx as unknown as DrizzleCli;
+			const scopedEntities = await txDb
+				.select({ internalId: entities.internal_id })
+				.from(entities)
+				.where(entityScope);
+			const poolIds = await removeEntityPoolContributions({
+				db: txDb,
+				internalEntityIds: scopedEntities.map((entity) => entity.internalId),
+			});
+
+			const deleted = await txDb
+				.delete(entities)
+				.where(entityScope)
+				.returning();
+
+			await expireOrphanedPools({ db: txDb, poolIds });
+			return deleted;
+		});
 
 		await markCustomersUpdatedAtByInternalIds({
 			db,
