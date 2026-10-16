@@ -23,8 +23,8 @@ The edge cache is a small service that runs in your own AWS or GCP account. It h
 ## Setting up the edge cache
 
 <Steps>
-  <Step title="Pick a region and size">
-    In the dashboard, open **Settings → Edge cache**. Pick an AWS region and a machine size.
+  <Step title="Name it, then pick a region and size">
+    In the dashboard, open **Settings → Edge cache**. Give the edge cache a name, such as the region your servers run in, then pick an AWS region and a machine size.
   </Step>
   <Step title="Choose your network">
     Use an existing VPC (private to your network), or a new VPC (reachable over the internet with TLS).
@@ -33,7 +33,7 @@ The edge cache is a small service that runs in your own AWS or GCP account. It h
     Click **Create stack in AWS**. This opens a prefilled CloudFormation page in your AWS account. Create the stack there.
   </Step>
   <Step title="Copy the endpoint">
-    Wait for the dashboard to show the edge cache as connected, then copy its endpoint URL.
+    Wait for the dashboard to show the edge cache as connected, then copy its endpoint URL from its page.
   </Step>
 </Steps>
 
@@ -81,6 +81,14 @@ autumn.track(customer_id="user_123", feature_id="messages", value=1)
 </CodeGroup>
 
 To try the edge cache on a single call, leave `useEdge` off and call it directly, for example `autumn.edge.check()`.
+
+### One endpoint per edge cache
+
+Each edge cache has its own endpoint URL, shown on its page under **Settings → Edge cache**. Pass a client the `edgeURL` of the edge cache it should use, usually the one closest to the servers it runs on. Every edge cache in an environment holds all of that environment's customers, so any of them can answer for any customer.
+
+<Note>
+Each environment can run up to three edge caches. Each one answers from its own copy, so a customer whose calls go to two edge caches at once can briefly be granted more than their balance; the extra lands in Autumn as overage.
+</Note>
 
 ## What the edge cache handles
 

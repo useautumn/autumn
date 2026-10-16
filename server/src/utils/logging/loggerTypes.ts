@@ -44,6 +44,13 @@ export type LogAppContext = {
 	balance_worker_rollout_enabled?: boolean;
 };
 
+/** An org's Atom calling Autumn, as its token hash names it */
+export type LogAtomContext = {
+	id: string;
+	org_id: string;
+	env: AppEnv;
+};
+
 /** Stripe webhook event context */
 export type LogStripeEventContext = {
 	id: string;

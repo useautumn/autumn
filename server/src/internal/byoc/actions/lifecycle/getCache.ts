@@ -2,24 +2,26 @@ import type { GetByocCacheResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
-	atomStackName,
 	atomStackNameSuffix,
 	cacheDeploymentStackName,
 	cacheDeploymentToApiCache,
 	cacheOwner,
-	nextAtomId,
+	nextAtomStackName,
 } from "../../utils/byocCacheUtils.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
-/** The env's Atom and any earlier ones still coming down, as alien has them now, and the stack name its Atom (or the next one) takes. */
+/** One Atom (the env's only one when none is named) and any earlier ones still coming down, as alien has them now, and the stack name it (or the next one) takes. */
 export const getCache = async ({
 	ctx,
+	atomId,
 }: {
 	ctx: AutumnContext;
+	atomId?: string;
 }): Promise<GetByocCacheResponse> => {
 	const { org, env } = ctx;
-	const [existing, removingRows] = await Promise.all([
-		cacheDeploymentRepo.find({ ctx }),
+	const [existing, active, removingRows] = await Promise.all([
+		cacheDeploymentRepo.find({ ctx, atomId }),
+		cacheDeploymentRepo.findActive({ ctx }),
 		cacheDeploymentRepo.findRemoving({ ctx }),
 	]);
 	const [cacheDeployment, ...removing] = await Promise.all(
@@ -28,12 +30,10 @@ export const getCache = async ({
 		),
 	);
 	const owner = cacheOwner({ org, env });
-	const atomId =
-		existing?.id ??
-		nextAtomId({
-			owner,
-			existingAtomIds: removingRows.map(({ id }) => id),
-		});
+	const next = nextAtomStackName({
+		owner,
+		existingAtomIds: [...active, ...removingRows].map(({ id }) => id),
+	});
 	return {
 		cache: cacheDeployment
 			? cacheDeploymentToApiCache({ cacheDeployment, org })
@@ -43,7 +43,9 @@ export const getCache = async ({
 			.map((row) => cacheDeploymentToApiCache({ cacheDeployment: row, org })),
 		stack_name: existing
 			? cacheDeploymentStackName({ cacheDeployment: existing, org })
-			: atomStackName({ owner, atomId }),
-		stack_name_suffix: atomStackNameSuffix({ owner, atomId }),
+			: next.stackName,
+		stack_name_suffix: existing
+			? atomStackNameSuffix({ owner, atomId: existing.id })
+			: next.suffix,
 	};
 };

@@ -1,4 +1,4 @@
-import LoadingScreen from "@/views/general/LoadingScreen";
+import { SettingsSectionSkeleton } from "./SettingsSection";
 import type { SettingsTab } from "./SettingsView";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";
@@ -51,7 +51,7 @@ export default function SettingsSections({
 	skeleton?: boolean;
 }) {
 	const Section = skeleton
-		? (SECTION_SKELETONS[tab] ?? LoadingScreen)
+		? (SECTION_SKELETONS[tab] ?? SettingsSectionSkeleton)
 		: (SECTION_MAP[tab] ?? AccountSection);
 	return <Section />;
 }

@@ -7,6 +7,7 @@ export const handleGetCache = createRoute({
 	body: GetByocCacheParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		return c.json(await getCache({ ctx }));
+		const { atom_id } = c.req.valid("json");
+		return c.json(await getCache({ ctx, atomId: atom_id }));
 	},
 });

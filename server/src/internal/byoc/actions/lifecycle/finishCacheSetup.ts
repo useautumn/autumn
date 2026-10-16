@@ -9,10 +9,12 @@ import {
 /** The org saw its first checks reach Atom and finished setup; its page shows the set-up Atom from then on. */
 export const finishCacheSetup = async ({
 	ctx,
+	atomId,
 }: {
 	ctx: AutumnContext;
+	atomId?: string;
 }): Promise<ApiByocCache> => {
-	const cacheDeployment = await cacheDeploymentRepo.find({ ctx });
+	const cacheDeployment = await cacheDeploymentRepo.find({ ctx, atomId });
 	if (cacheDeployment?.stages.connected !== ByocCacheStageStatus.Done)
 		throw cacheNotConnected();
 	if (cacheDeployment.first_check_at !== null)
