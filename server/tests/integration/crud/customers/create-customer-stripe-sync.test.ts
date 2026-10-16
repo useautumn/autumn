@@ -242,7 +242,7 @@ test(`${chalk.yellowBright("customers stripe sync: existing stripe subscription 
 	]);
 });
 
-test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is not imported on retry")}`, async () => {
+test(`${chalk.yellowBright("customers stripe sync: existing unlinked customer is linked and imported once on retry")}`, async () => {
 	const customerId = `create-stripe-sync-existing-${runId}`;
 	const pro = products.pro({
 		id: `create-stripe-sync-existing-pro-${runId}`,
@@ -253,7 +253,7 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 		actions: [],
 	});
 	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
-	await createSubscription({
+	const stripeSubscription = await createSubscription({
 		ctx,
 		stripeCustomerId: stripeCustomer.id,
 		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
@@ -265,13 +265,21 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 		customerId,
 		stripeCustomerId: stripeCustomer.id,
 	});
+	await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+	});
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	expect(retried.stripe_id).toBeNull();
-	expect(fullCustomer.customer_products).toHaveLength(0);
+	expect(retried.stripe_id).toBe(stripeCustomer.id);
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.subscription_ids).toEqual([
+		stripeSubscription.id,
+	]);
 });
 
 test(`${chalk.yellowBright("customers stripe sync: failed Stripe lookup leaves customer without products")}`, async () => {
