@@ -15,6 +15,7 @@ import {
 import {
 	type CustomerStateForm,
 	type CustomerStatePlan,
+	DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 	EMPTY_CUSTOMER_STATE_PLAN,
 } from "@/components/forms/customer-state/customerStateSchema";
 import { scopeCustomerProducts } from "@/components/forms/customer-state/scopeCustomerProducts";
@@ -116,8 +117,7 @@ export const syncProposalToCustomerState = ({
 		billingCycleAnchorDate: null,
 		endDate: null,
 		enablePlanImmediately: false,
-		carryOverUsages: false,
-		carryOverUsageFeatureIds: [],
+		...DEFAULT_CARRY_OVER_USAGES_FORM_VALUES,
 		...DISABLED_FREE_TRIAL_FORM_VALUES,
 		trialEdited: false,
 		...EMPTY_DISCOUNTS_FORM_VALUES,
