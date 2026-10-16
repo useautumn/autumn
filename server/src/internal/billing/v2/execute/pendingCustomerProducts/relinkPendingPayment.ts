@@ -1,12 +1,8 @@
-import {
-	CusProductStatus,
-	type DeferredAutumnBillingPlanData,
-	type FullCusProduct,
-} from "@autumn/shared";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { repointDeferredPlanToReplacement } from "@/internal/billing/v2/execute/pendingCustomerProducts/repointDeferredPlanToReplacement";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
-import { MetadataService } from "@/internal/metadata/MetadataService";
 
 /** Moves the pending payment onto the row that replaced its plan, so paying grants the replacement. */
 export const relinkPendingPayment = async ({
@@ -44,30 +40,10 @@ export const relinkPendingPayment = async ({
 		},
 	});
 
-	const pendingMetadata = await MetadataService.get({
-		db: ctx.db,
-		id: metadataId,
-	});
-	if (!pendingMetadata) return;
-
-	// The deferred plan still inserts the replaced row; the payment webhook must promote the replacement.
-	const data = pendingMetadata.data as DeferredAutumnBillingPlanData;
-	const { autumn } = data.billingPlan;
-	autumn.insertCustomerProducts = autumn.insertCustomerProducts?.map(
-		(planned) =>
-			planned.id === customerProduct.id
-				? {
-						...replacement,
-						status: planned.status,
-						created_at: customerProduct.created_at,
-						subscription_ids: planned.subscription_ids,
-						scheduled_ids: planned.scheduled_ids,
-					}
-				: planned,
-	);
-	await MetadataService.update({
-		db: ctx.db,
-		id: metadataId,
-		updates: { data },
+	await repointDeferredPlanToReplacement({
+		ctx,
+		metadataId,
+		replacedCustomerProduct: customerProduct,
+		replacement,
 	});
 };
