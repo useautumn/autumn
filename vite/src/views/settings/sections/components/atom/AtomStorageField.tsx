@@ -10,7 +10,7 @@ import {
 	atomVolumePresets,
 } from "./atomVolumeDisplay";
 
-const OPTION_CLASS = "min-w-0 max-w-32 flex-1 px-3 py-[7px]";
+const OPTION_CLASS = "min-w-0 flex-auto px-3 py-[7px]";
 
 /** Each preset's or the typed size's price for both volumes; Custom shows its rate until a size is typed. */
 const optionCaption = (gib: number | null) =>

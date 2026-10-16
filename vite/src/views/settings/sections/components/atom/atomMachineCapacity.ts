@@ -58,7 +58,7 @@ export const ATOM_MACHINE_CAPACITY: Record<
 };
 
 export const ATOM_CAPACITY_FOOTNOTE =
-	"Checks/s across both replicas, active customers per replica, measured on our benchmarks; † estimated. Capacity varies with workload.";
+	"Measured on our benchmarks; † estimated. Capacity varies with workload.";
 
 export const ATOM_STORAGE_RECOMMENDATION_NOTE =
 	"Estimate, not a quota. Based on a measured 21.6–21.7 KB per subject, allowing for 10 subject/entity rows per customer and rounding up to 256 KiB/customer. Adds a fixed 2 GiB for journals, WAL, catalog and filesystem overhead. Presets target ≤60% use, below the 80% eviction threshold. More entities, larger balances or heavier writes may need more storage.";

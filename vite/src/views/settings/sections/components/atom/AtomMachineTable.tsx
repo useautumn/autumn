@@ -61,8 +61,8 @@ export const AtomMachineTable = ({
 				)}
 			>
 				<span>Size</span>
-				<span>Checks/s</span>
-				<span>Active customers</span>
+				<span title="Across both replicas">Checks/s</span>
+				<span title="Held by each replica">Active customers</span>
 				<span>CPU · RAM</span>
 				<span>Machines</span>
 				<span>Est. / month</span>
