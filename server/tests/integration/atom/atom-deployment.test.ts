@@ -43,7 +43,6 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { atomTokenToHash } from "@/internal/byoc/utils/atomTokenUtils.js";
-import { MAX_ATOMS_PER_ENV } from "@/internal/byoc/utils/byocCacheUtils.js";
 import {
 	ApiKeyPrefix,
 	createKey,
@@ -240,14 +239,22 @@ test.skipIf(hostedAtom)(
 		const listed = await autumn.post("/byoc.list_atoms", {});
 		expect(listed).toMatchObject({
 			atoms: [{ id: fetched.cache.id }],
-			max_atoms: MAX_ATOMS_PER_ENV,
+			access: { included: true, used: 1, can_create: true, reason: null },
 		});
+		const { limit } = listed.access;
 		const others: { id: string }[] = [];
-		for (let count = 1; count < MAX_ATOMS_PER_ENV; count++)
+		for (let count = 1; count < limit; count++)
 			others.push(await autumn.post("/byoc.create_atom", {}));
 		expect(
 			new Set([fetched.cache.id, ...others.map(({ id }) => id)]).size,
-		).toBe(MAX_ATOMS_PER_ENV);
+		).toBe(limit);
+		expect((await autumn.post("/byoc.list_atoms", {})).access).toEqual({
+			included: true,
+			limit,
+			used: limit,
+			can_create: false,
+			reason: "limit_reached",
+		});
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "more than one Atom",
@@ -255,7 +262,7 @@ test.skipIf(hostedAtom)(
 		});
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: `already runs ${MAX_ATOMS_PER_ENV} Atoms`,
+			errMessage: `already runs ${limit} Atoms`,
 			func: () => autumn.post("/byoc.create_atom", {}),
 		});
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { dirname } from "node:path";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { Hono } from "hono";
@@ -70,13 +70,26 @@ const post = async ({ ctx, path }: { ctx: AutumnContext; path: string }) => {
 	return { status: res.status, body: await res.json() };
 };
 
+const savedEnv = { ...process.env };
+
+/** Production in us-east-2, the one place the plan decides; a stack's .env.local would otherwise say development. */
+const runAsProduction = () => {
+	process.env.NODE_ENV = "production";
+	process.env.AWS_REGION = "us-east-2";
+	delete process.env.STAGING_ENVIRONMENT;
+};
+
 beforeEach(() => {
 	state.allowed = true;
 	state.throws = false;
 	state.checks = [];
-	process.env.AUTUMN_SECRET_KEY = "am_sk_test_key";
-	// A Capy or dw stack's .env.local sets development, which skips the check this file tests.
-	process.env.NODE_ENV = "test";
+	runAsProduction();
+});
+
+afterAll(() => {
+	for (const key of ["NODE_ENV", "AWS_REGION", "STAGING_ENVIRONMENT"])
+		if (savedEnv[key] === undefined) delete process.env[key];
+		else process.env[key] = savedEnv[key];
 });
 
 describe("billingFeatureMiddleware (atoms gate on byoc.* routes)", () => {
@@ -124,8 +137,9 @@ describe("billingFeatureMiddleware (atoms gate on byoc.* routes)", () => {
 		expect(state.checks).toEqual([]);
 	});
 
-	test("lets the call through without AUTUMN_SECRET_KEY, without calling Autumn", async () => {
-		process.env.AUTUMN_SECRET_KEY = "";
+	test("lets the call through on staging, without calling Autumn", async () => {
+		process.env.STAGING_ENVIRONMENT = "true";
+		process.env.AWS_REGION = "us-east-1";
 		state.allowed = false;
 
 		const res = await post({ ctx: testCtx(), path: "/byoc.ping" });
