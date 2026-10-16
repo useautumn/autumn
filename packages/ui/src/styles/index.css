@@ -19,7 +19,7 @@
 
 @source "../components";
 @source "../lib";
-@source "../../../../vite/src";
+@source "../../dist";
 
 @plugin "tailwindcss-animate";
 

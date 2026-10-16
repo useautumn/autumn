@@ -104,4 +104,5 @@ apps/docs/mintlify/docs.json
 packages/autumn-js/package.json
 packages/atmn/package.json
 packages/gateway/package.json
+packages/ui/package.json
 packages/sdk/package.json

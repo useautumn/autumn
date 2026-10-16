@@ -40,6 +40,12 @@ export const PUBLISHED_PACKAGES: PublishedPackage[] = [
 		tagPrefix: "gateway",
 		sourcePaths: ["packages/gateway"],
 	},
+	{
+		name: "@useautumn/ui",
+		dir: "packages/ui",
+		tagPrefix: "ui",
+		sourcePaths: ["packages/ui"],
+	},
 ];
 
 const git = ({ root, args }: { root: string; args: string[] }) => {

@@ -17,7 +17,7 @@ on:
           - "true"
           - "false"
       force-packages:
-        description: "Comma-separated packages to publish even if unchanged (autumn-js, atmn, @useautumn/gateway)"
+        description: "Comma-separated packages to publish even if unchanged (autumn-js, atmn, @useautumn/gateway, @useautumn/ui)"
         required: false
         default: ""
         type: string
