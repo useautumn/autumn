@@ -5,6 +5,8 @@ import type {
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { rejectRuleAdmittedRequest } from "@/internal/approvals/enforce/access/rejectRuleAdmittedRequest";
+import { checkBillingApproval } from "@/internal/approvals/enforce/checkBillingApproval";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { discardPendingCustomerProduct } from "@/internal/billing/v2/execute/pendingCustomerProducts/discardPendingCustomerProduct";
 import { getDeferredBillingPlanData } from "@/internal/billing/v2/execute/pendingCustomerProducts/getDeferredBillingPlanData";
@@ -33,11 +35,18 @@ export const updatePendingCustomerProduct = async ({
 	});
 
 	if (params.cancel_action || !deferredData) {
+		// Discarding an unpaid plan bills nothing, so no rule decides it.
+		rejectRuleAdmittedRequest({
+			ctx,
+			action: params.cancel_action
+				? "billing.cancel"
+				: "billing.update_subscription",
+		});
 		await discardPendingCustomerProduct({ ctx, customerProduct });
 		return {};
 	}
 
-	const { attachParams, longLivedCheckout, rebills } =
+	const { attachParams, longLivedCheckout, rebills, replacementPreview } =
 		await previewPendingReattach({
 			ctx,
 			params,
@@ -61,11 +70,22 @@ export const updatePendingCustomerProduct = async ({
 		return updated as PendingUpdateResult;
 	}
 
+	// Checked before the discard, so a denied edit leaves the pending plan and its payment intact.
+	if (replacementPreview.billingPlan) {
+		await checkBillingApproval({
+			ctx,
+			billingContext: replacementPreview.billingContext,
+			billingPlan: replacementPreview.billingPlan,
+			action: "billing.update_subscription",
+			logDecision: false,
+		});
+	}
 	await discardPendingCustomerProduct({ ctx, customerProduct });
 
 	const { billingContext, billingResult } = await billingActions.attach({
 		ctx,
 		params: attachParams,
+		approvalAction: "billing.update_subscription",
 		longLivedCheckout: longLivedCheckout && {
 			id: longLivedCheckout.id,
 			expiresAt: longLivedCheckout.expires_at,

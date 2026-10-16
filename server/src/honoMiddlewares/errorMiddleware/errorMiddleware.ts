@@ -1,5 +1,10 @@
 import { formatZodError, reportError } from "@autumn/errors";
-import { type AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import {
+	type AppEnv,
+	ErrCode,
+	PermissionDeniedError,
+	RecaseError,
+} from "@autumn/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
@@ -26,6 +31,7 @@ export const errorToResponse = ({
 				code: error.code,
 				env,
 				...(error.details ? { details: error.details } : {}),
+				...(error instanceof PermissionDeniedError ? error.body : {}),
 			},
 			error.statusCode as ContentfulStatusCode,
 		);

@@ -18,6 +18,7 @@ export const ErrCode = {
 	FailedToVerifySecretKey: "failed_to_verify_secret_key",
 	FailedToFetchKeyFromAutumn: "failed_to_fetch_key_from_autumn",
 	InsufficientScopes: "insufficient_scopes",
+	PermissionDenied: "permission_denied",
 
 	NoPublishableKey: "no_publishable_key",
 	InvalidPublishableKey: "invalid_publishable_key",

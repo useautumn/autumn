@@ -38,6 +38,7 @@ export const handleCreateSchedule = createRoute({
 				params: createScheduleParamsToSetPlansParams({
 					params: c.req.valid("json"),
 				}),
+				approvalAction: "billing.schedule",
 			}),
 		}) satisfies CreateScheduleResponse;
 

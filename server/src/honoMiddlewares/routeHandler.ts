@@ -14,6 +14,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock } from "@/external/redis/utils/lockUtils/acquireLock.js";
 import { clearLock } from "@/external/redis/utils/lockUtils/clearLock.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { routeScopesGrantedByRules } from "@/internal/approvals/enforce/access/routeScopesGrantedByRules.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { registerRouteGroup } from "./routeGroupRegistry.js";
 import { validator } from "./validatorMiddleware.js";
@@ -217,6 +218,14 @@ export function createRoute<
 		}
 
 		const ctx = c.get("ctx");
+		// Approval rules can let a member past missing scopes; checked first so no scope branch denies them.
+		if (
+			!checkScopes(opts.scopes, ctx.scopes ?? []).allowed &&
+			(await routeScopesGrantedByRules({ ctx }))
+		) {
+			return next();
+		}
+
 		const granted = ctx.scopes;
 
 		// Legacy fail-open: no scopes on key/session ⇒ allow with warning.
