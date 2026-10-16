@@ -13,7 +13,7 @@ import {
 	isAtomConnected,
 } from "./atomDisplay";
 
-/** Step 4: Atom runs, Autumn reaches it, and the org's app sends its first checks; every row holds its place as they land. */
+/** Step 4: Atom runs, Autumn reaches it, and the org's app sends its first checks; setup can finish once Atom is connected, checks or not. */
 export const AtomVerifySection = ({
 	cache,
 	onDelete,
@@ -49,7 +49,7 @@ export const AtomVerifySection = ({
 					<Button
 						variant="primary"
 						onClick={onFinish}
-						disabled={!hasChecks}
+						disabled={!isConnected}
 						isLoading={isFinishing}
 					>
 						Finish setup

@@ -10,6 +10,7 @@
  *     byoc.delete_atom forgets it and the token stops working;
  *  3b. an Atom starts on the volume size its create names, or 20 GiB; byoc.increase_atom_storage only grows it,
  *     refusing a smaller size and leaving the same size as it is;
+ *  3c. a connected Atom finishes setup before it has seen any check;
  *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
  *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) and pulls the entity,
  *     then answers it itself again, as it does after the entity's next track;
@@ -321,6 +322,33 @@ test.skipIf(hostedAtom)(
 			errMessage: "at least 20 GiB",
 			func: () => autumn.post("/byoc.create_atom", { volume_size_gib: 10 }),
 		});
+
+		await deleteAtomDeployment({ autumn });
+	},
+	30_000,
+);
+
+test.skipIf(hostedAtom)(
+	`${chalk.yellowBright("atom-deployment3c: a connected Atom finishes setup before its first check")}`,
+	async () => {
+		await deleteAtomDeployment({ autumn });
+		await ensureAtomDeployment({ autumn });
+		const { cache } = await autumn.post("/byoc.get_atom", {});
+		const { first_check_seen_at } = await autumn.post(
+			"/byoc.list_atom_checks",
+			{ atom_id: cache.id },
+		);
+		expect(cache.first_check_at).toBeNull();
+		expect(first_check_seen_at).toBeNull();
+
+		const finished = await autumn.post("/byoc.finish_atom_setup", {
+			atom_id: cache.id,
+		});
+		expect(finished.first_check_at).toEqual(expect.any(Number));
+		expect(
+			(await autumn.post("/byoc.get_atom", { atom_id: cache.id })).cache
+				.first_check_at,
+		).toBe(finished.first_check_at);
 
 		await deleteAtomDeployment({ autumn });
 	},
