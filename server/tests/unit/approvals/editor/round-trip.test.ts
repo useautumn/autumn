@@ -344,6 +344,7 @@ describe("rows that can't be stored report an issue", () => {
 			{ field: "customer", operator: "is_any_of", value: [1, 2] },
 			{ field: "billing_cycle_anchor", operator: "is", value: "tomorrow" },
 			{ field: "customer", operator: "is", value: "" },
+			{ field: "customer_plan", operator: "has", value: { plan_id: "" } },
 			{ field: "discount", operator: "is_any_of", value: [""] },
 			{ field: "incoming_plan", operator: "is_any_of", value: [] },
 			{ field: "outgoing_plan", operator: "is", value: null },
