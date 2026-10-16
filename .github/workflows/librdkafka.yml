@@ -112,11 +112,11 @@ jobs:
           docker run --rm --network host -w /app/packages/librdkafka autumn:librdkafka-probe \
             bun scripts/probeAddon.ts | tee -a "$GITHUB_STEP_SUMMARY"
 
-  twd:
-    name: Publish the addon for twd's Debian base
-    # twd's Modal sandboxes run gVisor, where the compile outlives the warm; warmup.sh downloads this by build key.
+  publish:
+    name: Publish the Linux addon
+    # Every Linux glibc x64 machine (twd, QA, Capy, bun d) downloads this by build key instead of compiling.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: blacksmith-16vcpu-ubuntu-2404
+    runs-on: peak-ubuntu-24.04-4
     timeout-minutes: 40
     permissions:
       contents: write
@@ -127,7 +127,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Same distro and compiler as scripts/tw/helpers/modalImage.ts, so the build key matches the warm's.
+      # Bookworm's glibc 2.36 is older than every machine that downloads it, so the addon loads on all of them.
       - name: Build the addon on Debian bookworm
         id: build
         shell: bash
@@ -154,7 +154,7 @@ jobs:
           key=$(cat "$RUNNER_TEMP/addon/key")
           echo "key=$key" >> "$GITHUB_OUTPUT"
           if [ -f "$RUNNER_TEMP/addon/$key.node" ]; then echo "built=true" >> "$GITHUB_OUTPUT"; fi
-          echo "twd addon build key: $key" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "addon build key: $key" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Publish it as a release asset
         if: steps.build.outputs.built == 'true'
@@ -164,5 +164,5 @@ jobs:
           gh release create "librdkafka-addon-$key" "$RUNNER_TEMP/addon/$key.node" \
             --repo "$GITHUB_REPOSITORY" --target "${{ github.event.pull_request.head.sha || github.sha }}" --prerelease \
             --title "librdkafka addon $key" \
-            --notes "Prebuilt @confluentinc/kafka-javascript addon for twd warm images (Debian bookworm, build key $key)." \
+            --notes "Prebuilt @confluentinc/kafka-javascript addon for Linux glibc x64 (built on Debian bookworm, build key $key)." \
             || gh release view "librdkafka-addon-$key" --repo "$GITHUB_REPOSITORY" >/dev/null

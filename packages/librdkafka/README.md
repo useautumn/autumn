@@ -10,10 +10,11 @@ package directly.
 bun run --cwd packages/librdkafka build
 ```
 
-Compiles once per build key (~15 min cold: librdkafka statically links its own OpenSSL, zstd and curl)
-into `~/.cache/autumn-librdkafka/<key>.node`, then restores it in a second. The key hashes the patched
-sources, platform, arch, glibc and C++ compiler (`bun run --cwd packages/librdkafka native:key`), so an addon
-built on one base image never loads on another.
+Restores `~/.cache/autumn-librdkafka/<key>.node` if cached; on Linux glibc x64 it otherwise downloads CI's
+build (the `librdkafka-addon-<key>` release) and keeps it once it loads. Anything else, macOS included,
+compiles once (~15 min cold: librdkafka statically links its own OpenSSL, zstd and curl). The key hashes the
+patched sources, platform, arch and libc family (`bun run --cwd packages/librdkafka native:key`).
+`--prebuilt-only` never compiles and exits 1 instead; `bun d` and QA envs run it that way.
 
 Where the cache lives:
 
@@ -21,10 +22,11 @@ Where the cache lives:
   between runs by the Blacksmith builder's sticky disk.
 - **CI** (`librdkafka.yml`): `actions/cache` keyed on the build key. Its `image` job builds the deploy image on
   the same Blacksmith builder, so a patch change compiles in its PR and the deploy after merge restores it.
-- **Capy machines**: `scripts/setup/capy-init.sh` builds it, and the machine snapshot keeps the cache.
-- **twd** (`scripts/tw/image/warmup.sh`): compiling under Modal's gVisor outlives the warm, so `librdkafka.yml`'s `twd`
-  job builds on twd's Debian base and publishes `<key>.node` as the `librdkafka-addon-<key>` release. The warm
-  downloads it into `/opt/autumn-tw/librdkafka`, which its snapshot keeps.
+- **Prebuilt release**: `librdkafka.yml`'s `publish` job compiles on Debian bookworm (glibc 2.36) and publishes
+  `<key>.node`, so it loads on any newer glibc.
+- **Capy machines**: `scripts/setup/capy-init.sh` runs the build, and the machine snapshot keeps the cache.
+- **twd** (`scripts/tw/image/warmup.sh`): downloads the release into `/opt/autumn-tw/librdkafka`, which its snapshot keeps.
+- **QA envs** (`apps/twd/qa-envs/container/qa/prepare.sh`) and **`bun d`/`bun dw`** (`scripts/dev.ts`): `--prebuilt-only`.
 
 `bun run --cwd packages/librdkafka probe:addon` (`PROBE_BROKERS`, default `127.0.0.1:9092`) loads the addon,
 creates a topic and sends one record idempotently.

@@ -23,6 +23,8 @@ log "fetched ($(( $(date +%s) - t0 ))s)"
 bun install --frozen-lockfile --filter autumn --filter ./server --filter ./vite --filter ./apps/balance-worker --filter ./scripts \
 	${QA_TINYBIRD:+--filter ./apps/herald} >/tmp/install.log 2>&1 || { tail -50 /tmp/install.log; exit 1; }
 log "installed ($(( $(date +%s) - t0 ))s)"
+# No compiler in this image: the addon comes from CI's Linux build.
+bun run --cwd packages/librdkafka build --prebuilt-only || exit 1
 if [ "${PREPARE_MODE:-}" = deps ]; then
 	log "deps-only warm prepare done ($(du -sh /app/node_modules | cut -f1))"
 	exit 0

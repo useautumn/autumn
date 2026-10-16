@@ -179,6 +179,11 @@ async function startDev() {
 	const rootDir = dirname(fileURLToPath(import.meta.url));
 	const projectRoot = join(rootDir, "..");
 	const serverOnly = process.argv.includes("--server-only");
+	const addon = Bun.spawnSync(
+		["bun", "run", "--cwd", "packages/librdkafka", "build", "--prebuilt-only"],
+		{ cwd: projectRoot, stdout: "inherit", stderr: "inherit" },
+	);
+	if (addon.exitCode !== 0) process.exit(1);
 	if (launchBalanceWorker && !serverOnly) {
 		await assertBalanceWorkerPortAvailable({
 			port: Number(balanceWorkerEnv.BALANCE_WORKER_PORT),
