@@ -18,7 +18,7 @@ export const ApprovalRulesList = ({
 	rules: ApprovalRule[];
 	error: unknown;
 	isSandbox: boolean;
-	rowActions: RuleRowActions | null;
+	rowActions: RuleRowActions;
 }) => (
 	<div className="flex flex-col gap-6">
 		{isSandbox && (

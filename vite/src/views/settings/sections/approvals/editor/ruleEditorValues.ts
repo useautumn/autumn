@@ -7,6 +7,7 @@ import type {
 	CreateApprovalRuleParams,
 	RuleSubject,
 } from "@autumn/shared";
+import { ACTIONS } from "@autumn/shared";
 import {
 	type EditorRowIssue,
 	PINNED_FIELDS,
@@ -75,6 +76,10 @@ export const ruleToEditorValues = ({ rule }: { rule: ApprovalRule }) => {
 		note: rule.note ?? "",
 		enabled: rule.enabled,
 	};
+	// Ids S3 no longer lists (deferred member actions, old names) can't be edited.
+	if (rule.actions.some((action) => !(action in ACTIONS))) {
+		return { editable: false, values };
+	}
 	const shape = ruleFilterKey({ actions: rule.actions });
 	if (!shape) return { editable: rule.filter === null, values };
 

@@ -20,8 +20,7 @@ export const ApprovalRulesTable = ({
 	rowActions,
 }: {
 	rules: ApprovalRule[];
-	/** Null for anyone who can't edit rules: no menus, switches disabled. */
-	rowActions: RuleRowActions | null;
+	rowActions: RuleRowActions;
 }) => {
 	const [filter, setFilter] = useState("");
 	const rows = useApprovalRuleRows({ rules, filter });
@@ -60,11 +59,9 @@ export const ApprovalRulesTable = ({
 							parts={parts}
 							order={order}
 							enabled={enabledOf(rule)}
-							canToggle={rowActions !== null && !toggle.isPending}
+							canToggle={rowActions.canEdit && !toggle.isPending}
 							onToggle={(enabled) => toggle.mutate({ id: rule.id, enabled })}
-							menu={
-								rowActions && <RuleRowMenu rule={rule} actions={rowActions} />
-							}
+							menu={<RuleRowMenu rule={rule} actions={rowActions} />}
 						/>
 					))}
 				</SettingsTable>

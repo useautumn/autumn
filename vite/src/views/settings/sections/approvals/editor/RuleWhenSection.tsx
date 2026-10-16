@@ -1,4 +1,5 @@
 import type { ApprovalFilterKey } from "@autumn/shared";
+import type { EditorRowIssue } from "@autumn/shared/api/approvals/editor/index";
 import { cn } from "@/lib/utils";
 import { AddButton } from "@/views/migrations/migration/shared/AddButton";
 import { PinnedFeatureRow } from "./PinnedFeatureRow";
@@ -17,12 +18,16 @@ export const RuleWhenSection = ({
 	shape,
 	pinned,
 	groups,
+	issues,
+	error,
 	onPinnedChange,
 	onGroupsChange,
 }: {
 	shape: ApprovalFilterKey;
 	pinned: RuleRow | null;
 	groups: Groups;
+	issues: EditorRowIssue[];
+	error?: string;
 	onPinnedChange: (row: RuleRow) => void;
 	onGroupsChange: (groups: Groups) => void;
 }) => {
@@ -44,6 +49,7 @@ export const RuleWhenSection = ({
 	};
 	const addGroup = () =>
 		onGroupsChange([...groups, withId({ rules: [newRow()] })]);
+	const pinnedIssue = issues.find((issue) => issue.group === "pinned");
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -57,6 +63,7 @@ export const RuleWhenSection = ({
 				<PinnedFeatureRow
 					row={pinned}
 					label={fieldLabel({ shape, field: pinned.field })}
+					issue={pinnedIssue?.message}
 					onChange={onPinnedChange}
 				/>
 			)}
@@ -67,6 +74,7 @@ export const RuleWhenSection = ({
 						label={isSplit ? groupLabel(index) : undefined}
 						followsPinned={Boolean(pinned) && !isSplit}
 						rows={group.rules}
+						issues={issues.filter((issue) => issue.group === index)}
 						onChange={(rules) => setRows(index, rules)}
 						onRemove={
 							isSplit
@@ -87,6 +95,7 @@ export const RuleWhenSection = ({
 					<AddButton label='Add "or" group' onClick={addGroup} />
 				)}
 			</div>
+			{error && <p className="text-destructive text-xs">{error}</p>}
 		</div>
 	);
 };

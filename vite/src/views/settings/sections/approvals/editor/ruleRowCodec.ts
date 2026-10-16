@@ -16,6 +16,7 @@ export type RuleRow = FilterRow<EditorField, EditorOperator>;
 // Fields whose input the operators alone don't tell apart.
 const NAMED_INPUTS: Partial<Record<EditorField, string>> = {
 	customer: "customer",
+	entity: "feature",
 	discount: "reward",
 	reward: "reward",
 	feature: "feature",
@@ -54,7 +55,7 @@ const ONE: Partial<Record<EditorOperator, EditorOperator>> = {
 	is_none_of: "is_not",
 };
 
-const DEFAULT_TRIAL_UNIT = "month";
+export const DEFAULT_TRIAL_UNIT = "month";
 
 const toNumber = (value: string | undefined) =>
 	value === undefined || value.trim() === "" || Number.isNaN(Number(value))

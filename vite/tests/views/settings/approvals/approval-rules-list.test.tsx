@@ -24,7 +24,7 @@ const renderList = ({
 			rules={[]}
 			error={error}
 			isSandbox={isSandbox}
-			rowActions={null}
+			rowActions={{ canEdit: true, onOpen: () => {}, onDelete: () => {} }}
 		/>,
 	);
 
@@ -112,16 +112,15 @@ describe("approval rule row", () => {
 		expect(renderRow({ canToggle: true })).not.toContain("data-disabled");
 	});
 
-	test("editors get the row menu", () => {
+	test("members who can't edit still get a menu to view the rule", () => {
 		const menu = (
 			<RuleRowMenu
 				rule={rule}
-				actions={{ onEdit: () => {}, onDelete: () => {} }}
+				actions={{ canEdit: false, onOpen: () => {}, onDelete: () => {} }}
 			/>
 		);
-		expect(renderRow({ canToggle: true, menu })).toContain(
+		expect(renderRow({ canToggle: false, menu })).toContain(
 			'aria-label="No billing actions"',
 		);
-		expect(renderRow({ canToggle: false })).not.toContain("actions");
 	});
 });

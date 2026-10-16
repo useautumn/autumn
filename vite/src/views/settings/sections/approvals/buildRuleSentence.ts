@@ -61,7 +61,7 @@ const NEGATED: Record<string, string> = {
 	"is any of": "is none of",
 };
 
-const ENUM_LABELS: Record<string, string> = {
+export const ENUM_LABELS: Record<string, string> = {
 	cancel_end_of_cycle: "End of cycle",
 	cancel_immediately: "Immediately",
 	end_of_cycle: "End of cycle",

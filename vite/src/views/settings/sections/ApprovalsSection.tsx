@@ -38,19 +38,17 @@ export const ApprovalsSection = () => {
 					rules={rules}
 					error={error}
 					isSandbox={env === AppEnv.Sandbox}
-					rowActions={
-						isAdmin
-							? {
-									onEdit: (rule) => dialogs.openEditor({ rule }),
-									onDelete: (rule) => dialogs.openDelete({ rule }),
-								}
-							: null
-					}
+					rowActions={{
+						canEdit: isAdmin,
+						onOpen: (rule) => dialogs.openEditor({ rule }),
+						onDelete: (rule) => dialogs.openDelete({ rule }),
+					}}
 				/>
 			)}
 			<ApprovalRuleSheet
 				key={dialogs.nonce}
 				rule={dialogs.rule}
+				canEdit={isAdmin}
 				open={dialogs.dialog === "editor"}
 				onOpenChange={dialogs.setOpen}
 			/>

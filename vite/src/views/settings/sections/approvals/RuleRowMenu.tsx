@@ -8,8 +8,10 @@ import {
 } from "@autumn/ui";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 
+/** Everyone can open a rule; only editors get Edit and Delete. */
 export type RuleRowActions = {
-	onEdit: (rule: ApprovalRule) => void;
+	canEdit: boolean;
+	onOpen: (rule: ApprovalRule) => void;
 	onDelete: (rule: ApprovalRule) => void;
 };
 
@@ -33,15 +35,17 @@ export const RuleRowMenu = ({
 			}
 		/>
 		<DropdownMenuContent align="end">
-			<DropdownMenuItem onClick={() => actions.onEdit(rule)}>
-				Edit rule
+			<DropdownMenuItem onClick={() => actions.onOpen(rule)}>
+				{actions.canEdit ? "Edit rule" : "View rule"}
 			</DropdownMenuItem>
-			<DropdownMenuItem
-				variant="destructive"
-				onClick={() => actions.onDelete(rule)}
-			>
-				Delete rule
-			</DropdownMenuItem>
+			{actions.canEdit && (
+				<DropdownMenuItem
+					variant="destructive"
+					onClick={() => actions.onDelete(rule)}
+				>
+					Delete rule
+				</DropdownMenuItem>
+			)}
 		</DropdownMenuContent>
 	</DropdownMenu>
 );

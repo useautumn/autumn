@@ -1,12 +1,13 @@
-import type { Reward, RewardProgram } from "@autumn/shared";
+import type { AppEnv, Reward, RewardProgram } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { PERSIST_META } from "@/lib/queryPersistence";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-export const useRewardsQuery = () => {
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
+/** `env` reads another env's rewards; it defaults to the dashboard's. */
+export const useRewardsQuery = ({ env }: { env?: AppEnv } = {}) => {
+	const axiosInstance = useAxiosInstance({ env });
+	const buildKey = useQueryKeyFactory({ env });
 
 	const fetchRewards = async () => {
 		const { data } = await axiosInstance.get("/products/rewards");

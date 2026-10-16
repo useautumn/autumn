@@ -13,6 +13,7 @@ import {
 	TabsTrigger,
 } from "@autumn/ui";
 import { ChipMultiSelect } from "./ChipMultiSelect";
+import { ReadOnlyNotice } from "./ReadOnlyNotice";
 import { RuleActionsPicker } from "./RuleActionsPicker";
 import { RuleField } from "./RuleField";
 import { RuleWhenSection } from "./RuleWhenSection";
@@ -31,20 +32,44 @@ const required =
 			? undefined
 			: message;
 
+const sheetTitle = ({
+	rule,
+	canEdit,
+}: {
+	rule: ApprovalRule | null;
+	canEdit: boolean;
+}) => {
+	if (!rule) return "New rule";
+	return canEdit ? "Edit rule" : "View rule";
+};
+
 export const ApprovalRuleSheet = ({
 	rule,
+	canEdit,
 	open,
 	onOpenChange,
 }: {
 	rule: ApprovalRule | null;
+	canEdit: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }) => {
-	const { form, isSaving, serverIssue, unplacedIssue, changeActions } =
-		useApprovalRuleForm({
-			rule,
-			onSaved: () => onOpenChange(false),
-		});
+	const {
+		form,
+		readOnly,
+		showsRows,
+		isSaving,
+		serverIssue,
+		unplacedIssue,
+		filterError,
+		rowIssues,
+		clearRowIssues,
+		changeActions,
+	} = useApprovalRuleForm({
+		rule,
+		canEdit,
+		onSaved: () => onOpenChange(false),
+	});
 	const subjectGroups = useRuleSubjectGroups();
 
 	return (
@@ -55,11 +80,15 @@ export const ApprovalRuleSheet = ({
 		>
 			<SheetContent side="right" className="!w-full !max-w-[34rem]">
 				<SheetHeader>
-					<SheetTitle>{rule ? "Edit rule" : "New rule"}</SheetTitle>
+					<SheetTitle>{sheetTitle({ rule, canEdit })}</SheetTitle>
 					<SheetDescription>Billing → Approvals</SheetDescription>
 				</SheetHeader>
 
-				<div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
+				<fieldset
+					disabled={readOnly !== null}
+					className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4"
+				>
+					{readOnly && <ReadOnlyNotice reason={readOnly} />}
 					<form.Field
 						name="name"
 						validators={{ onSubmit: required({ message: "Name the rule." }) }}
@@ -132,6 +161,8 @@ export const ApprovalRuleSheet = ({
 					>
 						{(field) => {
 							const area = ruleArea({ actions: field.state.value });
+							// With no When section to show it on, a filter issue reads under Actions.
+							const shape = ruleFilterKey({ actions: field.state.value });
 							return (
 								<RuleField
 									label="Actions"
@@ -139,7 +170,7 @@ export const ApprovalRuleSheet = ({
 									error={
 										field.state.meta.errors[0] ??
 										serverIssue("actions") ??
-										serverIssue("filter")
+										(shape ? undefined : filterError)
 									}
 								>
 									<RuleActionsPicker
@@ -156,7 +187,7 @@ export const ApprovalRuleSheet = ({
 					<form.Subscribe selector={(state) => state.values.actions}>
 						{(actions) => {
 							const shape = ruleFilterKey({ actions });
-							if (!shape) return null;
+							if (!shape || !showsRows) return null;
 							return (
 								<form.Field name="pinned">
 									{(pinned) => (
@@ -166,8 +197,16 @@ export const ApprovalRuleSheet = ({
 													shape={shape}
 													pinned={pinned.state.value}
 													groups={groups.state.value}
-													onPinnedChange={pinned.handleChange}
-													onGroupsChange={groups.handleChange}
+													issues={rowIssues}
+													error={filterError}
+													onPinnedChange={(row) => {
+														clearRowIssues();
+														pinned.handleChange(row);
+													}}
+													onGroupsChange={(next) => {
+														clearRowIssues();
+														groups.handleChange(next);
+													}}
 												/>
 											)}
 										</form.Field>
@@ -206,7 +245,7 @@ export const ApprovalRuleSheet = ({
 							</div>
 						)}
 					</form.Field>
-				</div>
+				</fieldset>
 
 				{unplacedIssue && (
 					<p className="px-4 pb-2 text-destructive text-xs">{unplacedIssue}</p>
@@ -220,14 +259,16 @@ export const ApprovalRuleSheet = ({
 					>
 						Close
 					</Button>
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={() => form.handleSubmit()}
-						isLoading={isSaving}
-					>
-						Save
-					</Button>
+					{!readOnly && (
+						<Button
+							variant="primary"
+							className="flex-1"
+							onClick={() => form.handleSubmit()}
+							isLoading={isSaving}
+						>
+							Save
+						</Button>
+					)}
 				</div>
 			</SheetContent>
 		</Sheet>

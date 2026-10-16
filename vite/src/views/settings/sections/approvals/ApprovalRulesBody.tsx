@@ -12,7 +12,7 @@ export const ApprovalRulesBody = ({
 }: {
 	rules: ApprovalRule[];
 	error: unknown;
-	rowActions: RuleRowActions | null;
+	rowActions: RuleRowActions;
 }) => {
 	if (error) {
 		return (
