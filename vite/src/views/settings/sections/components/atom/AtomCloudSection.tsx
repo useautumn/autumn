@@ -14,6 +14,7 @@ import { AtomFieldRow } from "./AtomFieldRow";
 import { AtomMachineTable } from "./AtomMachineTable";
 import { AtomSetupSection } from "./AtomSetupSection";
 import { AtomStorageField } from "./AtomStorageField";
+import { atomRecommendedVolumeGib } from "./atomMachineCapacity";
 import { atomMachineLabel } from "./atomMachineDisplay";
 import { atomMonthlyCost, atomVolumeSize } from "./atomVolumeDisplay";
 import type { AtomSetupForm } from "./useAtomSetupForm";
@@ -163,6 +164,7 @@ export const AtomCloudSection = ({
 			<AtomStorageField
 				choice={volume}
 				size={volumeSize}
+				recommendedGib={atomRecommendedVolumeGib(machine)}
 				onChange={(choice) => form.setFieldValue("volume", choice)}
 			/>
 		</AtomSetupSection>
