@@ -13,23 +13,39 @@ const CATALOG: Record<string, { products: object[]; features: object[] }> = {
 	sandbox: { products: [], features: [] },
 };
 
-mock.module("@/utils/envUtils", () => ({ useEnv: () => "sandbox" }));
+// bun keeps module mocks for the whole run, so every mock spreads the real module.
+const actualQuery = await import("@tanstack/react-query");
+const actualEnv = await import("@/utils/envUtils");
+const actualKeys = await import("@/hooks/common/useQueryKeyFactory");
+const actualPersistence = await import("@/lib/queryPersistence");
+const actualAxios = await import("@/services/useAxiosInstance");
+
+mock.module("@/utils/envUtils", () => ({
+	...actualEnv,
+	useEnv: () => "sandbox",
+}));
 
 mock.module("@/hooks/common/useQueryKeyFactory", () => ({
+	...actualKeys,
 	useQueryKeyFactory: (params?: { env?: string }) => (key: unknown[]) => [
 		...key,
 		params?.env ?? "sandbox",
 	],
 }));
 
-mock.module("@/lib/queryPersistence", () => ({ PERSIST_META: {} }));
+mock.module("@/lib/queryPersistence", () => ({
+	...actualPersistence,
+	PERSIST_META: {},
+}));
 
 mock.module("@/services/useAxiosInstance", () => ({
+	...actualAxios,
 	useAxiosInstance: () => ({}),
 }));
 
 mock.module("@tanstack/react-query", () => ({
-	useQueryClient: () => ({}),
+	...actualQuery,
+	useQueryClient: () => new actualQuery.QueryClient(),
 	useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
 		const catalog = CATALOG[String(queryKey.at(-1))];
 		const isFeatures = queryKey[0] === "features";
