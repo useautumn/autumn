@@ -101,7 +101,11 @@ export const persistOrQueuePublishedBalanceTransitions = async ({
 			);
 		} catch (queueError) {
 			ctx.logger.error(
-				{ persistenceError, queueError },
+				{
+					error_type: "published_balance_persist_and_enqueue_failed",
+					persistenceError,
+					queueError,
+				},
 				"[persistPublishedBalanceTransitions] Failed to persist or queue the published balance",
 			);
 		}

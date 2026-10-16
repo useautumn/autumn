@@ -20,11 +20,13 @@ const createLifecycle = ({
 } = {}) => {
 	const exits: number[] = [];
 	const events: string[] = [];
+	const errorLogs: unknown[][] = [];
 	const ctx: HeraldLifecycleContext = {
 		herald: { start, stop },
 		logger: {
 			info: () => {},
-			error: (payload: unknown) => {
+			error: (payload: unknown, message: unknown) => {
+				errorLogs.push([payload, message]);
 				const type =
 					typeof payload === "object" && payload && "type" in payload
 						? String(payload.type)
@@ -41,7 +43,7 @@ const createLifecycle = ({
 		stopBudgetMs,
 	};
 	const state: HeraldLifecycleState = { stopping: null };
-	return { ctx, state, exits, events };
+	return { ctx, state, exits, events, errorLogs };
 };
 
 test("a signal with a clean stop exits 0 after flushing the logs", async () => {
@@ -103,7 +105,7 @@ test("a second stop, whatever its reason, joins the first: one stop, one exit", 
 });
 
 test("a stop that hangs past its budget is forced out with exit 1", async () => {
-	const { ctx, state, exits, events } = createLifecycle({
+	const { ctx, state, exits, events, errorLogs } = createLifecycle({
 		stop: () => new Promise<void>(() => {}),
 		stopBudgetMs: 20,
 	});
@@ -111,6 +113,16 @@ test("a stop that hangs past its budget is forced out with exit 1", async () => 
 	await new Promise((resolve) => setTimeout(resolve, 60));
 	expect(exits).toEqual([1]);
 	expect(events).toEqual(["herald_stop_forced", "flush"]);
+	expect(errorLogs).toEqual([
+		[
+			{
+				type: "herald_stop_forced",
+				error_type: "herald_stop_forced",
+				data: { stopBudgetMs: 20 },
+			},
+			"Herald stop exceeded its budget; exiting anyway",
+		],
+	]);
 });
 
 test("SIGTERM and SIGINT both stop herald as a signal", async () => {

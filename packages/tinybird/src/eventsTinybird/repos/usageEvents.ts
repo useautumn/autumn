@@ -26,6 +26,7 @@ export const sendUsageEvents = async ({
 	ctx.logger.error(
 		{
 			type: "tinybird_rows_quarantined",
+			error_type: "tinybird_rows_quarantined",
 			data: { quarantinedRows: reply.quarantined_rows },
 		},
 		"Tinybird quarantined usage events",

@@ -416,7 +416,7 @@ export const startPollingLoop = async ({
 				const senderFailures = failed.filter((failure) => failure.SenderFault);
 				if (senderFailures.length > 0) {
 					const message = `${prefix} SQS rejected ${senderFailures.length} message deletion(s): ${senderFailures.map((failure) => `${failure.Id}:${failure.Code}`).join(", ")}`;
-					logger.error(message);
+					logger.error(message, { error_type: "sqs_message_delete_rejected" });
 				}
 				const retryIds = new Set(
 					failed
@@ -437,7 +437,7 @@ export const startPollingLoop = async ({
 
 		if (pending.length > 0) {
 			const message = `${prefix} Failed to delete ${pending.length} message(s) after ${DELETE_RETRY_DELAYS_MS.length + 1} attempts`;
-			logger.error(message);
+			logger.error(message, { error_type: "sqs_message_delete_failed" });
 		}
 	};
 
