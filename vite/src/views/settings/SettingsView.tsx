@@ -201,8 +201,8 @@ export const useIsSettingsTabEnabled = () => {
 	return (tab: SettingsTab) => {
 		const flag = FLAGGED_TABS[tab];
 		if (flag && !flags[flag]) return false;
-		// Approvals stays local-only until rules can be created (U3b editor).
-		if (tab === "approvals") return import.meta.env.DEV;
+		// The rule list route needs organisation:read.
+		if (tab === "approvals") return has(Scopes.Organisation.Read);
 		if (API_KEY_SCOPED_TABS.includes(tab)) return has(Scopes.ApiKeys.Read);
 		return true;
 	};
