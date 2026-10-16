@@ -80,9 +80,9 @@ test.concurrent(
 		// Seq scans off so the tiny test table can't hide whether the key is seekable.
 		const eventNodes = await db.transaction(async (tx) => {
 			await tx.execute(sql`SET LOCAL enable_seqscan = off`);
-			const {
-				rows: [row],
-			} = await tx.execute(sql`EXPLAIN (FORMAT JSON) ${query}`);
+			const [row] = (await tx.execute(
+				sql`EXPLAIN (FORMAT JSON) ${query}`,
+			)) as unknown as Record<string, unknown>[];
 			const [{ Plan: plan }] = Object.values(row)[0] as [{ Plan: PlanNode }];
 			return findRelationNodes({ node: plan, relation: "events" });
 		});
