@@ -6,7 +6,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@autumn/ui";
-import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
@@ -22,30 +21,15 @@ import {
 } from "./atomVolumeDisplay";
 import type { AtomActions } from "./useAtomActions";
 
-const NO_SIZE = "—";
-
-/** The size per replica before or after the increase. */
-const VolumeSizeBox = ({
-	caption,
-	gib,
-	isTarget = false,
+/** e.g. "55 → 100 GiB per replica · +$7.20/mo (storage ~$8.80 → ~$16.00)" */
+const increaseSummary = ({
+	fromGib,
+	toGib,
 }: {
-	caption: string;
-	gib: number | null;
-	isTarget?: boolean;
-}) => (
-	<div
-		className={cn(
-			"flex flex-1 flex-col gap-1 rounded-md border bg-card p-3",
-			isTarget && "border-primary/40 bg-primary/10",
-		)}
-	>
-		<span className="text-xs text-tertiary-foreground">{caption}</span>
-		<span className="text-xl leading-[26px] text-foreground">
-			{gib === null ? NO_SIZE : `${gib} GiB`}
-		</span>
-	</div>
-);
+	fromGib: number;
+	toGib: number;
+}) =>
+	`${fromGib} → ${toGib} GiB per replica · ${atomStorageMonthlyIncrease({ fromGib, toGib })}/mo (storage ${atomStorageMonthlyEstimate({ volumeSizeGib: fromGib })} → ${atomStorageMonthlyEstimate({ volumeSizeGib: toGib })})`;
 
 /** The smallest preset above the current size, else Custom. */
 const defaultChoice = (currentGib: number): AtomVolumeChoice => ({
@@ -108,16 +92,6 @@ export const IncreaseStorageDialog = ({
 						<DialogTitle>Increase storage</DialogTitle>
 					</DialogHeader>
 
-					<div className="flex items-center gap-4">
-						<VolumeSizeBox caption="Current · per replica" gib={currentGib} />
-						<ArrowRightIcon className="size-4 shrink-0 text-subtle" />
-						<VolumeSizeBox
-							caption="New · per replica"
-							gib={size.gib}
-							isTarget
-						/>
-					</div>
-
 					<div className="flex flex-col gap-2">
 						<div className="flex gap-1.5">
 							{atomVolumePresets({ aboveGib: currentGib }).map((gib) => (
@@ -148,34 +122,20 @@ export const IncreaseStorageDialog = ({
 						)}
 					</div>
 
-					<p
-						className={cn(
-							"text-xs text-tertiary-foreground",
-							size.error && "text-destructive",
-						)}
-					>
-						{size.error ?? "Can only increase. Applies to both replicas."}
-					</p>
-
-					<div className="flex flex-col gap-1 border-t pt-3">
-						<div className="flex justify-between text-[13px] text-foreground">
-							<span>Storage / month</span>
-							<span className="tabular-nums">
-								{atomStorageMonthlyEstimate({ volumeSizeGib: currentGib })} →{" "}
-								{size.gib === null
-									? NO_SIZE
-									: atomStorageMonthlyEstimate({ volumeSizeGib: size.gib })}
-							</span>
-						</div>
+					<div className="flex flex-col gap-1">
 						{size.gib !== null && (
-							<span className="text-xs text-tertiary-foreground">
-								{atomStorageMonthlyIncrease({
-									fromGib: currentGib,
-									toGib: size.gib,
-								})}{" "}
-								/ month · AWS estimate · compute unchanged
-							</span>
+							<p className="text-sm text-foreground tabular-nums">
+								{increaseSummary({ fromGib: currentGib, toGib: size.gib })}
+							</p>
 						)}
+						<p
+							className={cn(
+								"text-xs text-tertiary-foreground",
+								size.error && "text-destructive",
+							)}
+						>
+							{size.error ?? "Can only increase. Applies to both replicas."}
+						</p>
 					</div>
 
 					<DialogFooter className="sm:justify-end *:flex-none">
