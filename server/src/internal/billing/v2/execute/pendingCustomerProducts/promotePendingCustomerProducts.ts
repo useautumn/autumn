@@ -1,6 +1,8 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
+	cp,
+	type FullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -8,6 +10,28 @@ import { withoutCustomCatalogRows } from "@/internal/billing/v2/utils/billingPla
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+
+/** An edit that didn't rebill swaps the planned row for a replacement that keeps its payment (relinkPendingPayment). */
+const findPlannedCustomerProduct = ({
+	autumnBillingPlan,
+	customerProduct,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+	customerProduct: FullCusProduct;
+}) => {
+	const planned = autumnBillingPlan.insertCustomerProducts ?? [];
+	return (
+		planned.find(({ id }) => id === customerProduct.id) ??
+		planned.find(
+			(plannedCustomerProduct) =>
+				cp(plannedCustomerProduct)
+					.hasProductId({ productId: customerProduct.product.id })
+					.onEntity({
+						internalEntityId: customerProduct.internal_entity_id ?? undefined,
+					}).valid,
+		)
+	);
+};
 
 export const promotePendingCustomerProducts = async ({
 	ctx,
@@ -50,10 +74,10 @@ export const promotePendingCustomerProducts = async ({
 	const promotedIds = new Set<string>();
 
 	for (const customerProduct of pendingCustomerProducts) {
-		const plannedCustomerProduct =
-			autumnBillingPlan.insertCustomerProducts?.find(
-				(planned) => planned.id === customerProduct.id,
-			);
+		const plannedCustomerProduct = findPlannedCustomerProduct({
+			autumnBillingPlan,
+			customerProduct,
+		});
 		if (!plannedCustomerProduct) continue;
 
 		// Checkout can change quantities after the pending rows were inserted.
@@ -89,7 +113,7 @@ export const promotePendingCustomerProducts = async ({
 			});
 		}
 
-		promotedIds.add(customerProduct.id);
+		promotedIds.add(plannedCustomerProduct.id);
 	}
 
 	return {
