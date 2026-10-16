@@ -36,7 +36,11 @@ export const MAX_UNSENT_PER_THREAD = 50_000;
 export const KEY_ROW_TTL_MS = ATOM_IDEMPOTENCY_TTL_MS;
 /** A relay under load lands seconds late; a handoff carries this much of a moved customer's keys so a retry at its new owner is refused. */
 export const KEYS_HANDED_WINDOW_MS = 10_000;
-const PRUNE_EVERY_MS = 60_000;
+/** One chunk a tick: a minute's expirations deleted back-to-back dirty a page per row, and copying that log pinned a gp3
+ * volume's IOPS for 7 s while appends waited 2.5 s behind it (rig, 2026-10-16). */
+export const PRUNE_TICK_MS = 1_000;
+/** A full chunk means a backlog, so the next follows sooner; two chunks a second still leave the volume most of its IOPS. */
+export const PRUNE_CATCH_UP_MS = 500;
 
 /** Unsent entries across every journal this thread has open: module state is the thread's own. */
 let unsentOnThread = 0;
@@ -464,43 +468,37 @@ export const openJournal = ({
 	}
 
 	let closed = false;
-	/** One chunk per writer round trip, until a chunk comes back short. */
-	async function pruneKeys(): Promise<void> {
+	/** One chunk per writer round trip; whether it came back full, so the loop knows a backlog is waiting. */
+	async function pruneChunk(): Promise<boolean> {
 		const appendedBefore = String(now() - KEY_ROW_TTL_MS);
 		const startedAt = now();
-		let rows = 0;
-		let chunks = 0;
-		while (!closed) {
-			const pruned = Number(
-				await file.write("pruneJournalKeys", appendedBefore),
-			);
-			rows += pruned;
-			chunks++;
-			if (pruned < PRUNE_CHUNK) break;
-		}
-		if (rows > 0)
+		const pruned = Number(await file.write("pruneJournalKeys", appendedBefore));
+		if (pruned > 0)
 			getAtomLogger().info(
 				{
 					type: "atom_journal_keys_pruned",
-					data: { path: databasePath, rows, chunks, ms: now() - startedAt },
+					data: { path: databasePath, rows: pruned, ms: now() - startedAt },
 				},
-				`Pruned ${rows} journal keys in ${chunks} chunks over ${now() - startedAt} ms`,
+				`Pruned ${pruned} journal keys in ${now() - startedAt} ms`,
 			);
+		return pruned >= PRUNE_CHUNK;
 	}
 
 	let pruneTimer: ReturnType<typeof setTimeout> | null = null;
-	const untilNextPrune = () =>
+	const untilNextPrune = ({ ms }: { ms: number }) =>
 		new Promise<void>((resolve) => {
-			pruneTimer = setTimeout(resolve, PRUNE_EVERY_MS);
+			pruneTimer = setTimeout(resolve, ms);
 			pruneTimer.unref();
 		});
 
-	/** One loop per journal, so a prune the writer is slow to answer is never joined by another; a failed one waits for the next cycle. */
+	/** One loop per journal, so a chunk the writer is slow to answer is never joined by another; a failed one waits a whole tick. */
 	async function runPruneLoop(): Promise<void> {
+		let ms = PRUNE_TICK_MS;
 		while (!closed) {
-			await untilNextPrune();
+			await untilNextPrune({ ms });
 			if (closed) return;
-			await pruneKeys().catch(() => {});
+			const full = await pruneChunk().catch(() => false);
+			ms = full ? PRUNE_CATCH_UP_MS : PRUNE_TICK_MS;
 		}
 	}
 	void runPruneLoop();

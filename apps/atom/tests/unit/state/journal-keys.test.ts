@@ -8,8 +8,13 @@ import {
 	createState,
 	createTrackCommand,
 } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
-import { openJournal } from "../../../src/state/journal/openJournal.js";
+import {
+	openJournal,
+	PRUNE_CATCH_UP_MS,
+	PRUNE_TICK_MS,
+} from "../../../src/state/journal/openJournal.js";
 import type { Journal } from "../../../src/state/journal/types/journal.js";
+import { PRUNE_CHUNK } from "../../../src/state/repos/journalKeys.js";
 import { SQLITE_WRITES } from "../../../src/state/writer/sqliteWrites.js";
 import { settleSqliteWrites } from "../utils/sqliteWriterTesting.js";
 
@@ -229,6 +234,34 @@ describe("the key prune loop", () => {
 			expect(held.calls()).toBe(1);
 		} finally {
 			held.restore();
+		}
+	});
+
+	test("a backlog goes one chunk per tick: a full chunk is followed after the catch-up pause, a short one waits a whole tick", async () => {
+		const answers = [String(PRUNE_CHUNK), String(PRUNE_CHUNK), "3"];
+		const prune = spyOn(SQLITE_WRITES, "pruneJournalKeys").mockImplementation(
+			() => answers.shift() ?? "0",
+		);
+		try {
+			jest.useFakeTimers();
+			open({ databasePath: ":memory:" });
+			jest.advanceTimersByTime(PRUNE_TICK_MS);
+			await flushMicrotasks();
+			expect(prune).toHaveBeenCalledTimes(1);
+			jest.advanceTimersByTime(PRUNE_CATCH_UP_MS);
+			await flushMicrotasks();
+			expect(prune).toHaveBeenCalledTimes(2);
+			jest.advanceTimersByTime(PRUNE_CATCH_UP_MS);
+			await flushMicrotasks();
+			expect(prune).toHaveBeenCalledTimes(3);
+			jest.advanceTimersByTime(PRUNE_TICK_MS - 1);
+			await flushMicrotasks();
+			expect(prune).toHaveBeenCalledTimes(3);
+			jest.advanceTimersByTime(1);
+			await flushMicrotasks();
+			expect(prune).toHaveBeenCalledTimes(4);
+		} finally {
+			prune.mockRestore();
 		}
 	});
 
