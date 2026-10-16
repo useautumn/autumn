@@ -24,7 +24,6 @@ import {
 	type StandardCursorFields,
 	shouldAggregateEntityData,
 } from "@autumn/shared";
-import { isMotherDuckConfigured } from "@/external/motherduck/initMotherDuck.js";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { withActiveSpan } from "@/utils/otel/withActiveSpan.js";
 import {
@@ -32,6 +31,7 @@ import {
 	getOrgEntitiesLimit,
 } from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
+import { getBalanceCandidateSource } from "./balanceCandidates/getBalanceCandidateSource.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
@@ -60,9 +60,6 @@ const dashboardQueryShape = ({ preview }: { preview: boolean }) => ({
 	withProductsPage: !preview,
 	withBalances: !preview,
 });
-
-/** Balance-mode pages are verify-bounded: nominations + exact PG re-rank. */
-const FEATURE_BALANCE_PAGE_CAP = 250;
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -769,7 +766,8 @@ export class CusBatchService {
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
 	}> {
-		if (!isMotherDuckConfigured()) {
+		const candidateSource = getBalanceCandidateSource();
+		if (!candidateSource.isAvailable()) {
 			throw new RecaseError({
 				message: "Balance sort is not available in this environment",
 				code: ErrCode.InvalidRequest,
@@ -800,7 +798,7 @@ export class CusBatchService {
 			});
 		}
 
-		const cappedLimit = Math.min(limit, FEATURE_BALANCE_PAGE_CAP);
+		const cappedLimit = Math.min(limit, candidateSource.maxPageSize);
 
 		const tResolveStart = performance.now();
 		const { rows, hasMore } = await resolveInternalIdsByFeatureBalanceSort({

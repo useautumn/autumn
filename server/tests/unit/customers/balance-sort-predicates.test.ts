@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { LIVE_LOOSE_BALANCE_CACHE_PREDICATE } from "@/external/motherduck/refreshCeBalancesCache.js";
-import { liveCusEntPredicate } from "@/internal/customers/resolveByFeatureBalanceSort.js";
+import { liveCusEntPredicate } from "@/internal/customers/liveCusEntSql.js";
 
 const dialect = new PgDialect();
 

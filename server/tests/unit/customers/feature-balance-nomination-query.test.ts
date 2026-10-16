@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
 import { drizzle } from "@duckdbfan/drizzle-duckdb";
-import { nominationQuery } from "@/internal/customers/resolveByFeatureBalanceSort.js";
+import { nominationQuery } from "@/external/motherduck/balanceCandidates/motherDuckNominationQuery.js";
 
 const dialect = drizzle({ client: {} as never }).dialect;
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
