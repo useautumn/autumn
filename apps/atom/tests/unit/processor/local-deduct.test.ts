@@ -191,18 +191,6 @@ describe("a send_event check the Atom deducts itself", () => {
 		).toBe("send_event");
 		expect(owedSeqs({ journal })).toEqual([]);
 	});
-
-	test("an entity's send_event is still the API's", async () => {
-		const { processor } = await openWritingSlot();
-
-		expect(
-			await forwardReasonOf(() =>
-				processor.check({
-					request: sendEvent({ params: { entity_id: "ent_42" } }),
-				}),
-			),
-		).toBe("send_event");
-	});
 });
 
 describe("a track the Atom deducts itself", () => {

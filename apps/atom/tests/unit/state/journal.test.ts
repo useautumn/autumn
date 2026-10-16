@@ -239,6 +239,61 @@ describe("journal", () => {
 		]);
 	});
 
+	test("an entity's entry leaves on that entity's own push alone, and stays in the file until then", async () => {
+		const databasePath = journalPath();
+		const journal = open({ databasePath });
+		const onEntity = (commandId: string, entityId: string) => ({
+			...commandOf({ commandId }),
+			identity: { ...commandOf({ commandId }).identity, entityId },
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: onEntity("a", "ent_42"),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: commandOf({ commandId: "b" }),
+		});
+		await journal.append({
+			customerId: "cus_1",
+			command: onEntity("c", "ent_7"),
+		});
+		const seen = { atom_1: { [journal.writerId]: 3 } };
+
+		// The customer's copy shows all three applied: only its own entry leaves, each entity's waits for its push.
+		await journal.reconcile({ customerId: "cus_1", atomSeqs: seen });
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[1, 3],
+		);
+		expect(rowsIn({ databasePath })).toEqual([
+			{ customerId: "cus_1", seq: 1 },
+			{ customerId: "cus_1", seq: 3 },
+		]);
+		expect(
+			open({ databasePath: databasePath })
+				.owed({ customerId: "cus_1" })
+				.map(({ seq }) => seq),
+		).toEqual([1, 3]);
+
+		await journal.reconcile({
+			customerId: "cus_1",
+			entityId: "ent_7",
+			atomSeqs: seen,
+		});
+		expect(journal.owed({ customerId: "cus_1" }).map(({ seq }) => seq)).toEqual(
+			[1],
+		);
+		expect(rowsIn({ databasePath })).toEqual([{ customerId: "cus_1", seq: 1 }]);
+
+		await journal.reconcile({
+			customerId: "cus_1",
+			entityId: "ent_42",
+			atomSeqs: seen,
+		});
+		expect(journal.owed({ customerId: "cus_1" })).toEqual([]);
+		expect(rowsIn({ databasePath })).toEqual([]);
+	});
+
 	test("a push that has seen nothing from this journal's writer leaves every entry owed", async () => {
 		const journal = open({ databasePath: journalPath() });
 		await journal.append({

@@ -2,12 +2,11 @@
  * An entity's push held back while the customer's push, which already applied that entity's deduction, lands first.
  *
  * Contract: the Atom deducts an entity's send_event itself; the worker settles it and herald pushes the customer's copy
- * and the entity's. While the entity's copy is behind the customer's, a check for that entity is forwarded with
- * entity_stale (the API's reply), and a customer-only check is still the Atom's own; once the entity's push lands, the
- * Atom answers the entity itself again, and Postgres ends exactly where the API's customer ends.
+ * and the entity's. While the entity's copy is behind the customer's, the Atom still answers the entity itself with the
+ * deduction counted once (its copy replays the owed entry, the customer's already holds it), and the customer too; once
+ * the entity's push lands, nothing is owed, and Postgres ends exactly where the API's customer ends.
  *
- * Red on dev: the Atom forwards the entity's send_event (x-atom-forwarded: send_event); and nothing marks an entity
- * copy stale behind a customer push that is not an evict.
+ * Red on dev: the Atom forwards the entity's send_event (x-atom-forwarded: send_event).
  */
 
 import { expect, test } from "bun:test";
@@ -29,7 +28,7 @@ import {
 const replicaSet = useReplicaSet({ size: 1 });
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("entity-push-order1: while an entity's push trails its customer's, the entity is forwarded entity_stale and the customer is still the Atom's")}`,
+	`${chalk.yellowBright("entity-push-order1: while an entity's push trails its customer's, the Atom still answers both, the entity's deduction counted once")}`,
 	async () => {
 		const pair = await initPerEntityLockPair({
 			pairId: "entity-push-order1",
@@ -62,12 +61,7 @@ test.skipIf(!replicaSetRunsHere)(
 				),
 		});
 
-		await checkPair({
-			...messages,
-			entityId: ent1,
-			requiredBalance: 1,
-			forwarded: "entity_stale",
-		});
+		await checkPair({ ...messages, entityId: ent1, requiredBalance: 1 });
 		await checkPair({ ...messages, requiredBalance: 1 });
 
 		await set.releasePushes();

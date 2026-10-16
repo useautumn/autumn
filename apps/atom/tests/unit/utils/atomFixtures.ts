@@ -144,26 +144,29 @@ export const storedEntitySubjectWith = ({
 	customerBalance,
 	entityBalance,
 	readAt = 1000,
+	ofEntity = entity,
 }: {
 	customerBalance: number;
 	entityBalance: number;
 	readAt?: number;
+	/** `ent_42` unless another entity of `cus_1` is named; its own row is `messages_<id>`. */
+	ofEntity?: { id: string; internal_id: string };
 }): StoredSubject => {
 	const state = createSubjectState({
-		identity: { ...identity, entityId: entity.id },
+		identity: { ...identity, entityId: ofEntity.id },
 		customerProducts: [createCustomerProduct()],
 		customerEntitlements: [
 			createCustomerEntitlement({ balance: customerBalance }),
 			{
 				...createCustomerEntitlement({
-					id: "messages_ent_42",
+					id: `messages_${ofEntity.id}`,
 					balance: entityBalance,
 				}),
 				customer_product_id: null,
-				internal_entity_id: entity.internal_id,
+				internal_entity_id: ofEntity.internal_id,
 			},
 		],
-		entity,
+		entity: { ...entity, ...ofEntity },
 	});
 	return {
 		state,
