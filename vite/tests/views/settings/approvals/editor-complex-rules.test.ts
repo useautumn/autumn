@@ -232,4 +232,14 @@ describe("stored rules the editor can't show as rows", () => {
 		});
 		expect(ruleToEditorValues({ rule }).editable).toBe(false);
 	});
+
+	test("a rule naming a deferred member action opens read-only", () => {
+		const rule = storedRule({
+			name: "Invites",
+			subjects: [sales],
+			actions: ["members.invite"],
+			when: null,
+		});
+		expect(ruleToEditorValues({ rule }).editable).toBe(false);
+	});
 });
