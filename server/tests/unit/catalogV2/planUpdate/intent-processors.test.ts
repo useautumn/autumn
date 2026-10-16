@@ -89,6 +89,7 @@ const fold = ({
 			source,
 		},
 		productStatesContext: productStatesContext({ withCurrent }),
+		originalProductStatesContext: productStatesContext({ withCurrent }),
 	});
 
 describe("stripe unlink flag", () => {

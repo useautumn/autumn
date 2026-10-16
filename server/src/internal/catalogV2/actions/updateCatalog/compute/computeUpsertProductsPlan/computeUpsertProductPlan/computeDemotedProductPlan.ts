@@ -12,11 +12,13 @@ export const computeDemotedProductPlan = ({
 	ctx,
 	targetProductPlan,
 	productStatesContext,
+	originalProductStatesContext,
 	claimedProductKeys,
 }: {
 	ctx: AutumnContext;
 	targetProductPlan: UpsertProductPlan;
 	productStatesContext: ProductStatesContext;
+	originalProductStatesContext: ProductStatesContext;
 	claimedProductKeys: Set<string>;
 }): UpsertProductPlan | undefined => {
 	if (!targetProductPlan.previousActiveInternalId) return undefined;
@@ -50,5 +52,10 @@ export const computeDemotedProductPlan = ({
 	});
 	if (!intent) return undefined;
 
-	return intentToUpsertProductPlan({ ctx, intent, productStatesContext });
+	return intentToUpsertProductPlan({
+		ctx,
+		intent,
+		productStatesContext,
+		originalProductStatesContext,
+	});
 };
