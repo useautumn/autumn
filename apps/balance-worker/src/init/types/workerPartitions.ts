@@ -36,7 +36,7 @@ export type WorkerPartitionsContext = {
 		Partial<Pick<Admin, "fetchTopicOffsetsByTimestamp">>;
 	/** Required with a command topic: kafkajs admins sharing topics can overwrite each other's metadata mid-read. */
 	commandTopicOffsets?: KafkaOwnedPartitionGroupAdminPort;
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 	stateStore: StateStore;
 	createRuntime: KafkaPartitionRuntimeFactory;
 	served?: PartitionsDependencies["served"];

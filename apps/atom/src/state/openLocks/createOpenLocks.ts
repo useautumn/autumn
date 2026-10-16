@@ -5,10 +5,16 @@ import type { JournalEntry } from "../journal/types/journal.js";
 export type OpenLock = { track: TrackCommand; row: WorkerLock };
 
 /** The lock an owed entry takes or settles; null for a plain track. */
-const lockIdOf = ({ command }: JournalEntry): string | null =>
-	command.type === "finalize"
-		? command.lock.lock_id
-		: (command.lock?.lockId ?? null);
+const lockIdOf = ({ command }: JournalEntry): string | null => {
+	switch (command.type) {
+		case "track":
+			return command.lock?.lockId ?? null;
+		case "finalize":
+			return command.lock.lock_id;
+		case "undecidedFinalize":
+			return command.lockId;
+	}
+};
 
 /**
  * The locks this slot took, by customer and lock_id. Memory only: after a restart a lock still owed is read back from

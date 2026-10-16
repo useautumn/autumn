@@ -446,23 +446,119 @@ test("a plain check carries no idempotency key to the edge or the fallback", asy
 	expect(keysSent(autumn)).toEqual([null]);
 });
 
-test("useEdge leaves finalize with Autumn until the edge dedupes it", async () => {
-	const edge = startEdge();
-	const autumn = startStub({ reply: () => Response.json({ success: true }) });
+const FINALIZE = {
+	customerId: "customer_123",
+	lockId: "lock_1",
+	action: "confirm" as const,
+};
+
+const finalizeStub = ({ delayMs = 0 }: { delayMs?: number } = {}) =>
+	startStub({
+		reply: async () => {
+			await Bun.sleep(delayMs);
+			return Response.json({ success: true });
+		},
+	});
+
+const pathsSent = (stub: Stub) =>
+	stub.requests.map(({ url }) => new URL(url).pathname);
+
+test("useEdge sends finalize to the edge first, with a generated idempotency key", async () => {
+	const edge = finalizeStub();
+	const autumn = finalizeStub();
+
+	const response = await edgeClientFor({
+		edgeURL: edge.url,
+		autumnURL: autumn.url,
+	}).balances.finalize(FINALIZE);
+
+	expect(response).toEqual({ success: true });
+	expect(pathsSent(edge)).toEqual(["/v1/balances.finalize"]);
+	expect(keysSent(edge)[0]).toBeString();
+	expect(autumn.requests).toHaveLength(0);
+});
+
+test("a finalize sends the caller's idempotency key unchanged", async () => {
+	const edge = finalizeStub();
+	const autumn = finalizeStub();
 
 	await edgeClientFor({
 		edgeURL: edge.url,
 		autumnURL: autumn.url,
-	}).balances.finalize({
-		customerId: "customer_123",
-		lockId: "lock_1",
-		action: "confirm",
+	}).balances.finalize(FINALIZE, {
+		headers: { "Idempotency-Key": "caller_key_1" },
 	});
 
+	expect(keysSent(edge)).toEqual(["caller_key_1"]);
+});
+
+test("a finalize falls back after the edge's 1s budget with the same key", async () => {
+	const edge = finalizeStub({ delayMs: 2_000 });
+	const autumn = finalizeStub();
+	const startedAt = Date.now();
+
+	const response = await edgeClientFor({
+		edgeURL: edge.url,
+		autumnURL: autumn.url,
+	}).balances.finalize(FINALIZE);
+
+	expect(response).toEqual({ success: true });
+	expect(Date.now() - startedAt).toBeLessThan(1_800);
+	const [key] = keysSent(edge);
+	expect(key).toBeString();
+	expect(keysSent(autumn)).toEqual([key]);
+	expect(pathsSent(autumn)).toEqual(["/v1/balances.finalize"]);
+});
+
+for (const down of EDGE_DOWN_REPLIES) {
+	test(`a finalize falls back on ${down.name} with the same key`, async () => {
+		const edge = startStub({ reply: down.reply });
+		const autumn = finalizeStub();
+
+		await edgeClientFor({
+			edgeURL: edge.url,
+			autumnURL: autumn.url,
+		}).balances.finalize(FINALIZE);
+
+		const [key] = keysSent(edge);
+		expect(key).toBeString();
+		expect(keysSent(autumn)).toEqual([key]);
+	});
+}
+
+test("a finalize the edge forwarded is returned as is, without asking Autumn again", async () => {
+	const edge = startStub({
+		reply: () =>
+			Response.json(
+				{
+					message: "Atom is stopping; ask the Autumn API",
+					code: "atom_stopping",
+				},
+				{ status: 503, headers: { "x-atom-forwarded": "atom_stopping" } },
+			),
+	});
+	const autumn = finalizeStub();
+
+	await expect(
+		edgeClientFor({
+			edgeURL: edge.url,
+			autumnURL: autumn.url,
+		}).balances.finalize(FINALIZE),
+	).rejects.toMatchObject({ statusCode: 503 });
+	expect(autumn.requests).toHaveLength(0);
+});
+
+test("without useEdge, a finalize goes to Autumn with no generated key", async () => {
+	const edge = finalizeStub();
+	const autumn = finalizeStub();
+
+	await clientFor({
+		edgeURL: edge.url,
+		autumnURL: autumn.url,
+	}).balances.finalize(FINALIZE);
+
 	expect(edge.requests).toHaveLength(0);
-	expect(autumn.requests.map(({ url }) => new URL(url).pathname)).toEqual([
-		"/v1/balances.finalize",
-	]);
+	expect(keysSent(autumn)).toEqual([null]);
 });
 
 test("without an edgeURL, edge calls go straight to Autumn", async () => {

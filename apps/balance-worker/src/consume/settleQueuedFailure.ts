@@ -1,5 +1,6 @@
 import {
 	LockAlreadyExistsError,
+	LockFeatureNotLoadedError,
 	LockNotFoundError,
 	UnsupportedCommandError,
 } from "@autumn/balance-engine";
@@ -31,6 +32,7 @@ const isRefused = (cause: unknown): boolean =>
 	cause instanceof SubjectNotFoundError ||
 	cause instanceof LockAlreadyExistsError ||
 	cause instanceof LockNotFoundError ||
+	cause instanceof LockFeatureNotLoadedError ||
 	cause instanceof FlushRecordRefusedError ||
 	cause instanceof PartitionWriterStateNotFoundError ||
 	cause instanceof PartitionProcessorStateNotFoundError;
@@ -69,6 +71,19 @@ export const settleQueuedFailure = ({
 	if (settlement === "transient") throw cause;
 	if (settlement === "applied") {
 		ctx.logger?.info(`Queued ${command.type} already applied`, fields);
+		return;
+	}
+	// A lock left open by a feature row that is gone is an error to look into; its expiry still settles it.
+	if (cause instanceof LockFeatureNotLoadedError) {
+		ctx.logger?.error(
+			`Queued ${command.type} refused: the lock's feature row is gone`,
+			{
+				...fields,
+				lockId: cause.lockId,
+				featureId: cause.featureId,
+				error: cause,
+			},
+		);
 		return;
 	}
 	ctx.logger?.warn(`Queued ${command.type} refused`, {

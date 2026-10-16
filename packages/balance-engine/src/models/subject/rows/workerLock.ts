@@ -31,6 +31,8 @@ export const workerLockSchema = z
 			values: ["release", "confirm"],
 		}),
 		created_at: timestampSchema,
+		/** The feature's catalog internal id, joined onto a row the worker reads back (null when its feature row is gone); the table does not store it. */
+		internal_feature_id: nonEmptyStringSchema.nullable().optional(),
 	})
 	.loose();
 

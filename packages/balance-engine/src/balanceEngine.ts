@@ -120,6 +120,7 @@ export type { UnsupportedCommandReason } from "./errors.js";
 export {
 	CatalogRowMissingError,
 	LockAlreadyExistsError,
+	LockFeatureNotLoadedError,
 	LockNotFoundError,
 	MutationSubjectMismatchError,
 	OutOfOrderMutationError,

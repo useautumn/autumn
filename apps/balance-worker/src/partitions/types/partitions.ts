@@ -171,7 +171,7 @@ export type PartitionsDependencies = {
 	 *  and idle and the scheduler never learns to replace it. Left optional so a
 	 *  test can observe the stop without taking the runner down with it. */
 	onServiceStopped?(reason: PartitionServiceStopReason): void;
-	logger?: Pick<AutumnLogger, "info" | "warn">;
+	logger?: Pick<AutumnLogger, "info" | "warn" | "error">;
 };
 
 /** Why the service stopped for good: the failure, and whether it was one partition's or the shared consumer's. */
