@@ -1,14 +1,13 @@
-import type { KafkaProducerFactory, KafkaRequestTiming } from "@autumn/kafka";
+import type {
+	KafkaProducerFactory,
+	KafkaProducerStatistics,
+	KafkaRequestTiming,
+} from "@autumn/kafka";
 import type { ProducerThreadInit } from "./producerThreadMessages.js";
 
 export type ThreadedProducersConfig = Pick<
 	ProducerThreadInit,
-	| "clientId"
-	| "brokers"
-	| "authMode"
-	| "sasl"
-	| "limits"
-	| "dedupeCjsChildren"
+	"clientId" | "brokers" | "authMode" | "sasl" | "limits" | "dedupeCjsChildren"
 > & {
 	/** Powers of two. */
 	sendRingBytes: number;
@@ -27,3 +26,4 @@ export type ThreadedProducers = KafkaProducerFactory & {
 };
 
 export type RequestListener = (timing: KafkaRequestTiming) => void;
+export type StatisticsListener = (statistics: KafkaProducerStatistics) => void;

@@ -5,7 +5,10 @@ import {
 	KafkaPartialDeliveryError,
 	KafkaProducerClosedError,
 } from "../../kafkaErrors.js";
-import type { KafkaRequestTiming } from "../../types/kafkaClient.js";
+import type {
+	KafkaProducerStatistics,
+	KafkaRequestTiming,
+} from "../../types/kafkaClient.js";
 import {
 	CompressionTypes,
 	type ProducerConfig,
@@ -16,6 +19,10 @@ import {
 import { nativeConsumerOf } from "../consumer/nativeConsumerRegistry.js";
 import type { KafkaLog } from "../kafkaLog.js";
 import { retryWindowMs } from "../nativeClientConfig.js";
+import {
+	createProducerStatisticsReader,
+	type LibrdkafkaStatistics,
+} from "./producerStatistics.js";
 
 const COMPRESSION_CODECS: Record<number, string> = {
 	[CompressionTypes.None]: "none",
@@ -83,22 +90,12 @@ export function nativeProducerConfigOf({
  * mostly fast requests) hid it.
  */
 export function requestTimingsOf({
-	statistics,
+	document,
 }: {
-	statistics: string;
+	document: LibrdkafkaStatistics;
 }): KafkaRequestTiming[] {
-	const parsed = JSON.parse(statistics) as {
-		brokers?: Record<
-			string,
-			{
-				nodeid?: number;
-				rtt?: { cnt?: number; p99?: number };
-				outbuf_latency?: { p99?: number };
-			}
-		>;
-	};
 	const timings: KafkaRequestTiming[] = [];
-	for (const [name, broker] of Object.entries(parsed.brokers ?? {})) {
+	for (const [name, broker] of Object.entries(document.brokers ?? {})) {
 		if ((broker.nodeid ?? -1) < 0 || !broker.rtt?.cnt) continue;
 		timings.push({
 			apiName: "Produce",
@@ -180,6 +177,7 @@ export type LibrdkafkaProducer = {
 	send(record: ProducerRecord): Promise<RecordMetadata[]>;
 	transaction(): Promise<Transaction>;
 	onRequestTimings(listener: (timing: KafkaRequestTiming) => void): void;
+	onStatistics(listener: (statistics: KafkaProducerStatistics) => void): void;
 };
 
 /** Past the message timeout, how long a delivery report may still take to reach JS before it counts as lost. */
@@ -220,11 +218,18 @@ export function createLibrdkafkaProducer({
 	config: ProducerConfig;
 }): LibrdkafkaProducer {
 	const listeners = new Set<(timing: KafkaRequestTiming) => void>();
-	function onStatistics({ message }: { message: string }): void {
-		if (listeners.size === 0) return;
+	const statisticsListeners = new Set<
+		(statistics: KafkaProducerStatistics) => void
+	>();
+	const statisticsReader = createProducerStatisticsReader();
+	function receiveStatistics({ message }: { message: string }): void {
+		if (listeners.size === 0 && statisticsListeners.size === 0) return;
 		try {
-			for (const timing of requestTimingsOf({ statistics: message }))
+			const document = JSON.parse(message) as LibrdkafkaStatistics;
+			for (const timing of requestTimingsOf({ document }))
 				for (const listener of listeners) listener(timing);
+			const statistics = statisticsReader.read({ document });
+			for (const listener of statisticsListeners) listener(statistics);
 		} catch {
 			// Timing is telemetry; it must never fail a produce.
 		}
@@ -241,7 +246,7 @@ export function createLibrdkafkaProducer({
 	const producer = ctx.kafka.producer({
 		...ctx.nativeClientConfig,
 		...nativeConfig,
-		stats_cb: onStatistics,
+		stats_cb: receiveStatistics,
 		kafkaJS: { logger: ctx.log.shim },
 	} as KafkaJS.ProducerConstructorConfig);
 
@@ -381,5 +386,18 @@ export function createLibrdkafkaProducer({
 		listeners.add(listener);
 	}
 
-	return { connect, disconnect, send, transaction, onRequestTimings };
+	function onStatistics(
+		listener: (statistics: KafkaProducerStatistics) => void,
+	): void {
+		statisticsListeners.add(listener);
+	}
+
+	return {
+		connect,
+		disconnect,
+		send,
+		transaction,
+		onRequestTimings,
+		onStatistics,
+	};
 }

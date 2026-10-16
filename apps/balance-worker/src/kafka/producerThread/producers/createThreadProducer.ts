@@ -12,7 +12,10 @@ import { kafkaErrorOf } from "../rules/kafkaErrorOf.js";
 import { producerConfigSnapshotOf } from "../rules/producerConfigSnapshotOf.js";
 import { sendFrameOf } from "../rules/sendFrameOf.js";
 import type { DecideToProducerMessage } from "../types/producerThreadMessages.js";
-import type { RequestListener } from "../types/threadedProducers.js";
+import type {
+	RequestListener,
+	StatisticsListener,
+} from "../types/threadedProducers.js";
 import type { ThreadedProducersScope } from "../types/threadedProducersScope.js";
 import { enqueueSend } from "./enqueueSend.js";
 import { postToProducerThread } from "./postToProducerThread.js";
@@ -82,6 +85,7 @@ export function createThreadProducer({
 		// Closed before the thread hears of it: a send racing the disconnect is still answered, a later one throws.
 		closed = true;
 		scope.requestListeners.delete(producerId);
+		scope.statisticsListeners.delete(producerId);
 		return control({
 			scope,
 			message: { kind: "disconnect", producerId, reqId: takeReqId() },
@@ -126,11 +130,20 @@ export function createThreadProducer({
 		listeners.add(listener);
 	}
 
+	function onStatistics(listener: StatisticsListener): void {
+		const listeners =
+			scope.statisticsListeners.get(producerId) ??
+			new Set<StatisticsListener>();
+		scope.statisticsListeners.set(producerId, listeners);
+		listeners.add(listener);
+	}
+
 	return {
 		connect,
 		disconnect,
 		send,
 		transaction,
 		onRequestTimings,
+		onStatistics,
 	};
 }
