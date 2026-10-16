@@ -79,6 +79,7 @@ const parseArgs = () => {
 		cleanup: args.includes("--cleanup"),
 		keepRows: args.includes("--keep-rows"),
 		tracksOut: get("--tracks-out"),
+		tracksOnlyMs: Number(get("--tracks-only-ms") ?? "2000"),
 	};
 };
 
@@ -482,7 +483,11 @@ const main = async () => {
 		intervalMs: options.sampleIntervalMs,
 	});
 	unrelatedTracks.add({ customerIds: unrelatedIds });
-	await Bun.sleep(2_000);
+	const tracksOnlyStartedAt = Date.now();
+	await Bun.sleep(options.tracksOnlyMs);
+	console.log(
+		`lane: tracks only from ${tracksOnlyStartedAt} to ${Date.now()} applied ${unrelatedTracks.tally.applied}`,
+	);
 	const unrelatedLatencyStart = unrelatedTracks.tally.latenciesMs.length;
 	const samplesFrom = (ids: string[]) =>
 		ids.filter((id) => !warmIds.has(id)).slice(0, options.samplePerPage);
