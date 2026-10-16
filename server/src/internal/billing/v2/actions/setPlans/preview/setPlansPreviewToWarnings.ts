@@ -35,7 +35,6 @@ const INFO_WARNING_TYPES: WarningType[] = [
 	"new_stripe_price_created",
 	"proration_disabled",
 	"new_stripe_subscription",
-	"past_due_invoice_open",
 	"other_subscriptions_unaffected",
 	"billing_starts_later",
 ];
@@ -115,7 +114,6 @@ export const setPlansPreviewToWarnings = ({
 	withdrawnCustomerProducts,
 	outgoingCustomerProducts,
 	replacedOpenInvoices,
-	liveOpenInvoices,
 	unbilledUsageLineItems = [],
 }: {
 	ctx: Pick<AutumnContext, "features">;
@@ -129,7 +127,6 @@ export const setPlansPreviewToWarnings = ({
 	withdrawnCustomerProducts: FullCusProduct[];
 	outgoingCustomerProducts: FullCusProduct[];
 	replacedOpenInvoices: Stripe.Invoice[];
-	liveOpenInvoices: Stripe.Invoice[];
 	unbilledUsageLineItems?: LineItem[];
 }): SetPlansPreviewWarning[] => {
 	const {
@@ -158,7 +155,6 @@ export const setPlansPreviewToWarnings = ({
 			billingContext,
 			stripeBillingPlan,
 			replacedOpenInvoices,
-			liveOpenInvoices,
 			lineItems,
 		}),
 		...liveSubscriptionChangeWarnings({
