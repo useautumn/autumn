@@ -5,14 +5,14 @@ import { NumberValueInput } from "./NumberValueInput";
 import { OptionsValueInput } from "./OptionsValueInput";
 import { QuantityValueInput } from "./QuantityValueInput";
 import { TrialValueInput } from "./TrialValueInput";
-import { OPTION_SOURCES } from "./useValueOptions";
+import { OPTION_HOOKS } from "./useValueOptions";
 import { YesNoValueInput } from "./YesNoValueInput";
 
 // Module-level so each input keeps its identity across renders (and its focus).
 const OPTION_INPUTS: FilterValueInputs = Object.fromEntries(
-	OPTION_SOURCES.map((source) => [
+	Object.entries(OPTION_HOOKS).map(([source, useOptions]) => [
 		source,
-		(props) => <OptionsValueInput {...props} source={source} />,
+		(props) => <OptionsValueInput {...props} useOptions={useOptions} />,
 	]),
 );
 
