@@ -123,29 +123,27 @@ export function CustomerActions() {
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" keepMounted>
-					{canEditCustomer && (
-						<DropdownMenuItem
-							onClick={() => setIsModalOpen(true)}
-							className="flex gap-2"
-							shortcut="e"
-						>
-							<PencilSimpleIcon />
-							Edit customer
-						</DropdownMenuItem>
-					)}
-					{canEditCustomer && (
-						<DropdownMenuItem
-							onClick={() => {
-								setSheet({ type: "customer-config-edit" });
-								setActionsOpen(false);
-							}}
-							className="flex gap-2"
-							shortcut="g"
-						>
-							<SlidersHorizontalIcon />
-							Edit config
-						</DropdownMenuItem>
-					)}
+					<DropdownMenuItem
+						disabled={!canEditCustomer}
+						onClick={() => setIsModalOpen(true)}
+						className="flex gap-2"
+						shortcut="e"
+					>
+						<PencilSimpleIcon />
+						Edit customer
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						disabled={!canEditCustomer}
+						onClick={() => {
+							setSheet({ type: "customer-config-edit" });
+							setActionsOpen(false);
+						}}
+						className="flex gap-2"
+						shortcut="g"
+					>
+						<SlidersHorizontalIcon />
+						Edit config
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => setCreateEntityOpen(true)}
 						className="flex gap-2"
@@ -154,16 +152,15 @@ export function CustomerActions() {
 						<SubtractIcon />
 						Create entity
 					</DropdownMenuItem>
-					{canApplyReward && (
-						<DropdownMenuItem
-							onClick={() => setAddCouponOpen(true)}
-							className="flex gap-2"
-							shortcut="c"
-						>
-							<TicketIcon />
-							Add coupon
-						</DropdownMenuItem>
-					)}
+					<DropdownMenuItem
+						disabled={!canApplyReward}
+						onClick={() => setAddCouponOpen(true)}
+						className="flex gap-2"
+						shortcut="c"
+					>
+						<TicketIcon />
+						Add coupon
+					</DropdownMenuItem>
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
@@ -254,17 +251,16 @@ export function CustomerActions() {
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuSeparator />
-					{canDeleteCustomer && (
-						<DropdownMenuItem
-							onClick={() => setDeleteOpen(true)}
-							variant="destructive"
-							className="flex gap-2 text-red-500 !hover:bg-red-500"
-							shortcut="d"
-						>
-							<TrashIcon />
-							Delete customer
-						</DropdownMenuItem>
-					)}
+					<DropdownMenuItem
+						disabled={!canDeleteCustomer}
+						onClick={() => setDeleteOpen(true)}
+						variant="destructive"
+						className="flex gap-2 text-red-500 !hover:bg-red-500"
+						shortcut="d"
+					>
+						<TrashIcon />
+						Delete customer
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
