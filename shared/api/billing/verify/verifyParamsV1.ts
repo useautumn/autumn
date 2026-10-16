@@ -7,7 +7,7 @@ export const VerifyParamsV1Schema = z.object({
 	}),
 	subscription_ids: z.array(z.string()).optional().meta({
 		description:
-			"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.",
+			"Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.",
 	}),
 	strict: z.boolean().optional().meta({
 		description:
@@ -189,6 +189,25 @@ export type StaleSubscriptionLinkMismatch = z.infer<
 	typeof StaleSubscriptionLinkMismatchSchema
 >;
 
+/** A paid recurring plan linked to no Stripe subscription or schedule — Autumn
+ * holds prices for it, but nothing on Stripe bills them. */
+export const MissingStripeSubscriptionMismatchSchema = z.object({
+	type: z.literal("missing_stripe_subscription"),
+	message,
+	severity,
+	customer_product_id: z.string(),
+	plan_id: z.string().meta({
+		description: "The Autumn plan that has no Stripe subscription.",
+	}),
+	plan_name: z.string().optional(),
+	entity_id: z.string().optional().meta({
+		description: "The entity holding the plan, when it is entity-scoped.",
+	}),
+});
+export type MissingStripeSubscriptionMismatch = z.infer<
+	typeof MissingStripeSubscriptionMismatchSchema
+>;
+
 /** Autumn's expected Stripe state couldn't be computed for this subscription
  * (e.g. a price with no Stripe link) — drift is unknown, not absent. */
 export const ExpectedStateErrorMismatchSchema = z.object({
@@ -234,6 +253,7 @@ export const SubscriptionMismatchSchema = z.discriminatedUnion("type", [
 	StripeSubNotInAutumnMismatchSchema,
 	PlanOnEndingSubscriptionMismatchSchema,
 	StaleSubscriptionLinkMismatchSchema,
+	MissingStripeSubscriptionMismatchSchema,
 	ExpectedStateErrorMismatchSchema,
 	SharedStripeCustomerMismatchSchema,
 ]);

@@ -6,6 +6,7 @@
  *     - A customer whose Stripe subscription matches Autumn's customer_products
  *       returns { customer_id, subscriptions: [{ stripe_subscription_id, status:
  *       "correct", mismatches: [] }] } with zero mismatches.
+ *     - A paid plan billed on its subscription raises no customer mismatches.
  *
  * This is the control case every drift test in this folder is compared against.
  */
@@ -42,5 +43,6 @@ test.concurrent(
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("correct");
 		expect(result.subscriptions[0].mismatches).toEqual([]);
+		expect(result.customer_mismatches).toEqual([]);
 	},
 );

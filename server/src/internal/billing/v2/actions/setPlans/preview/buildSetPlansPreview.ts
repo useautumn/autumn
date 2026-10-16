@@ -1,10 +1,5 @@
-import {
-	customerProductHasActiveStatus,
-	filterCustomerProductsByStripeSubscriptionId,
-	type SetPlansPreviewResponse,
-} from "@autumn/shared";
+import type { SetPlansPreviewResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getRequestedBillingCycleAnchorResetAt } from "@/internal/billing/v2/utils/billingContext/getRequestedBillingCycleAnchorResetAt";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import type { SetPlansResult } from "../types/setPlansResult";
 import { buildSetPlansPreviewPhases } from "./buildSetPlansPreviewPhases";
@@ -96,6 +91,10 @@ export const buildSetPlansPreview = async ({
 		removed_phases: review.removedPhases,
 		processor_changes: processorChanges,
 		warnings: setPlansPreviewToWarnings({
+			ctx,
+			billingContext,
+			stripeBillingPlan: billingPlan.stripe,
+			lineItems: billingPlan.autumn.lineItems,
 			phases: previewPhases,
 			liveProcessorItems: stripeSubscriptionToProcessorItems({
 				stripeSubscription: billingContext.stripeSubscription,
@@ -104,28 +103,8 @@ export const buildSetPlansPreview = async ({
 			withdrawnCustomerProducts: review.withdrawnStarts,
 			outgoingCustomerProducts:
 				immediatePhaseTransition.outgoingCustomerProducts,
-			requestedProrationBehavior: billingContext.requestedProrationBehavior,
-			requestedAnchorResetMs: billingContext.stripeSubscription
-				? getRequestedBillingCycleAnchorResetAt({
-						requestedBillingCycleAnchor:
-							billingContext.requestedBillingCycleAnchor,
-					})
-				: undefined,
-			features: ctx.features,
-			billingContext,
-			stripeBillingPlan: billingPlan.stripe,
 			...replacedSubscriptionInputs,
 			liveOpenInvoices,
-			lineItems: billingPlan.autumn.lineItems,
-			stripeSubscriptionScope: billingContext.stripeSubscriptionScope,
-			resetsCycleNow: billingContext.requestedBillingCycleAnchor === "now",
-			prorationOverride: billingContext.prorationOverride,
-			liveCustomerProducts: billingContext.stripeSubscription
-				? filterCustomerProductsByStripeSubscriptionId({
-						customerProducts: billingContext.fullCustomer.customer_products,
-						stripeSubscriptionId: billingContext.stripeSubscription.id,
-					}).filter(customerProductHasActiveStatus)
-				: [],
 		}),
 	};
 

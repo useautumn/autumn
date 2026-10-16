@@ -74,7 +74,6 @@ const noSubscriptionState = {
 	stripeBillingPlan: {},
 	replacedOpenInvoices: [],
 	liveOpenInvoices: [],
-	requestedAnchorResetMs: undefined,
 };
 
 describe("setPlansPreviewToWarnings", () => {
@@ -92,7 +91,7 @@ describe("setPlansPreviewToWarnings", () => {
 				],
 				withdrawnCustomerProducts: [],
 				outgoingCustomerProducts: [],
-				features: [],
+				ctx: { features: [] },
 				...noSubscriptionState,
 			}),
 		).toEqual([]);
@@ -131,9 +130,12 @@ describe("setPlansPreviewToWarnings", () => {
 			],
 			withdrawnCustomerProducts: [scheduledEnterprise],
 			outgoingCustomerProducts: [outgoingPro],
-			requestedProrationBehavior: "none",
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
+			billingContext: {
+				...noSubscriptionState.billingContext,
+				requestedProrationBehavior: "none",
+			},
 		});
 
 		expect(warnings.map((warning) => warning.type)).toEqual([
@@ -173,7 +175,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -190,7 +192,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -211,7 +213,7 @@ describe("setPlansPreviewToWarnings", () => {
 			liveProcessorItems: [],
 			withdrawnCustomerProducts: [],
 			outgoingCustomerProducts: [],
-			features: [],
+			ctx: { features: [] },
 			...noSubscriptionState,
 		});
 
@@ -263,7 +265,7 @@ const stateWarnings = (
 		liveProcessorItems: [],
 		withdrawnCustomerProducts: [],
 		outgoingCustomerProducts: [],
-		features: [],
+		ctx: { features: [] },
 		...noSubscriptionState,
 		...overrides,
 	});
@@ -718,6 +720,13 @@ describe("setPlansPreviewToWarnings: subscription state", () => {
 	});
 });
 
+const anchorResetContext = (requestedBillingCycleAnchor: number) => ({
+	currentEpochMs: 0,
+	billingCycleAnchorMs: "now" as const,
+	requestedBillingCycleAnchor,
+	stripeSubscription: stripeSubscription({ id: "sub_live", status: "active" }),
+});
+
 describe("setPlansPreviewToWarnings: live subscription changes", () => {
 	const liveSubscription = stripeSubscription({
 		id: "sub_live",
@@ -798,7 +807,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 		const resetAtMs = NOON_UTC + 10 * DAY_MS;
 
 		const warnings = stateWarnings({
-			requestedAnchorResetMs: resetAtMs,
+			billingContext: anchorResetContext(resetAtMs),
 			stripeBillingPlan: {
 				subscriptionScheduleAction: {
 					type: "create",
@@ -828,7 +837,7 @@ describe("setPlansPreviewToWarnings: live subscription changes", () => {
 	test("an anchor the billing plan never applies doesn't announce a cycle reset", () => {
 		expect(
 			stateWarnings({
-				requestedAnchorResetMs: NOON_UTC + 10 * DAY_MS,
+				billingContext: anchorResetContext(NOON_UTC + 10 * DAY_MS),
 				stripeBillingPlan: {},
 			}),
 		).toEqual([]);
