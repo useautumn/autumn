@@ -12,6 +12,7 @@ type BillingVerifyExportConfig = {
 	};
 	customer: {
 		concurrency: number;
+		replicaPoolMax: number;
 		timeoutMs: number;
 		attempts: number;
 		retryDelayMs: number;
@@ -56,12 +57,12 @@ export const billingVerifyExportConfig: BillingVerifyExportConfig = {
 		requestsPerSecond: 25,
 		sandboxRequestsPerSecond: 5,
 	},
-	/** Each verification needs a replica connection, so throughput plateaus at
-	 * roughly twice REPLICA_DB_POOL_MAX and extra slots only queue. Measured
-	 * against prod's pool of 5: 113ms/customer at 5, 82ms at 8, 80ms at 10 and
-	 * flat thereafter. Raising the replica pool is what moves this further. */
+	/** Verifications read through their own replica pool, sized past the
+	 * concurrency so a verification never waits for a connection. At 16 the pool
+	 * peaked at 10 server backends on a 3.1M-customer run. */
 	customer: {
 		concurrency: 16,
+		replicaPoolMax: 20,
 		timeoutMs: 30_000,
 		attempts: 6,
 		retryDelayMs: 2_000,

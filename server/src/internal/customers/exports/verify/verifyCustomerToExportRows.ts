@@ -11,6 +11,7 @@ import {
 	billingVerifyExportConfig,
 	type CustomerLimits,
 } from "./billingVerifyExportConfig.js";
+import { getBillingVerifyReplicaDb } from "./getBillingVerifyReplicaDb.js";
 import type { BillingVerifySweep } from "./setupBillingVerifySweep.js";
 import {
 	isVerifyResponseClean,
@@ -45,9 +46,11 @@ export const verifyCustomerToExportRows = async ({
 		stripe_customer_id: stripeCustomerId,
 	};
 
+	const verifyCtx = { ...ctx, db: getBillingVerifyReplicaDb() ?? ctx.db };
+
 	const verifyOnce = async () => {
 		const fullCustomer = await CusService.getFull({
-			ctx,
+			ctx: verifyCtx,
 			idOrInternalId: scalar.internal_id,
 			withEntities: true,
 			inStatuses: STRIPE_LINKED_STATUSES,
@@ -57,7 +60,7 @@ export const verifyCustomerToExportRows = async ({
 		const { stripeReader, sweptSubscriptions } = sweep;
 
 		const screened = await billingActions.verify({
-			ctx,
+			ctx: verifyCtx,
 			params,
 			prefetched: {
 				fullCustomer,
@@ -68,7 +71,7 @@ export const verifyCustomerToExportRows = async ({
 		if (isVerifyResponseClean({ response: screened })) return [];
 
 		const confirmed = await billingActions.verify({
-			ctx,
+			ctx: verifyCtx,
 			params,
 			prefetched: { fullCustomer },
 		});
