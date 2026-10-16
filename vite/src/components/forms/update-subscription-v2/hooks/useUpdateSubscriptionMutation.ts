@@ -34,6 +34,7 @@ export function useUpdateSubscriptionMutation({
 		buildRequestBody,
 		successMessage: "Subscription updated successfully",
 		errorMessage: "Failed to update subscription",
+		inlineDenials: true,
 		onApplied,
 		onCheckoutRedirect,
 		onSuccess,

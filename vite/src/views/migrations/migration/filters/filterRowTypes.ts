@@ -1,5 +1,15 @@
 import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
 import {
+	createFieldRegistry,
+	filterToRows,
+} from "@/components/filters/fieldRegistry";
+import type {
+	FilterOperatorOption,
+	FilterRow,
+	FilterRowGroup,
+	FilterField as RegistryField,
+} from "@/components/filters/types";
+import {
 	makePlanKey,
 	type PlanSelection,
 	parsePlanKey,
@@ -26,33 +36,14 @@ export type FilterOperator =
 	| "not_exists"
 	| "none";
 
-export type FilterRule = {
-	field: FilterField;
-	operator: FilterOperator;
-	values: string[];
-};
+export type FilterRule = FilterRow<FilterField, FilterOperator>;
 
-export type FilterGroupData = {
-	rules: FilterRule[];
-};
+export type FilterGroupData = FilterRowGroup<FilterField, FilterOperator>;
 
-export const FILTER_FIELD_OPTIONS: {
-	value: FilterField;
-	label: string;
-}[] = [
-	{ value: "customer_id", label: "Customer" },
-	{ value: "plan_id", label: "Plan" },
-	{ value: "custom", label: "Custom" },
-	{ value: "paid", label: "Paid" },
-	{ value: "recurring", label: "Recurring" },
-	{ value: "price", label: "Base Price" },
-];
+/** One group's flat filter: plan-level fields plus the hoisted `customer_id`. */
+export type MigrationRowFilter = PlanFilter & { customer_id?: StringMatcher };
 
-type OperatorOption = { value: FilterOperator; label: string };
-export type FieldConfig = {
-	operators: OperatorOption[];
-	valueType: "string" | "boolean" | "plan" | "none" | "customer";
-};
+type OperatorOption = FilterOperatorOption<FilterOperator>;
 
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
@@ -65,30 +56,84 @@ const STRING_MATCH_OPERATORS: OperatorOption[] = [
 // (compiles to the `$none` quantifier, not a per-plan matcher).
 const PLAN_OPERATORS: OperatorOption[] = [
 	...STRING_MATCH_OPERATORS,
-	{ value: "none", label: "has none" },
+	{ value: "none", label: "has none", hidesValue: true },
 ];
 
-const BOOLEAN_ONLY: FieldConfig = {
+type MigrationFilterField = RegistryField<
+	MigrationRowFilter,
+	FilterField,
+	FilterOperator
+>;
+
+const booleanField = ({
+	path,
+	label,
+}: {
+	path: "custom" | "paid" | "recurring";
+	label: string;
+}): MigrationFilterField => ({
+	path,
+	label,
+	valueInput: "boolean",
 	operators: [{ value: "is", label: "is" }],
-	valueType: "boolean",
-};
+	toFilter: ({ values }) => ({ [path]: values[0] === "true" }),
+	fromFilter: (filter) =>
+		filter[path] === undefined ? null : booleanRule(path, filter[path]),
+});
 
-const NULLABLE_ONLY: FieldConfig = {
-	operators: [
-		{ value: "exists", label: "exists" },
-		{ value: "not_exists", label: "does not exist" },
+export const MIGRATION_FILTER_REGISTRY = createFieldRegistry<
+	MigrationRowFilter,
+	FilterField,
+	FilterOperator
+>({
+	defaultPath: "plan_id",
+	fields: [
+		{
+			path: "customer_id",
+			label: "Customer",
+			valueInput: "customer",
+			operators: STRING_MATCH_OPERATORS,
+			toFilter: (rule) => {
+				const matcher = ruleToCustomerIdMatcher(rule);
+				return matcher === undefined ? null : { customer_id: matcher };
+			},
+			fromFilter: ({ customer_id }) => {
+				const ids = customerIdToStrings(customer_id);
+				if (ids.length === 0) return null;
+				return {
+					field: "customer_id",
+					operator: inferCustomerIdOperator(customer_id, ids.length),
+					values: ids,
+				};
+			},
+		},
+		{
+			path: "plan_id",
+			label: "Plan",
+			valueInput: "plan",
+			operators: PLAN_OPERATORS,
+			toFilter: ({ values }) =>
+				values.some((value) => value.trim()) ? planKeysToFilter(values) : null,
+			fromFilter: planRuleFromFilter,
+		},
+		booleanField({ path: "custom", label: "Custom" }),
+		booleanField({ path: "paid", label: "Paid" }),
+		booleanField({ path: "recurring", label: "Recurring" }),
+		{
+			path: "price",
+			label: "Base price",
+			valueInput: "none",
+			operators: [
+				{ value: "exists", label: "exists" },
+				{ value: "not_exists", label: "does not exist" },
+			],
+			toFilter: ({ operator }) => ({
+				price: operator === "exists" ? { $ne: null } : null,
+			}),
+			fromFilter: ({ price }) => nullableToRule("price", price),
+		},
 	],
-	valueType: "none",
-};
-
-export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
-	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "customer" },
-	plan_id: { operators: PLAN_OPERATORS, valueType: "plan" },
-	custom: BOOLEAN_ONLY,
-	paid: BOOLEAN_ONLY,
-	recurring: BOOLEAN_ONLY,
-	price: NULLABLE_ONLY,
-};
+});
 
 function stringMatcherToRule(
 	field: FilterField,
@@ -239,59 +284,32 @@ function planKeysToRule(keys: string[]): FilterRule {
 	};
 }
 
+function planRuleFromFilter(filter: PlanFilter): FilterRule | null {
+	const keys = planFilterToPlanKeys(filter);
+	if (keys !== null) return keys.length > 0 ? planKeysToRule(keys) : null;
+
+	const rule = stringMatcherToRule("plan_id", filter.plan_id);
+	if (!rule) return null;
+	// Sibling fields (e.g. custom) keep this off the pure-selection path, so
+	// fold a concrete version pin into the plan keys here or it's lost.
+	const version = pinnedVersion(filter.version);
+	if (typeof version !== "number") return rule;
+	return {
+		...rule,
+		values: rule.values.map((planId) => makePlanKey({ planId, version })),
+	};
+}
+
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
+	const rules = filterToRows({ registry: MIGRATION_FILTER_REGISTRY, filter });
 	// Property siblings (`custom`, `paid`, …) must not hide a `$or` of plan
 	// selections — catalog drafts are `{ $or: [{ plan_id, version }, …], custom: false }`.
-	const { custom, paid, recurring, price, ...selection } = filter;
-	const planKeys = planFilterToPlanKeys(selection);
-	if (planKeys !== null) {
-		const rules: FilterRule[] = [];
-		if (planKeys.length > 0) rules.push(planKeysToRule(planKeys));
-		if (custom !== undefined) rules.push(booleanRule("custom", custom));
-		if (paid !== undefined) rules.push(booleanRule("paid", paid));
-		if (recurring !== undefined)
-			rules.push(booleanRule("recurring", recurring));
-		const priceRule = nullableToRule("price", price);
-		if (priceRule) rules.push(priceRule);
-		return [{ rules }];
-	}
+	if (planFilterToPlanKeys(filter) !== null) return [{ rules }];
 
-	const mainRules: FilterRule[] = [];
-
-	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
-	if (planIdRule) {
-		// Sibling fields (e.g. custom) keep this off the pure-selection path, so
-		// fold a concrete version pin into the plan keys here or it's lost.
-		const version = pinnedVersion(filter.version);
-		if (typeof version === "number")
-			planIdRule.values = planIdRule.values.map((planId) =>
-				makePlanKey({ planId, version }),
-			);
-		mainRules.push(planIdRule);
-	}
-
-	if (filter.custom !== undefined)
-		mainRules.push(booleanRule("custom", filter.custom));
-
-	if (filter.paid !== undefined)
-		mainRules.push(booleanRule("paid", filter.paid));
-
-	if (filter.recurring !== undefined)
-		mainRules.push(booleanRule("recurring", filter.recurring));
-
-	const priceRule = nullableToRule("price", filter.price);
-	if (priceRule) mainRules.push(priceRule);
-
-	const groups: FilterGroupData[] =
-		mainRules.length > 0 ? [{ rules: mainRules }] : [];
-
+	const groups: FilterGroupData[] = rules.length > 0 ? [{ rules }] : [];
 	// Legacy `$or` of full filters — each branch is its own OR-group.
-	if (filter.$or) {
-		for (const orFilter of filter.$or) {
-			const orGroups = planFilterToGroups(orFilter);
-			if (orGroups.length > 0) groups.push(orGroups[0]);
-		}
-	}
+	for (const orFilter of filter.$or ?? [])
+		groups.push(planFilterToGroups(orFilter)[0]);
 
 	return groups.length > 0 ? groups : [{ rules: [] }];
 }
@@ -313,4 +331,32 @@ export function stringsToCustomerId(ids: string[]): StringMatcher | undefined {
 	if (filtered.length === 0) return undefined;
 	if (filtered.length === 1) return filtered[0];
 	return { $in: filtered };
+}
+
+function inferCustomerIdOperator(
+	matcher: StringMatcher | undefined,
+	count: number,
+): FilterOperator {
+	if (matcher && typeof matcher === "object") {
+		if ("$nin" in matcher) return "not_in";
+		if ("$ne" in matcher) return "is_not";
+		if ("$in" in matcher) return "in";
+	}
+	return count > 1 ? "in" : "is";
+}
+
+function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
+	if (rule.values.length === 0) return undefined;
+	switch (rule.operator) {
+		case "is":
+			return rule.values[0];
+		case "is_not":
+			return { $ne: rule.values[0] };
+		case "in":
+			return { $in: rule.values };
+		case "not_in":
+			return { $nin: rule.values };
+		default:
+			return stringsToCustomerId(rule.values);
+	}
 }

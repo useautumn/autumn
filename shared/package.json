@@ -99,6 +99,11 @@
 			"types": "./utils/roleUtils/scopesToRoleAccess.ts",
 			"import": "./utils/roleUtils/scopesToRoleAccess.ts",
 			"default": "./utils/roleUtils/scopesToRoleAccess.ts"
+		},
+		"./api/approvals/editor/index": {
+			"types": "./api/approvals/editor/index.ts",
+			"import": "./api/approvals/editor/index.ts",
+			"default": "./api/approvals/editor/index.ts"
 		}
 	},
 	"author": "Recase Inc.",

@@ -1,5 +1,7 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { type ReactNode, useEffect, useState } from "react";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import { PermissionLock } from "./permission/PermissionLock";
 
 const REVEAL_DELAY_MS = 350;
 const FADE_CLASS = "animate-in fade-in duration-200";
@@ -45,21 +47,20 @@ export function BillingFooter({
 	if (reveal && !showFooter) return null;
 
 	// Split callers fade each button themselves via BillingFooterButton.
-	if (layout === "split") {
-		return (
+	const footer =
+		layout === "split" ? (
 			<SheetFooter className={LAYOUT_CLASSES.split}>{children}</SheetFooter>
+		) : (
+			<SheetFooter className={LAYOUT_CLASSES[layout]}>
+				<div
+					className={cn(
+						layout === "stacked" && "flex flex-col gap-2 w-full",
+						reveal && FADE_CLASS,
+					)}
+				>
+					{children}
+				</div>
+			</SheetFooter>
 		);
-	}
-
-	return (
-		<SheetFooter className={LAYOUT_CLASSES[layout]}>
-			<div
-				className={`${layout === "stacked" ? "flex flex-col gap-2 w-full" : ""} ${
-					reveal ? FADE_CLASS : ""
-				}`.trim()}
-			>
-				{children}
-			</div>
-		</SheetFooter>
-	);
+	return <PermissionLock>{footer}</PermissionLock>;
 }

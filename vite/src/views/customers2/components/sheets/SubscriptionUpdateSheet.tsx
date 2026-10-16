@@ -8,6 +8,8 @@ import { CusProductStatus, cp, LONG_LIVED_CHECKOUT_PATH } from "@autumn/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { BillingPromptToggle } from "@/components/forms/shared/generation/BillingPromptToggle";
+import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { PermissionDenialProvider } from "@/components/forms/shared/permission/PermissionDenialContext";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
 	WarningBanner,
@@ -187,7 +189,9 @@ function EditContent() {
 				<WarningBanner lines={warningLines} />
 
 				<EditPlanSection />
+				<PermissionDenial section="plan" />
 				<UpdateSubscriptionAdvancedSection />
+				<PermissionDenial section="options" />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />
 
@@ -208,11 +212,16 @@ function EditContent() {
 
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
+	const { previewQuery } = useUpdateSubscriptionFormContext();
 
-	return sheetType === "subscription-update-send-invoice" ? (
-		<SendInvoiceContent />
-	) : (
-		<EditContent />
+	return (
+		<PermissionDenialProvider preview={previewQuery.data}>
+			{sheetType === "subscription-update-send-invoice" ? (
+				<SendInvoiceContent />
+			) : (
+				<EditContent />
+			)}
+		</PermissionDenialProvider>
 	);
 }
 
