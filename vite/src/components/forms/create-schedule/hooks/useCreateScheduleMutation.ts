@@ -26,6 +26,7 @@ export function useCreateScheduleMutation({
 			buildRequestBody,
 			successMessage: "Plans set successfully",
 			errorMessage: "Failed to set plans",
+			inlineDenials: true,
 			onApplied,
 			onCheckoutRedirect,
 			onSuccess,

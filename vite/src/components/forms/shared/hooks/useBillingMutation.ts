@@ -1,8 +1,8 @@
 import type { ApiVersion } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { AxiosError } from "axios";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { toastWriteError } from "../permission/toastWriteError";
 import type { BillingStageParams } from "../utils/billingStageParams";
 import { invalidateCustomerBillingQueries } from "../utils/invalidateCustomerBillingQueries";
 
@@ -43,6 +43,7 @@ export function useBillingMutation<
 	onCheckoutRedirect,
 	onSuccess,
 	apiVersion,
+	inlineDenials = false,
 }: {
 	customerId: string | undefined;
 	path: string;
@@ -54,6 +55,8 @@ export function useBillingMutation<
 	onSuccess?: () => void;
 	/** Overrides the dashboard's default x-api-version for bodies in a newer shape. */
 	apiVersion?: ApiVersion;
+	/** The sheet renders a `permission_denied` inline, so it skips the toast. */
+	inlineDenials?: boolean;
 }) {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -108,11 +111,7 @@ export function useBillingMutation<
 			if (!useInvoice || !data.invoice) onSuccess?.();
 			invalidateBillingQueries();
 		},
-		onError: (error) => {
-			toast.error(
-				(error as AxiosError<{ message: string }>)?.response?.data?.message ??
-					errorMessage,
-			);
-		},
+		onError: (error) =>
+			toastWriteError({ error, fallback: errorMessage, inlineDenials }),
 	});
 }

@@ -126,6 +126,7 @@ export function useCollectionMethodSwitch({
 				? "Subscription switched to invoicing"
 				: "Subscription switched to charging automatically",
 		errorMessage: "Failed to switch collection method",
+		inlineDenials: true,
 		apiVersion: LATEST_VERSION,
 		onApplied,
 		onSuccess,
