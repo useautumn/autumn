@@ -26,6 +26,16 @@ export function createRuntimeDirectory(): PartitionDirectory {
 		state.set(partition, { routeEpoch, runtime });
 	}
 
+	/** A later claim naming this worker for the runtime it already serves is the route callers now hold. */
+	function adoptNewerRoute(admission: PartitionAdmission): void {
+		const { partition, routeEpoch, runtime } = admission;
+		if (!/^(0|[1-9]\d*)$/.test(routeEpoch)) return;
+		const admitted = state.get(partition);
+		if (!admitted || admitted.runtime !== runtime) return;
+		if (BigInt(routeEpoch) <= BigInt(admitted.routeEpoch)) return;
+		state.set(partition, { routeEpoch, runtime });
+	}
+
 	function withdraw(target: PartitionTarget): void {
 		state.delete(target.partition);
 	}
@@ -54,7 +64,7 @@ export function createRuntimeDirectory(): PartitionDirectory {
 		return entry.routeEpoch === route.routeEpoch ? entry.runtime : undefined;
 	}
 
-	return { admit, withdraw, findRuntime, findOwnedRuntime };
+	return { admit, adoptNewerRoute, withdraw, findRuntime, findOwnedRuntime };
 }
 
 /** An activating runtime is admitted already: it was named owner, and a command waits at its gate. */

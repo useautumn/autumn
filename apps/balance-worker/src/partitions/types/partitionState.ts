@@ -71,6 +71,8 @@ export type PartitionEntry = PartitionRuntimeResources & {
 	handoffAbort: AbortController;
 	/** True once the entry stopped serving; a handoff cannot be cancelled past this. */
 	withdrawn: boolean;
+	/** The newest claim naming this worker seen while starting or serving; a late one outranks the claim it was admitted with. */
+	newestOwnClaim: string | null;
 	retirement: Promise<void> | null;
 	drain: Promise<PartitionCleanupResult> | null;
 };

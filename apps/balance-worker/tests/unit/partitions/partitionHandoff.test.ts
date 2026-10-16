@@ -109,12 +109,27 @@ const createOwnershipLog = () => {
 		}
 		return null;
 	};
+	/** Every later record until the signal aborts, as a tail listener sees them. */
+	const follow = ({
+		signal,
+		listen,
+	}: {
+		signal: AbortSignal;
+		listen: (event: OwnershipEvent) => void;
+	}) => {
+		if (signal.aborted) return;
+		listeners.add(listen);
+		signal.addEventListener("abort", () => listeners.delete(listen), {
+			once: true,
+		});
+	};
 	return {
 		records,
 		events,
 		nextEpoch: () => String(++offset),
 		publish,
 		await: await_,
+		follow,
 		owner,
 		activeDrain,
 		activePreparation,
@@ -305,6 +320,18 @@ const createWorker = ({
 						event.endpoint === endpoint
 							? { routeEpoch: event.routeEpoch }
 							: undefined,
+				}),
+			followClaims: ({ signal, onClaim }) =>
+				log.follow({
+					signal,
+					listen: (event) => {
+						if (
+							event.type === "claimed" &&
+							event.partition === partition &&
+							event.endpoint === endpoint
+						)
+							onClaim({ routeEpoch: event.routeEpoch });
+					},
 				}),
 		};
 		return { runtime, publication, markUnavailable: () => undefined };
@@ -907,6 +934,42 @@ describe("partition handoff", () => {
 			await waitFor(() => B.status(2) === "ready", 1_000);
 			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
 			expect(A.has("claim:B:2")).toBe(false);
+			expect(B.errors).toEqual([]);
+		} finally {
+			drain.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a predecessor's claim landing after the successor claimed for itself is the route the successor serves", async () => {
+		const log = createOwnershipLog();
+		const drain = deferred();
+		const A = createWorker({ name: "A", log, drainGate: drain.promise });
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 100 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => A.has("draining:2"));
+			await waitFor(() => B.has("claim:B:2"), 1_000);
+			await waitFor(() => B.status(2) === "ready", 1_000);
+			drain.resolve();
+			await waitFor(() => A.has("claim:B:2"));
+			const latest = log.records
+				.filter((record) => record.type === "claimed" && record.partition === 2)
+				.at(-1);
+			expect(latest?.type === "claimed" && latest.endpoint).toBe(B.endpoint);
+			const routeEpoch = latest?.type === "claimed" ? latest.routeEpoch : "";
+			await waitFor(
+				() =>
+					B.ownership.findRuntime({ partition: 2, routeEpoch }) !== undefined,
+			);
 			expect(B.errors).toEqual([]);
 		} finally {
 			drain.resolve();

@@ -16,6 +16,7 @@ import type {
 	PartitionsState,
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
+import { followOwnClaims, newerRouteEpoch } from "./followOwnClaims.js";
 import { watchForSuccessor } from "./handOffPartition.js";
 import { clearPartitionRetry } from "./retryPartition.js";
 
@@ -66,6 +67,7 @@ export function createPartitionEntries({
 				unsubscribeUnavailable: null,
 				handoffAbort: new AbortController(),
 				withdrawn: false,
+				newestOwnClaim: null,
 				retirement: null,
 				drain: null,
 			};
@@ -162,6 +164,7 @@ export async function startPartition({
 		if (!isStillStarting()) return;
 		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
 		watchForSuccessor({ ctx, state, entry });
+		followOwnClaims({ state, entry });
 
 		const activation = entry.runtime.activate();
 		try {
@@ -225,7 +228,7 @@ function admitPartition({
 	state.handoffSuccessors.delete(entry.partition);
 	state.directory.admit({
 		partition: entry.partition,
-		routeEpoch,
+		routeEpoch: newerRouteEpoch({ routeEpoch, than: entry.newestOwnClaim }),
 		runtime: entry.runtime,
 	});
 }

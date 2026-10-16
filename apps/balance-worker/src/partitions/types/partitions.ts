@@ -61,6 +61,11 @@ export type PartitionOwnershipPublication = {
 	}): Promise<{ endpoint: string }>;
 	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
 	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
+	/** Every `claimed` naming this worker from now on, in log order, until the signal aborts. */
+	followClaims?(params: {
+		signal: AbortSignal;
+		onClaim(claim: { routeEpoch: string }): void;
+	}): void;
 };
 
 export type PartitionRuntimeResources = {
@@ -251,4 +256,5 @@ export interface PartitionDirectory {
 	withdraw(target: PartitionTarget): void;
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
 	findOwnedRuntime(target: PartitionTarget): PartitionRuntimePort | undefined;
+	adoptNewerRoute(admission: PartitionAdmission): void;
 }

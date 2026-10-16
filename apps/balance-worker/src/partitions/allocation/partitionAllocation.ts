@@ -1,4 +1,5 @@
 import { isKafkaAccessRefusal } from "@autumn/kafka";
+import { followOwnClaims } from "../lifecycle/followOwnClaims.js";
 import {
 	beginPartitionHandoffs,
 	cancelPartitionHandoff,
@@ -110,6 +111,7 @@ function keepHandoffsForOwnPartitions({
 		if (entry && cancelPartitionHandoff({ state, entry })) {
 			subscribeEntryUnavailable({ ctx, state, entry, allocationGeneration });
 			watchForSuccessor({ ctx, state, entry });
+			followOwnClaims({ state, entry });
 			continue;
 		}
 		if (entry?.retirement) blockers.push(entry.retirement);

@@ -166,8 +166,22 @@ function trackOwnerEpoch({
 		cell.write(claimed.routeEpoch);
 		return claimed;
 	}
+	function followClaims(
+		...params: Parameters<
+			NonNullable<PartitionOwnershipPublication["followClaims"]>
+		>
+	): void {
+		const [{ signal, onClaim }] = params;
+		function recordNewer(claim: { routeEpoch: string }): void {
+			const held = cell.read();
+			if (held === undefined || BigInt(claim.routeEpoch) > BigInt(held))
+				cell.write(claim.routeEpoch);
+			onClaim(claim);
+		}
+		publication.followClaims?.({ signal, onClaim: recordNewer });
+	}
 	return {
-		publication: { ...publication, claim, awaitClaim },
+		publication: { ...publication, claim, awaitClaim, followClaims },
 		ownerEpoch: cell.read,
 	};
 }

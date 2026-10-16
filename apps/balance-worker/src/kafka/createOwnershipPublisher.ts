@@ -222,6 +222,26 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchClaim });
 	}
 
+	function followClaims({
+		signal,
+		onClaim,
+	}: {
+		signal: AbortSignal;
+		onClaim(claim: { routeEpoch: string }): void;
+	}): void {
+		function onRecord({ record, offset }: OwnershipTailRecord): void {
+			if (record.type !== "claimed" || record.endpoint !== config.endpoint)
+				return;
+			onClaim({ routeEpoch: offset.toString() });
+		}
+		if (signal.aborted) return;
+		ctx.handoff?.tail.tailPartition({
+			partition: config.partition,
+			onRecord,
+			signal,
+		});
+	}
+
 	return {
 		claim,
 		release,
@@ -235,5 +255,6 @@ export function createOwnershipPublisher({
 		awaitDraining,
 		awaitForeignClaim,
 		awaitClaim,
+		followClaims,
 	};
 }
