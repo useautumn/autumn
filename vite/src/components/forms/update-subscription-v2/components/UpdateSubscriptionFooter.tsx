@@ -47,7 +47,7 @@ export function UpdateSubscriptionFooter() {
 			layout="stacked"
 			isReady={hasChanges && previewReady}
 			reveal
-			invoiceAction={
+			stageAction={
 				<DisabledTooltipButton
 					variant="secondary"
 					className="w-full"
