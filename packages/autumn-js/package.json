@@ -6,7 +6,7 @@
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
 	"module": "./dist/sdk/index.mjs",
-	"types": "./dist/sdk/index.d.ts",
+	"types": "./dist/sdk-types/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
@@ -14,12 +14,12 @@
 	],
 	"scripts": {
 		"ts": "tsgo --noEmit --skipLibCheck",
-		"build": "rm -rf dist && tsup",
+		"build": "rm -rf dist && tsup && tsc -p tsconfig.standalone.json && node scripts/link-sdk-types.mjs",
 		"prepublishOnly": "bun run build"
 	},
 	"exports": {
 		".": {
-			"types": "./dist/sdk/index.d.ts",
+			"types": "./dist/sdk-types/index.d.ts",
 			"require": "./dist/sdk/index.js",
 			"import": "./dist/sdk/index.mjs"
 		},
@@ -57,6 +57,14 @@
 			"types": "./dist/better-auth/index.d.ts",
 			"require": "./dist/better-auth/index.js",
 			"import": "./dist/better-auth/index.mjs"
+		},
+		"./core": {
+			"types": "./dist/sdk-types/core.d.ts",
+			"import": "./dist/standalone/core.js"
+		},
+		"./funcs/*": {
+			"types": "./dist/sdk-types/funcs/*.d.ts",
+			"import": "./dist/standalone/funcs/*.js"
 		}
 	},
 	"typesVersions": {
@@ -81,6 +89,12 @@
 			],
 			"fetch": [
 				"./dist/backend/adapters/fetch.d.ts"
+			],
+			"core": [
+				"./dist/sdk-types/core.d.ts"
+			],
+			"funcs/*": [
+				"./dist/sdk-types/funcs/*.d.ts"
 			]
 		}
 	},
