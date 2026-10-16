@@ -100,12 +100,17 @@ afterEach(() => {
 	for (const spy of spies.splice(0)) spy.mockRestore();
 });
 
+const fakeLogger = {
+	error: (message: string) => errorsLogged.push(message),
+	child: () => fakeLogger,
+};
+
 const app = new Hono<HonoEnv>();
 app.use("*", async (c, next) => {
 	c.set("ctx", {
 		db: {},
 		id: "req_append",
-		logger: { error: (message: string) => errorsLogged.push(message) },
+		logger: fakeLogger,
 	} as never);
 	await next();
 });

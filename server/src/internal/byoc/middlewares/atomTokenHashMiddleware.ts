@@ -1,6 +1,7 @@
 import { ATOM_TOKEN_HASH_HEADER, AtomSubjectReadErrorCode } from "@autumn/byoc";
 import type { MiddlewareHandler } from "hono";
 import { getOrgWithFeaturesCached } from "@/internal/orgs/orgUtils/getOrgWithFeaturesCached.js";
+import { addAtomToLogs } from "@/utils/logging/addContextToLogs.js";
 import { cacheDeploymentRepo } from "../repos/cacheDeploymentRepo.js";
 import type { AtomHonoEnv } from "../types/atomHonoEnv.js";
 
@@ -29,6 +30,15 @@ export const atomTokenHashMiddleware: MiddlewareHandler<AtomHonoEnv> = async (
 			401,
 		);
 	c.set("atom", atom);
-	c.set("ctx", { ...c.get("ctx"), ...orgWithFeatures, env: atom.env });
+	const ctx = c.get("ctx");
+	c.set("ctx", {
+		...ctx,
+		...orgWithFeatures,
+		env: atom.env,
+		logger: addAtomToLogs({
+			logger: ctx.logger,
+			atomContext: { id: atom.id, org_id: atom.orgId, env: atom.env },
+		}),
+	});
 	await next();
 };

@@ -32,9 +32,11 @@ import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { sidebarRowClass } from "@/views/main-sidebar/sidebarRowClass";
-import { SettingsGroupContext } from "./SettingsSection";
+import {
+	SettingsGroupContext,
+	SettingsSectionSkeleton,
+} from "./SettingsSection";
 
 export type SettingsTab =
 	| "account"
@@ -165,7 +167,7 @@ export const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 			},
 			{
 				id: "atom",
-				label: "Edge Cache",
+				label: "Atom",
 				icon: <AtomIcon className="size-4" />,
 				badge: "PREVIEW",
 			},
@@ -310,7 +312,7 @@ export const SettingsView = () => {
 	const activeTab = useActiveSettingsTab();
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<Suspense fallback={<LoadingScreen />}>
+			<Suspense fallback={<SettingsSectionSkeleton />}>
 				<SettingsSections tab={activeTab} />
 			</Suspense>
 		</SettingsFrame>
@@ -322,7 +324,7 @@ export const SettingsViewSkeleton = () => {
 	const activeTab = useActiveSettingsTab();
 	return (
 		<SettingsFrame activeTab={activeTab}>
-			<Suspense fallback={<LoadingScreen />}>
+			<Suspense fallback={<SettingsSectionSkeleton />}>
 				<SettingsSections tab={activeTab} skeleton />
 			</Suspense>
 		</SettingsFrame>

@@ -1,6 +1,6 @@
 import type { ListAtomChecksResponse } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { atomIdBody, useAtomApi } from "@/contexts/AtomApiContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const POLL_INTERVAL_MS = 3000;
@@ -11,14 +11,14 @@ const hasChecks = (data: ListAtomChecksResponse | undefined) =>
 /** The Atom's latest checks, polled until the first arrive, then held as they first came in. */
 export const useAtomChecksQuery = ({ enabled }: { enabled: boolean }) => {
 	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
+	const { basePath, queryKey, atomId } = useAtomApi();
 
 	const { data } = useQuery<ListAtomChecksResponse>({
-		queryKey: buildKey(["atom", "checks"]),
+		queryKey: [...queryKey, "checks"],
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<ListAtomChecksResponse>(
-				"/v1/byoc.list_atom_checks",
-				{},
+				`${basePath}/byoc.list_atom_checks`,
+				atomIdBody({ atomId }),
 			);
 			return data;
 		},

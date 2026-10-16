@@ -20,6 +20,7 @@ type RequestBody = {
 const TRACK_ROUTES = ["/v1/balances.track", "/v1/track", "/v1/events"];
 const TRACK_TOKENS_ROUTES = ["/v1/balances.track_tokens", "/v1/track_tokens"];
 const CHECK_ROUTES = ["/v1/balances.check", "/v1/check", "/v1/entitled"];
+const FINALIZE_ROUTES = ["/v1/balances.finalize"];
 
 const isPostTo = ({ path, urls }: { path: string; urls: string[] }) =>
 	urls.some((url) =>
@@ -44,7 +45,7 @@ const toLatestBody = ({
 		ctx,
 	});
 
-/** A track the handler will apply synchronously, or a check that writes a balance (lock or send_event). */
+/** A track the handler will apply synchronously, a check that writes a balance (lock or send_event), or a finalize. */
 export const isSyncBalanceWrite = ({
 	ctx,
 	method,
@@ -55,6 +56,7 @@ export const isSyncBalanceWrite = ({
 	path: string;
 }): boolean => {
 	if (method !== "POST" || !ctx?.apiVersion) return false;
+	if (isPostTo({ path, urls: FINALIZE_ROUTES })) return true;
 	// Runs before validation, so the raw body is read defensively.
 	const body = ctx.requestBody;
 	if (!body || typeof body !== "object" || Array.isArray(body)) return false;

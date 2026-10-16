@@ -5,8 +5,13 @@ export { countApiCalls } from "./apiRequests/actions/countApiCalls/countApiCalls
 export { apiRequestCatalog } from "./apiRequests/apiRequestCatalog";
 export type { AutumnClientConfig } from "./external/autumn/createAutumnClient";
 export { createAutumnClient } from "./external/autumn/createAutumnClient";
-export { orgHasFeature } from "./featureAccess/actions/orgHasFeature";
 export { BillingFeatureId } from "./featureAccess/billingFeatureIds";
+export type { FeatureAccess } from "./featureAccess/createFeatureAccess";
+export { createFeatureAccess } from "./featureAccess/createFeatureAccess";
+export type {
+	AtomLimits,
+	AtomLimitsReason,
+} from "./featureAccess/types/atomLimits";
 export type { FeatureAccessContext } from "./featureAccess/types/featureAccessContext";
 export type { PaymentVolumeReport } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";
 export { pushPaymentVolume } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";

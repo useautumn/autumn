@@ -1,13 +1,13 @@
 /**
- * A finalize the Atom answers from its own view, while that view is behind Autumn's balance: the push that would have
- * told it is held back, as a slow link holds it.
+ * A finalize answered by the Atom while its view is behind Autumn's balance: the push that would have told it is held
+ * back, as a slow link holds it.
  *
- * Contract: a finalize the Atom answered 200 is the lock's one terminal state at Autumn too. The Atom tells the caller
- * the lock is settled, so Autumn must not leave it open, nor settle it another way.
- *  1. a confirm above the lock, answered by the Atom while Autumn's balance has since moved (an API track): Autumn closes
- *     the lock and the Atom's 200 is what Autumn did;
- *  2. a confirm sent to the Atom after the lock's expiry, which Autumn's timer has released: Autumn charges what the Atom
- *     said it confirmed, or the Atom must not have answered 200;
+ * Contract: the Atom's 200 says the finalize is journaled, not decided. Autumn decides it from its own row, under the
+ * row's own overage, and what Autumn did is what the push shows.
+ *  1. a confirm above the lock, journaled while Autumn's balance has since moved (an API track) so the row cannot cover
+ *     it: rejected at Autumn, the lock stays open, nothing is charged, and the finalize's seq lands;
+ *  2. a confirm journaled after the lock's expiry, which Autumn's timer has released: refused at Autumn, nothing is
+ *     charged, and the Atom's view shows the units back;
  *  3. a lock the Atom grants on its view while Autumn's balance has since moved (an API track): what the Atom holds and
  *     what its confirm settles is what Autumn holds and charges.
  */
@@ -84,7 +84,7 @@ const initLockedCustomer = async ({
 };
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("atom-finalize-drift1: a confirm above the lock the Atom answers 200 while Autumn's balance moved leaves no lock open at Autumn")}`,
+	`${chalk.yellowBright("atom-finalize-drift1: a confirm above the lock, journaled while Autumn's balance moved past it, is rejected at Autumn: the lock stays open, nothing is charged")}`,
 	async () => {
 		const customerId = "atom-finalize-drift1";
 		const { atom, lockId, autumnV2_6 } = await initLockedCustomer({
@@ -119,18 +119,24 @@ test.skipIf(!replicaSetRunsHere)(
 		});
 		await replicaSet().releasePushes();
 
-		// The finalize reached Autumn: its seq landed.
-		await pollUntilAsserted({
-			fetch: () => atomSeqsOf({ customerId }),
-			assert: (seqs) => expect(seqs).toEqual([2]),
+		// The finalize reached Autumn: its seq landed, and the row's own overage refused the draw above the lock.
+		await expectAutumnLockState({
+			customerId,
+			openLockIds: [lockId],
+			atomSeqs: [2],
 		});
-		expect(await openLockIdsOf({ customerId })).toEqual([]);
+		await expectBalanceCorrect({
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 10,
+		});
+		await expectAtomBalance({ atom, customerId, remaining: 10 });
 	},
 	120_000,
 );
 
 test.skipIf(!replicaSetRunsHere)(
-	`${chalk.yellowBright("atom-finalize-drift2: a confirm the Atom answers 200 after Autumn's timer released the lock is charged, or not answered 200")}`,
+	`${chalk.yellowBright("atom-finalize-drift2: a confirm journaled after Autumn's timer released the lock is refused at Autumn: nothing is charged")}`,
 	async () => {
 		const customerId = "atom-finalize-drift2";
 		// Long enough for the lock to land at Autumn before its own timer releases it.
@@ -168,20 +174,22 @@ test.skipIf(!replicaSetRunsHere)(
 			lockId,
 			action: "confirm",
 		});
-		await replicaSet().releasePushes();
-		await pollUntilAsserted({
-			fetch: () => atomSeqsOf({ customerId }),
-			assert: (seqs) =>
-				expect(seqs).toEqual(confirmed.status === 200 ? [2] : [1]),
+		expect(confirmed).toEqual({
+			status: 200,
+			forwarded: null,
+			body: { success: true },
 		});
+		await replicaSet().releasePushes();
 
-		const charged = confirmed.status === 200 ? LOCKED : 0;
+		// Refused at Autumn: no row to settle, so no seq lands either.
+		await expectAtomBalance({ atom, customerId, remaining: 100 });
+		expect(await atomSeqsOf({ customerId })).toEqual([1]);
+		expect(await openLockIdsOf({ customerId })).toEqual([]);
 		await expectBalanceCorrect({
 			customerId,
 			featureId: TestFeature.Messages,
-			remaining: 100 - charged,
+			remaining: 100,
 		});
-		await expectAtomBalance({ atom, customerId, remaining: 100 - charged });
 	},
 	120_000,
 );

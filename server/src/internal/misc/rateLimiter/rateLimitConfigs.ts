@@ -104,6 +104,7 @@ export const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/balances/update" }),
 			route({ method: "POST", url: "/v1/balances.track" }),
 			route({ method: "POST", url: "/v1/balances.track_tokens" }),
+			// Fallback only: isSyncBalanceWrite claims finalize first.
 			route({ method: "POST", url: "/v1/balances.finalize" }),
 			route({ method: "POST", url: "/v1/balances.update" }),
 		],
@@ -271,7 +272,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		scope: RateLimitScope.Org,
 		store: "redis",
 	},
-	// Tracks the handler applies synchronously, and checks with a lock or send_event, share these.
+	// Tracks the handler applies synchronously, checks with a lock or send_event, and finalizes share these.
 	[RateLimitType.SyncBalanceWrite]: {
 		limit: 1000,
 		windowMs: 1000,

@@ -1,4 +1,5 @@
 import { deleteCacheDeployment } from "./deleteCacheDeployment.js";
+import { findActiveCacheDeployments } from "./findActiveCacheDeployments.js";
 import { findCacheByTokenHash } from "./findCacheByTokenHash.js";
 import { findCacheDeployment } from "./findCacheDeployment.js";
 import { findCacheDeploymentByGroupId } from "./findCacheDeploymentByGroupId.js";
@@ -10,6 +11,7 @@ import { updateCacheDeployment } from "./updateCacheDeployment.js";
 
 export const cacheDeploymentRepo = {
 	find: findCacheDeployment,
+	findActive: findActiveCacheDeployments,
 	findRemoving: findRemovingCacheDeployments,
 	findById: findCacheDeploymentById,
 	findByGroupId: findCacheDeploymentByGroupId,

@@ -636,6 +636,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@autumn/axiom": "workspace:*",
+        "@autumn/env": "workspace:*",
         "@autumn/fx": "workspace:*",
         "@autumn/logging": "workspace:*",
         "autumn-js": "1.4.34",

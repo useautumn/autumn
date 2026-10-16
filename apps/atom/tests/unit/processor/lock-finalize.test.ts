@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { occurredAt as lockedAt } from "../../../../../packages/balance-engine/tests/unit/engineFixtures.js";
 import { atomErrorOf } from "../../../src/http/handlers/errorHandler/atomErrorOf.js";
+import { finalize } from "../../../src/processor/actions/finalize/finalize.js";
 import type { FinalizeRequest } from "../../../src/processor/types/finalize.js";
 import { openJournal } from "../../../src/state/journal/openJournal.js";
 import {
@@ -27,6 +28,16 @@ afterEach(() => {
 	for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
+/** The slot with the finalize the Atom decides itself, which the route no longer takes but which stays as it was. */
+const decidingFinalize = (slot: ReturnType<typeof openSlotProcessor>) => ({
+	...slot,
+	processor: {
+		...slot.processor,
+		finalize: ({ request }: { request: FinalizeRequest }) =>
+			finalize({ ctx: slot.ctx, request }),
+	},
+});
+
 /** `cus_1` holding `balance` messages on a slot whose files live in `folder`, or in memory. */
 const openHolding = async ({
 	balance,
@@ -35,13 +46,15 @@ const openHolding = async ({
 	balance: number;
 	folder?: ReturnType<typeof createSlotFolder>;
 }) => {
-	const slot = openSlotProcessor(
-		folder
-			? {
-					subjectsPath: folder.subjectsPath,
-					journal: openJournal({ databasePath: folder.journalPath }),
-				}
-			: {},
+	const slot = decidingFinalize(
+		openSlotProcessor(
+			folder
+				? {
+						subjectsPath: folder.subjectsPath,
+						journal: openJournal({ databasePath: folder.journalPath }),
+					}
+				: {},
+		),
 	);
 	cleanups.push(slot.close);
 	await slot.processor.setSubject(
@@ -255,10 +268,12 @@ describe("a finalize on the Atom", () => {
 		before.close();
 		cleanups.splice(cleanups.indexOf(before.close), 1);
 
-		const after = openSlotProcessor({
-			subjectsPath: folder.subjectsPath,
-			journal: openJournal({ databasePath: folder.journalPath }),
-		});
+		const after = decidingFinalize(
+			openSlotProcessor({
+				subjectsPath: folder.subjectsPath,
+				journal: openJournal({ databasePath: folder.journalPath }),
+			}),
+		);
 		cleanups.push(after.close);
 
 		expect(

@@ -4,6 +4,7 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	Skeleton,
 } from "@autumn/ui";
 import { createContext, useContext } from "react";
 import { LabelTag } from "@/components/general/LabelTag";
@@ -68,6 +69,25 @@ export const SettingsSection = ({
 			) : (
 				children
 			)}
+		</div>
+	);
+};
+
+/** Any section's shape while its code or data loads: the header lines where they will land, then its body. */
+export const SettingsSectionSkeleton = () => {
+	const groupLabel = useContext(SettingsGroupContext);
+	return (
+		<div className="flex flex-col gap-10" aria-busy="true">
+			<div className="flex flex-col gap-2">
+				{groupLabel && (
+					<span className="font-medium text-subtle text-xs leading-4">
+						{groupLabel}
+					</span>
+				)}
+				<Skeleton className="h-7 w-40" />
+				<Skeleton className="h-5 w-80" />
+			</div>
+			<Skeleton className="h-64 w-full rounded-xl" />
 		</div>
 	);
 };

@@ -2,9 +2,8 @@ import {
 	type ApiByocCache,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
+import { Badge, Skeleton } from "@autumn/ui";
 import { toast } from "sonner";
-import { TABLE_TRAY_CLASS } from "@/components/general/table";
 import { getBackendErr } from "@/utils/genUtils";
 import { AtomAccountSection } from "./AtomAccountSection";
 import { AtomCloudSection } from "./AtomCloudSection";
@@ -13,6 +12,7 @@ import { AtomDeploySection } from "./AtomDeploySection";
 import { AtomSteadyState } from "./AtomSteadyState";
 import { type AtomStep, AtomStepper } from "./AtomStepper";
 import { AtomVerifySection } from "./AtomVerifySection";
+import { ATOM_PAGE_CARD_CLASS } from "./atomCardLayout";
 import { atomMachineSpecs } from "./atomMachineDisplay";
 import { useAtomActions } from "./useAtomActions";
 import { useAtomDeleteDialog } from "./useAtomDeleteDialog";
@@ -125,7 +125,7 @@ export const AtomSetupFlow = ({
 
 	return (
 		<div className="flex flex-col gap-10">
-			<div className={TABLE_TRAY_CLASS}>
+			<div className={ATOM_PAGE_CARD_CLASS}>
 				<AtomStepper steps={Object.values(steps)} />
 				<form.Subscribe selector={(formState) => formState.values}>
 					{(values) => (
@@ -185,3 +185,13 @@ export const AtomSetupFlow = ({
 		</div>
 	);
 };
+
+/** The stepper's own card while a new or unfinished Atom loads: its steps row, then the open step's body. */
+export const AtomSetupSkeleton = () => (
+	<div className={ATOM_PAGE_CARD_CLASS} aria-busy="true">
+		<div className="flex h-10 items-center px-3">
+			<Skeleton className="h-4 w-full" />
+		</div>
+		<Skeleton className="h-[26rem] w-full rounded-lg" />
+	</div>
+);

@@ -5,7 +5,9 @@
  *  1. a track through the API reaches the Atom: its check answers off the new balance;
  *  2. the same for an entity: its check answers off the entity's own balance, and a second entity's is untouched;
  *  3. byoc.create_atom hands back an endpoint and a token, and only that token opens the Atom;
- *     creating again returns the same Atom; byoc.delete_atom forgets it and the token stops working;
+ *     creating again with its atom_id returns the same Atom; new ones get ids of their own up to the env's cap, past which
+ *     a create is refused, and a get naming no Atom refuses to pick one;
+ *     byoc.delete_atom forgets it and the token stops working;
  *  4. an Atom, by its token hash, learns which of its secret keys are not its own org and env's;
  *  5. evicting a customer makes its entity's check stale: the Atom forwards it (entity_stale) and pulls the entity,
  *     then answers it itself again, as it does after the entity's next track;
@@ -25,11 +27,13 @@ import {
 	AppEnv,
 	apiKeys,
 	ByocCacheStatus,
+	ErrCode,
 	organizations,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { isBalanceWorkerRoute } from "@tests/utils/balanceWorkerRouteTestUtils.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { pollUntilAsserted } from "@tests/utils/genUtils.js";
@@ -197,7 +201,7 @@ test.skipIf(!isBalanceWorkerRoute() || hostedAtom)(
 );
 
 test.skipIf(hostedAtom)(
-	`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → delete → gone")}`,
+	`${chalk.yellowBright("atom-deployment3: only the token opens the Atom → create again is a no-op → up to the cap, then refused → delete → gone")}`,
 	async () => {
 		const atom = await ensureAtomDeployment({ autumn });
 		const anyCheck = {
@@ -223,11 +227,43 @@ test.skipIf(hostedAtom)(
 		});
 		expect(fetched.cache.token).toBeUndefined();
 
-		const again = await autumn.post("/byoc.create_atom", {});
+		const again = await autumn.post("/byoc.create_atom", {
+			atom_id: fetched.cache.id,
+		});
 		expect(again).toMatchObject({
 			deployment_id: fetched.cache.deployment_id,
 			setup_url: null,
 			token: atom.token,
+		});
+
+		const listed = await autumn.post("/byoc.list_atoms", {});
+		expect(listed).toMatchObject({
+			atoms: [{ id: fetched.cache.id }],
+			limits: { included: true, used: 1, can_create: true, reason: null },
+		});
+		const { limit } = listed.limits;
+		const others: { id: string }[] = [];
+		for (let count = 1; count < limit; count++)
+			others.push(await autumn.post("/byoc.create_atom", {}));
+		expect(
+			new Set([fetched.cache.id, ...others.map(({ id }) => id)]).size,
+		).toBe(limit);
+		expect((await autumn.post("/byoc.list_atoms", {})).limits).toEqual({
+			included: true,
+			limit,
+			used: limit,
+			can_create: false,
+			reason: "limit_reached",
+		});
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "more than one Atom",
+			func: () => autumn.post("/byoc.get_atom", {}),
+		});
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: `already runs ${limit} Atoms`,
+			func: () => autumn.post("/byoc.create_atom", {}),
 		});
 
 		await deleteAtomDeployment({ autumn });
@@ -241,6 +277,7 @@ test.skipIf(hostedAtom)(
 			intervalMs: 250,
 		});
 	},
+	30_000,
 );
 
 test(`${chalk.yellowBright("atom-deployment4: an Atom learns which of its secret keys are not its org and env's, and its org's id and slug")}`, async () => {

@@ -3,25 +3,24 @@ import {
 	type Catalog,
 	computeFinalize,
 	computeTrack,
+	type FinalizeCommand,
 	LockAlreadyExistsError,
 	LockNotFoundError,
 	type SubjectState,
 	type SubjectStateMutation,
 	subjectStateToFullSubject,
+	type TrackCommand,
 	UnsupportedCommandError,
 	type WorkerFullSubject,
 } from "@autumn/balance-engine";
-import type {
-	JournalEntry,
-	JournaledCommand,
-} from "../../../state/journal/types/journal.js";
+import type { JournalEntry } from "../../../state/journal/types/journal.js";
 
 const computeOwed = ({
 	fullSubject,
 	command,
 }: {
 	fullSubject: WorkerFullSubject;
-	command: JournaledCommand;
+	command: TrackCommand | FinalizeCommand;
 }): SubjectStateMutation =>
 	command.type === "finalize"
 		? computeFinalize({ fullSubject, command })
@@ -35,7 +34,7 @@ const isRefusedForGood = (error: unknown): boolean =>
 
 /**
  * The snapshot with each owed command applied as the balance worker applies it: decided on the rows so far, then applied.
- * A command the worker would refuse moves nothing here either.
+ * A command the worker would refuse moves nothing here either, nor does a finalize left to the worker to decide.
  */
 export const replayOwed = ({
 	owed,
@@ -53,6 +52,7 @@ export const replayOwed = ({
 	onApplied?: (mutation: SubjectStateMutation) => void;
 }): SubjectState =>
 	owed.reduce((current, { command }) => {
+		if (command.type === "undecidedFinalize") return current;
 		const fullSubject =
 			current === state && stateFullSubject
 				? stateFullSubject
