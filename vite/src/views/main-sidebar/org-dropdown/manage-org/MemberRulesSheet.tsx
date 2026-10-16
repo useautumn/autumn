@@ -31,7 +31,7 @@ export const MemberRulesSheet = ({
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
 				side="right"
-				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
+				className="!w-full !max-w-full sm:!w-[28rem] sm:!max-w-[28rem]"
 			>
 				<SheetHeader>
 					<SheetTitle>{name}</SheetTitle>

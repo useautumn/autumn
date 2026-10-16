@@ -21,6 +21,7 @@ const john: RuleSubject = { type: "user", user_id: "usr_john" };
 const ROLES: Record<string, string> = {
 	usr_john: "engineering",
 	usr_maya: "sales",
+	usr_ada: "admin",
 };
 const roleOf = (userId: string) => ROLES[userId] ?? null;
 
@@ -146,6 +147,12 @@ describe("precedence warnings", () => {
 		[
 			"the draft names a role, not a member",
 			{ ...johnGrants, subjects: [engineering] },
+			[rule({ id: "all_grants", subjects: [everyone] })],
+			[],
+		],
+		[
+			"an Admin skips rules, so naming them overrides nothing",
+			{ ...johnGrants, subjects: [{ type: "user", user_id: "usr_ada" }] },
 			[rule({ id: "all_grants", subjects: [everyone] })],
 			[],
 		],
