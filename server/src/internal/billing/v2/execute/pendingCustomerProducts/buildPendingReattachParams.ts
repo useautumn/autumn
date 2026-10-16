@@ -21,6 +21,9 @@ export const buildPendingReattachParams = ({
 }): AttachParamsV1 => {
 	const { invoiceMode } = billingContext;
 	const enablesNow = params.invoice_mode?.enable_plan_immediately === true;
+	const issueMethod = invoiceMode && invoiceModeToIssueMethod({ invoiceMode });
+	const shouldFinalizeInvoiceForImmediateEnable =
+		enablesNow && issueMethod === "draft";
 
 	const featureQuantities =
 		params.feature_quantities ??
@@ -45,9 +48,9 @@ export const buildPendingReattachParams = ({
 			enabled: true,
 			enable_plan_immediately:
 				enablesNow || invoiceMode?.enableProductImmediately,
-			issue_method: invoiceMode
-				? invoiceModeToIssueMethod({ invoiceMode })
-				: undefined,
+			issue_method: shouldFinalizeInvoiceForImmediateEnable
+				? "finalize"
+				: issueMethod,
 			net_terms_days: invoiceMode?.daysUntilDue,
 		},
 	} as AttachParamsV1;

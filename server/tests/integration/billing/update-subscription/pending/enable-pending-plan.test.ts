@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
+	type ApiCustomerV5,
 	type AttachParamsV1Input,
 	BillingInterval,
 	CusProductStatus,
@@ -220,6 +221,84 @@ test.concurrent(
 		});
 		expect(rows).toHaveLength(1);
 		expect(rows[0]!.product.id).toBe(pendingPlan.id);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("enable custom pending plan: activates it over a paid same-group predecessor")}`,
+	{ timeout: 90_000 },
+	async () => {
+		const live = products.pro({
+			id: "custom-live",
+			group: "shared",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const pendingPlan = products.pro({
+			id: "custom-pending",
+			group: "shared",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_2, ctx, customer, customerId } = await initScenario({
+			customerId: "enable-custom-pending-replacement",
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [live, pendingPlan] }),
+			],
+			actions: [],
+		});
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: live.id,
+		});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pendingPlan.id,
+			customize: {
+				price: {
+					amount: 5000,
+					interval: BillingInterval.Month,
+				},
+			},
+			invoice_mode: { enabled: true, issue_method: "draft" },
+		});
+
+		const pending = await loadPending({
+			ctx,
+			internalCustomerId: customer!.internal_id,
+		});
+		const metadata = await MetadataService.get({
+			db: ctx.db,
+			id: pending.metadata_id!,
+		});
+		const oldInvoiceId = metadata!.stripe_invoice_id!;
+		const result = await autumnV2_2.subscriptions.update(
+			enablePending({
+				customerId,
+				pendingId: pending.id,
+				planId: pendingPlan.id,
+			}),
+		);
+
+		expect(result.invoice?.status).toBe("open");
+		const oldInvoice = await ctx.stripeCli.invoices.retrieve(oldInvoiceId);
+		expect(
+			oldInvoice.status === "void" || oldInvoice.auto_advance === false,
+		).toBe(true);
+		const customerAfter =
+			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const activeSubscription = customerAfter.subscriptions.find(
+			(subscription) =>
+				subscription.plan_id === pendingPlan.id &&
+				subscription.status === "active",
+		);
+		expect(activeSubscription).toBeDefined();
+		const endedSubscription = customerAfter.subscriptions.find(
+			(subscription) => subscription.plan_id === live.id,
+		);
+		expect(
+			endedSubscription === undefined ||
+				endedSubscription.status === "canceled",
+		).toBe(true);
 	},
 );
 
