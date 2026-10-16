@@ -140,8 +140,9 @@ jobs:
     with:
       package-dir: ${{ matrix.package.dir }}
       ref: ${{ needs.prepare.outputs.sha }}
-      patch-artifact: publish-patch
-      create-tag: false
+      # No staged changes means no patch artifact; the publish job then tags its own commit.
+      patch-artifact: ${{ needs.prepare.outputs.has-changes == 'true' && 'publish-patch' || '' }}
+      create-tag: ${{ needs.prepare.outputs.has-changes != 'true' }}
       build-command: ${{ matrix.package.name == 'autumn-js' && 'bun js:build' || '' }}
       typecheck-command: ${{ matrix.package.name == 'autumn-js' && 'bun js:ts' || '' }}
       test-command: ${{ matrix.package.name == 'autumn-js' && 'cd packages/sdk && bun test' || '' }}
