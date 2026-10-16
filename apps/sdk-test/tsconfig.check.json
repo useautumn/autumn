@@ -2,7 +2,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@autumn/ui": ["../../packages/ui/src/index.ts"],
+      "@autumn/ui/*": ["../../packages/ui/src/*"]
     }
   },
   "include": [
