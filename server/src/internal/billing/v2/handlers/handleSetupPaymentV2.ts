@@ -1,4 +1,4 @@
-import { SetupPaymentParamsV1Schema, Scopes } from "@autumn/shared";
+import { Scopes, SetupPaymentParamsV1Schema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { billingActions } from "@/internal/billing/v2/actions";
 

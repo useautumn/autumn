@@ -11,7 +11,8 @@
  * - A paid session whose webhook is still in flight is neither renewed nor expired.
  * - Renewal drops absolute times (e.g. trial_end) that elapsed since link creation.
  * - Editing the unpaid plan previews its full new price, bills nothing, and keeps the link,
- *   which then sells the edit and grants it on payment.
+ *   which then sells the edit and grants it on payment; usage on the plan carries over.
+ * - A paid one-off purchase from the link is not treated as unpaid by an edit.
  */
 
 import { expect, test } from "bun:test";
@@ -25,10 +26,12 @@ import {
 	metadata,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectProductActive,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -51,11 +54,18 @@ type ScenarioCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
 const setupLongLivedScenario = async ({
 	customerId,
 	withTrial = false,
+	carryUsage = false,
 }: {
 	customerId: string;
 	withTrial?: boolean;
+	carryUsage?: boolean;
 }) => {
-	const productItems = [items.monthlyMessages({ includedUsage: 100 })];
+	const productItems = [
+		{
+			...items.monthlyMessages({ includedUsage: 100 }),
+			reset_usage_when_enabled: !carryUsage,
+		},
+	];
 	const pro = withTrial
 		? products.proWithTrial({ id: `pro-${customerId}`, items: productItems })
 		: products.pro({ id: `pro-${customerId}`, items: productItems });
@@ -345,8 +355,20 @@ test.concurrent(
 	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: editing the unpaid plan keeps the link and bills nothing")}`,
 	async () => {
 		const customerId = "ll-eppi-edit";
-		const { autumnV2_2, ctx, pro, internalCustomerId, checkoutId } =
-			await setupLongLivedScenario({ customerId });
+		const { autumnV1, autumnV2_2, ctx, pro, internalCustomerId, checkoutId } =
+			await setupLongLivedScenario({ customerId, carryUsage: true });
+
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 60,
+		});
+		await expectCustomerFeatureCorrect({
+			customerId,
+			autumn: autumnV1,
+			featureId: TestFeature.Messages,
+			balance: 40,
+		});
 
 		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
@@ -382,10 +404,16 @@ test.concurrent(
 		expect(subscriptions.data).toHaveLength(0);
 		expect(invoices.data).toHaveLength(0);
 
-		// 3. The plan stays granted, and the link sells the edited price.
+		// 3. The plan stays granted with its usage, and the link sells the edited price.
 		expect(
 			await getActiveProRow({ ctx, internalCustomerId, productId: pro.id }),
 		).toBeDefined();
+		await expectCustomerFeatureCorrect({
+			customerId,
+			autumn: autumnV1,
+			featureId: TestFeature.Messages,
+			balance: 40,
+		});
 		const stripeUrl = await startLongLivedCheckout(checkoutId);
 		const session = await ctx.stripeCli.checkout.sessions.retrieve(
 			getStripeSessionId(stripeUrl),
@@ -408,5 +436,77 @@ test.concurrent(
 				return (row?.subscription_ids ?? []).length === 1;
 			},
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("long-lived checkout enable_plan_immediately: editing a paid one-off purchase leaves it in place")}`,
+	async () => {
+		const customerId = "ll-eppi-one-off-paid";
+		const oneOff = products.oneOff({
+			id: `one-off-${customerId}`,
+			items: [
+				items.oneOffMessages({
+					includedUsage: 0,
+					billingUnits: 100,
+					price: 10,
+				}),
+			],
+		});
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: true }), s.products({ list: [oneOff] })],
+			actions: [],
+		});
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		const internalCustomerId = dbCustomer!.internal_id;
+
+		const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: oneOff.id,
+			long_lived_checkout: true,
+			enable_plan_immediately: true,
+			feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		});
+		const stripeUrl = await startLongLivedCheckout(
+			getLongLivedCheckoutId(attachResult.payment_url),
+		);
+		await completeStripeCheckoutForm({ url: stripeUrl });
+		await waitForStripeWebhook({
+			stripeCli: ctx.stripeCli,
+			env: ctx.env,
+			types: ["checkout.session.completed"],
+			objectId: getStripeSessionId(stripeUrl),
+			until: async () =>
+				!(await ctx.db.query.metadata.findFirst({
+					where: eq(
+						metadata.stripe_checkout_session_id,
+						getStripeSessionId(stripeUrl),
+					),
+				})),
+		});
+		const paidRow = await getActiveProRow({
+			ctx,
+			internalCustomerId,
+			productId: oneOff.id,
+		});
+		expect(paidRow).toBeDefined();
+
+		await autumnV2_2.subscriptions
+			.update<UpdateSubscriptionV1ParamsInput>({
+				customer_id: customerId,
+				plan_id: oneOff.id,
+				feature_quantities: [
+					{ feature_id: TestFeature.Messages, quantity: 200 },
+				],
+			})
+			.catch(() => undefined);
+
+		expect(
+			(await getActiveProRow({ ctx, internalCustomerId, productId: oneOff.id }))
+				?.id,
+		).toBe(paidRow!.id);
 	},
 );

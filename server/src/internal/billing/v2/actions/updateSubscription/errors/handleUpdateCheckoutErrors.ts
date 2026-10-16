@@ -40,7 +40,11 @@ export const handleUpdateCheckoutErrors = ({
 				) === true,
 		);
 
-		if (quantitiesUnchanged && licenseQuantitiesUnchanged && !hasAdjustableFeature) {
+		if (
+			quantitiesUnchanged &&
+			licenseQuantitiesUnchanged &&
+			!hasAdjustableFeature
+		) {
 			throw new RecaseError({
 				message:
 					"Cannot create checkout when quantities are not updated or adjustable",

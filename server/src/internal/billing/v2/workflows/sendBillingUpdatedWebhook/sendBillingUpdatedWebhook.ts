@@ -17,8 +17,8 @@ import {
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
-import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ALLOCATIONS_ADJUSTED_TAG } from "@/internal/balances/allocate/allocationsAdjustedTag.js";
 import {
 	billingChangeResponseHasContent,
 	buildBillingChangeResponse,

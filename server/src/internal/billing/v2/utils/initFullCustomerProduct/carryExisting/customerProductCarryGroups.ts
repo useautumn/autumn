@@ -1,7 +1,4 @@
-import {
-	type FullCusProduct,
-	type FullCustomerEntitlement,
-} from "@autumn/shared";
+import type { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
 import {
 	carryIdentityToKey,
 	customerEntitlementToCarryIdentity,

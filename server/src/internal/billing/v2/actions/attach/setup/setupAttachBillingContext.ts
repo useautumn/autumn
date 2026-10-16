@@ -116,7 +116,9 @@ export const setupAttachBillingContext = async ({
 			})
 		: undefined;
 	const carryOverSourceCustomerProduct =
-		currentCustomerProduct ?? removedCarrySource ?? undefined;
+		currentCustomerProduct ??
+		removedCarrySource ??
+		contextOverride.carryOverSourceCustomerProduct;
 
 	const subscriptionTargetCustomerProduct = setupAttachSubscriptionTarget({
 		fullCustomer,

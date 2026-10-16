@@ -33,6 +33,9 @@ export interface StripeBillingContextOverride {
 export interface BillingContextOverride {
 	fullCustomer?: FullCustomer;
 
+	/** Carries usage from a plan that is replaced without being the customer's current product. */
+	carryOverSourceCustomerProduct?: FullCusProduct;
+
 	stripeBillingContext?: StripeBillingContextOverride;
 
 	productContext?: {

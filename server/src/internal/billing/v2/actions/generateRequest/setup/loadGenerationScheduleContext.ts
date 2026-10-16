@@ -56,19 +56,19 @@ export const loadGenerationScheduleContext = async ({
 		...(entityId ? { entity_id: entityId } : {}),
 		phases: schedule.phases.map(
 			({ starts_at, customer_product_ids, proration_behavior }) => ({
-			starts_at,
-			customer_product_ids,
-			...(customer_product_ids.some((id) =>
-				phaseResetsBillingCycle({
-					billingCycleAnchorResetsAt:
-						customerProductById.get(id)?.billing_cycle_anchor_resets_at,
-					phaseStartsAt: starts_at,
-				}),
-			)
-				? { billing_cycle_anchor: "phase_start" as const }
-				: {}),
-			...(proration_behavior ? { proration_behavior } : {}),
-		}),
+				starts_at,
+				customer_product_ids,
+				...(customer_product_ids.some((id) =>
+					phaseResetsBillingCycle({
+						billingCycleAnchorResetsAt:
+							customerProductById.get(id)?.billing_cycle_anchor_resets_at,
+						phaseStartsAt: starts_at,
+					}),
+				)
+					? { billing_cycle_anchor: "phase_start" as const }
+					: {}),
+				...(proration_behavior ? { proration_behavior } : {}),
+			}),
 		),
 	});
 

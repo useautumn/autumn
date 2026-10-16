@@ -25,7 +25,10 @@ export const customLineItemsToLineItems = ({
 		prorated: false,
 		context: {
 			price: {} as LineItem["context"]["price"],
-			product: { id: "", name: item.description } as LineItem["context"]["product"],
+			product: {
+				id: "",
+				name: item.description,
+			} as LineItem["context"]["product"],
 			currency,
 			direction: item.amount >= 0 ? "charge" : "refund",
 			now: Date.now(),

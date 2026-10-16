@@ -13,7 +13,8 @@ import { getPendingPlanLongLivedCheckout } from "@/internal/billing/v2/execute/p
 import { pendingPlanRebills } from "@/internal/billing/v2/execute/pendingCustomerProducts/pendingPlanRebills";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 
-const withoutCustomerProduct = async ({
+/** A granted plan is only discarded at execution: the preview must not see it attached, and both carry its usage. */
+const grantedPlanOverrides = async ({
 	ctx,
 	params,
 	customerProduct,
@@ -23,11 +24,21 @@ const withoutCustomerProduct = async ({
 	customerProduct: FullCusProduct;
 }) => {
 	const fullCustomer = await setupFullCustomerContext({ ctx, params });
+	const carryOverSourceCustomerProduct =
+		fullCustomer.customer_products.find(
+			({ id }) => id === customerProduct.id,
+		) ?? customerProduct;
 	return {
-		...fullCustomer,
-		customer_products: fullCustomer.customer_products.filter(
-			({ id }) => id !== customerProduct.id,
-		),
+		preview: {
+			fullCustomer: {
+				...fullCustomer,
+				customer_products: fullCustomer.customer_products.filter(
+					({ id }) => id !== customerProduct.id,
+				),
+			},
+			carryOverSourceCustomerProduct,
+		},
+		execute: { carryOverSourceCustomerProduct },
 	};
 };
 
@@ -64,20 +75,14 @@ export const previewPendingReattach = async ({
 		: reattachParams;
 
 	const isGranted = customerProduct.status !== CusProductStatus.Pending;
+	const overrides = isGranted
+		? await grantedPlanOverrides({ ctx, params: attachParams, customerProduct })
+		: undefined;
 	const replacementPreview = await billingActions.attach({
 		ctx,
 		params: attachParams,
 		preview: true,
-		// A granted plan is only discarded at execution, so the preview must not see it as already attached.
-		contextOverride: isGranted
-			? {
-					fullCustomer: await withoutCustomerProduct({
-						ctx,
-						params: attachParams,
-						customerProduct,
-					}),
-				}
-			: undefined,
+		contextOverride: overrides?.preview,
 	});
 
 	const replacementProduct =
@@ -106,5 +111,11 @@ export const previewPendingReattach = async ({
 				: replacementProduct?.free_trial,
 		});
 
-	return { attachParams, longLivedCheckout, replacementPreview, rebills };
+	return {
+		attachParams,
+		attachContextOverride: overrides?.execute,
+		longLivedCheckout,
+		replacementPreview,
+		rebills,
+	};
 };

@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { matchesTarget } from "@/internal/billing/v2/execute/pendingCustomerProducts/findPendingCustomerProduct";
 import { LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { CusService } from "@/internal/customers/CusService";
+import { MetadataService } from "@/internal/metadata/MetadataService";
 
 /** A plan a long-lived link granted with enable_plan_immediately, before it is paid.
  * Its payment metadata lives on the Stripe session, so it's carried like a pending row's. */
@@ -49,12 +50,12 @@ export const findUnpaidLongLivedCustomerProduct = async ({
 		customerProduct.stripe_checkout_session_id,
 	);
 	const metadataId = session.metadata?.autumn_metadata_id;
-	if (
-		!session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY] ||
-		!metadataId
-	) {
-		return;
-	}
+	const isUnpaidLongLived =
+		session.status !== "complete" &&
+		session.metadata?.[LONG_LIVED_CHECKOUT_STRIPE_METADATA_KEY] &&
+		metadataId &&
+		(await MetadataService.get({ db: ctx.db, id: metadataId }));
+	if (!isUnpaidLongLived) return;
 
 	return { ...customerProduct, metadata_id: metadataId };
 };
