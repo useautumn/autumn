@@ -1,4 +1,6 @@
 import { approvalErrorResult, isErrorResult } from "./approvalErrors.js";
+import { permissionDenialText } from "./permissionDenialText.js";
+import { readPermissionDeniedError } from "./readPermissionDeniedError.js";
 
 /** `unknown` = the call may or may not have reached the server — never
  * auto-retried, a re-run could double-charge. */
@@ -18,7 +20,11 @@ export const classifyWriteExecution = ({
 		return { detail: approvalErrorResult(error).message, status: "unknown" };
 	}
 	if (isErrorResult(result)) {
-		return { detail: approvalErrorResult(result).message, status: "failed" };
+		const denial = readPermissionDeniedError(result);
+		const detail = denial
+			? permissionDenialText({ denial })
+			: approvalErrorResult(result).message;
+		return { detail, status: "failed" };
 	}
 	return { result, status: "applied" };
 };
