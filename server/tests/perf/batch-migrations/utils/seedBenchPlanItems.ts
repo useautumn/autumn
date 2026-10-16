@@ -89,6 +89,7 @@ export const ensureBenchPlanItemProduct = async ({
 			name,
 			created_at: Date.now(),
 			version: 1,
+			is_add_on: false,
 		});
 	}
 

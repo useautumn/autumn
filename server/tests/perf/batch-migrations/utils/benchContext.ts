@@ -162,6 +162,7 @@ const ensureProduct = async ({
 		version: 1,
 		version_slug: "v1",
 		active: true,
+		is_add_on: false,
 	});
 	return internalId;
 };
