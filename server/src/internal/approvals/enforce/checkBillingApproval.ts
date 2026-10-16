@@ -6,10 +6,13 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { ctxToApprovalPrincipal } from "@/internal/approvals/evaluate/ctxToApprovalPrincipal";
 import { evaluateBillingApproval } from "@/internal/approvals/evaluate/evaluateBillingApproval";
+import { listRulesForAction } from "@/internal/approvals/evaluate/listRulesForAction";
 import { billingFactsToJson } from "@/internal/approvals/facts/billing/billingFactsToJson";
 import { rejectRuleAdmittedRequest } from "./access/rejectRuleAdmittedRequest";
 import { logApprovalDecision } from "./logApprovalDecision";
+import { setupApprovalTaxRate } from "./setupApprovalTaxRate";
 
 type CheckBillingApprovalParams = {
 	ctx: AutumnContext;
@@ -31,9 +34,14 @@ const decideBillingApproval = async ({
 	logDecision = true,
 	enforced,
 }: CheckBillingApprovalParams & { enforced: boolean }) => {
+	const rulesMayApply =
+		ctxToApprovalPrincipal({ ctx }) !== null &&
+		(await listRulesForAction({ ctx, action })).length > 0;
 	const approval = await evaluateBillingApproval({
 		ctx,
-		billingContext,
+		billingContext: rulesMayApply
+			? await setupApprovalTaxRate({ ctx, billingContext })
+			: billingContext,
 		billingPlan,
 		action,
 		nextCycleStripeSubscriptionId,
