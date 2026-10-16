@@ -1,6 +1,7 @@
 import {
 	type AffectedResource,
 	type ApiVersion,
+	AuthType,
 	checkScopes,
 	ErrCode,
 	RecaseError,
@@ -228,12 +229,25 @@ export function createRoute<
 
 		const granted = ctx.scopes;
 
-		// Legacy fail-open: no scopes on key/session ⇒ allow with warning.
+		const hasNoScopes = !granted || granted.length === 0;
+
+		// A session's scopes come from its role, so none means an unknown role: deny, don't fail open.
+		if (hasNoScopes && ctx.authType === AuthType.Dashboard) {
+			if (checkScopes(opts.scopes, []).allowed) return next();
+			throw new RecaseError({
+				message:
+					"Your role in this organization grants no access. Ask an owner or admin to assign you a role.",
+				code: ErrCode.InsufficientScopes,
+				statusCode: 403,
+			});
+		}
+
+		// Legacy fail-open: no scopes on an API key ⇒ allow.
 		// Covers:
 		//   - Legacy API keys created before the scopes column existed
 		//   - Public keys (by design bypass the scope system)
 		//   - Cached API key payloads from before the deploy
-		if (!granted || granted.length === 0) {
+		if (hasNoScopes) {
 			return next();
 		}
 
