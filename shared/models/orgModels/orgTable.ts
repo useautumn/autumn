@@ -168,6 +168,13 @@ export const organizations = pgTable(
 			.concurrently(),
 		unique("organizations_test_pkey_key").on(table.test_pkey),
 		unique("organizations_live_pkey_key").on(table.live_pkey),
+		index("idx_organizations_redis_configured")
+			.on(table.id)
+			.where(sql`${table.redis_config} IS NOT NULL`)
+			.concurrently(),
+		index("idx_organizations_owner_sandbox_created")
+			.on(table.created_by, table.is_sandbox, sql`${table.createdAt} DESC`)
+			.concurrently(),
 	],
 );
 

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -50,6 +51,9 @@ export const balanceLocks = pgTable(
 		// The customer load reads a customer's open locks.
 		index("idx_balance_locks_internal_customer_id")
 			.on(table.internal_customer_id)
+			.concurrently(),
+		index("idx_balance_locks_internal_customer_id_c")
+			.on(sql`${table.internal_customer_id} COLLATE "C"`)
 			.concurrently(),
 		// The expiry sweep reads the oldest due locks.
 		index("idx_balance_locks_expires_at")

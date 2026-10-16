@@ -1,5 +1,6 @@
 import type {
 	KafkaProducerFactory,
+	KafkaProducerStatistics,
 	KafkaRequestTiming,
 	KafkaSender,
 	KafkaTransaction,
@@ -20,6 +21,8 @@ export function createProducerSession({
 		kafka: KafkaProducerFactory;
 		/** Called for every broker request this producer makes. Must not throw. */
 		onRequest?: (timing: KafkaRequestTiming) => void;
+		/** Called once per statistics window of this producer. Must not throw. */
+		onStatistics?: (statistics: KafkaProducerStatistics) => void;
 	};
 	config: KafkaProducerSessionConfig;
 }): KafkaProducerSession {
@@ -29,6 +32,8 @@ export function createProducerSession({
 	};
 	if (dependencies.onRequest)
 		ctx.producer.onRequestTimings?.(guardTelemetry(dependencies.onRequest));
+	if (dependencies.onStatistics)
+		ctx.producer.onStatistics?.(guardTelemetry(dependencies.onStatistics));
 	const state: ProducerSessionState = {
 		initialized: false,
 		connected: false,
@@ -124,12 +129,12 @@ export function createProducerSession({
 	return { connect, fence, transaction, send, isUsable, disconnect, mode };
 }
 
-function guardTelemetry(
-	onRequest: (timing: KafkaRequestTiming) => void,
-): (timing: KafkaRequestTiming) => void {
-	function report(timing: KafkaRequestTiming): void {
+function guardTelemetry<Event>(
+	listener: (event: Event) => void,
+): (event: Event) => void {
+	function report(event: Event): void {
 		try {
-			onRequest(timing);
+			listener(event);
 		} catch {
 			// Timing is telemetry; it must never fail a produce.
 		}

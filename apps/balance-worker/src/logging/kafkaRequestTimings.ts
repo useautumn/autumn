@@ -1,5 +1,9 @@
 import type { KafkaRequestTiming } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
+import {
+	type createKafkaBrokerStatistics,
+	kafkaBrokersMessageOf,
+} from "./kafkaBrokerStatistics.js";
 import { percentileOf, sampleInto } from "./sampleWindow.js";
 
 export type KafkaRequestSummary = {
@@ -117,14 +121,18 @@ export const kafkaRequestTimings = createKafkaRequestTimings();
 
 const REQUEST_REPORT_INTERVAL_MS = 10_000;
 
-/** Logs one `balance_worker.kafka_requests` line per Kafka API every ten seconds. */
+/**
+ * Every ten seconds, logs one `balance_worker.kafka_requests` line per Kafka API and one
+ * `balance_worker.kafka_brokers` line, a warning when a broker stalled.
+ */
 export function createKafkaRequestReporter({
 	ctx,
 	config,
 }: {
 	ctx: {
-		logger: Pick<AutumnLogger, "info">;
+		logger: Pick<AutumnLogger, "info" | "warn">;
 		timings: Pick<ReturnType<typeof createKafkaRequestTimings>, "drain">;
+		brokers: Pick<ReturnType<typeof createKafkaBrokerStatistics>, "drain">;
 	};
 	config: { deployment: string; endpoint: string };
 }): { start(): void; stop(): void } {
@@ -142,14 +150,37 @@ export function createKafkaRequestReporter({
 					`Kafka ${summary.api}: ${summary.count} requests, p50 ${summary.p50}ms p99 ${summary.p99}ms`,
 				);
 			}
+			reportBrokers();
 		} catch {
 			// Telemetry must never disturb the worker.
 		}
 	}
 
+	function reportBrokers(): void {
+		const brokers = ctx.brokers.drain();
+		if (brokers.length === 0) return;
+		const stalledBrokers = brokers
+			.filter((broker) => broker.stalled)
+			.map((broker) => broker.id);
+		const fields = {
+			event: "balance_worker.kafka_brokers",
+			workerDeployment: config.deployment,
+			data: {
+				workerEndpoint: config.endpoint,
+				stalled: stalledBrokers.length > 0,
+				stalledBrokers,
+				brokers,
+			},
+		};
+		const message = kafkaBrokersMessageOf({ brokers });
+		if (stalledBrokers.length > 0) ctx.logger.warn(fields, message);
+		else ctx.logger.info(fields, message);
+	}
+
 	function start(): void {
 		if (timer) return;
 		ctx.timings.drain();
+		ctx.brokers.drain();
 		timer = setInterval(report, REQUEST_REPORT_INTERVAL_MS);
 		timer.unref();
 	}
