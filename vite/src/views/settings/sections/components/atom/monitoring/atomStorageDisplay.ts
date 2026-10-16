@@ -1,8 +1,4 @@
-import {
-	type AtomMetricsRange,
-	type AtomVolume,
-	BYOC_CACHE_REPLICAS,
-} from "@autumn/shared";
+import type { AtomMetricsRange, AtomVolume } from "@autumn/shared";
 import {
 	type AtomMetricsChartData,
 	type AtomMetricsPlotRow,
@@ -49,22 +45,16 @@ export const atomVolumeUsage = (volume: AtomVolume | undefined) => {
 	};
 };
 
-/** Each replica in a stable order, e.g. "Replica 1 · 15.2 / 20 GiB"; one that reported nothing says so. */
-export const atomReplicaLines = (volumes: AtomVolume[]) => {
-	const byReplica = [...volumes].sort((a, b) =>
-		a.replica_id.localeCompare(b.replica_id),
-	);
-	return Array.from(
-		{ length: Math.max(BYOC_CACHE_REPLICAS, byReplica.length) },
-		(_, index) => {
-			const usage = atomVolumeUsage(byReplica[index]);
-			const reading = usage
-				? `${usage.used} / ${usage.total} GiB`
-				: "not reporting";
-			return `Replica ${index + 1} · ${reading}`;
-		},
-	);
-};
+/** Each reporting replica in a stable order, e.g. "Replica 1 · 15.2 / 20 GiB". */
+export const atomReplicaLines = (volumes: AtomVolume[]) =>
+	[...volumes]
+		.sort((a, b) => a.replica_id.localeCompare(b.replica_id))
+		.flatMap((volume, index) => {
+			const usage = atomVolumeUsage(volume);
+			return usage
+				? [`Replica ${index + 1} · ${usage.used} / ${usage.total} GiB`]
+				: [];
+		});
 
 /** Every eviction the plotted periods counted. */
 export const atomEvictionsTotal = (chartData: AtomMetricsChartData) =>

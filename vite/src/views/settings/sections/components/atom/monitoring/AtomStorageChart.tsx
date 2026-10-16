@@ -94,7 +94,11 @@ const StorageInfo = ({ volumes }: { volumes: AtomVolume[] }) => (
 			their next checks go to the API until they are cached again.
 		</p>
 		<p>Evictions count events across both replicas, not unique customers.</p>
-		{volumes.length > 0 && <p>{atomReplicaLines(volumes).join(" · ")}</p>}
+		<p>
+			{volumes.length > 0
+				? atomReplicaLines(volumes).join(" · ")
+				: "Readings come from the Atom's health reports in Axiom, so they are unavailable on a local dev stack and until the Atom first reports."}
+		</p>
 	</div>
 );
 

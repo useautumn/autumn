@@ -100,7 +100,7 @@ describe("the storage card's readings", () => {
 		expect(atomVolumeUsage(undefined)).toBeNull();
 	});
 
-	test("says when a replica is not reporting", () => {
+	test("lists only the replicas that report", () => {
 		expect(
 			atomReplicaLines([
 				{
@@ -110,7 +110,7 @@ describe("the storage card's readings", () => {
 					at: 0,
 				},
 			]),
-		).toEqual(["Replica 1 · 14.8 / 20 GiB", "Replica 2 · not reporting"]);
+		).toEqual(["Replica 1 · 14.8 / 20 GiB"]);
 	});
 
 	test("counts evictions in the window", () => {
