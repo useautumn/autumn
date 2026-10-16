@@ -14,6 +14,7 @@ import {
 	executeCreditSystemSchemaRewrites,
 	executeFeatureReferenceRewrites,
 } from "@/internal/catalogV2/execute/executeFeatureReferenceRewrites";
+import { executeFeatureRuleRewrite } from "@/internal/catalogV2/execute/executeFeatureRuleRewrite";
 import {
 	initStripeResourcesForCatalog,
 	stripeInitTargets,
@@ -106,7 +107,7 @@ const executeUpdateFeatures = async ({
 				ctx,
 				feature: op.next,
 			});
-			return FeatureService.update({
+			const saved = await FeatureService.update({
 				db: ctx.db,
 				id: op.current.id,
 				orgId: ctx.org.id,
@@ -124,6 +125,10 @@ const executeUpdateFeatures = async ({
 					stripe_meter: next.stripe_meter,
 				},
 			});
+			if (saved) {
+				await executeFeatureRuleRewrite({ ctx, updateFeaturePlan: op });
+			}
+			return saved;
 		}),
 	);
 

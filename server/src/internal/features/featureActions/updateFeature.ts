@@ -11,6 +11,7 @@ import {
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { rewriteApprovalRuleIds } from "@/internal/approvals/renames/rewriteApprovalRuleIds.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { workflows } from "@/queue/workflows.js";
@@ -299,6 +300,16 @@ export const updateFeature = async ({
 			display: updates.display,
 		},
 	});
+
+	// After the save, so a rename that fails validation never moves rule references.
+	if (isChangingId && updates.id && updatedFeature) {
+		await rewriteApprovalRuleIds({
+			ctx,
+			key: "feature_id",
+			fromId: feature.id,
+			toId: updates.id,
+		});
+	}
 
 	// Queue display generation if name changed
 	if (isChangingName && updatedFeature) {

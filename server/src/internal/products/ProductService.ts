@@ -657,19 +657,29 @@ export class ProductService {
 	}
 
 	// UPDATES
+	/** With `expectedId`, saves only if the row still has that id; returns whether a row was saved. */
 	static async updateByInternalId({
 		db,
 		internalId,
 		update,
+		expectedId,
 	}: {
 		db: DrizzleCli;
 		internalId: string;
 		update: any;
+		expectedId?: string;
 	}) {
-		await db
+		const saved = await db
 			.update(products)
 			.set(update)
-			.where(eq(products.internal_id, internalId));
+			.where(
+				and(
+					eq(products.internal_id, internalId),
+					expectedId === undefined ? undefined : eq(products.id, expectedId),
+				),
+			)
+			.returning({ internal_id: products.internal_id });
+		return saved.length > 0;
 	}
 
 	// DELETES
