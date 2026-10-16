@@ -119,11 +119,13 @@ test.skipIf(!replicaSetRunsHere)(
 			atomCustomerId: pair.atomCustomerId,
 			openLocks: [`${pair.apiCustomerId}-lock`],
 		});
+		// Unique per run: the API's claim outlives the customer the pair recreates.
+		const run = Date.now();
 		const finalize = (customerId: string) => ({
 			lockName: "lock",
 			action: "confirm" as const,
 			overrideValue: 10,
-			idempotencyKey: `${customerId}-finalize`,
+			idempotencyKey: `${customerId}-finalize-${run}`,
 		});
 
 		const apiFirst = await finalizeOnApi({

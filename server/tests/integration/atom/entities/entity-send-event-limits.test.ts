@@ -119,9 +119,11 @@ test.skipIf(!replicaSetRunsHere)(
 			requiredBalance: 10,
 			sendEvent: true,
 		};
+		// Unique per run: the API's claim outlives the customer the pair recreates.
+		const run = Date.now();
 		const keyed = (customerId: string) => ({
 			...check,
-			idempotencyKey: `${customerId}-key`,
+			idempotencyKey: `${customerId}-key-${run}`,
 		});
 
 		for (let attempt = 0; attempt < 2; attempt++) {
