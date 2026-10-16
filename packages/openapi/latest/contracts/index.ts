@@ -1,5 +1,14 @@
 import { oc } from "@orpc/contract";
 import {
+	createApprovalRuleContract,
+	deleteApprovalRuleContract,
+	getApprovalRuleContract,
+	listApprovalRulesContract,
+	listApprovalRuleVersionsContract,
+	reorderApprovalRulesContract,
+	updateApprovalRuleContract,
+} from "./approvalRulesContract.js";
+import {
 	balancesBatchTrackContract,
 	balancesCheckContract,
 	balancesCreateContract,
@@ -117,6 +126,7 @@ import {
 	rewardsRedeemCodeContract,
 	rewardsUpdateContract,
 } from "./referralsContract.js";
+import { listRolesContract } from "./rolesContract.js";
 import {
 	createSandboxContract,
 	createSandboxKeyContract,
@@ -261,6 +271,16 @@ export const v2_3ContractRouter = oc.router({
 	webhooksDelete: deleteWebhookContract,
 	webhooksPreviewSync: previewSyncWebhooksContract,
 	webhooksSync: syncWebhooksContract,
+
+	// Approval rules (who needs approval for which billing actions) and the roles they name
+	approvalRulesList: listApprovalRulesContract,
+	approvalRulesGet: getApprovalRuleContract,
+	approvalRulesCreate: createApprovalRuleContract,
+	approvalRulesUpdate: updateApprovalRuleContract,
+	approvalRulesDelete: deleteApprovalRuleContract,
+	approvalRulesReorder: reorderApprovalRulesContract,
+	approvalRulesVersionsList: listApprovalRuleVersionsContract,
+	rolesList: listRolesContract,
 });
 
 /**
