@@ -12,6 +12,7 @@ import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
+import { subjectLoadGate } from "../../../src/external/postgres/subjectLoadGate.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -25,9 +26,11 @@ import {
 } from "../../../src/init/workerConfig.js";
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
+import { databaseTimings } from "../../../src/logging/databaseTimings.js";
 import { createPartitionLoad } from "../../../src/processor/writer/partitionLoad/createPartitionLoad.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
+import { installPgLatency } from "./pgLatency.js";
 
 // BENCH_FETCH_REJOIN=1 restores unpatched kafkajs: a fetch that finds stale leadership also rejoins the group.
 if (process.env.BENCH_FETCH_REJOIN === "1") {
@@ -83,6 +86,24 @@ function describe(value: unknown): unknown {
 		),
 	);
 }
+
+// BENCH_PG_DELAY_MS: per-transaction Postgres latency, off until the orchestrator sends SIGUSR2.
+if (process.env.BENCH_PG_DELAY_MS)
+	installPgLatency({
+		medianMs: Number(process.env.BENCH_PG_DELAY_MS),
+		sigma: Number(process.env.BENCH_PG_DELAY_SIGMA ?? 0.58),
+		onToggle: ({ armed }) => emit("pg_latency", { armed }),
+	});
+// BENCH_DB_REPORT=1: the balance_worker.database window every second instead of every ten.
+if (process.env.BENCH_DB_REPORT === "1")
+	setInterval(
+		() =>
+			emit("db.window", {
+				subjectLoads: subjectLoadGate.snapshot(),
+				...databaseTimings.drain(),
+			}),
+		1_000,
+	);
 
 const checkpointConfig = createWorkerCheckpointConfig({ env });
 const address = await resolveWorkerAddress({ env });
