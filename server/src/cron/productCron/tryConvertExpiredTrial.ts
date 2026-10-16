@@ -8,6 +8,7 @@ import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { isCustomerProductAutumnManagedTrial } from "@/internal/billing/v2/setup/trialContext/isCustomerProductAutumnManagedTrial";
 import { customerHasInvoiceEmail } from "@/internal/billing/v2/utils/invoiceMode/customerHasInvoiceEmail";
@@ -137,21 +138,28 @@ const billExpiredTrial = async ({
 		customerProduct,
 	});
 
-	const { billingResult } = await billingActions.updateSubscription({
+	const { billingResult } = await withApprovalSkipped({
 		ctx,
-		params: {
-			customer_id: fullCustomer.id || fullCustomer.internal_id,
-			customer_product_id: customerProduct.id,
-			entity_id: customerProductToEntityId({ fullCustomer, customerProduct }),
-			version: customerProduct.product.version,
-			redirect_mode: "if_required",
-			...(invoiceMode && { invoice_mode: invoiceMode }),
-		},
-		contextOverride: {
-			...(paymentBehaviorIntent && { paymentBehaviorIntent }),
-			billingUpdatedTags: ["trial_ended"],
-		},
-		options: { skipAutumnCheckout: true },
+		run: () =>
+			billingActions.updateSubscription({
+				ctx,
+				params: {
+					customer_id: fullCustomer.id || fullCustomer.internal_id,
+					customer_product_id: customerProduct.id,
+					entity_id: customerProductToEntityId({
+						fullCustomer,
+						customerProduct,
+					}),
+					version: customerProduct.product.version,
+					redirect_mode: "if_required",
+					...(invoiceMode && { invoice_mode: invoiceMode }),
+				},
+				contextOverride: {
+					...(paymentBehaviorIntent && { paymentBehaviorIntent }),
+					billingUpdatedTags: ["trial_ended"],
+				},
+				options: { skipAutumnCheckout: true },
+			}),
 	});
 
 	// Billed only when a live subscription came back, not a deferred plan awaiting a failed payment.

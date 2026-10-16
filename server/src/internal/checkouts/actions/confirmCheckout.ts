@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createScheduleParamsToSetPlansParams } from "@/internal/billing/v2/actions/setPlans/utils/createScheduleParamsToSetPlansParams";
 import { setPlansResultToResponse } from "@/internal/billing/v2/actions/setPlans/utils/setPlansResultToResponse";
@@ -86,12 +87,18 @@ export const confirmCheckout = async ({
 
 	switch (checkout.action) {
 		case CheckoutAction.Attach: {
-			const checkoutResult = await billingActions.attach({
-				ctx,
-				params: params as AttachParamsV1,
-				preview: false,
-				skipAutumnCheckout: true,
-			});
+			const checkoutResult =
+				await // The member chose this when creating the checkout; confirming is the customer's step.
+				withApprovalSkipped({
+					ctx,
+					run: () =>
+						billingActions.attach({
+							ctx,
+							params: params as AttachParamsV1,
+							preview: false,
+							skipAutumnCheckout: true,
+						}),
+				});
 
 			billingContext = checkoutResult.billingContext;
 			billingResult = checkoutResult.billingResult;
@@ -99,13 +106,17 @@ export const confirmCheckout = async ({
 			break;
 		}
 		case CheckoutAction.UpdateSubscription: {
-			const checkoutResult = await billingActions.updateSubscription({
+			const checkoutResult = await withApprovalSkipped({
 				ctx,
-				params: params as UpdateSubscriptionV1Params,
-				preview: false,
-				options: {
-					skipAutumnCheckout: true,
-				},
+				run: () =>
+					billingActions.updateSubscription({
+						ctx,
+						params: params as UpdateSubscriptionV1Params,
+						preview: false,
+						options: {
+							skipAutumnCheckout: true,
+						},
+					}),
 			});
 
 			billingContext = checkoutResult.billingContext;
@@ -118,10 +129,14 @@ export const confirmCheckout = async ({
 				params: params as CreateScheduleParamsV0 | SetPlansParamsV0,
 			});
 			const checkoutResult = setPlansResultToResponse({
-				result: await billingActions.setPlans({
+				result: await withApprovalSkipped({
 					ctx,
-					params: setPlansParams,
-					skipAutumnCheckout: true,
+					run: () =>
+						billingActions.setPlans({
+							ctx,
+							params: setPlansParams,
+							skipAutumnCheckout: true,
+						}),
 				}),
 			});
 
