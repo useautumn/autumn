@@ -89,7 +89,6 @@ const computeAttachNewCustomerProductResult = ({
 		attachProduct,
 		fullCustomer,
 		currentCustomerProduct,
-		carryOverSourceCustomerProduct,
 		planTiming,
 		endOfCycleMs,
 		stripeSubscription,
