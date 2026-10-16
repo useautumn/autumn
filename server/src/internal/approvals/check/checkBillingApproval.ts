@@ -1,5 +1,6 @@
 import { attachTestFacts } from "./attachTestFacts";
 import { billingContextToApprovalAction } from "./billingContextToApprovalAction";
+import { evaluateBillingApproval } from "./evaluateBillingApproval";
 import { lazyBillingApprovalFacts } from "./lazyBillingApprovalFacts";
 import type { BillingApprovalOutcome } from "./types/billingApprovalOutcome";
 import type { CheckBillingApprovalParams } from "./types/checkBillingApprovalParams";
@@ -19,6 +20,7 @@ export const checkBillingApproval = async (
 	};
 	const facts = lazyBillingApprovalFacts({ ...params, action });
 	if (ctx.skipApproval) return outcome;
+	await evaluateBillingApproval({ params, outcome, facts });
 
 	if (preview) await attachTestFacts({ params, outcome, facts });
 	return outcome;
