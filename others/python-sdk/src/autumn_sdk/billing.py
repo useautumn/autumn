@@ -4301,7 +4301,7 @@ class Billing(BaseSDK):
         Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
 
         :param customer_id: Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
-        :param subscription_ids: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+        :param subscription_ids: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.
         :param strict: When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -4399,7 +4399,7 @@ class Billing(BaseSDK):
         Use this endpoint to audit that a customer's Stripe subscriptions, items, quantities, prices, schedules and cancellation state match what Autumn expects, for example after a migration or a manual change in Stripe.
 
         :param customer_id: Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
-        :param subscription_ids: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+        :param subscription_ids: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.
         :param strict: When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method

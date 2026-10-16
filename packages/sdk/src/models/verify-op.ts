@@ -23,13 +23,48 @@ export type VerifyParams = {
    */
   customerId: string;
   /**
-   * Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+   * Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.
    */
   subscriptionIds?: Array<string> | undefined;
   /**
    * When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.
    */
   strict?: boolean | undefined;
+};
+
+/**
+ * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+ */
+export const CustomerMismatchSeverity13 = {
+  Error: "error",
+  Warning: "warning",
+} as const;
+/**
+ * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+ */
+export type CustomerMismatchSeverity13 = OpenEnum<
+  typeof CustomerMismatchSeverity13
+>;
+
+export type CustomerMismatchOtherCustomer = {
+  id: string;
+  name: string | null;
+  email: string | null;
+};
+
+export type CustomerMismatch13 = {
+  type: "shared_stripe_customer";
+  /**
+   * Human-readable one-line description of the mismatch.
+   */
+  message?: string | undefined;
+  /**
+   * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+   */
+  severity?: CustomerMismatchSeverity13 | undefined;
+  stripeCustomerId: string;
+  otherCustomerIds: Array<string>;
+  otherCustomers?: Array<CustomerMismatchOtherCustomer> | undefined;
 };
 
 /**
@@ -46,14 +81,8 @@ export type CustomerMismatchSeverity12 = OpenEnum<
   typeof CustomerMismatchSeverity12
 >;
 
-export type CustomerMismatchOtherCustomer = {
-  id: string;
-  name: string | null;
-  email: string | null;
-};
-
 export type CustomerMismatch12 = {
-  type: "shared_stripe_customer";
+  type: "expected_state_error";
   /**
    * Human-readable one-line description of the mismatch.
    */
@@ -62,9 +91,7 @@ export type CustomerMismatch12 = {
    * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
    */
   severity?: CustomerMismatchSeverity12 | undefined;
-  stripeCustomerId: string;
-  otherCustomerIds: Array<string>;
-  otherCustomers?: Array<CustomerMismatchOtherCustomer> | undefined;
+  error: string;
 };
 
 /**
@@ -82,7 +109,7 @@ export type CustomerMismatchSeverity11 = OpenEnum<
 >;
 
 export type CustomerMismatch11 = {
-  type: "expected_state_error";
+  type: "missing_stripe_subscription";
   /**
    * Human-readable one-line description of the mismatch.
    */
@@ -91,7 +118,16 @@ export type CustomerMismatch11 = {
    * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
    */
   severity?: CustomerMismatchSeverity11 | undefined;
-  error: string;
+  customerProductId: string;
+  /**
+   * The Autumn plan that has no Stripe subscription.
+   */
+  planId: string;
+  planName?: string | undefined;
+  /**
+   * The entity holding the plan, when it is entity-scoped.
+   */
+  entityId?: string | undefined;
 };
 
 /**
@@ -465,6 +501,7 @@ export type CustomerMismatchUnion =
   | CustomerMismatch10
   | CustomerMismatch11
   | CustomerMismatch12
+  | CustomerMismatch13
   | discriminatedUnionTypes.Unknown<"type">;
 
 export const VerifyStatus = {
@@ -472,6 +509,39 @@ export const VerifyStatus = {
   Mismatched: "mismatched",
 } as const;
 export type VerifyStatus = OpenEnum<typeof VerifyStatus>;
+
+/**
+ * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+ */
+export const MismatchSeverity13 = {
+  Error: "error",
+  Warning: "warning",
+} as const;
+/**
+ * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+ */
+export type MismatchSeverity13 = OpenEnum<typeof MismatchSeverity13>;
+
+export type MismatchOtherCustomer = {
+  id: string;
+  name: string | null;
+  email: string | null;
+};
+
+export type Mismatch13 = {
+  type: "shared_stripe_customer";
+  /**
+   * Human-readable one-line description of the mismatch.
+   */
+  message?: string | undefined;
+  /**
+   * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+   */
+  severity?: MismatchSeverity13 | undefined;
+  stripeCustomerId: string;
+  otherCustomerIds: Array<string>;
+  otherCustomers?: Array<MismatchOtherCustomer> | undefined;
+};
 
 /**
  * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
@@ -485,14 +555,8 @@ export const MismatchSeverity12 = {
  */
 export type MismatchSeverity12 = OpenEnum<typeof MismatchSeverity12>;
 
-export type MismatchOtherCustomer = {
-  id: string;
-  name: string | null;
-  email: string | null;
-};
-
 export type Mismatch12 = {
-  type: "shared_stripe_customer";
+  type: "expected_state_error";
   /**
    * Human-readable one-line description of the mismatch.
    */
@@ -501,9 +565,7 @@ export type Mismatch12 = {
    * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
    */
   severity?: MismatchSeverity12 | undefined;
-  stripeCustomerId: string;
-  otherCustomerIds: Array<string>;
-  otherCustomers?: Array<MismatchOtherCustomer> | undefined;
+  error: string;
 };
 
 /**
@@ -519,7 +581,7 @@ export const MismatchSeverity11 = {
 export type MismatchSeverity11 = OpenEnum<typeof MismatchSeverity11>;
 
 export type Mismatch11 = {
-  type: "expected_state_error";
+  type: "missing_stripe_subscription";
   /**
    * Human-readable one-line description of the mismatch.
    */
@@ -528,7 +590,16 @@ export type Mismatch11 = {
    * How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
    */
   severity?: MismatchSeverity11 | undefined;
-  error: string;
+  customerProductId: string;
+  /**
+   * The Autumn plan that has no Stripe subscription.
+   */
+  planId: string;
+  planName?: string | undefined;
+  /**
+   * The entity holding the plan, when it is entity-scoped.
+   */
+  entityId?: string | undefined;
 };
 
 /**
@@ -880,6 +951,7 @@ export type MismatchUnion =
   | Mismatch10
   | Mismatch11
   | Mismatch12
+  | Mismatch13
   | discriminatedUnionTypes.Unknown<"type">;
 
 export type VerifySubscription = {
@@ -898,6 +970,7 @@ export type VerifySubscription = {
     | Mismatch10
     | Mismatch11
     | Mismatch12
+    | Mismatch13
     | discriminatedUnionTypes.Unknown<"type">
   >;
 };
@@ -920,6 +993,7 @@ export type VerifyResponse = {
     | CustomerMismatch10
     | CustomerMismatch11
     | CustomerMismatch12
+    | CustomerMismatch13
     | discriminatedUnionTypes.Unknown<"type">
   >;
   subscriptions: Array<VerifySubscription>;
@@ -955,10 +1029,10 @@ export function verifyParamsToJSON(verifyParams: VerifyParams): string {
 }
 
 /** @internal */
-export const CustomerMismatchSeverity12$inboundSchema: z.ZodMiniType<
-  CustomerMismatchSeverity12,
+export const CustomerMismatchSeverity13$inboundSchema: z.ZodMiniType<
+  CustomerMismatchSeverity13,
   unknown
-> = openEnums.inboundSchema(CustomerMismatchSeverity12);
+> = openEnums.inboundSchema(CustomerMismatchSeverity13);
 
 /** @internal */
 export const CustomerMismatchOtherCustomer$inboundSchema: z.ZodMiniType<
@@ -981,14 +1055,14 @@ export function customerMismatchOtherCustomerFromJSON(
 }
 
 /** @internal */
-export const CustomerMismatch12$inboundSchema: z.ZodMiniType<
-  CustomerMismatch12,
+export const CustomerMismatch13$inboundSchema: z.ZodMiniType<
+  CustomerMismatch13,
   unknown
 > = z.pipe(
   z.object({
     type: types.literal("shared_stripe_customer"),
     message: types.optional(types.string()),
-    severity: types.optional(CustomerMismatchSeverity12$inboundSchema),
+    severity: types.optional(CustomerMismatchSeverity13$inboundSchema),
     stripe_customer_id: types.string(),
     other_customer_ids: z.array(types.string()),
     other_customers: types.optional(
@@ -1003,6 +1077,33 @@ export const CustomerMismatch12$inboundSchema: z.ZodMiniType<
     });
   }),
 );
+
+export function customerMismatch13FromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerMismatch13, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerMismatch13$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerMismatch13' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerMismatchSeverity12$inboundSchema: z.ZodMiniType<
+  CustomerMismatchSeverity12,
+  unknown
+> = openEnums.inboundSchema(CustomerMismatchSeverity12);
+
+/** @internal */
+export const CustomerMismatch12$inboundSchema: z.ZodMiniType<
+  CustomerMismatch12,
+  unknown
+> = z.object({
+  type: types.literal("expected_state_error"),
+  message: types.optional(types.string()),
+  severity: types.optional(CustomerMismatchSeverity12$inboundSchema),
+  error: types.string(),
+});
 
 export function customerMismatch12FromJSON(
   jsonString: string,
@@ -1024,12 +1125,25 @@ export const CustomerMismatchSeverity11$inboundSchema: z.ZodMiniType<
 export const CustomerMismatch11$inboundSchema: z.ZodMiniType<
   CustomerMismatch11,
   unknown
-> = z.object({
-  type: types.literal("expected_state_error"),
-  message: types.optional(types.string()),
-  severity: types.optional(CustomerMismatchSeverity11$inboundSchema),
-  error: types.string(),
-});
+> = z.pipe(
+  z.object({
+    type: types.literal("missing_stripe_subscription"),
+    message: types.optional(types.string()),
+    severity: types.optional(CustomerMismatchSeverity11$inboundSchema),
+    customer_product_id: types.string(),
+    plan_id: types.string(),
+    plan_name: types.optional(types.string()),
+    entity_id: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_product_id": "customerProductId",
+      "plan_id": "planId",
+      "plan_name": "planName",
+      "entity_id": "entityId",
+    });
+  }),
+);
 
 export function customerMismatch11FromJSON(
   jsonString: string,
@@ -1477,8 +1591,9 @@ export const CustomerMismatchUnion$inboundSchema: z.ZodMiniType<
   stripe_sub_not_in_autumn: z.lazy(() => CustomerMismatch8$inboundSchema),
   plan_on_ending_subscription: z.lazy(() => CustomerMismatch9$inboundSchema),
   stale_subscription_link: z.lazy(() => CustomerMismatch10$inboundSchema),
-  expected_state_error: z.lazy(() => CustomerMismatch11$inboundSchema),
-  shared_stripe_customer: z.lazy(() => CustomerMismatch12$inboundSchema),
+  missing_stripe_subscription: z.lazy(() => CustomerMismatch11$inboundSchema),
+  expected_state_error: z.lazy(() => CustomerMismatch12$inboundSchema),
+  shared_stripe_customer: z.lazy(() => CustomerMismatch13$inboundSchema),
 });
 
 export function customerMismatchUnionFromJSON(
@@ -1496,10 +1611,10 @@ export const VerifyStatus$inboundSchema: z.ZodMiniType<VerifyStatus, unknown> =
   openEnums.inboundSchema(VerifyStatus);
 
 /** @internal */
-export const MismatchSeverity12$inboundSchema: z.ZodMiniType<
-  MismatchSeverity12,
+export const MismatchSeverity13$inboundSchema: z.ZodMiniType<
+  MismatchSeverity13,
   unknown
-> = openEnums.inboundSchema(MismatchSeverity12);
+> = openEnums.inboundSchema(MismatchSeverity13);
 
 /** @internal */
 export const MismatchOtherCustomer$inboundSchema: z.ZodMiniType<
@@ -1522,12 +1637,12 @@ export function mismatchOtherCustomerFromJSON(
 }
 
 /** @internal */
-export const Mismatch12$inboundSchema: z.ZodMiniType<Mismatch12, unknown> = z
+export const Mismatch13$inboundSchema: z.ZodMiniType<Mismatch13, unknown> = z
   .pipe(
     z.object({
       type: types.literal("shared_stripe_customer"),
       message: types.optional(types.string()),
-      severity: types.optional(MismatchSeverity12$inboundSchema),
+      severity: types.optional(MismatchSeverity13$inboundSchema),
       stripe_customer_id: types.string(),
       other_customer_ids: z.array(types.string()),
       other_customers: types.optional(
@@ -1542,6 +1657,31 @@ export const Mismatch12$inboundSchema: z.ZodMiniType<Mismatch12, unknown> = z
       });
     }),
   );
+
+export function mismatch13FromJSON(
+  jsonString: string,
+): SafeParseResult<Mismatch13, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Mismatch13$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Mismatch13' from JSON`,
+  );
+}
+
+/** @internal */
+export const MismatchSeverity12$inboundSchema: z.ZodMiniType<
+  MismatchSeverity12,
+  unknown
+> = openEnums.inboundSchema(MismatchSeverity12);
+
+/** @internal */
+export const Mismatch12$inboundSchema: z.ZodMiniType<Mismatch12, unknown> = z
+  .object({
+    type: types.literal("expected_state_error"),
+    message: types.optional(types.string()),
+    severity: types.optional(MismatchSeverity12$inboundSchema),
+    error: types.string(),
+  });
 
 export function mismatch12FromJSON(
   jsonString: string,
@@ -1561,12 +1701,25 @@ export const MismatchSeverity11$inboundSchema: z.ZodMiniType<
 
 /** @internal */
 export const Mismatch11$inboundSchema: z.ZodMiniType<Mismatch11, unknown> = z
-  .object({
-    type: types.literal("expected_state_error"),
-    message: types.optional(types.string()),
-    severity: types.optional(MismatchSeverity11$inboundSchema),
-    error: types.string(),
-  });
+  .pipe(
+    z.object({
+      type: types.literal("missing_stripe_subscription"),
+      message: types.optional(types.string()),
+      severity: types.optional(MismatchSeverity11$inboundSchema),
+      customer_product_id: types.string(),
+      plan_id: types.string(),
+      plan_name: types.optional(types.string()),
+      entity_id: types.optional(types.string()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "customer_product_id": "customerProductId",
+        "plan_id": "planId",
+        "plan_name": "planName",
+        "entity_id": "entityId",
+      });
+    }),
+  );
 
 export function mismatch11FromJSON(
   jsonString: string,
@@ -1994,8 +2147,9 @@ export const MismatchUnion$inboundSchema: z.ZodMiniType<
   stripe_sub_not_in_autumn: z.lazy(() => Mismatch8$inboundSchema),
   plan_on_ending_subscription: z.lazy(() => Mismatch9$inboundSchema),
   stale_subscription_link: z.lazy(() => Mismatch10$inboundSchema),
-  expected_state_error: z.lazy(() => Mismatch11$inboundSchema),
-  shared_stripe_customer: z.lazy(() => Mismatch12$inboundSchema),
+  missing_stripe_subscription: z.lazy(() => Mismatch11$inboundSchema),
+  expected_state_error: z.lazy(() => Mismatch12$inboundSchema),
+  shared_stripe_customer: z.lazy(() => Mismatch13$inboundSchema),
 });
 
 export function mismatchUnionFromJSON(
@@ -2027,8 +2181,9 @@ export const VerifySubscription$inboundSchema: z.ZodMiniType<
       stripe_sub_not_in_autumn: z.lazy(() => Mismatch8$inboundSchema),
       plan_on_ending_subscription: z.lazy(() => Mismatch9$inboundSchema),
       stale_subscription_link: z.lazy(() => Mismatch10$inboundSchema),
-      expected_state_error: z.lazy(() => Mismatch11$inboundSchema),
-      shared_stripe_customer: z.lazy(() => Mismatch12$inboundSchema),
+      missing_stripe_subscription: z.lazy(() => Mismatch11$inboundSchema),
+      expected_state_error: z.lazy(() => Mismatch12$inboundSchema),
+      shared_stripe_customer: z.lazy(() => Mismatch13$inboundSchema),
     })),
   }),
   z.transform((v) => {
@@ -2068,8 +2223,11 @@ export const VerifyResponse$inboundSchema: z.ZodMiniType<
         CustomerMismatch9$inboundSchema
       ),
       stale_subscription_link: z.lazy(() => CustomerMismatch10$inboundSchema),
-      expected_state_error: z.lazy(() => CustomerMismatch11$inboundSchema),
-      shared_stripe_customer: z.lazy(() => CustomerMismatch12$inboundSchema),
+      missing_stripe_subscription: z.lazy(() =>
+        CustomerMismatch11$inboundSchema
+      ),
+      expected_state_error: z.lazy(() => CustomerMismatch12$inboundSchema),
+      shared_stripe_customer: z.lazy(() => CustomerMismatch13$inboundSchema),
     })),
     subscriptions: z.array(z.lazy(() => VerifySubscription$inboundSchema)),
   }),

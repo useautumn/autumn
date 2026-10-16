@@ -49,7 +49,7 @@ errors mean Stripe will bill differently from what Autumn expects.
 </DynamicParamField>
 
 <DynamicParamField body="subscription_ids" type="string[]">
-  Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+  Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.
 </DynamicParamField>
 
 <DynamicParamField body="strict" type="boolean">
@@ -61,7 +61,7 @@ errors mean Stripe will bill differently from what Autumn expects.
 
 <DynamicResponseField name="customer_id" type="string" />
 
-<DynamicResponseField name="customer_mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object[]">
+<DynamicResponseField name="customer_mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object | object[]">
   <Expandable title="properties">
     <DynamicResponseField name="type" type="any" />
 
@@ -129,6 +129,12 @@ errors mean Stripe will bill differently from what Autumn expects.
 
     <DynamicResponseField name="ending_subscription_id" type="string" />
 
+    <DynamicResponseField name="customer_product_id" type="string" />
+
+    <DynamicResponseField name="entity_id" type="string">
+      The entity holding the plan, when it is entity-scoped.
+    </DynamicResponseField>
+
     <DynamicResponseField name="error" type="string" />
 
     <DynamicResponseField name="stripe_customer_id" type="string" />
@@ -155,7 +161,7 @@ errors mean Stripe will bill differently from what Autumn expects.
 
     <DynamicResponseField name="status" type="'correct' | 'mismatched'" />
 
-    <DynamicResponseField name="mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object[]">
+    <DynamicResponseField name="mismatches" type="object | object | object | object | object | object | object | object | object | object | object | object | object[]">
       <Expandable title="properties">
         <DynamicResponseField name="type" type="any" />
 
@@ -222,6 +228,12 @@ errors mean Stripe will bill differently from what Autumn expects.
         <DynamicResponseField name="unexpected_reward_ids" type="string[]" />
 
         <DynamicResponseField name="ending_subscription_id" type="string" />
+
+        <DynamicResponseField name="customer_product_id" type="string" />
+
+        <DynamicResponseField name="entity_id" type="string">
+          The entity holding the plan, when it is entity-scoped.
+        </DynamicResponseField>
 
         <DynamicResponseField name="error" type="string" />
 

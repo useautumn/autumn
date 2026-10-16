@@ -44,7 +44,7 @@ class VerifyParamsTypedDict(TypedDict):
     customer_id: str
     r"""Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products."""
     subscription_ids: NotRequired[List[str]]
-    r"""Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn."""
+    r"""Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted."""
     strict: NotRequired[bool]
     r"""When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false."""
 
@@ -54,7 +54,7 @@ class VerifyParams(BaseModel):
     r"""Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products."""
 
     subscription_ids: Optional[List[str]] = None
-    r"""Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn."""
+    r"""Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted."""
 
     strict: Optional[bool] = None
     r"""When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false."""
@@ -76,7 +76,7 @@ class VerifyParams(BaseModel):
         return m
 
 
-CustomerMismatchSeverity12 = Union[
+CustomerMismatchSeverity13 = Union[
     Literal[
         "error",
         "warning",
@@ -114,18 +114,18 @@ class CustomerMismatchOtherCustomer(BaseModel):
         return m
 
 
-class CustomerMismatch12TypedDict(TypedDict):
+class CustomerMismatch13TypedDict(TypedDict):
     stripe_customer_id: str
     other_customer_ids: List[str]
     type: Literal["shared_stripe_customer"]
     message: NotRequired[str]
     r"""Human-readable one-line description of the mismatch."""
-    severity: NotRequired[CustomerMismatchSeverity12]
+    severity: NotRequired[CustomerMismatchSeverity13]
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
     other_customers: NotRequired[List[CustomerMismatchOtherCustomerTypedDict]]
 
 
-class CustomerMismatch12(BaseModel):
+class CustomerMismatch13(BaseModel):
     stripe_customer_id: str
 
     other_customer_ids: List[str]
@@ -141,7 +141,7 @@ class CustomerMismatch12(BaseModel):
     message: Optional[str] = None
     r"""Human-readable one-line description of the mismatch."""
 
-    severity: Optional[CustomerMismatchSeverity12] = None
+    severity: Optional[CustomerMismatchSeverity13] = None
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
 
     other_customers: Optional[List[CustomerMismatchOtherCustomer]] = None
@@ -149,6 +149,59 @@ class CustomerMismatch12(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["message", "severity", "other_customers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CustomerMismatchSeverity12 = Union[
+    Literal[
+        "error",
+        "warning",
+    ],
+    UnrecognizedStr,
+]
+r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+
+class CustomerMismatch12TypedDict(TypedDict):
+    error: str
+    type: Literal["expected_state_error"]
+    message: NotRequired[str]
+    r"""Human-readable one-line description of the mismatch."""
+    severity: NotRequired[CustomerMismatchSeverity12]
+    r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+
+class CustomerMismatch12(BaseModel):
+    error: str
+
+    type: Annotated[
+        Annotated[
+            Literal["expected_state_error"],
+            AfterValidator(validate_const("expected_state_error")),
+        ],
+        pydantic.Field(alias="type"),
+    ] = "expected_state_error"
+
+    message: Optional[str] = None
+    r"""Human-readable one-line description of the mismatch."""
+
+    severity: Optional[CustomerMismatchSeverity12] = None
+    r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["message", "severity"])
         serialized = handler(self)
         m = {}
 
@@ -174,24 +227,32 @@ r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) c
 
 
 class CustomerMismatch11TypedDict(TypedDict):
-    error: str
-    type: Literal["expected_state_error"]
+    customer_product_id: str
+    plan_id: str
+    r"""The Autumn plan that has no Stripe subscription."""
+    type: Literal["missing_stripe_subscription"]
     message: NotRequired[str]
     r"""Human-readable one-line description of the mismatch."""
     severity: NotRequired[CustomerMismatchSeverity11]
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+    plan_name: NotRequired[str]
+    entity_id: NotRequired[str]
+    r"""The entity holding the plan, when it is entity-scoped."""
 
 
 class CustomerMismatch11(BaseModel):
-    error: str
+    customer_product_id: str
+
+    plan_id: str
+    r"""The Autumn plan that has no Stripe subscription."""
 
     type: Annotated[
         Annotated[
-            Literal["expected_state_error"],
-            AfterValidator(validate_const("expected_state_error")),
+            Literal["missing_stripe_subscription"],
+            AfterValidator(validate_const("missing_stripe_subscription")),
         ],
         pydantic.Field(alias="type"),
-    ] = "expected_state_error"
+    ] = "missing_stripe_subscription"
 
     message: Optional[str] = None
     r"""Human-readable one-line description of the mismatch."""
@@ -199,9 +260,14 @@ class CustomerMismatch11(BaseModel):
     severity: Optional[CustomerMismatchSeverity11] = None
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
 
+    plan_name: Optional[str] = None
+
+    entity_id: Optional[str] = None
+    r"""The entity holding the plan, when it is entity-scoped."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["message", "severity"])
+        optional_fields = set(["message", "severity", "plan_name", "entity_id"])
         serialized = handler(self)
         m = {}
 
@@ -960,13 +1026,14 @@ CustomerMismatchUnionTypedDict = TypeAliasType(
     Union[
         CustomerMismatch8TypedDict,
         CustomerMismatch10TypedDict,
-        CustomerMismatch9TypedDict,
-        CustomerMismatch11TypedDict,
-        CustomerMismatch6TypedDict,
-        CustomerMismatch7TypedDict,
         CustomerMismatch12TypedDict,
-        CustomerMismatch4TypedDict,
+        CustomerMismatch9TypedDict,
+        CustomerMismatch7TypedDict,
+        CustomerMismatch6TypedDict,
+        CustomerMismatch13TypedDict,
+        CustomerMismatch11TypedDict,
         CustomerMismatch5TypedDict,
+        CustomerMismatch4TypedDict,
         CustomerMismatch3TypedDict,
         CustomerMismatch1TypedDict,
         CustomerMismatch2TypedDict,
@@ -995,8 +1062,9 @@ _CUSTOMER_MISMATCH_UNION_VARIANTS: dict[str, Any] = {
     "stripe_sub_not_in_autumn": CustomerMismatch8,
     "plan_on_ending_subscription": CustomerMismatch9,
     "stale_subscription_link": CustomerMismatch10,
-    "expected_state_error": CustomerMismatch11,
-    "shared_stripe_customer": CustomerMismatch12,
+    "missing_stripe_subscription": CustomerMismatch11,
+    "expected_state_error": CustomerMismatch12,
+    "shared_stripe_customer": CustomerMismatch13,
 }
 
 
@@ -1014,6 +1082,7 @@ CustomerMismatchUnion = Annotated[
         CustomerMismatch10,
         CustomerMismatch11,
         CustomerMismatch12,
+        CustomerMismatch13,
         UnknownCustomerMismatchUnion,
     ],
     BeforeValidator(
@@ -1037,7 +1106,7 @@ VerifyStatus = Union[
 ]
 
 
-MismatchSeverity12 = Union[
+MismatchSeverity13 = Union[
     Literal[
         "error",
         "warning",
@@ -1075,18 +1144,18 @@ class MismatchOtherCustomer(BaseModel):
         return m
 
 
-class Mismatch12TypedDict(TypedDict):
+class Mismatch13TypedDict(TypedDict):
     stripe_customer_id: str
     other_customer_ids: List[str]
     type: Literal["shared_stripe_customer"]
     message: NotRequired[str]
     r"""Human-readable one-line description of the mismatch."""
-    severity: NotRequired[MismatchSeverity12]
+    severity: NotRequired[MismatchSeverity13]
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
     other_customers: NotRequired[List[MismatchOtherCustomerTypedDict]]
 
 
-class Mismatch12(BaseModel):
+class Mismatch13(BaseModel):
     stripe_customer_id: str
 
     other_customer_ids: List[str]
@@ -1102,7 +1171,7 @@ class Mismatch12(BaseModel):
     message: Optional[str] = None
     r"""Human-readable one-line description of the mismatch."""
 
-    severity: Optional[MismatchSeverity12] = None
+    severity: Optional[MismatchSeverity13] = None
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
 
     other_customers: Optional[List[MismatchOtherCustomer]] = None
@@ -1110,6 +1179,59 @@ class Mismatch12(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["message", "severity", "other_customers"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+MismatchSeverity12 = Union[
+    Literal[
+        "error",
+        "warning",
+    ],
+    UnrecognizedStr,
+]
+r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+
+class Mismatch12TypedDict(TypedDict):
+    error: str
+    type: Literal["expected_state_error"]
+    message: NotRequired[str]
+    r"""Human-readable one-line description of the mismatch."""
+    severity: NotRequired[MismatchSeverity12]
+    r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+
+class Mismatch12(BaseModel):
+    error: str
+
+    type: Annotated[
+        Annotated[
+            Literal["expected_state_error"],
+            AfterValidator(validate_const("expected_state_error")),
+        ],
+        pydantic.Field(alias="type"),
+    ] = "expected_state_error"
+
+    message: Optional[str] = None
+    r"""Human-readable one-line description of the mismatch."""
+
+    severity: Optional[MismatchSeverity12] = None
+    r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["message", "severity"])
         serialized = handler(self)
         m = {}
 
@@ -1135,24 +1257,32 @@ r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) c
 
 
 class Mismatch11TypedDict(TypedDict):
-    error: str
-    type: Literal["expected_state_error"]
+    customer_product_id: str
+    plan_id: str
+    r"""The Autumn plan that has no Stripe subscription."""
+    type: Literal["missing_stripe_subscription"]
     message: NotRequired[str]
     r"""Human-readable one-line description of the mismatch."""
     severity: NotRequired[MismatchSeverity11]
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
+    plan_name: NotRequired[str]
+    entity_id: NotRequired[str]
+    r"""The entity holding the plan, when it is entity-scoped."""
 
 
 class Mismatch11(BaseModel):
-    error: str
+    customer_product_id: str
+
+    plan_id: str
+    r"""The Autumn plan that has no Stripe subscription."""
 
     type: Annotated[
         Annotated[
-            Literal["expected_state_error"],
-            AfterValidator(validate_const("expected_state_error")),
+            Literal["missing_stripe_subscription"],
+            AfterValidator(validate_const("missing_stripe_subscription")),
         ],
         pydantic.Field(alias="type"),
-    ] = "expected_state_error"
+    ] = "missing_stripe_subscription"
 
     message: Optional[str] = None
     r"""Human-readable one-line description of the mismatch."""
@@ -1160,9 +1290,14 @@ class Mismatch11(BaseModel):
     severity: Optional[MismatchSeverity11] = None
     r"""How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate."""
 
+    plan_name: Optional[str] = None
+
+    entity_id: Optional[str] = None
+    r"""The entity holding the plan, when it is entity-scoped."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["message", "severity"])
+        optional_fields = set(["message", "severity", "plan_name", "entity_id"])
         serialized = handler(self)
         m = {}
 
@@ -1921,13 +2056,14 @@ MismatchUnionTypedDict = TypeAliasType(
     Union[
         Mismatch8TypedDict,
         Mismatch10TypedDict,
-        Mismatch9TypedDict,
-        Mismatch11TypedDict,
-        Mismatch6TypedDict,
-        Mismatch7TypedDict,
         Mismatch12TypedDict,
-        Mismatch4TypedDict,
+        Mismatch9TypedDict,
+        Mismatch7TypedDict,
+        Mismatch6TypedDict,
+        Mismatch13TypedDict,
+        Mismatch11TypedDict,
         Mismatch5TypedDict,
+        Mismatch4TypedDict,
         Mismatch3TypedDict,
         Mismatch1TypedDict,
         Mismatch2TypedDict,
@@ -1956,8 +2092,9 @@ _MISMATCH_UNION_VARIANTS: dict[str, Any] = {
     "stripe_sub_not_in_autumn": Mismatch8,
     "plan_on_ending_subscription": Mismatch9,
     "stale_subscription_link": Mismatch10,
-    "expected_state_error": Mismatch11,
-    "shared_stripe_customer": Mismatch12,
+    "missing_stripe_subscription": Mismatch11,
+    "expected_state_error": Mismatch12,
+    "shared_stripe_customer": Mismatch13,
 }
 
 
@@ -1975,6 +2112,7 @@ MismatchUnion = Annotated[
         Mismatch10,
         Mismatch11,
         Mismatch12,
+        Mismatch13,
         UnknownMismatchUnion,
     ],
     BeforeValidator(
@@ -2022,6 +2160,10 @@ class VerifyResponse(BaseModel):
 
 
 try:
+    CustomerMismatch13.model_rebuild()
+except NameError:
+    pass
+try:
     CustomerMismatch12.model_rebuild()
 except NameError:
     pass
@@ -2067,6 +2209,10 @@ except NameError:
     pass
 try:
     CustomerMismatch1.model_rebuild()
+except NameError:
+    pass
+try:
+    Mismatch13.model_rebuild()
 except NameError:
     pass
 try:

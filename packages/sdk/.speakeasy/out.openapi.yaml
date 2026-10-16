@@ -50499,7 +50499,7 @@ paths:
 
         @param customerId - Autumn customer whose Stripe subscriptions should be checked against Autumn's customer_products.
 
-        @param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. (optional)
+        @param subscriptionIds - Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted. (optional)
 
         @param strict - When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false. (optional)
 
@@ -50521,7 +50521,7 @@ paths:
                   type: array
                   items:
                     type: string
-                  description: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn.
+                  description: Optional whitelist of Stripe subscription IDs to verify. Defaults to every subscription linked to the customer's plans, plus any other active Stripe subscription on the customer, which is reported as not linked to Autumn. Paid plans with no Stripe subscription are only reported when this is omitted.
                 strict:
                   type: boolean
                   description: When true, report missing usage-based items and unexpected metered Stripe items. Defaults to false.
@@ -50832,6 +50832,33 @@ paths:
                               description: How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
                           required:
                             - type
+                        - type: object
+                          properties:
+                            type:
+                              const: missing_stripe_subscription
+                            message:
+                              type: string
+                              description: Human-readable one-line description of the mismatch.
+                            severity:
+                              enum:
+                                - error
+                                - warning
+                              type: string
+                              description: How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+                            customer_product_id:
+                              type: string
+                            plan_id:
+                              type: string
+                              description: The Autumn plan that has no Stripe subscription.
+                            plan_name:
+                              type: string
+                            entity_id:
+                              type: string
+                              description: The entity holding the plan, when it is entity-scoped.
+                          required:
+                            - type
+                            - customer_product_id
+                            - plan_id
                         - type: object
                           properties:
                             type:
@@ -51196,6 +51223,33 @@ paths:
                                     description: How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
                                 required:
                                   - type
+                              - type: object
+                                properties:
+                                  type:
+                                    const: missing_stripe_subscription
+                                  message:
+                                    type: string
+                                    description: Human-readable one-line description of the mismatch.
+                                  severity:
+                                    enum:
+                                      - error
+                                      - warning
+                                    type: string
+                                    description: How serious the mismatch is — warnings (e.g. a Stripe-only subscription) can be deliberate.
+                                  customer_product_id:
+                                    type: string
+                                  plan_id:
+                                    type: string
+                                    description: The Autumn plan that has no Stripe subscription.
+                                  plan_name:
+                                    type: string
+                                  entity_id:
+                                    type: string
+                                    description: The entity holding the plan, when it is entity-scoped.
+                                required:
+                                  - type
+                                  - customer_product_id
+                                  - plan_id
                               - type: object
                                 properties:
                                   type:
