@@ -101,10 +101,14 @@ export const getOneOffCustomerProductsToCleanup = async ({
 			FROM valid_one_off_cus_products oo
 			INNER JOIN products prod1 ON prod1.internal_id = oo.internal_product_id
 			WHERE EXISTS (
-				SELECT 1 
-				FROM customer_products cp2
-				INNER JOIN products prod2 ON prod2.internal_id = cp2.internal_product_id
-				WHERE cp2.internal_customer_id = oo.internal_customer_id
+				-- Probe per candidate via the active (product, customer) index; joining
+				-- every active customer product hashes ~21M rows on each run.
+				SELECT 1
+				FROM products prod2
+				INNER JOIN customer_products cp2 ON cp2.internal_product_id = prod2.internal_id
+				WHERE prod2.org_id = prod1.org_id
+				  AND prod2.env = prod1.env
+				  AND cp2.internal_customer_id = oo.internal_customer_id
 				  AND (
 				  	(cp2.internal_entity_id IS NULL AND oo.internal_entity_id IS NULL)
 				  	OR cp2.internal_entity_id = oo.internal_entity_id
