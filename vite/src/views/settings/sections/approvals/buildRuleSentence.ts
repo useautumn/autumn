@@ -13,6 +13,7 @@ export type RuleLabels = {
 	plan: (planId: string) => string;
 	feature: (featureId: string) => { name: string; unit: string };
 	money: (amount: number) => string;
+	reward: (rewardId: string) => string;
 };
 
 export type RuleCondition = { field: string; operator: string; value: string };
@@ -43,7 +44,8 @@ type Format = (params: { value: unknown; ctx: Ctx }) => string | null;
 type Field =
 	| { kind: "match"; format: Format }
 	| { kind: "each" }
-	| { kind: "object"; none?: string; any?: string };
+	| { kind: "object"; none?: string; any?: string }
+	| { kind: "plans" };
 
 const OPERATORS: Record<string, string> = {
 	$eq: "is",
@@ -100,6 +102,69 @@ const duration: Format = ({ value }) =>
 
 const match = (format: Format): Field => ({ kind: "match", format });
 
+/** The customer's plans, whatever the rule's effect: `$some` has, `$none` doesn't have (`{}` = no plans at all). */
+const PLAN_OPERATORS: Record<string, string> = {
+	$some: "has plan",
+	$none: "doesn't have plan",
+};
+
+/** `{ plan_id, version? }`, or an `$or` of them, as plan names; anything broader is null. */
+const planNames = ({
+	element,
+	ctx,
+}: {
+	element: unknown;
+	ctx: Ctx;
+}): string | null => {
+	if (!isFilter(element)) return null;
+	if (Array.isArray(element.$or) && Object.keys(element).length === 1) {
+		const names = element.$or.map((branch) =>
+			planNames({ element: branch, ctx }),
+		);
+		return names.every(Boolean) ? names.join(", ") : null;
+	}
+	const { plan_id: planId, version, ...rest } = element;
+	if (Object.keys(rest).length > 0) return null;
+	const isInOnly =
+		isFilter(planId) &&
+		Object.keys(planId).join() === "$in" &&
+		Array.isArray(planId.$in);
+	if (isInOnly && version === undefined) {
+		return (planId.$in as unknown[])
+			.map((id) => ctx.labels.plan(String(id)))
+			.join(", ");
+	}
+	if (typeof planId !== "string") return null;
+	const name = ctx.labels.plan(planId);
+	if (version === undefined) return name;
+	return typeof version === "number" ? `${name} v${version}` : null;
+};
+
+const planConditions = ({
+	value,
+	label,
+	ctx,
+}: {
+	value: unknown;
+	label: string | undefined;
+	ctx: Ctx;
+}): RuleCondition[] => {
+	const [quantifier, ...others] = isFilter(value) ? Object.keys(value) : [];
+	const operator = PLAN_OPERATORS[quantifier];
+	if (!label || !operator || others.length > 0 || !isFilter(value))
+		return [CUSTOM];
+	const element = value[quantifier];
+	if (
+		quantifier === "$none" &&
+		isFilter(element) &&
+		Object.keys(element).length === 0
+	) {
+		return [{ field: label, operator: "has no plans", value: "" }];
+	}
+	const names = planNames({ element, ctx });
+	return names ? [{ field: label, operator, value: names }] : [CUSTOM];
+};
+
 /** How each filter field's value reads; labels come from `APPROVAL_FILTER_FIELD_LABELS` by path. */
 const FIELDS: Record<string, Field> = {
 	paid: match(yesNo),
@@ -111,6 +176,9 @@ const FIELDS: Record<string, Field> = {
 	outgoing: { kind: "each" },
 	discounts: { kind: "each" },
 	customer: { kind: "object" },
+	customer_id: match(({ value }) => String(value)),
+	plan: { kind: "plans" },
+	reward_id: match(({ value, ctx }) => ctx.labels.reward(String(value))),
 	entity: { kind: "object", none: "none", any: "any" },
 	free_trial: { kind: "object", none: "none", any: "any" },
 	refund: { kind: "object" },
@@ -225,6 +293,9 @@ const fieldConditions = ({
 	if (field.kind === "each") return elementConditions({ value, ctx: inField });
 	if (field.kind === "object") {
 		return objectConditions({ field, value, label, ctx: inField });
+	}
+	if (field.kind === "plans") {
+		return planConditions({ value, label: ctx.fieldLabels[ctx.path], ctx });
 	}
 	if (!label) return [CUSTOM];
 	return matcherConditions({

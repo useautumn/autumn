@@ -45,6 +45,7 @@ const labels: RuleLabels = {
 	plan: (id) => NAMES[id] ?? id,
 	feature: (id) => ({ name: NAMES[id] ?? id, unit: UNITS[id] ?? "" }),
 	money: (amount) => `$${amount}`,
+	reward: (id) => (id === "launch20" ? "Launch 20%" : id),
 };
 
 const sentenceText = (parts: SentencePart[]) =>
@@ -498,6 +499,92 @@ describe("rule sentence: conditions", () => {
 			"a shape the list can't word yet",
 			{ filter: { invoice_mode: { enabled: true } } },
 			"Sales can Attach when Custom condition",
+		],
+	])("%s", (_name, input, expected) => {
+		expect(textOf(input)).toBe(expected);
+	});
+});
+
+describe("rule sentence: area fields", () => {
+	test.each<[string, Input, string]>([
+		[
+			"a reward by name",
+			{
+				effect: "block",
+				actions: ["rewards.redeem"],
+				filter: { reward_id: "launch20" },
+			},
+			"Sales can't Redeem reward when Reward is Launch 20%",
+		],
+		[
+			"customers by id",
+			{
+				effect: "block",
+				actions: ["customers.update"],
+				filter: { customer: { customer_id: { $in: ["acme", "globex"] } } },
+			},
+			"Sales can't Update customers when Customer is any of acme, globex",
+		],
+		[
+			"the customer's plans",
+			{
+				actions: ["invoices.create"],
+				filter: {
+					customer: {
+						plan: {
+							$some: {
+								$or: [{ plan_id: "pro" }, { plan_id: "team", version: 2 }],
+							},
+						},
+					},
+				},
+			},
+			"Sales can Create invoices when Customer has plan Pro, Team v2",
+		],
+		[
+			"several versionless plans",
+			{
+				actions: ["invoices.create"],
+				filter: {
+					customer: { plan: { $some: { plan_id: { $in: ["pro", "team"] } } } },
+				},
+			},
+			"Sales can Create invoices when Customer has plan Pro, Team",
+		],
+		[
+			"a plan the customer doesn't have",
+			{
+				effect: "block",
+				actions: ["invoices.create"],
+				filter: { customer: { plan: { $none: { plan_id: "pro" } } } },
+			},
+			"Sales can't Create invoices when Customer doesn't have plan Pro",
+		],
+		[
+			"a customer with no plans",
+			{
+				effect: "block",
+				actions: ["invoices.create"],
+				filter: { customer: { plan: { $none: {} } } },
+			},
+			"Sales can't Create invoices when Customer has no plans",
+		],
+		[
+			"a customer who has paid before",
+			{ effect: "block", filter: { customer: { has_paid: true } } },
+			"Sales can't Attach when Customer has paid before is Yes",
+		],
+		[
+			"a plan range the editor can't build",
+			{
+				actions: ["invoices.create"],
+				filter: {
+					customer: {
+						plan: { $some: { plan_id: "pro", version: { $gte: 2 } } },
+					},
+				},
+			},
+			"Sales can Create invoices when Custom condition",
 		],
 	])("%s", (_name, input, expected) => {
 		expect(textOf(input)).toBe(expected);
