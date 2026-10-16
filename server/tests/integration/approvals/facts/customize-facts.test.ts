@@ -86,3 +86,41 @@ test.concurrent(
 		expect(facts.incoming[0]).toMatchObject({ paid: true, customized: true });
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("customize facts 3: in a multi-attach, only the customized plan reads customized")}`,
+	async () => {
+		const customerId = "approvals-facts-customize-multi";
+		const messages = items.monthlyMessages({ includedUsage: 100 });
+		const pro = products.pro({ items: [messages] });
+		const addon = products.recurringAddOn({ id: "addon", items: [messages] });
+
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, addon] }),
+			],
+			actions: [],
+		});
+
+		const { _permission_facts: facts } =
+			await permissionFactsClient().billing.previewMultiAttach({
+				customer_id: customerId,
+				plans: [
+					{ plan_id: pro.id },
+					{
+						plan_id: addon.id,
+						customize: { price: itemsV2.monthlyPrice({ amount: 30 }) },
+					},
+				],
+			});
+
+		expect(facts.incoming).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ plan_id: pro.id, customized: false }),
+				expect.objectContaining({ plan_id: addon.id, customized: true }),
+			]),
+		);
+	},
+);
