@@ -1,6 +1,6 @@
-import type { ConsumerConfig } from "kafkajs";
 import { assertPositiveSafeInteger } from "../lib/assert.js";
 import type { KafkaConsumerGroupTimings } from "./types/kafkaLimits.js";
+import type { ConsumerConfig } from "./types/kafkaWire.js";
 
 export const TAIL_FETCH_MAX_WAIT_MS = 5_000;
 
@@ -35,17 +35,21 @@ export function assertConsumerGroupTimings({
 	}
 }
 
+/** A group's config; its protocol is the client's (`groupProtocol`, KIP-848 unless the deployment says classic). */
 export function createConsumerGroupConfig({
 	groupId,
 	timings,
+	remoteAssignor,
 }: {
 	groupId: string;
 	timings: KafkaConsumerGroupTimings;
+	remoteAssignor?: ConsumerConfig["remoteAssignor"];
 }): ConsumerConfig {
 	if (groupId.trim().length === 0) throw new Error("groupId cannot be empty");
 	assertConsumerGroupTimings({ timings });
 	return {
 		groupId,
+		...(remoteAssignor && { remoteAssignor }),
 		readUncommitted: false,
 		allowAutoTopicCreation: false,
 		maxWaitTimeInMs: timings.fetchMaxWaitTimeMs,

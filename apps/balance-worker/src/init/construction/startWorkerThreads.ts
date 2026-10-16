@@ -1,4 +1,3 @@
-import type { KafkaTokenInfo } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import { createHttpWorkerPool } from "../../http/workerThreads/createHttpWorkerPool.js";
 import type { HttpWorkerPoolConfig } from "../../http/workerThreads/types/httpWorkerPool.js";
@@ -27,7 +26,6 @@ export async function startWorkerThreads({
 			cause: unknown;
 			scope: "http-workers" | "producer-thread";
 		}): void;
-		onToken(info: KafkaTokenInfo): void;
 		/** Where held replies learn their fate: the commit positions, and how a failure is answered. */
 		heldReplies?: Omit<Parameters<typeof connectHeldReplies>[0], "http">;
 	};
@@ -58,7 +56,6 @@ export async function startWorkerThreads({
 		ctx: {
 			logger: ctx.logger,
 			onFatal: producerThreadFailed,
-			onToken: ctx.onToken,
 		},
 		config: config.producers,
 	});

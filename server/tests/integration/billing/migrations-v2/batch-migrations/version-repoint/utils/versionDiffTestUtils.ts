@@ -75,6 +75,7 @@ export const expectVersionRepointedOnce = async ({
 	before,
 	targetVersion,
 	result,
+	isCustom,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -82,6 +83,7 @@ export const expectVersionRepointedOnce = async ({
 	before: Awaited<ReturnType<typeof readRepointableCustomerPlanRow>>;
 	targetVersion: number;
 	result: Parameters<typeof expectBatchLane>[0]["result"];
+	isCustom?: boolean;
 }) => {
 	expectBatchLane({ result });
 	const after = await readRepointableCustomerPlanRow({
@@ -89,7 +91,12 @@ export const expectVersionRepointedOnce = async ({
 		customerId,
 		planId,
 	});
-	expectCustomerPlanRepointedInPlace({ before, after, targetVersion });
+	expectCustomerPlanRepointedInPlace({
+		before,
+		after,
+		targetVersion,
+		isCustom,
+	});
 	expect(await readCustomerPlanRows({ ctx, customerId, planId })).toHaveLength(
 		1,
 	);

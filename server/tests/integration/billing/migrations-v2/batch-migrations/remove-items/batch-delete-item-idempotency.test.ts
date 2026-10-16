@@ -1,6 +1,6 @@
 /**
  * Replaying an identical delete must remain a clean no-op after the target row
- * is already gone.
+ * is already gone. The first run leaves the row custom, so neither filter pins custom.
  */
 import { expect, test } from "bun:test";
 import { MigrationItemRunStatus } from "@autumn/shared";
@@ -38,12 +38,12 @@ test(`${chalk.yellowBright("batch migration: replaying a delete is idempotent")}
 			ctx,
 			migrationClient: autumnV2_2,
 			migrationId,
-			filter: { customer: { plan: { plan_id: plan.id, custom: false } } },
+			filter: { customer: { plan: { plan_id: plan.id } } },
 			operations: {
 				customer: [
 					{
 						type: "update_plan",
-						plan_filter: { plan_id: plan.id, custom: false },
+						plan_filter: { plan_id: plan.id },
 						customize: {
 							remove_items: [{ feature_id: TestFeature.Messages }],
 						},

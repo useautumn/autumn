@@ -29,8 +29,19 @@ export async function enqueueCommands({
 		});
 	}
 	const commandLog = ctx.commandLog;
-	function append(): Promise<void> {
-		return commandLog.append({ records });
+	// A send that gave up may still have reached the broker, so its outcome is unknown, never a raw driver error.
+	async function append(): Promise<void> {
+		try {
+			await commandLog.append({ records });
+		} catch (cause) {
+			if (cause instanceof BalanceWorkerClientError) throw cause;
+			throw new BalanceWorkerClientError({
+				code: "COMMAND_LOG_UNAVAILABLE",
+				outcome: "unknown",
+				message: `Command log append failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+				cause,
+			});
+		}
 	}
 	await withAppendDeadline({ timeoutMs: ctx.timeoutMs, signal, run: append });
 }

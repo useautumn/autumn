@@ -3,8 +3,7 @@
  * on that thread. A send is one send frame on the send ring (or a `postMessage` when it does not fit), its
  * outcome one ack frame back; connect and disconnect are control messages.
  */
-import type { KafkaProducerClient } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
+import type { KafkaProducerClient, ProducerConfig } from "@autumn/kafka";
 import {
 	createRing,
 	createRingReader,

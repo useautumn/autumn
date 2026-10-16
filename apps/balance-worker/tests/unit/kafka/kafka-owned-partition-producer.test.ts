@@ -12,8 +12,9 @@ import {
 	type OwnershipTailRecord,
 	type OwnershipTailView,
 	ownershipTopic,
+	type ProducerConfig,
+	type ProducerRecord,
 } from "@autumn/kafka";
-import type { ProducerConfig, ProducerRecord } from "kafkajs";
 import { createMutationPublisher } from "../../../src/kafka/createMutationPublisher.js";
 import { createOwnershipPublisher } from "../../../src/kafka/createOwnershipPublisher.js";
 import {
@@ -89,7 +90,6 @@ describe("Kafka owned partition producer", () => {
 				"autumn-balance-worker:staging%2Feu-west-1:metering-events-v1:3",
 			idempotent: true,
 			maxInFlightRequests: 1,
-			createPartitioner: expect.any(Function),
 			transactionTimeout: 15_000,
 			retry: {
 				retries: 3,
@@ -639,6 +639,44 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			});
 			expect(await claim).toEqual({ routeEpoch: "8" });
 		});
+		test("a claim from before this worker's ready is not taken as the answer to it", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const claim = f.publication.awaitClaim({
+				signal: controller.signal,
+				afterReadyAt: 42,
+			});
+			// An earlier allocation's own claim, still arriving on the tail after the new one listens.
+			f.deliver({
+				partition: 2,
+				offset: 27n,
+				record: record({ type: "claimed", endpoint: "http://worker.test" }),
+			});
+			f.deliver({
+				partition: 2,
+				offset: 30n,
+				record: {
+					...record({ type: "ready", endpoint: "http://worker.test" }),
+				},
+			});
+			f.deliver({
+				partition: 2,
+				offset: 33n,
+				record: {
+					schemaVersion: 1,
+					type: "ready",
+					partition: 2,
+					endpoint: "http://worker.test",
+					readyAt: 42,
+				},
+			});
+			f.deliver({
+				partition: 2,
+				offset: 34n,
+				record: record({ type: "claimed", endpoint: "http://worker.test" }),
+			});
+			expect(await claim).toEqual({ routeEpoch: "34" });
+		});
 		test("an aborted wait rejects with the reason and stops listening", async () => {
 			const f = fixture({ withHandoff: true });
 			const controller = new AbortController();
@@ -691,13 +729,14 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			const append = await f.session.transaction();
 			const claim = f.publication.claim();
 			await Bun.sleep(1);
+			// The fence is the connect, so the append is the first transaction and the claim waits behind it.
 			expect(f.events.filter((event) => event === "transaction")).toHaveLength(
-				2,
+				1,
 			);
 			await append.commit();
 			await claim;
 			expect(f.events.filter((event) => event === "transaction")).toHaveLength(
-				3,
+				2,
 			);
 		});
 		for (const failure of ["ambiguous", "fenced"]) {

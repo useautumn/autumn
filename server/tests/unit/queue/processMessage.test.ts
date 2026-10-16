@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { BalanceWorkerClientError } from "@autumn/balance-worker-client";
 import { RecaseError } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
-import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackReplay.js";
+import { SpooledTrackTooOldError } from "@/internal/balances/track/balanceWorker/spool/spooledTrackErrors.js";
 import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { Kafka } from "kafkajs";
+import { createKafka } from "@autumn/kafka";
 import { createWorkerResources } from "../../../src/init/workerResources.js";
 import {
 	createSyntheticWorkerDb,
@@ -15,7 +15,13 @@ import {
 function createResourceFixture() {
 	const storeFixture = createStoreFixture();
 	const events: string[] = [];
-	const kafka = new Kafka({ brokers: ["127.0.0.1:19092"] });
+	const kafka = createKafka({
+		clientId: "worker-resources-test",
+		brokers: ["127.0.0.1:19092"],
+		connectionTimeout: 1_000,
+		requestTimeout: 1_000,
+		retry: { retries: 1, initialRetryTime: 1, maxRetryTime: 1 },
+	});
 	async function disconnect(): Promise<void> {
 		events.push("disconnect");
 	}

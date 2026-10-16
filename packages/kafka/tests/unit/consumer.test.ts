@@ -1,13 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type {
-	ConsumerEndBatchProcessEvent,
-	ConsumerRunConfig,
-	EachBatchPayload,
-	IHeaders,
-	KafkaMessage,
-	OffsetsByTopicPartition,
-} from "kafkajs";
-import { KafkaJSNonRetriableError, KafkaJSProtocolError } from "kafkajs";
 import { createProgressTracker } from "../../src/consumer/createProgressTracker.js";
 import { createTopicConsumer } from "../../src/consumer/createTopicConsumer.js";
 import type {
@@ -16,6 +7,15 @@ import type {
 	TopicRecordResult,
 	TopicResumePosition,
 } from "../../src/consumer/types/consumer.js";
+import type {
+	ConsumerEndBatchProcessEvent,
+	ConsumerRunConfig,
+	EachBatchPayload,
+	IHeaders,
+	KafkaMessage,
+	OffsetsByTopicPartition,
+} from "../../src/kafka.js";
+import { KafkaConsumerNotRunningError } from "../../src/kafka.js";
 import { InvalidRecordError } from "../../src/lib/recordErrors.js";
 import { OWNER_EPOCH_HEADER } from "../../src/producer/sendIdempotentBatch.js";
 import { OWNER_FENCE_HEADER } from "../../src/producer/sendOwnerFence.js";
@@ -167,7 +167,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		function isEmpty(): boolean {
 			return messages.length === 0;
 		}
-		function offsetLag(): string {
+		function _offsetLag(): string {
 			return "0";
 		}
 		function resolveOffset(offset: string): void {
@@ -234,8 +234,6 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 				firstOffset,
 				lastOffset,
 				isEmpty,
-				offsetLag,
-				offsetLagLow: offsetLag,
 			},
 			resolveOffset,
 			heartbeat,
@@ -267,19 +265,14 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 			| ((event: ConsumerEndBatchProcessEvent) => void)
 			| undefined;
 		listener?.({
-			id: "event",
 			type: "consumer.end_batch_process",
 			timestamp: 0,
 			payload: {
 				topic: eventTopic,
 				partition,
 				highWatermark: (BigInt(lastOffset) + 1n).toString(),
-				offsetLag: "0",
-				offsetLagLow: "0",
 				batchSize,
-				firstOffset: lastOffset,
 				lastOffset,
-				duration: 1,
 			},
 		});
 	}
@@ -427,16 +420,23 @@ async function failedCommitDoesNotAdvanceProgress(): Promise<void> {
 	}
 }
 
+const GROUP_REFUSAL_CODES = {
+	ILLEGAL_GENERATION: 22,
+	STALE_MEMBER_EPOCH: 113,
+	REBALANCE_IN_PROGRESS: 27,
+} as const;
+
 function groupRefusal({
 	type,
 	message,
 }: {
-	type: string;
+	type: keyof typeof GROUP_REFUSAL_CODES;
 	message: string;
-}): KafkaJSProtocolError {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error(message), { type, retriable: false }),
-	);
+}): Error {
+	return Object.assign(new Error(message), {
+		code: GROUP_REFUSAL_CODES[type],
+		retriable: false,
+	});
 }
 
 async function supersededGenerationCommitIsDropped(): Promise<void> {
@@ -524,6 +524,84 @@ async function reconcilesInitialOffsetAndRejoins(): Promise<void> {
 	expect(resumes).toBe(3);
 	expect(fixture.seeks).toHaveLength(2);
 	await consumer.stop();
+}
+
+/** A commit refusal as it reaches the batch: the broker's answer under whatever the caller wrapped it in. */
+function wrappedCommitRefusal({
+	type,
+	message,
+}: {
+	type: keyof typeof GROUP_REFUSAL_CODES;
+	message: string;
+}): Error {
+	return new Error("Kafka commit failed", {
+		cause: groupRefusal({ type, message }),
+	});
+}
+
+async function supersededResumeCommitIsDropped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "ILLEGAL_GENERATION",
+				message: "Specified group generation id is not valid",
+			}),
+		);
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([]);
+		expect(progress.read({ topic, partition })).toBeNull();
+
+		await fixture.deliverBatch({ records: [createRecord("3")] });
+		expect(fixture.seeks).toEqual([{ topic, partition, offset: "1" }]);
+	} finally {
+		await consumer.stop();
+	}
+}
+
+async function resumeCommitChurnReachesRunnerUnwrapped(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const progress = createProgressTracker();
+	function readResumeOffset(): bigint {
+		return 1n;
+	}
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress,
+		},
+		config: { topic },
+	});
+	await consumer.start();
+	try {
+		fixture.failNextCommit(
+			wrappedCommitRefusal({
+				type: "REBALANCE_IN_PROGRESS",
+				message: "The group is rebalancing, so a rejoin is needed",
+			}),
+		);
+		const delivery = fixture.deliverBatch({ records: [createRecord("3")] });
+		await expect(delivery).rejects.toMatchObject({
+			cause: { code: GROUP_REFUSAL_CODES.REBALANCE_IN_PROGRESS },
+		});
+		expect(fixture.seeks).toEqual([]);
+	} finally {
+		await consumer.stop();
+	}
 }
 
 async function reconcilesAdvancedApplicationOffset(): Promise<void> {
@@ -809,6 +887,14 @@ function topicConsumerTests(): void {
 		reconcilesInitialOffsetAndRejoins,
 	);
 	test(
+		"a resume-offset commit refused for a superseded generation is dropped instead of crashing the consumer",
+		supersededResumeCommitIsDropped,
+	);
+	test(
+		"other group churn on a resume-offset commit fails the batch, so the runner rewinds instead of seeking past it",
+		resumeCommitChurnReachesRunnerUnwrapped,
+	);
+	test(
 		"seeks beyond already applied records without folding the rest of the batch",
 		reconcilesAdvancedApplicationOffset,
 	);
@@ -1066,11 +1152,11 @@ function meteringConsumerTests(): void {
 describe("topicConsumer", topicConsumerTests);
 describe("meteringConsumer", meteringConsumerTests);
 
-import type { Consumer } from "kafkajs";
 import {
 	KafkaPartitionAssignmentRevokedError,
 	subscribePartitionChanges,
 } from "../../src/consumer/subscribePartitionChanges.js";
+import type { Consumer } from "../../src/kafka.js";
 
 describe("partition allocation events", function allocationEvents() {
 	const topic = "metering-events-v1";
@@ -1403,9 +1489,7 @@ test("a handler that declines a position gets the record passed without decoding
 
 test("steering a partition after the consumer group is gone is nothing to do, not a failure", async () => {
 	const gone = createConsumerFixture({
-		steeringFailure: new KafkaJSNonRetriableError(
-			"Consumer group was not initialized, consumer#run must be called first",
-		),
+		steeringFailure: new KafkaConsumerNotRunningError({ operation: "pause" }),
 	});
 	const consumer = createTopicConsumer({
 		ctx: {

@@ -4,6 +4,7 @@ import {
 	type Price,
 	type Product,
 	RecaseError,
+	type Reward,
 } from "@autumn/shared";
 import { resolveStripeProductIdForPrice } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -37,11 +38,16 @@ const planSharesStripeProductId = ({
 /** Stripe scopes coupons to products, so a partial group would silently discount the rest. */
 export const validateCouponStripeProductScope = async ({
 	ctx,
+	reward,
 	prices,
 }: {
 	ctx: AutumnContext;
+	reward: Pick<Reward, "discount_config">;
 	prices: (Price & { product?: Product | null })[];
 }) => {
+	// An apply-to-all coupon carries no Stripe product scope, so there is no partial group.
+	if (reward.discount_config?.apply_to_all) return;
+
 	const stripeProductIds = stripeProductIdsOfPrices({ prices });
 	if (stripeProductIds.size === 0) return;
 

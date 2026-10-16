@@ -1,11 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { isKafkaProducerFencingCause } from "@autumn/kafka";
 import {
-	KafkaJSError,
-	KafkaJSNumberOfRetriesExceeded,
-	KafkaJSProtocolError,
-} from "kafkajs";
-import { isRetriableKafkaError } from "../../../../../../packages/kafka/src/producer/sendTransactionalBatch.js";
+	hasKafkaErrorCode,
+	isKafkaProducerFencingCause,
+	isKafkaProtocolError,
+	isRetriableKafkaError,
+} from "@autumn/kafka";
 import {
 	decodeAckFrame,
 	encodeAckFrame,
@@ -22,14 +21,36 @@ import { producerErrorOf } from "../../../../src/kafka/producerThread/rules/prod
 
 const encoder = new TextEncoder();
 
-function protocolError({ type, code }: { type: string; code: number }) {
-	return new KafkaJSProtocolError(
-		Object.assign(new Error(`broker said ${type}`), {
-			type,
-			code,
-			retriable: false,
-		}),
-	);
+/** What Confluent's shim throws: librdkafka's code and its verdicts on the error itself. */
+function librdkafkaError({
+	name = "KafkaJSProtocolError",
+	message,
+	code,
+	retriable,
+	fatal = false,
+	abortable = false,
+}: {
+	name?: string;
+	message: string;
+	code: number;
+	retriable: boolean;
+	fatal?: boolean;
+	abortable?: boolean;
+}): Error {
+	const error = Object.assign(new Error(message), {
+		code,
+		retriable,
+		fatal,
+		abortable,
+	});
+	error.name = name;
+	return error;
+}
+
+function crossThreads(cause: unknown): Error {
+	return kafkaErrorOf({
+		error: structuredClone(producerErrorOf({ cause })),
+	});
 }
 
 describe("producer thread frames", () => {
@@ -84,56 +105,74 @@ describe("producer thread frames", () => {
 });
 
 describe("producer errors across threads", () => {
-	test("a broker refusal comes back as a KafkaJSProtocolError, so the batch is known to be uncommitted", () => {
-		const rebuilt = kafkaErrorOf({
-			error: producerErrorOf({
-				cause: protocolError({ type: "NOT_LEADER_FOR_PARTITION", code: 6 }),
-			}),
+	test("a broker refusal keeps its code, so it still reads as that refusal and the batch as uncommitted", () => {
+		const refusal = librdkafkaError({
+			message:
+				"Broker: Producer attempted a transactional operation in an invalid state",
+			code: 51,
+			retriable: true,
 		});
-		expect(rebuilt).toBeInstanceOf(KafkaJSProtocolError);
-		expect(rebuilt).toMatchObject({
-			type: "NOT_LEADER_FOR_PARTITION",
-			code: 6,
-		});
+		const rebuilt = crossThreads(refusal);
+		expect(rebuilt).toBeInstanceOf(Error);
+		expect(rebuilt.name).toBe("KafkaJSProtocolError");
+		expect(rebuilt.message).toBe(refusal.message);
+		const types = new Set(["CONCURRENT_TRANSACTIONS"]);
+		expect(isKafkaProtocolError({ cause: rebuilt, types })).toBe(true);
+		expect(isRetriableKafkaError(rebuilt)).toBe(true);
+		expect(rebuilt).toMatchObject({ fatal: false, abortable: false });
 	});
 
-	test("anything else comes back as a KafkaJSError whose nested cause still reads as fencing", () => {
-		const fenced = new KafkaJSNumberOfRetriesExceeded(
-			protocolError({ type: "INVALID_PRODUCER_EPOCH", code: 47 }),
-			{ retryCount: 5, retryTime: 300 },
-		);
-		const rebuilt = kafkaErrorOf({ error: producerErrorOf({ cause: fenced }) });
-		expect(rebuilt).toBeInstanceOf(KafkaJSError);
-		expect(rebuilt).not.toBeInstanceOf(KafkaJSProtocolError);
-		expect(rebuilt.name).toBe("KafkaJSNumberOfRetriesExceeded");
-		expect(isKafkaProducerFencingCause({ cause: rebuilt })).toBe(true);
-	});
-
-	test("retries exceeded on a retriable broker refusal keeps its class, so the writer still retries it", () => {
-		const exhausted = new KafkaJSNumberOfRetriesExceeded(
-			new KafkaJSProtocolError(
-				Object.assign(new Error("broker said NOT_LEADER_FOR_PARTITION"), {
-					type: "NOT_LEADER_FOR_PARTITION",
-					code: 6,
-					retriable: true,
-				}),
-			),
-			{ retryCount: 5, retryTime: 300 },
-		);
-		expect(isRetriableKafkaError(exhausted)).toBe(true);
-		const rebuilt = kafkaErrorOf({
-			error: producerErrorOf({ cause: exhausted }),
+	test("a client-side failure keeps its negative code and its verdict", () => {
+		const timedOut = librdkafkaError({
+			name: "KafkaJSError",
+			message: "Local: Message timed out",
+			code: -192,
+			retriable: true,
 		});
-		expect(rebuilt).toBeInstanceOf(KafkaJSNumberOfRetriesExceeded);
-		expect(rebuilt.name).toBe("KafkaJSNumberOfRetriesExceeded");
+		const rebuilt = crossThreads(timedOut);
+		expect(isKafkaProtocolError({ cause: rebuilt })).toBe(false);
+		expect(hasKafkaErrorCode({ cause: rebuilt, codes: new Set([-192]) })).toBe(
+			true,
+		);
 		expect(isRetriableKafkaError(rebuilt)).toBe(true);
 	});
 
-	test("a thrown non-error crosses as an unknown outcome", () => {
-		const rebuilt = kafkaErrorOf({
-			error: producerErrorOf({ cause: "socket closed" }),
+	test("a wrapper with no verdict of its own lets the cause's verdict through, as it would on this thread", () => {
+		const wrapped = new Error("commit failed", {
+			cause: librdkafkaError({
+				message: "Broker: Not leader for partition",
+				code: 6,
+				retriable: true,
+			}),
 		});
-		expect(rebuilt).toBeInstanceOf(KafkaJSError);
+		expect(isRetriableKafkaError(wrapped)).toBe(true);
+		expect(isRetriableKafkaError(crossThreads(wrapped))).toBe(true);
+	});
+
+	test("a fencing anywhere in the chain, cause, abort cause or aggregated, still reads as fencing", () => {
+		const fenced = librdkafkaError({
+			message: "Local: This instance has been fenced by a newer instance",
+			code: -144,
+			retriable: false,
+			fatal: true,
+		});
+		for (const cause of [
+			new Error("send failed", { cause: fenced }),
+			Object.assign(new Error("aborted"), { abortCause: fenced }),
+			new AggregateError([new Error("other"), fenced], "both failed"),
+		]) {
+			expect(isKafkaProducerFencingCause({ cause })).toBe(true);
+			expect(isKafkaProducerFencingCause({ cause: crossThreads(cause) })).toBe(
+				true,
+			);
+		}
+	});
+
+	test("a thrown non-error crosses as an unknown outcome", () => {
+		const rebuilt = crossThreads("socket closed");
+		expect(rebuilt).toBeInstanceOf(Error);
 		expect(rebuilt.message).toBe("socket closed");
+		expect(isKafkaProtocolError({ cause: rebuilt })).toBe(false);
+		expect(isRetriableKafkaError(rebuilt)).toBe(false);
 	});
 });

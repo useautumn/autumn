@@ -5,6 +5,7 @@ import type {
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
 import type {
+	Admin,
 	KafkaCommitMode,
 	KafkaConsumerGroupTimings,
 	KafkaOffsetCommit,
@@ -12,7 +13,6 @@ import type {
 	KafkaProducerLimits,
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
-import type { Admin } from "kafkajs";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
@@ -77,17 +77,19 @@ export type PartitionRuntimeFactoryContext = {
 	partitionResolver: MeteringPartitionResolver;
 	subjectSnapshotsConfig?: EdgeConfigStore<SubjectSnapshotsEdgeConfig>;
 	dbControl?: EdgeConfigStore<DbControlEdgeConfig>;
-	/** Shared by every partition runtime; the consumer group's assigner reads it on each rejoin. */
+	/** Shared by every partition runtime: what each partition commits. */
 	partitionLoad?: PartitionLoad;
 	/** The task's commit positions; each partition's writer publishes to its own cell. */
 	commitPositions?: Pick<CommitPositions, "sinkFor">;
 	/** Commits command offsets through the consumer group when no transaction carries them (idempotent commits). */
-	commandOffsets?: { commit(offsets: KafkaOffsetCommit): Promise<void> };
+	commandOffsets?: {
+		commit(offsets: Pick<KafkaOffsetCommit, "topics">): Promise<void>;
+	};
 };
 
 export type PartitionRuntimeFactoryConfig = {
 	deploymentEnvironment: string;
-	commands?: { commandTopic: string; groupId: string };
+	commands?: { commandTopic: string };
 	ownership: { topic: string; endpoint: string };
 	checkpointRestoreLimits: PartitionCheckpointRestoreLimits;
 	checkpointRetryPolicy: PartitionBootstrapRetryPolicy;

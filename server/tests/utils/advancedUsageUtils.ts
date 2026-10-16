@@ -1,3 +1,4 @@
+import { expect } from "bun:test";
 import assert from "node:assert";
 import type { Feature, ProductV2 } from "@autumn/shared";
 import { AutumnCli } from "@tests/cli/AutumnCli.js";
@@ -41,9 +42,10 @@ export const checkCreditBalance = async ({
 
 	try {
 		assert.equal(allowed, true);
-		assert.equal(
-			balanceObj.balance,
+		// Balances are stored as floats, so summing many 6-dp deductions can drift in the last bits.
+		expect(balanceObj.balance).toBeCloseTo(
 			new Decimal(originalAllowance).minus(totalCreditsUsed).toNumber(),
+			6,
 		);
 	} catch (error) {
 		console.group();

@@ -1,11 +1,11 @@
 import {
+	type Admin,
 	createOwnershipPublisher as createKafkaOwnershipPublisher,
 	type KafkaProducerSession,
 	type KafkaSender,
 	type OwnershipTail,
 	type OwnershipTailRecord,
 } from "@autumn/kafka";
-import type { Admin } from "kafkajs";
 import type { PartitionOwnershipPublication } from "../partitions/types/partitions.js";
 
 export function createOwnershipPublisher({
@@ -67,12 +67,16 @@ export function createOwnershipPublisher({
 		});
 	}
 
-	async function announceReady(): Promise<void> {
+	async function announceReady({
+		readyAt = Date.now(),
+	}: {
+		readyAt?: number;
+	} = {}): Promise<void> {
 		if (!ctx.handoff) return;
 		await publisher.announceReady({
 			partition: config.partition,
 			endpoint: config.endpoint,
-			readyAt: Date.now(),
+			readyAt,
 		});
 	}
 
@@ -211,12 +215,23 @@ export function createOwnershipPublisher({
 
 	function awaitClaim({
 		signal,
+		afterReadyAt,
 	}: {
 		signal: AbortSignal;
+		afterReadyAt?: number;
 	}): Promise<{ routeEpoch: string }> {
+		// A claim naming this worker can be an earlier allocation's, still arriving on the tail.
+		let answersReady = afterReadyAt === undefined;
 		function matchClaim({ record, offset }: OwnershipTailRecord) {
+			if (
+				record.type === "ready" &&
+				record.endpoint === config.endpoint &&
+				record.readyAt === afterReadyAt
+			)
+				answersReady = true;
 			if (record.type !== "claimed" || record.endpoint !== config.endpoint)
 				return undefined;
+			if (!answersReady) return undefined;
 			return { routeEpoch: offset.toString() };
 		}
 		return awaitRecord({ signal, match: matchClaim });
@@ -235,6 +250,6 @@ export function createOwnershipPublisher({
 		awaitDraining,
 		awaitForeignClaim,
 		awaitClaim,
-		awaitRouteClaim: awaitClaim,
+		awaitRouteClaim: ({ signal }) => awaitClaim({ signal }),
 	};
 }

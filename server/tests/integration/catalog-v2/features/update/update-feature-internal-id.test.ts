@@ -9,14 +9,17 @@
  *       previous_attributes
  *   I3  internal_id + the same feature_id is a no-op ("none")
  *   I4  an unknown internal_id is refused, naming the id
+ *   I5  a rename beside a plan whose items don't otherwise change returns that
+ *       plan under the new feature id
  */
 
 import { expect, test } from "bun:test";
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, ResetInterval } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { deleteDbPlans } from "../../plans/utils/expectCatalogPlans.js";
 import {
 	deleteDbFeatures,
 	expectDbFeaturesAbsent,
@@ -25,6 +28,7 @@ import {
 import {
 	expectCatalogPreviewCorrect,
 	expectCatalogResultsCorrect,
+	expectPlanFeatureIdsCorrect,
 } from "../../utils/expectCatalogUpdate.js";
 import { uniqueTestId } from "../../utils/uniqueTestId.js";
 
@@ -127,6 +131,67 @@ test.concurrent(
 				lenient.features.find((row) => row.feature_id === newId)?.action,
 			).toBe("none");
 		} finally {
+			await deleteDbFeatures({ ctx, featureIds });
+		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalogV2 internal_id: a rename beside an unchanged plan returns the plan under the new id")}`,
+	async () => {
+		const { autumnV2_3, ctx } = await initScenario({ setup: [], actions: [] });
+		const oldId = uniqueTestId("cv2_iid_plan_old");
+		const newId = uniqueTestId("cv2_iid_plan_new");
+		const planId = uniqueTestId("cv2_iid_plan");
+		const featureIds = [oldId, newId];
+		await deleteDbPlans({ ctx, planIds: [planId] });
+		await deleteDbFeatures({ ctx, featureIds });
+
+		const plan = (featureId: string) => ({
+			plan_id: planId,
+			name: "CatalogV2 Internal Id Plan",
+			items: [
+				{
+					feature_id: featureId,
+					included: 5,
+					reset: { interval: ResetInterval.Month },
+				},
+			],
+		});
+
+		try {
+			await autumnV2_3.catalogV2.update({
+				features: [consumableFeature(oldId)],
+				plans: [plan(oldId)],
+			});
+			const internalId = (
+				await FeatureService.list({
+					db: ctx.db,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				})
+			).find((candidate) => candidate.id === oldId)?.internal_id;
+
+			// I5
+			const response = await autumnV2_3.catalogV2.update({
+				features: [{ ...consumableFeature(newId), internal_id: internalId }],
+				plans: [plan(newId)],
+			});
+			expectCatalogResultsCorrect({
+				response,
+				features: [{ id: newId, action: "update" }],
+				returnedPlanIds: [planId],
+			});
+			expect(response.plans[0].items.map((item) => item.feature_id)).toEqual([
+				newId,
+			]);
+			await expectPlanFeatureIdsCorrect({
+				autumn: autumnV2_3,
+				planId,
+				featureIds: [newId],
+			});
+		} finally {
+			await deleteDbPlans({ ctx, planIds: [planId] });
 			await deleteDbFeatures({ ctx, featureIds });
 		}
 	},

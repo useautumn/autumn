@@ -95,36 +95,46 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 	});
 
 	test("should send 20 events and have correct balance", async () => {
-		const eventCount = 20;
-
-		const batchEvents = [];
-		for (let i = 0; i < eventCount; i++) {
-			const randomVal = new Decimal(Math.random().toFixed(PRECISION))
+		const randomValue = () =>
+			new Decimal(Math.random().toFixed(PRECISION))
 				.mul(CREDIT_MULTIPLIER)
-				.mul(Math.random() > 0.2 ? 1 : -1)
 				.toNumber();
-			const featureId = i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2;
 
+		const sendEvent = ({
+			featureId,
+			value,
+		}: {
+			featureId: string;
+			value: number;
+		}) => {
 			const creditsUsed = getCreditCost({
 				creditSystem: creditsFeature,
-				featureId: featureId,
-				amount: randomVal,
+				featureId,
+				amount: value,
 			});
-
 			totalCreditsUsed = new Decimal(totalCreditsUsed)
 				.plus(creditsUsed)
 				.toNumber();
 
-			batchEvents.push(
-				AutumnCli.sendEvent({
-					customerId: customerId,
-					featureId: featureId,
-					properties: { value: randomVal },
-				}),
-			);
-		}
+			return AutumnCli.sendEvent({
+				customerId,
+				featureId,
+				properties: { value },
+			});
+		};
 
-		await Promise.all(batchEvents);
+		const usages = Array.from({ length: 16 }, (_, i) => ({
+			featureId: i % 2 === 0 ? TestFeature.Action1 : TestFeature.Action2,
+			value: randomValue(),
+		}));
+		await Promise.all(usages.map(sendEvent));
+
+		// Refunds are capped at the starting balance, so each one refunds at most an already-tracked usage.
+		const refunds = usages.slice(0, 4).map(({ featureId, value }) => ({
+			featureId,
+			value: -Math.min(randomValue(), value),
+		}));
+		await Promise.all(refunds.map(sendEvent));
 		await new Promise((resolve) => setTimeout(resolve, 15000));
 
 		// Convert V2 product to V1 to get allowance

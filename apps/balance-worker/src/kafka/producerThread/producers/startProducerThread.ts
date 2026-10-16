@@ -1,5 +1,4 @@
 /** Boots the producer thread: its client is built there, and `ready` settles once it can take producers. */
-import type { KafkaTokenInfo } from "@autumn/kafka";
 import type {
 	ProducerThreadInit,
 	ProducerToDecideMessage,
@@ -24,18 +23,10 @@ function receive({
 			ack: { ok: false, error: message.error },
 		});
 	else if (message.kind === "request") {
-		const { event } = message;
-		const payload = {
-			apiName: event.apiName,
-			broker: event.broker,
-			duration: event.durationMs,
-			pendingDuration: event.pendingMs,
-		};
-		for (const listener of scope.requestListeners.get(event.producerId) ?? [])
-			listener({ payload });
-	} else if (message.kind === "token")
-		scope.ctx.onToken?.(message.info as KafkaTokenInfo);
-	else if (message.kind === "stopped") scope.stopped.resolve();
+		const { producerId, ...timing } = message.event;
+		for (const listener of scope.requestListeners.get(producerId) ?? [])
+			listener(timing);
+	} else if (message.kind === "stopped") scope.stopped.resolve();
 }
 
 export async function startProducerThread({
@@ -92,7 +83,6 @@ export async function startProducerThread({
 		clientId: config.clientId,
 		brokers: config.brokers,
 		authMode: config.authMode,
-		region: config.region,
 		sasl: config.sasl,
 		limits: config.limits,
 		sendRing: rings.send,

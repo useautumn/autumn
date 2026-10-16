@@ -2,8 +2,8 @@ import type {
 	KafkaSaslCredentials,
 	KafkaSender,
 	OwnershipKafka,
+	ProducerConfig,
 } from "@autumn/kafka";
-import type { ProducerConfig } from "kafkajs";
 import type { PartitionOwners } from "../../routing/types/routing.js";
 
 export type BalanceWorkerProducer = KafkaSender & {
@@ -19,9 +19,10 @@ export type BalanceWorkerKafka = OwnershipKafka & {
 export type BalanceWorkerKafkaConfig = {
 	clientId: string;
 	brokers: string[];
-	authMode: "none" | "msk_iam" | "scram" | "plain";
-	region?: string;
+	authMode: "none" | "scram" | "plain";
 	sasl?: KafkaSaslCredentials;
+	/** KIP-848 (`consumer`) unless the cluster cannot. */
+	groupProtocol?: "consumer" | "classic";
 };
 
 type LogMethod = (payload: object | string, message?: string) => void;

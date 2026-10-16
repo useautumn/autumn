@@ -36,7 +36,8 @@ export type PartitionOwnershipPublication = {
 	/** Names `endpoint` as the owner, this worker when omitted. */
 	claim(params?: { endpoint: string }): Promise<{ routeEpoch: string }>;
 	release(): Promise<void>;
-	announceReady(): Promise<void>;
+	/** `readyAt` stamps the record, so `awaitClaim` can tell the claim answering it from an older one. */
+	announceReady(params?: { readyAt: number }): Promise<void>;
 	/** Tells the owner this worker is preparing the partition, so it keeps serving instead of releasing at its timeout. */
 	announcePreparing(): Promise<void>;
 	/** Tells the successor this worker has withdrawn and is draining, so it holds its claim timeout. */
@@ -57,8 +58,12 @@ export type PartitionOwnershipPublication = {
 	awaitForeignClaim(params: {
 		signal: AbortSignal;
 	}): Promise<{ endpoint: string }>;
-	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason. */
-	awaitClaim(params: { signal: AbortSignal }): Promise<{ routeEpoch: string }>;
+	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason.
+	 *  With `afterReadyAt`, only a claim that follows this worker's `ready` stamped with it counts. */
+	awaitClaim(params: {
+		signal: AbortSignal;
+		afterReadyAt?: number;
+	}): Promise<{ routeEpoch: string }>;
 	/** As `awaitClaim`, for routing only: the epoch is never taken as the owner epoch the writer stamps and fences with. */
 	awaitRouteClaim(params: {
 		signal: AbortSignal;
@@ -98,7 +103,7 @@ export type SubscribePartitionChanges = (
 export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
-	/** Joins the group again after kafkajs gave it up; absent, such a crash stops the service. */
+	/** Joins the group again after the consumer gave it up; absent, such a crash stops the service. */
 	restart?(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
 	resume(position: {

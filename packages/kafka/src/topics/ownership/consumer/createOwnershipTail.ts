@@ -1,10 +1,13 @@
-import type { ConsumerCrashEvent, EachBatchPayload } from "kafkajs";
 import {
 	createConsumerGroupConfig,
 	TAIL_FETCH_MAX_WAIT_MS,
 } from "../../../client/createConsumerGroupConfig.js";
 import { parseKafkaOffset } from "../../../client/kafkaOffsetUtils.js";
 import type { KafkaConsumerGroupTimings } from "../../../client/types/kafkaLimits.js";
+import type {
+	ConsumerCrashEvent,
+	EachBatchPayload,
+} from "../../../client/types/kafkaWire.js";
 import { ownershipTopic } from "../ownershipTopic.js";
 import type {
 	OwnershipTail,

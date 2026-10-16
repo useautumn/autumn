@@ -61,12 +61,10 @@ const parseMcpPayload = (text: string) => {
 
 const postMcp = async ({
 	body,
-	sessionId,
 	token,
 	url,
 }: {
 	body: unknown;
-	sessionId?: string | null;
 	token?: string;
 	url: string;
 }) => {
@@ -75,7 +73,6 @@ const postMcp = async ({
 		Accept: "application/json, text/event-stream",
 	});
 	if (token) headers.set("Authorization", `Bearer ${token}`);
-	if (sessionId) headers.set("mcp-session-id", sessionId);
 
 	const response = await fetch(url, {
 		method: "POST",
@@ -444,19 +441,17 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 			url: mcpUrl,
 		});
 		expect(initialize.response.status).toBe(200);
-		const mcpSessionId = initialize.response.headers.get("mcp-session-id");
-		expect(typeof mcpSessionId).toBe("string");
+		// The hosted endpoint is stateless, so no session is opened or needed later.
+		expect(initialize.response.headers.get("mcp-session-id")).toBeNull();
 
 		await postMcp({
 			body: { jsonrpc: "2.0", method: "notifications/initialized" },
-			sessionId: mcpSessionId,
 			token: accessToken,
 			url: mcpUrl,
 		});
 
 		const toolsList = await postMcp({
 			body: { jsonrpc: "2.0", id: 2, method: "tools/list" },
-			sessionId: mcpSessionId,
 			token: accessToken,
 			url: mcpUrl,
 		});
@@ -472,7 +467,6 @@ test("MCP OAuth end to end: challenge, discovery, DCR, consent, token, tool call
 				method: "tools/call",
 				params: { name: "getCurrentOrganization", arguments: {} },
 			},
-			sessionId: mcpSessionId,
 			token: accessToken,
 			url: mcpUrl,
 		});

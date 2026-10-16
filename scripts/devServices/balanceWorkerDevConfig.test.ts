@@ -27,9 +27,9 @@ describe("local balance worker launch settings", () => {
 		expect(
 			balanceWorkerDevConfig({
 				worktreeNum: 50,
-				runtimeEnv: { KAFKA_AUTH_MODE: "msk_iam" },
+				runtimeEnv: { KAFKA_AUTH_MODE: "plain" },
 			}).KAFKA_AUTH_MODE,
-		).toBe("msk_iam");
+		).toBe("plain");
 	});
 	test("assigns collision-free per-worktree listener ports", () => {
 		const ports = new Set<number>();

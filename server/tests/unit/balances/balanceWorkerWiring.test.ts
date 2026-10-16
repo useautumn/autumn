@@ -194,7 +194,7 @@ async function startsAndMemoizesWhateverTheRolloutSays(): Promise<void> {
 			clientId: "autumn-server-balance-worker",
 			brokers: ["broker:9092"],
 			authMode: "none",
-			region: undefined,
+			groupProtocol: "consumer",
 		},
 		ownershipTopic: "serving-ownership",
 		commandTopic: "serving-commands",

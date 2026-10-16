@@ -13,6 +13,7 @@ import {
 } from "@tests/integration/balances/utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -33,12 +34,6 @@ test.concurrent(
 				actions: [
 					s.billing.attach({ productId: freeEntityPlan.id, entityIndex: 0 }),
 					s.billing.attach({ productId: freeEntityPlan.id, entityIndex: 1 }),
-					s.track({
-						featureId: TestFeature.Messages,
-						value: 40,
-						entityIndex: 1,
-						timeout: 2_000,
-					}),
 				],
 			},
 		);
@@ -48,6 +43,14 @@ test.concurrent(
 			plan_id: proEntityPlan.id,
 			plan_schedule: "immediate",
 		});
+		// Free usage is forgiven when the Pro attach merges pools, so record it afterwards.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			feature_id: TestFeature.Messages,
+			value: 40,
+		});
+		await timeout(2_000);
 
 		const windowLimit = 35;
 		await setCustomerUsageLimit({

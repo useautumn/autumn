@@ -4,7 +4,7 @@ import {
 	type RewardRedemption,
 	rewardRedemptions,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 type RedemptionWithRelations = RewardRedemption & {
@@ -29,6 +29,7 @@ export const getRedemptionsByCustomer = async ({
 	const data = await db.query.rewardRedemptions.findMany({
 		where: and(
 			eq(rewardRedemptions.internal_customer_id, internalCustomerId),
+			isNotNull(rewardRedemptions.referral_code_id),
 			internalRewardProgramId
 				? eq(
 						rewardRedemptions.internal_reward_program_id,
