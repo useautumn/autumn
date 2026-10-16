@@ -1,3 +1,4 @@
+export * from "./evaluateApprovalRules";
 export * from "./facts/approvalFacts";
 export * from "./facts/balanceFacts";
 export * from "./facts/billingFacts";
@@ -7,5 +8,7 @@ export * from "./facts/otherFacts";
 export * from "./filter/areas/filterFieldsByKey";
 export * from "./filter/filterFieldTypes";
 export * from "./matchRuleFilter";
+export * from "./resolve/findAlwaysBlockingRule";
 export * from "./types/approvalPrincipal";
+export * from "./types/approvalVerdict";
 export * from "./types/approvalViolation";
