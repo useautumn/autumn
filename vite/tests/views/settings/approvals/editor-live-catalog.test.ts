@@ -26,8 +26,12 @@ mock.module("@/services/useAxiosInstance", () => ({
 	useAxiosInstance: () => ({}),
 }));
 
+// Keep the real exports: bun module mocks last the whole run, and later files need them.
+const actual = await import("@tanstack/react-query");
+
 mock.module("@tanstack/react-query", () => ({
-	useQueryClient: () => ({}),
+	...actual,
+	useQueryClient: () => new actual.QueryClient(),
 	useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
 		const catalog = CATALOG[String(queryKey.at(-1))];
 		const isFeatures = queryKey[0] === "features";
