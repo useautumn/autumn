@@ -386,6 +386,48 @@ describe("librdkafka consumer runner", () => {
 		await consumer.disconnect();
 	});
 
+	test.each([
+		{ batchByPartition: undefined, expected: [["5"], ["8"]] },
+		{ batchByPartition: false, expected: [["5"], ["8"]] },
+		{ batchByPartition: true, expected: [["5", "8"]] },
+	])(
+		"batchByPartition=$batchByPartition controls batching across fetch ends without changing marker commits",
+		async ({ batchByPartition, expected }) => {
+			const { fake, consumer, events } = createRunner({
+				config: { batchByPartition },
+			});
+			fake.chunks.push([
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+				{ kind: "message", partition: 0, offset: 5 },
+				{ kind: "eof", partition: 0, offset: 8 },
+				{ kind: "message", partition: 0, offset: 8 },
+				{ kind: "eof", partition: 0, offset: 12 },
+			]);
+			const batches: string[][] = [];
+			await consumer.connect();
+			await consumer.subscribe({ topics: [topic], fromBeginning: true });
+			await consumer.run({
+				eachBatch: async ({
+					batch,
+					resolveOffset,
+					commitOffsetsIfNecessary,
+				}) => {
+					batches.push(batch.messages.map((message) => message.offset));
+					resolveOffset(batch.lastOffset());
+					await commitOffsetsIfNecessary();
+				},
+			});
+			await until(
+				() => events.includes("end:0:1:11") || events.includes("end:0:2:11"),
+			);
+			expect(batches).toEqual(expected.map((offsets) => [...offsets]));
+			expect(fake.commits.at(-1)).toEqual([
+				{ topic, partition: 0, offset: 12 },
+			]);
+			await consumer.disconnect();
+		},
+	);
+
 	test("markers fetched on their own are committed past once the handler has settled what came before", async () => {
 		const { fake, consumer, events } = createRunner();
 		fake.chunks.push(
