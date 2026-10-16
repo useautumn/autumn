@@ -124,7 +124,17 @@ const planNames = ({
 		return names.every(Boolean) ? names.join(", ") : null;
 	}
 	const { plan_id: planId, version, ...rest } = element;
-	if (typeof planId !== "string" || Object.keys(rest).length > 0) return null;
+	if (Object.keys(rest).length > 0) return null;
+	const isInOnly =
+		isFilter(planId) &&
+		Object.keys(planId).join() === "$in" &&
+		Array.isArray(planId.$in);
+	if (isInOnly && version === undefined) {
+		return (planId.$in as unknown[])
+			.map((id) => ctx.labels.plan(String(id)))
+			.join(", ");
+	}
+	if (typeof planId !== "string") return null;
 	const name = ctx.labels.plan(planId);
 	if (version === undefined) return name;
 	return typeof version === "number" ? `${name} v${version}` : null;

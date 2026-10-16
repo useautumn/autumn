@@ -542,6 +542,16 @@ describe("rule sentence: area fields", () => {
 			"Sales can Create invoices when Customer has plan Pro, Team v2",
 		],
 		[
+			"several versionless plans",
+			{
+				actions: ["invoices.create"],
+				filter: {
+					customer: { plan: { $some: { plan_id: { $in: ["pro", "team"] } } } },
+				},
+			},
+			"Sales can Create invoices when Customer has plan Pro, Team",
+		],
+		[
 			"a plan the customer doesn't have",
 			{
 				effect: "block",
