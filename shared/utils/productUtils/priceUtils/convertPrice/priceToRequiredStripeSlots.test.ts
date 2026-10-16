@@ -107,6 +107,16 @@ describe("priceToRequiredStripeSlots", () => {
 		).toEqual([]);
 	});
 
+	test("V1 zero fixed price requires stripe_price_id", () => {
+		expect(
+			priceToRequiredStripeSlots({
+				price: fixedPrice({ amount: 0 }),
+				product: product(),
+				billingVersion: BillingVersion.V1,
+			}),
+		).toEqual(["stripe_price_id"]);
+	});
+
 	test("fixed price requires stripe_price_id", () => {
 		expect(
 			priceToRequiredStripeSlots({
