@@ -2,6 +2,7 @@ import type { FilterValueInputProps } from "@/components/filters/types";
 import { cn } from "@/lib/utils";
 import { NumberValueInput } from "./NumberValueInput";
 import { OptionsValueInput } from "./OptionsValueInput";
+import { OPTION_HOOKS } from "./useValueOptions";
 
 /** A feature and its quantity as `[feature_id, quantity]`. */
 export const QuantityValueInput = ({
@@ -14,7 +15,7 @@ export const QuantityValueInput = ({
 		<div className={cn("flex min-w-0 gap-2", className)}>
 			<OptionsValueInput
 				className="min-w-0 flex-1"
-				source="feature"
+				useOptions={OPTION_HOOKS.feature}
 				values={featureId ? [featureId] : []}
 				onChange={(next) => onChange([next.at(-1) ?? "", quantity])}
 			/>
