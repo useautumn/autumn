@@ -1,22 +1,26 @@
 import type { AppEnv, CustomerListFilters } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { buildSearchPredicates } from "../../CusSearchService.js";
 import {
 	liveCusEntPredicate,
 	unlimitedUsedSumSql,
 } from "../../liveCusEntSql.js";
 
 /** `ce_balance_totals` computed live from Postgres for one org/env/feature,
- * using the same exact definitions as the verify pass. */
+ * using the verify pass's exact definitions. Search and customer filters apply
+ * before ranking, so the batch LIMIT never cuts off a matching customer. */
 export const postgresBalanceTotalsCte = ({
 	orgId,
 	env,
 	internalFeatureId,
-	createdAtRange,
+	search = "",
+	filters,
 }: {
 	orgId: string;
 	env: AppEnv;
 	internalFeatureId: string;
-	createdAtRange?: CustomerListFilters["created_at_range"];
+	search?: string;
+	filters?: CustomerListFilters;
 }): SQL => sql`
 	WITH ce_sums AS (
 		SELECT
@@ -30,12 +34,9 @@ export const postgresBalanceTotalsCte = ({
 			COALESCE(${unlimitedUsedSumSql()}, 0) AS unlimited_used,
 			COUNT(*) FILTER (WHERE ce.unlimited IS NOT TRUE) AS finite_rows
 		FROM customer_entitlements ce
-		JOIN customers c
-			ON c.internal_id = ce.internal_customer_id
-			AND c.org_id = ${orgId}
-			AND c.env = ${env}
-			${createdAtRange?.start !== undefined ? sql`AND c.created_at >= ${createdAtRange.start}` : sql``}
-			${createdAtRange?.end !== undefined ? sql`AND c.created_at <= ${createdAtRange.end}` : sql``}
+		JOIN customers
+			ON customers.internal_id = ce.internal_customer_id
+			AND ${buildSearchPredicates({ orgId, env, search, filters }).whereRaw}
 		LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 		LEFT JOIN entitlements e ON e.id = ce.entitlement_id
 		WHERE ce.internal_feature_id = ${internalFeatureId}

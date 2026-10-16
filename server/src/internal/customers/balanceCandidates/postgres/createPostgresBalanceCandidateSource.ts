@@ -39,7 +39,8 @@ const nominate: BalanceCandidateSource["nominate"] = ({
 	db,
 	orgId,
 	env,
-	createdAtRange,
+	search,
+	filters,
 	internalFeatureId,
 	after,
 	sortOrder,
@@ -50,7 +51,7 @@ const nominate: BalanceCandidateSource["nominate"] = ({
 		{ after, sortOrder, basis, remainingFilter },
 	);
 	const query = sql`
-		${postgresBalanceTotalsCte({ orgId, env, internalFeatureId, createdAtRange })}
+		${postgresBalanceTotalsCte({ orgId, env, internalFeatureId, search, filters })}
 		SELECT internal_customer_id, is_unlimited, ${basisExprSql(basis)} AS total
 		FROM ce_balance_totals
 		WHERE true

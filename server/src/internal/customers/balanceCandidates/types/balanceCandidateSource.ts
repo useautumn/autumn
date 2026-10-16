@@ -37,7 +37,8 @@ export type BalanceCandidateSource = {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
-		createdAtRange?: CustomerListFilters["created_at_range"];
+		search: string;
+		filters?: CustomerListFilters;
 		internalFeatureId: string;
 		after: NominationCursor | null;
 		sortOrder: SortOrder;

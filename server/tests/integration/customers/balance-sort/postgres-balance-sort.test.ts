@@ -106,6 +106,14 @@ test.concurrent(
 		});
 		expect(secondPage.rows.map((row) => row.total)).toEqual([20]);
 
+		const searchedLowest = await resolveInternalIdsByFeatureBalanceSort({
+			...scope,
+			search: `${prefix}-low`,
+			limit: 10,
+			sortOrder: "desc",
+		});
+		expect(searchedLowest.rows.map((row) => row.total)).toEqual([20]);
+
 		const balance = {
 			feature_id: TestFeature.Messages,
 			op: "<" as const,

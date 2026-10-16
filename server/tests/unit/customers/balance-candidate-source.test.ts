@@ -67,21 +67,24 @@ describe("balance candidate backend selection", () => {
 });
 
 describe("postgres balance totals", () => {
-	test("scopes totals to one org, env and feature with the live definition", () => {
+	test("scopes totals to org, env, feature, search and filters before ranking", () => {
 		const { sql: query, params } = dialect.sqlToQuery(
 			postgresBalanceTotalsCte({
 				orgId: "org_target",
 				env: AppEnv.Sandbox,
 				internalFeatureId: "feature_target",
-				createdAtRange: { start: 1_000 },
+				search: "acme",
+				filters: { created_at_range: { start: 1_000 } },
 			}),
 		);
 		const normalized = normalize(query);
 
-		expect(normalized).toContain("AND c.org_id = $");
-		expect(normalized).toContain("AND c.env = $");
-		expect(normalized).toContain("AND c.created_at >= $");
-		expect(normalized).not.toContain("c.created_at <=");
+		expect(normalized).toContain('"customers"."org_id" = $');
+		expect(normalized).toContain('"customers"."env" = $');
+		expect(normalized).toContain('"customers"."id" ILIKE $');
+		expect(normalized).toContain('"customers"."created_at" >= $');
+		expect(normalized).not.toContain('"customers"."created_at" <=');
+		expect(params).toContain("%acme%");
 		expect(normalized).toContain("WHERE ce.internal_feature_id = $");
 		expect(normalized).toContain("ce.pooled_contribution_id IS NULL");
 		expect(normalized).toContain(

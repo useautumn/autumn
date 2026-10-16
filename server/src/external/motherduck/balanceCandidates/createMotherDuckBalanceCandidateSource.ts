@@ -28,7 +28,7 @@ const rowsOf = <T>(result: unknown): T[] => {
 const nominate: BalanceCandidateSource["nominate"] = async ({
 	orgId,
 	env,
-	createdAtRange,
+	filters,
 	internalFeatureId,
 	after,
 	sortOrder,
@@ -43,7 +43,7 @@ const nominate: BalanceCandidateSource["nominate"] = async ({
 				nominationQuery({
 					orgId,
 					env,
-					createdAtRange,
+					createdAtRange: filters?.created_at_range,
 					internalFeatureId,
 					after,
 					sortOrder,
