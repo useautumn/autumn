@@ -181,6 +181,30 @@ const resolveVersionsForPlan = ({
 	return [...withExplicitVersion, ...mintedFromSlug, ...targetingLatest];
 };
 
+const statedVersionSlug = (planParams: UpdateCatalogPlanParams) =>
+	planParams.new_version_slug ?? planParams.version_slug;
+
+/** A row minted without a slug can't take the default `v{n}` a sibling row states. */
+const mintsUnslugged = ({
+	planId,
+	planParams,
+	siblings,
+	productStatesContext,
+}: {
+	planId: string;
+	planParams: ResolvedPlanParams;
+	siblings: ResolvedPlanParams[];
+	productStatesContext: ProductStatesContext;
+}): boolean => {
+	if (statedVersionSlug(planParams) !== undefined) return false;
+	const exists = (productStatesContext.versionsByPlanId[planId] ?? []).some(
+		(product) => product.version === planParams.version,
+	);
+	if (exists) return false;
+	const defaultSlug = `v${planParams.version}`;
+	return siblings.some((sibling) => statedVersionSlug(sibling) === defaultSlug);
+};
+
 /**
  * Caller-asked intents: params.plans → ProductUpsertIntent[] with version set
  * and source "direct".
@@ -199,19 +223,26 @@ export const deriveDirectIntents = ({
 			planParamsList: params.plans ?? [],
 			internalIdRefs,
 		}).entries(),
-	]
-		.flatMap(([planId, planParamsList]) =>
-			resolveVersionsForPlan({
-				planId,
-				planParamsList,
-				productStatesContext,
-				internalIdRefs,
-			}).map((planParams) => ({ planId, planParams })),
-		)
-		.map(({ planId, planParams }) => ({
+	].flatMap(([planId, planParamsList]) => {
+		const siblings = resolveVersionsForPlan({
+			planId,
+			planParamsList,
+			productStatesContext,
+			internalIdRefs,
+		});
+		return siblings.map((planParams) => ({
 			// Key on the row's current id; `plan_id` may be the rename target.
 			productKey: { planId, version: planParams.version },
 			planParams,
 			source: "direct" as const,
 			...(planParams.base_variant_id === null ? { unlink: true } : {}),
+			...(mintsUnslugged({
+				planId,
+				planParams,
+				siblings,
+				productStatesContext,
+			})
+				? { unslugged: true }
+				: {}),
 		}));
+	});

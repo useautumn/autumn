@@ -27,6 +27,7 @@ export const computeProductDetailsPlan = ({
 	baseProcessor,
 	currentActive,
 	latestExistingVersion,
+	unslugged,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdateCatalogPlanParams;
@@ -41,6 +42,8 @@ export const computeProductDetailsPlan = ({
 	/** Pre-fold pointer — default follows only when this row is eligible. */
 	currentActive?: FullProduct | null;
 	latestExistingVersion?: number;
+	/** Mint without the default `v{n}` slug. */
+	unslugged?: boolean;
 }): ProductDetailsPlan => {
 	if (!currentFullProduct) {
 		return {
@@ -49,6 +52,7 @@ export const computeProductDetailsPlan = ({
 				ctx,
 				planParams,
 				version,
+				...(unslugged ? { unslugged } : {}),
 				...(baseFullProduct ? { base: baseFullProduct } : {}),
 				...(baseInternalProductId !== undefined
 					? { baseInternalProductId }

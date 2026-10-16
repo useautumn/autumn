@@ -2,6 +2,7 @@ import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computePlanLicensesPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computePlanLicensesPlan/computePlanLicensesPlan";
 import { computeUpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeUpsertProductPlan/computeUpsertProductPlan";
+import { orderCreatedBasesFirst } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/orderCreatedBasesFirst";
 import { indexDeclaredVariants } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/computeVariantPlan/shouldUnlinkDirectVariant";
 import { deriveDirectIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveDirectIntents";
 import { deriveIntents } from "@/internal/catalogV2/actions/updateCatalog/compute/computeUpsertProductsPlan/derive/deriveIntents";
@@ -34,15 +35,18 @@ export const computeUpsertProductsPlan = ({
 
 	// A row the payload named is claimed before the fold, so the derived
 	// mapping fan-out can never reach it — fill it in up front instead.
-	const pendingIntents = mergeDeclaredProcessors({
-		intents: deriveDirectIntents({
+	const pendingIntents = orderCreatedBasesFirst({
+		intents: mergeDeclaredProcessors({
+			intents: deriveDirectIntents({
+				params,
+				productStatesContext,
+				internalIdRefs,
+			}),
 			params,
 			productStatesContext,
 			internalIdRefs,
 		}),
-		params,
 		productStatesContext,
-		internalIdRefs,
 	});
 	const declaredVariants = indexDeclaredVariants({
 		plans: params.plans ?? [],

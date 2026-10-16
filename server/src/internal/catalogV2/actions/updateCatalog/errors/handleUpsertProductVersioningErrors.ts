@@ -201,6 +201,13 @@ export const handleUpsertProductVersioningErrors = ({
 	const seenSlugs = new Set<string>();
 	const unpinnedPlanIds = new Set<string>();
 	const mintedVersionsByPlanId = new Map<string, number>();
+	const pinnedVersionsByPlanId = new Map<string, Set<number>>();
+	for (const planParams of params.plans ?? []) {
+		if (planParams.version === undefined) continue;
+		const pinned = pinnedVersionsByPlanId.get(planParams.plan_id) ?? new Set();
+		pinned.add(planParams.version);
+		pinnedVersionsByPlanId.set(planParams.plan_id, pinned);
+	}
 	// Each entry mints relative to the base row it sits under.
 	const mintedPins = new Set(
 		(params.plans ?? []).flatMap((planParams) => {
@@ -303,24 +310,24 @@ export const handleUpsertProductVersioningErrors = ({
 				seenPinned,
 			});
 
-			const maxVersion = Math.max(
-				maxVersionForPlan({
-					planId: planParams.plan_id,
-					productStatesContext,
-				}),
-				// Rows minted earlier in this same request count: a full-history
-				// push states v1, v2, v3 against a catalog that holds none of them.
-				mintedVersionsByPlanId.get(planParams.plan_id) ?? 0,
-			);
-			if (planParams.version > maxVersion + 1) {
+			const maxVersion = maxVersionForPlan({
+				planId: planParams.plan_id,
+				productStatesContext,
+			});
+			// Other rows of this request fill the gap in any order: a full-history
+			// push states v1, v2, v3 against a catalog that holds none of them.
+			const pinned = pinnedVersionsByPlanId.get(planParams.plan_id);
+			const gapUnfilled = Array.from(
+				{ length: Math.max(0, planParams.version - maxVersion - 1) },
+				(_, index) => maxVersion + 1 + index,
+			).some((version) => !pinned?.has(version));
+			if (gapUnfilled) {
 				throw new RecaseError({
 					message: `Version gap: plan_id=${planParams.plan_id} version=${planParams.version} exceeds max existing version ${maxVersion} + 1`,
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});
 			}
-			// Recorded only AFTER the check: an entry must not authorise its own
-			// gap, it only widens the ceiling for rows stated after it.
 			mintedVersionsByPlanId.set(
 				planParams.plan_id,
 				Math.max(

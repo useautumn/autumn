@@ -302,12 +302,23 @@ export class ProductService {
 		return activeProducts as FullProduct[];
 	}
 
-	static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
+	static async insert({
+		db,
+		product,
+		defaultVersionSlug = true,
+	}: {
+		db: DrizzleCli;
+		product: Product;
+		/** false: a null version_slug is deliberate and stays null. */
+		defaultVersionSlug?: boolean;
+	}) {
 		// Dual-write version identity; omit-version reads resolve `active`.
 		// A row only self-activates when no higher version exists.
 		const row = {
 			...product,
-			version_slug: product.version_slug ?? `v${product.version}`,
+			version_slug:
+				product.version_slug ??
+				(defaultVersionSlug ? `v${product.version}` : null),
 		};
 		const samePlan = and(
 			eq(products.org_id, row.org_id),

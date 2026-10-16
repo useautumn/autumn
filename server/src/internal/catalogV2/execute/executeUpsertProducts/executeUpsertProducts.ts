@@ -3,8 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { UpdateCatalogPlan } from "@/internal/catalogV2/actions/updateCatalog/types/updateCatalogPlan";
 import type { UpsertProductPlan } from "@/internal/catalogV2/actions/updateCatalog/types/upsertProductPlan";
 import { upsertToCatalogAction } from "@/internal/catalogV2/actions/updateCatalog/utils/upsertToCatalogAction";
-import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
 import { deleteClaimedPlanAliases } from "@/internal/catalogV2/execute/deleteClaimedPlanAliases.js";
+import type { CatalogAppliedResult } from "@/internal/catalogV2/execute/executeUpdateCatalogPlan";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { applyEntitlementPricesPlan } from "./applyEntitlementPricesPlan";
 import { applyFreeTrialPlan } from "./applyFreeTrialPlan";
@@ -31,7 +31,8 @@ const executeUpsertProduct = async ({
 					? [upsert.aliasReplacement.alias_id]
 					: [],
 			});
-			await ProductService.insert({ db, product });
+			// Compute already stamped the slug; null means a sibling claims `v{n}`.
+			await ProductService.insert({ db, product, defaultVersionSlug: false });
 		});
 	}
 

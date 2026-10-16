@@ -108,6 +108,7 @@ export const intentToUpsertProductPlan = ({
 		baseFullProduct,
 		currentActive,
 		latestExistingVersion: maxVersion === 0 ? undefined : maxVersion,
+		...(intent.unslugged ? { unslugged: true } : {}),
 		...(pointer !== undefined ? { baseInternalProductId: pointer } : {}),
 		...(variantBaseFullProduct
 			? { baseProcessor: variantBaseFullProduct.processor }
