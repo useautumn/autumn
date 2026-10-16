@@ -13,7 +13,7 @@ import {
 } from "@/views/settings/SettingsTable";
 import {
 	memberRoleOptions,
-	roleLabel,
+	roleName,
 } from "@/views/settings/sections/roles/roleAccess";
 import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";
@@ -57,7 +57,7 @@ const MemberRoleSelect = ({
 				toast.error(error.message ?? "Failed to update role");
 				return;
 			}
-			toast.success(`Role updated to ${roleLabel({ roles, name: newRole })}`);
+			toast.success(`Role updated to ${roleName({ roles, roleId: newRole })}`);
 			onRoleChanged();
 			refetchRoles();
 		} catch {
@@ -67,7 +67,7 @@ const MemberRoleSelect = ({
 		}
 	};
 
-	// Until /roles answers, offer the built-in roles as before.
+	// Until roles.list answers, offer the built-in roles as before.
 	const options =
 		roles.length > 0
 			? memberRoleOptions({ roles, allowOwner: allowOwnerPromotion })
@@ -79,7 +79,7 @@ const MemberRoleSelect = ({
 			onChange={handleRoleChange}
 			allowed={allowOwnerPromotion ? ALL_ROLES : NON_OWNER_ROLES}
 			options={options}
-			valueLabel={roleLabel({ roles, name: currentRole })}
+			valueLabel={roleName({ roles, roleId: currentRole })}
 			disabled={disabled || loading}
 			className="h-7 w-[120px] text-xs"
 		/>

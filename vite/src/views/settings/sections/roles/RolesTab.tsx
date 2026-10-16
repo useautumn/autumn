@@ -1,11 +1,12 @@
 import { InfoIcon } from "@phosphor-icons/react";
-import { useRoleMutations, useRolesQuery } from "@/hooks/queries/useRolesQuery";
+import { useRoleMutations } from "@/hooks/queries/useRoleMutations";
+import { useRolesQuery } from "@/hooks/queries/useRolesQuery";
 import { SettingsTable } from "@/views/settings/SettingsTable";
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
 import { RoleFormSheet } from "./RoleFormSheet";
 import { RoleRow } from "./RoleRow";
 import { RolesLoadError } from "./RolesLoadError";
-import type { RoleBody } from "./roleAccess";
+import type { RoleFormValues } from "./roleAccess";
 import { getRoleInUseCount } from "./roleErrors";
 import type { RoleDialogs } from "./useRoleDialogs";
 
@@ -27,15 +28,12 @@ export const RolesTab = ({
 	const { save, remove } = useRoleMutations();
 	const close = () => dialogs.setOpen(false);
 
-	const handleSave = ({ body }: { body: RoleBody }) =>
-		save.mutate(
-			{ name: dialogs.role?.name ?? null, body },
-			{ onSuccess: close },
-		);
+	const handleSave = ({ values }: { values: RoleFormValues }) =>
+		save.mutate({ role: dialogs.role, values }, { onSuccess: close });
 
 	const handleDelete = () => {
 		if (!dialogs.role) return;
-		remove.mutate({ name: dialogs.role.name }, { onSuccess: close });
+		remove.mutate({ id: dialogs.role.id }, { onSuccess: close });
 	};
 
 	if (isLoading) return null;
@@ -46,7 +44,7 @@ export const RolesTab = ({
 			<SettingsTable columns={COLUMNS}>
 				{roles.map((role) => (
 					<RoleRow
-						key={role.name}
+						key={role.id}
 						role={role}
 						readOnly={readOnly}
 						onEdit={() => dialogs.openEditor({ role })}
