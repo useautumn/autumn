@@ -23,6 +23,7 @@ import { CalendarXIcon, InfinityIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -33,7 +34,6 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { RolloverConfigForm } from "@/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm";
 import { checkRolloverConfigValid } from "@/views/products/plan/utils/rolloverUtils";
@@ -184,7 +184,7 @@ export function BalanceCreateSheet() {
 			closeSheet();
 			toast.success("Balance created");
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create balance"));
+			toastWriteError({ error, fallback: "Failed to create balance" });
 		}
 	};
 

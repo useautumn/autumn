@@ -104,6 +104,9 @@ const denialFromError = ({ error }: { error: unknown }) => {
 	return parsed.success ? parsed.data.response.data : null;
 };
 
+export const isPermissionDeniedError = ({ error }: { error: unknown }) =>
+	denialFromError({ error }) !== null;
+
 /**
  * The preview's deny locks submit. A 403 from submit shows the same way but
  * leaves the button enabled so an edited request can be retried.

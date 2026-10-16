@@ -31,13 +31,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { PermissionDenial } from "@/components/forms/shared/permission/PermissionDenial";
+import { toastWriteError } from "@/components/forms/shared/permission/toastWriteError";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCanDo } from "@/hooks/queries/useCanDo";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { getCustomerBalancePlanName } from "../table/customer-balance/customerBalanceUtils";
@@ -234,7 +235,7 @@ function UnlimitedBalanceForm({
 			closeSheet();
 			refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update"));
+			toastWriteError({ error, fallback: "Failed to update" });
 		}
 	};
 
@@ -885,7 +886,7 @@ function SubmitButton({
 			handleClose();
 			refetch();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update"));
+			toastWriteError({ error, fallback: "Failed to update" });
 		}
 	};
 
