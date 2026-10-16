@@ -20,6 +20,8 @@ export const AppSidebarLayout = ({
     [pathname],
   );
 
+  if (pathname === "/atom") return children;
+
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="px-4 py-3">

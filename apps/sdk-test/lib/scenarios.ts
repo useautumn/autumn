@@ -16,6 +16,19 @@ export type ScenarioSection = {
 
 export const scenarioSections: Array<ScenarioSection> = [
   {
+    id: "edge",
+    title: "Edge",
+    items: [
+      {
+        id: "atom",
+        title: "Atom playground",
+        href: "/atom",
+        description: "Click through check, send event, lock and finalize on the edge.",
+        status: "ready",
+      },
+    ],
+  },
+  {
     id: "core",
     title: "Core",
     items: [

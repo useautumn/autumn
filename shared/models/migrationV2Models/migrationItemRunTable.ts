@@ -85,6 +85,10 @@ export const migrationItemRuns = pgTable(
 		index("migration_item_runs_customer_recent_idx")
 			.on(table.item_id, sql`${table.updated_at} DESC`)
 			.where(sql`${table.item_kind} = 'customer'`),
+		// Drizzle can't express INCLUDE; the migration adds INCLUDE (status) by hand.
+		index("idx_migration_item_runs_reporting")
+			.on(table.migration_internal_id, table.item_kind, table.migration_run_id)
+			.concurrently(),
 	],
 );
 

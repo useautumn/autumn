@@ -22,6 +22,9 @@ Where the cache lives:
 - **CI** (`librdkafka.yml`): `actions/cache` keyed on the build key. Its `image` job builds the deploy image on
   the same Blacksmith builder, so a patch change compiles in its PR and the deploy after merge restores it.
 - **Capy machines**: `scripts/setup/capy-init.sh` builds it, and the machine snapshot keeps the cache.
+- **twd** (`scripts/tw/image/warmup.sh`): compiling under Modal's gVisor outlives the warm, so `librdkafka.yml`'s `twd`
+  job builds on twd's Debian base and publishes `<key>.node` as the `librdkafka-addon-<key>` release. The warm
+  downloads it into `/opt/autumn-tw/librdkafka`, which its snapshot keeps.
 
 `bun run --cwd packages/librdkafka probe:addon` (`PROBE_BROKERS`, default `127.0.0.1:9092`) loads the addon,
 creates a topic and sends one record idempotently.

@@ -112,6 +112,10 @@ export const customerEntitlements = pgTable(
 			table.internal_customer_id,
 		),
 		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
+		// entitlements.id is COLLATE "C", so joins on it can't probe the plain index.
+		index("idx_customer_entitlements_entitlement_id_c")
+			.on(sql`${table.entitlement_id} COLLATE "C"`)
+			.concurrently(),
 		index("idx_customer_entitlements_internal_feature_id_c")
 			.on(sql`${table.internal_feature_id} COLLATE "C"`)
 			.concurrently(),

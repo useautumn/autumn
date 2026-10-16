@@ -20,6 +20,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { copyToClipboard } from "@/utils/clipboardUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { EntityScopeSelector } from "./EntityScopeSelector";
@@ -162,7 +163,12 @@ export function CheckBalanceSheet() {
 							<CodeGroupList>
 								<CodeGroupTab value="response">Response</CodeGroupTab>
 								<CodeGroupCopyButton
-									onCopy={() => navigator.clipboard.writeText(formattedJson)}
+									onCopy={() =>
+										copyToClipboard({
+											text: formattedJson,
+											successMessage: "Copied to clipboard",
+										})
+									}
 								/>
 							</CodeGroupList>
 							<div className="flex-1 h-0 overflow-y-auto border border-t-0 rounded-b-lg bg-white dark:bg-background p-4">
