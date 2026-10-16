@@ -14,12 +14,13 @@ export const canDoQueryKey = (action: ApprovalAction) =>
 export const useCanDo = (action: ApprovalAction) => {
 	const axios = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
-	const { data } = useQuery({
+	const { data, isError } = useQuery({
 		queryKey: buildKey(canDoQueryKey(action)),
 		queryFn: () => fetchCanDo({ axios, action }),
 		staleTime: 60_000,
 		retry: false,
 	});
 
-	return canDoAllows({ response: data });
+	// A failed refresh keeps stale data; failing open means ignoring it.
+	return isError || canDoAllows({ response: data });
 };

@@ -32,7 +32,20 @@ export function AttachProductSheetTrigger() {
 	const canAttach = useCanDo("billing.attach");
 	const canSetPlans = useCanDo("billing.set_plans");
 
-	if (!canAttach) return null;
+	if (!canAttach && !canSetPlans) return null;
+	if (!canAttach) {
+		return (
+			<Button
+				variant="primary"
+				size="mini"
+				className="gap-1 font-medium"
+				onClick={openSetPlans}
+			>
+				<CalendarBlankIcon className="size-3.5" />
+				Set Plans
+			</Button>
+		);
+	}
 
 	return (
 		<div

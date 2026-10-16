@@ -19,6 +19,7 @@ import {
 	InvoiceSettingsSection,
 } from "./InvoiceSettingsSection";
 import { PreviewSection, type PreviewSectionQuery } from "./PreviewSection";
+import { PermissionLock } from "./permission/PermissionLock";
 import { UrlSuccessView } from "./UrlSuccessView";
 import { resolveNetTermsDays } from "./utils/resolveNetTermsDays";
 
@@ -345,28 +346,30 @@ export function SendInvoiceStage({
 
 			<PreviewSection previewQuery={previewQuery} />
 
-			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-				<div className="flex flex-col gap-2 w-full">
-					<Button
-						variant="secondary"
-						className="w-full"
-						onClick={handleDraft}
-						isLoading={activeAction === "draft"}
-						disabled={submitDisabled}
-					>
-						Draft and edit in Stripe
-					</Button>
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={handleFinalize}
-						isLoading={activeAction === "finalize"}
-						disabled={submitDisabled}
-					>
-						Finalize and send invoice
-					</Button>
-				</div>
-			</SheetFooter>
+			<PermissionLock>
+				<SheetFooter className="flex flex-col grid-cols-1 mt-0">
+					<div className="flex flex-col gap-2 w-full">
+						<Button
+							variant="secondary"
+							className="w-full"
+							onClick={handleDraft}
+							isLoading={activeAction === "draft"}
+							disabled={submitDisabled}
+						>
+							Draft and edit in Stripe
+						</Button>
+						<Button
+							variant="primary"
+							className="w-full"
+							onClick={handleFinalize}
+							isLoading={activeAction === "finalize"}
+							disabled={submitDisabled}
+						>
+							Finalize and send invoice
+						</Button>
+					</div>
+				</SheetFooter>
+			</PermissionLock>
 		</>
 	);
 }

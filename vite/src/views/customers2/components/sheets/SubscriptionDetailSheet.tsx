@@ -66,6 +66,7 @@ export function SubscriptionDetailSheet() {
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
 	const canDoCancel = useCanDo("billing.cancel");
+	const canDoUncancel = useCanDo("billing.uncancel");
 	const canDoUpdate = useCanDo("billing.update_subscription");
 
 	// Prefetch product version data so the update sheet has it cached immediately
@@ -120,7 +121,7 @@ export function SubscriptionDetailSheet() {
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
 
-	const canCancel = !isExpired && canDoCancel;
+	const canCancel = !isExpired && (isCanceled ? canDoUncancel : canDoCancel);
 	const canUpdate = !isExpired && !isScheduled && canDoUpdate;
 	const hasPlanItems = (displayItems?.length ?? 0) > 0;
 	const licenseRows = cusProductLicenses(cusProduct);

@@ -53,15 +53,27 @@ describe("canDoAllows", () => {
 const renderTrigger = ({
 	attach,
 	setPlans,
+	failedRefresh = false,
 }: {
 	attach?: CanDo;
 	setPlans?: CanDo;
+	failedRefresh?: boolean;
 }) => {
 	const client = new QueryClient();
-	if (attach) client.setQueryData(canDoQueryKey("billing.attach"), attach);
-	if (setPlans) {
-		client.setQueryData(canDoQueryKey("billing.set_plans"), setPlans);
-	}
+	const seed = (
+		action: "billing.attach" | "billing.set_plans",
+		value?: CanDo,
+	) => {
+		if (!value) return;
+		client.setQueryData(canDoQueryKey(action), value);
+		if (!failedRefresh) return;
+		client
+			.getQueryCache()
+			.find({ queryKey: canDoQueryKey(action) })
+			?.setState({ status: "error", error: new Error("refresh failed") });
+	};
+	seed("billing.attach", attach);
+	seed("billing.set_plans", setPlans);
 	return renderToStaticMarkup(
 		createElement(
 			QueryClientProvider,
@@ -87,12 +99,28 @@ describe("attach trigger", () => {
 		expect(html).not.toContain('aria-label="More plan actions"');
 	});
 
-	test("hides the trigger when attach is denied", () => {
-		expect(renderTrigger({ attach: denied, setPlans: allowed })).toBe("");
+	test("keeps set plans alone when only attach is denied", () => {
+		const html = renderTrigger({ attach: denied, setPlans: allowed });
+		expect(html).not.toContain("Attach Plan");
+		expect(html).toContain("Set Plans");
+	});
+
+	test("hides the trigger when both are denied", () => {
+		expect(renderTrigger({ attach: denied, setPlans: denied })).toBe("");
 	});
 
 	test("keeps both while the check hasn't answered", () => {
 		const html = renderTrigger({});
+		expect(html).toContain("Attach Plan");
+		expect(html).toContain('aria-label="More plan actions"');
+	});
+
+	test("a failed refresh after a denial shows the actions again", () => {
+		const html = renderTrigger({
+			attach: denied,
+			setPlans: denied,
+			failedRefresh: true,
+		});
 		expect(html).toContain("Attach Plan");
 		expect(html).toContain('aria-label="More plan actions"');
 	});
