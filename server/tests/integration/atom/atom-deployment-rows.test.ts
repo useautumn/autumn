@@ -5,7 +5,8 @@
  *  1. one Atom per org and env: a second claim loses and the first is read back;
  *  2. a write only lands on the row as it was read: a stale copy cannot undo a move or forget a replacement;
  *  3. the cached org follows an Atom's route (status, endpoint, token) and ignores its deploy progress;
- *  4. a token hash names its Atom's org and env.
+ *  4. a token hash names its Atom's org and env;
+ *  5. the first check seen is written once, and neither a later sighting nor a refresh from a stale read clears it.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -58,6 +59,7 @@ const atomRow = ({
 	stages: toCacheStages({ doneStages: [], status }),
 	error: null,
 	first_check_at: null,
+	first_check_seen_at: null,
 	created_at: Date.now(),
 });
 
@@ -192,4 +194,43 @@ test(`${chalk.yellowBright("atom-rows4: a token hash names its Atom's org and en
 	).toBeNull();
 
 	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: atom });
+});
+
+test(`${chalk.yellowBright("atom-rows5: the first check seen is written once, and no later write clears it")}`, async () => {
+	const unseen = {
+		...atomRow({
+			deploymentGroupId: `dg_${orgId}_g`,
+			status: ByocCacheStatus.Ready,
+		}),
+		deployment_id: "dep_1",
+	};
+	await cacheDeploymentRepo.insert({ ctx, cacheDeployment: unseen });
+
+	await cacheDeploymentRepo.setFirstCheckSeenAt({
+		ctx,
+		cacheDeployment: unseen,
+		firstCheckSeenAt: 1_000,
+	});
+	await cacheDeploymentRepo.setFirstCheckSeenAt({
+		ctx,
+		cacheDeployment: unseen,
+		firstCheckSeenAt: 2_000,
+	});
+	expect((await cacheDeploymentRepo.find({ ctx }))?.first_check_seen_at).toBe(
+		1_000,
+	);
+
+	// A refresh that read the row before the first check writes only what it changed.
+	await cacheDeploymentRepo.update({
+		ctx,
+		from: unseen,
+		to: { ...unseen, endpoint_url: "https://atom.example.com" },
+	});
+	expect(await cacheDeploymentRepo.find({ ctx })).toMatchObject({
+		endpoint_url: "https://atom.example.com",
+		first_check_seen_at: 1_000,
+		first_check_at: null,
+	});
+
+	await cacheDeploymentRepo.delete({ ctx, cacheDeployment: unseen });
 });

@@ -108,6 +108,7 @@ const claimCacheDeployment = async ({
 		stages: toCacheStages({ doneStages: [], status }),
 		error: null,
 		first_check_at: null,
+		first_check_seen_at: null,
 		created_at: Date.now(),
 	};
 	if (await cacheDeploymentRepo.insert({ ctx, cacheDeployment }))

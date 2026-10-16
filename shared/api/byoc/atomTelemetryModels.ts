@@ -12,10 +12,16 @@ export const AtomCheckSchema = z.object({
 });
 
 export const ListAtomChecksResponseSchema = z.object({
+	first_check_seen_at: z
+		.number()
+		.nullable()
+		.describe(
+			"When Atom first counted a check from your app, in epoch milliseconds; null until it does.",
+		),
 	checks: z
 		.array(AtomCheckSchema)
 		.describe(
-			"The Atom's latest checks from the last few minutes, newest first.",
+			"A sample of the Atom's latest checks, newest first; empty once the first check has been seen.",
 		),
 });
 
