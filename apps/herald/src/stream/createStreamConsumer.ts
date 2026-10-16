@@ -6,6 +6,7 @@ import {
 	createProgressTracker,
 	type Kafka,
 	type KafkaConsumerGroupTimings,
+	KafkaConsumerLeaseLostError,
 	type MeteringRecordFailure,
 	type MeteringRecordSlice,
 	type MeteringStaleRecord,
@@ -25,6 +26,7 @@ import {
 	type RunningStreamConsumer,
 	type StreamConsumer,
 } from "./types/streamConsumer.js";
+import { createUncommittedLandings } from "./uncommittedLandings/createUncommittedLandings.js";
 
 // Small on purpose: herald is a follower, and one slow partition must not hold the others.
 const PARTITIONS_CONSUMED_CONCURRENTLY = 8;
@@ -80,6 +82,10 @@ export function createStreamConsumer({
 	const stopping = new AbortController();
 	const job = streamConsumer.name;
 	const progress = createProgressTracker();
+	const uncommittedLandings = createUncommittedLandings({
+		ctx: { progress },
+		topic: config.topic,
+	});
 	const now = ctx.now ?? Date.now;
 	let membership: JobMembership = "idle";
 	let assignedPartitions: number[] = [];
@@ -146,7 +152,7 @@ export function createStreamConsumer({
 		}
 	}
 
-	/** Every slice, landed or cut short, is timed: a slow one is how a poll overruns its window. */
+	/** Every slice, landed or cut short, is held until committed and timed: a slow one is how a poll overruns its window. */
 	function noteSlice({
 		slice,
 		startedAtMs,
@@ -155,8 +161,17 @@ export function createStreamConsumer({
 		startedAtMs: number;
 	}): void {
 		const first = slice.applications[0];
-		if (!first) return;
-		const durationMs = now() - startedAtMs;
+		const last = slice.applications.at(-1);
+		if (!first || !last) return;
+		const endedAtMs = now();
+		uncommittedLandings.recordSlice({
+			partition: slice.partition,
+			firstOffset: first.position.offset,
+			nextOffset: last.position.offset + 1n,
+			startedAtMs,
+			endedAtMs,
+		});
+		const durationMs = endedAtMs - startedAtMs;
 		if (durationMs < SLOW_SLICE_MS) return;
 		ctx.logger.warn(
 			{
@@ -207,8 +222,40 @@ export function createStreamConsumer({
 	});
 
 	function onCrash(event: ConsumerCrashEvent): void {
-		if (event.payload.restart) return;
-		ctx.onCrashed({ job, cause: event.payload.error });
+		const { error, restart } = event.payload;
+		if (restart) {
+			reportRewind({ cause: error });
+			return;
+		}
+		ctx.onCrashed({ job, cause: error });
+	}
+
+	/** A restart seeks every partition back to its last commit, so what the job was handed past it comes again. */
+	function reportRewind({ cause }: { cause: Error }): void {
+		const rewound = uncommittedLandings.takeRewound({
+			partitions: assignedPartitions,
+		});
+		let records = 0;
+		let longestRanMs = 0;
+		for (const partition of rewound) {
+			records += partition.records;
+			longestRanMs = Math.max(longestRanMs, partition.ranMs);
+		}
+		ctx.logger.warn(
+			{
+				error: cause,
+				type: "herald_job_rewound",
+				data: {
+					job,
+					groupId,
+					leaseLost: cause instanceof KafkaConsumerLeaseLostError,
+					records,
+					longestRanMs,
+					rewound,
+				},
+			},
+			"Herald job rewound to its last commit",
+		);
 	}
 	function onGroupJoin(event: ConsumerGroupJoinEvent): void {
 		assignedPartitions = event.payload.memberAssignment[config.topic] ?? [];
