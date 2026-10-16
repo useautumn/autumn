@@ -18,10 +18,11 @@ export const billingFeatureMiddleware =
 	async (c, next) => {
 		const ctx = c.get("ctx");
 		const override = ctx.testOptions?.billingFeatures?.[featureId];
-		// Stacks without Autumn's own key (local, dev) have nothing to check against.
+		// The local dev server, and stacks without Autumn's own key, skip the plan check; deployed images run NODE_ENV=production.
 		const allowed =
 			override ??
-			(!process.env.AUTUMN_SECRET_KEY ||
+			(process.env.NODE_ENV === "development" ||
+				!process.env.AUTUMN_SECRET_KEY ||
 				(await orgHasFeature({
 					ctx: { autumn: getBillingAutumnClient(), logger: ctx.logger },
 					orgId: ctx.org.id,
