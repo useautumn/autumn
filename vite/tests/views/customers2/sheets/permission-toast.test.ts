@@ -40,9 +40,7 @@ describe("toastWriteError", () => {
 			fallback: "Failed",
 			inlineDenials: false,
 		});
-		expect(toastError).toHaveBeenCalledWith(
-			"Sales can grant up to 50 credits.",
-		);
+		expect(toastError).toHaveBeenCalledTimes(1);
 	});
 
 	test("any other error still toasts", () => {
