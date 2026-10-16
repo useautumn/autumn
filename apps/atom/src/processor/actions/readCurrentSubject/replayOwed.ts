@@ -45,9 +45,8 @@ const isRefusedForGood = (error: unknown): boolean =>
 	error instanceof LockNotFoundError;
 
 /**
- * The parts with each owed command applied as the balance worker applies it: decided on the rows so far (an entity's on
- * the customer's rows and its own as one, split back as the worker stores them), then applied. A command the worker would
- * refuse moves nothing here either, nor does a finalize left to the worker to decide, nor one for an entity not held.
+ * Each owed command applied as the worker applies it: an entity's on the customer's rows and its own as one, split back
+ * as the worker stores them. What the worker refuses, a finalize left to it, or an entity not held moves nothing.
  */
 export const replayOwed = ({
 	owed,
