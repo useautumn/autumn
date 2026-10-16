@@ -1,6 +1,5 @@
 import { Button, ConditionalTooltip } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import { parseAsString, useQueryState } from "nuqs";
 import { useEffect } from "react";
 import { AtomScope } from "@/contexts/AtomApiContext";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
@@ -21,15 +20,13 @@ import {
 	isAtomBeingRemoved,
 	isAtomSetUp,
 } from "./components/atom/atomDisplay";
+import { NEW_ATOM, useAtomSelection } from "./components/atom/useAtomSelection";
 
 const ATOM_SECTION = {
 	title: "Atom",
 	badge: "PREVIEW",
 	description: "Answer balance checks from your own cloud.",
 };
-
-/** The `atom` query param that opens a new Atom's setup rather than one of the env's Atoms. */
-const NEW_ATOM = "new";
 
 /** Whether this browser last saw a set-up Atom, so a cold load draws the layout that is about to arrive. */
 const useLastSeenAtomSetUp = () =>
@@ -145,7 +142,8 @@ const AtomContent = ({
 
 /** The env's Atoms: a list, each one's own page with a switcher, and a new one's setup. */
 export const AtomSection = () => {
-	const [selected, setSelected] = useQueryState("atom", parseAsString);
+	const selection = useAtomSelection();
+	const { selected } = selection;
 	const {
 		atoms,
 		removing,
@@ -162,13 +160,21 @@ export const AtomSection = () => {
 	// The list is not polled once every Atom settles, so it is re-read on the way back to it.
 	const showAll = () => {
 		refetch();
-		setSelected(null);
+		selection.showAll();
 	};
 	const open = (atomId: string) => {
 		refetch();
-		setSelected(atomId);
+		selection.open(atomId);
 	};
-	const create = () => setSelected(NEW_ATOM);
+	const showCreated = (atomId: string) => {
+		refetch();
+		selection.replace(atomId);
+	};
+	const showAllAfterRemoval = () => {
+		refetch();
+		selection.replace(null);
+	};
+	const create = selection.create;
 
 	const newAtomButton = (
 		<ConditionalTooltip enabled={refusal !== null} content={refusal}>
@@ -191,7 +197,7 @@ export const AtomSection = () => {
 		if (error) return <AtomLoadError error={error} onRetry={() => refetch()} />;
 		if (view === "new")
 			return (
-				<AtomScope onCreated={open}>
+				<AtomScope onCreated={showCreated}>
 					<AtomSetupFlow
 						cache={null}
 						stackName={nextStackName}
@@ -206,13 +212,11 @@ export const AtomSection = () => {
 						isSetUp={isAtomSetUp(
 							atoms.find(({ id }) => id === selected) ?? null,
 						)}
-						onGone={showAll}
+						onGone={showAllAfterRemoval}
 					/>
 				</AtomScope>
 			);
-		return (
-			limits && <AtomList atoms={atoms} limits={limits} onOpen={setSelected} />
-		);
+		return limits && <AtomList atoms={atoms} limits={limits} onOpen={open} />;
 	};
 
 	return (
@@ -230,7 +234,7 @@ export const AtomSection = () => {
 					selectedId={selected}
 					isLoading={isLoading}
 					canCreate={canCreate}
-					onSelect={setSelected}
+					onSelect={open}
 					onCreate={create}
 					onShowAll={showAll}
 				/>
@@ -243,7 +247,7 @@ export const AtomSection = () => {
 
 /** The section as it loads, before the org it reads is known: the frame and the skeleton of the view the URL asks for. */
 export const AtomSectionSkeleton = () => {
-	const [selected] = useQueryState("atom", parseAsString);
+	const { selected } = useAtomSelection();
 	const view = atomViewOf({ selected, isLoading: true, atomCount: 0 });
 	return (
 		<AtomLayout

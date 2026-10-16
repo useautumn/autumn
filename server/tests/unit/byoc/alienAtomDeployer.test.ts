@@ -8,6 +8,7 @@ import {
 	ByocCacheStatus,
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
+	DEFAULT_BYOC_CACHE_VOLUME_GIB,
 	findByocCacheMachineByInstanceType,
 	type Organization,
 } from "@autumn/shared";
@@ -49,6 +50,7 @@ describe("starting an Atom on alien", () => {
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		});
 
 		expect(started).toHaveLength(1);
@@ -77,6 +79,7 @@ describe("starting an Atom on alien", () => {
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		});
 
 		expect(started[0]?.pools).toEqual({
@@ -93,10 +96,11 @@ describe("starting an Atom on alien", () => {
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		});
 
 		expect(started[0]?.containers).toEqual({
-			atom: { cpu: 3, memory: "6Gi" },
+			atom: { cpu: 3, memory: "6Gi", volumeSizeGib: 20 },
 		});
 	});
 
@@ -120,12 +124,15 @@ describe("starting an Atom on alien", () => {
 				auth: { mode: "deployed", tokenHash: "hash_1" },
 				machine,
 				region: DEFAULT_BYOC_CACHE_AWS_REGION,
+				volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 			});
 
 			expect(started[0]?.pools).toEqual({
 				stateful: { machine: instanceType, machines: 2 },
 			});
-			expect(started[0]?.containers).toEqual({ atom: container });
+			expect(started[0]?.containers).toEqual({
+				atom: { ...container, volumeSizeGib: 20 },
+			});
 		},
 	);
 
@@ -137,6 +144,7 @@ describe("starting an Atom on alien", () => {
 			names: atomNames({ owner: cacheOwner({ org, env: AppEnv.Sandbox }) }),
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 			region: "eu-west-2",
 		});
 
@@ -152,6 +160,7 @@ describe("starting an Atom on alien", () => {
 			auth: { mode: "multi_tenant", tokenHash: "admin_hash" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 		});
 
 		expect(started[0]?.environmentVariables).toEqual([
@@ -185,6 +194,7 @@ describe("an Atom's network on alien", () => {
 			auth: { mode: "deployed", tokenHash: "hash_1" },
 			machine: DEFAULT_BYOC_CACHE_MACHINE,
 			region: DEFAULT_BYOC_CACHE_AWS_REGION,
+			volumeSizeGib: DEFAULT_BYOC_CACHE_VOLUME_GIB,
 			network,
 		});
 		return started[0]?.network;
@@ -324,5 +334,177 @@ describe("finding an Atom on alien", () => {
 		expect(
 			await deployer.find({ deploymentGroupId: "dg_1", deploymentId: "dep_1" }),
 		).toBeNull();
+	});
+});
+
+/** An alien client running one deployment that selects `volumeSizeGib`, recording each compute update. */
+const growingAlienClient = ({
+	volumeSizeGib,
+}: {
+	volumeSizeGib: number | null;
+}) => {
+	const updates: Parameters<AlienClient["updateDeploymentCompute"]>[0][] = [];
+	const deployment: AlienDeployment = {
+		...deploymentIn("running"),
+		stackSettings: {
+			compute: {
+				pools: {
+					stateful: { mode: "fixed", machines: 2, machine: "c8g.xlarge" },
+				},
+				containers: { atom: { cpu: 3, memory: "6Gi", volumeSizeGib } },
+			},
+		},
+	};
+	const alienClient: AlienClient = {
+		...deploymentsAlienClient({ byId: deployment, byGroup: deployment }),
+		updateDeploymentCompute: async (params) => {
+			updates.push(params);
+		},
+	};
+	return { alienClient, updates };
+};
+
+describe("growing an Atom's volume on alien", () => {
+	test("sends the Atom's whole compute, its machine and container unchanged, with the bigger volume", async () => {
+		const { alienClient, updates } = growingAlienClient({ volumeSizeGib: 20 });
+
+		await createAlienAtomDeployer({ alienClient }).growVolume({
+			deploymentGroupId: "dg_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			volumeSizeGib: 50,
+		});
+
+		expect(updates).toHaveLength(1);
+		expect(updates[0]?.pools).toEqual({
+			stateful: { machine: "c8g.xlarge", machines: 2 },
+		});
+		expect(updates[0]?.containers).toEqual({
+			atom: { cpu: 3, memory: "6Gi", volumeSizeGib: 50 },
+		});
+	});
+
+	test("refuses a size below the one the deployment already selects, before asking alien", async () => {
+		const { alienClient, updates } = growingAlienClient({ volumeSizeGib: 100 });
+
+		const grow = createAlienAtomDeployer({ alienClient }).growVolume({
+			deploymentGroupId: "dg_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			volumeSizeGib: 50,
+		});
+
+		await expect(grow).rejects.toThrow("can only grow");
+		expect(updates).toEqual([]);
+	});
+
+	test("a deployment on the release's default volume can grow past it", async () => {
+		const { alienClient, updates } = growingAlienClient({
+			volumeSizeGib: null,
+		});
+
+		await createAlienAtomDeployer({ alienClient }).growVolume({
+			deploymentGroupId: "dg_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			volumeSizeGib: 50,
+		});
+
+		expect(updates[0]?.containers?.atom?.volumeSizeGib).toBe(50);
+	});
+
+	test("a group with no running deployment has nothing to grow", async () => {
+		const alienClient = deploymentsAlienClient({ byId: null, byGroup: null });
+
+		const grow = createAlienAtomDeployer({ alienClient }).growVolume({
+			deploymentGroupId: "dg_1",
+			machine: DEFAULT_BYOC_CACHE_MACHINE,
+			volumeSizeGib: 50,
+		});
+
+		await expect(grow).rejects.toThrow("not running");
+	});
+});
+
+describe("an Atom's latest update on alien", () => {
+	const withUpdate = (latest: Record<string, unknown>): AlienDeployment => ({
+		...deploymentIn("running"),
+		updateState: { active: null, next: null, latest },
+	});
+	const findWith = (deployment: AlienDeployment) =>
+		createAlienAtomDeployer({
+			alienClient: deploymentsAlienClient({
+				byId: deployment,
+				byGroup: deployment,
+			}),
+		}).find({ deploymentGroupId: "dg_1", deploymentId: "dep_1" });
+
+	test("a grow alien is applying reads as applying, with when it was asked for", async () => {
+		const found = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "applying",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: null,
+			}),
+		);
+		expect(found?.update).toEqual({
+			status: "applying",
+			requested_at: Date.parse("2026-10-16T12:00:00Z"),
+			completed_at: null,
+			error: null,
+		});
+	});
+
+	test("a queued grow reads as requested, and a superseded one as succeeded", async () => {
+		const queued = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "queued",
+				requestedAt: "2026-10-16T12:00:00Z",
+			}),
+		);
+		const superseded = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "superseded",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: "2026-10-16T12:02:00Z",
+			}),
+		);
+		expect(queued?.update?.status).toBe("requested");
+		expect(superseded?.update?.status).toBe("succeeded");
+	});
+
+	test("a failed grow carries alien's reason", async () => {
+		const found = await findWith(
+			withUpdate({
+				id: "duop_1",
+				status: "failed",
+				requestedAt: "2026-10-16T12:00:00Z",
+				completedAt: "2026-10-16T12:01:00Z",
+				actionRequired: "Volume modification rate limit reached",
+			}),
+		);
+		expect(found?.update).toMatchObject({
+			status: "failed",
+			error: "Volume modification rate limit reached",
+		});
+	});
+
+	test("a release or redeploy is not a grow, so it reads as no update", async () => {
+		const update = (reasons: string[]) =>
+			findWith(
+				withUpdate({
+					id: "duop_1",
+					status: "applying",
+					reasons,
+					requestedAt: "2026-10-16T12:00:00Z",
+				}),
+			);
+		expect((await update(["release"]))?.update).toBeNull();
+		expect((await update(["configuration", "redeploy"]))?.update).toBeNull();
+		expect((await update(["configuration"]))?.update?.status).toBe("applying");
+	});
+
+	test("no update state reads as no update", async () => {
+		expect((await findWith(deploymentIn("running")))?.update).toBeNull();
 	});
 });

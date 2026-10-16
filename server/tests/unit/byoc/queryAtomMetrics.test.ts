@@ -8,11 +8,14 @@ type Query = { startTime: string; pipeline: string };
 const queries: Query[] = [];
 let periodRows: Record<string, unknown>[] = [];
 let latestRows: Record<string, unknown>[] = [];
+let volumeRows: Record<string, unknown>[] = [];
 
 mock.module(queryAtomLogsModulePath, () => ({
 	queryAtomLogs: async (query: Query) => {
 		queries.push(query);
-		return query.startTime === "now-1m" ? latestRows : periodRows;
+		if (query.startTime === "now-1m") return latestRows;
+		if (query.startTime === "now-5m") return volumeRows;
+		return periodRows;
 	},
 }));
 
@@ -33,7 +36,10 @@ beforeEach(() => {
 	queries.length = 0;
 	periodRows = [];
 	latestRows = [];
+	volumeRows = [];
 });
+
+const GIB = 1024 ** 3;
 
 describe("an Atom's metrics", () => {
 	test("rate each period's average over the seconds it covers, and its maximum as its busiest window", async () => {
@@ -49,6 +55,8 @@ describe("an Atom's metrics", () => {
 				requestsPerSecond: 1.9,
 				forwardedPerSecond: 0.1,
 				pushesPerSecond: 1.9,
+				disk: 0.42,
+				evicted: 312,
 			},
 			{ requests: 26, seconds: 130 },
 		];
@@ -71,6 +79,7 @@ describe("an Atom's metrics", () => {
 		expect(queries.map((query) => query.startTime)).toEqual([
 			"now-24h",
 			"now-1m",
+			"now-5m",
 		]);
 		expect(queries[0].pipeline).toMatch(
 			/arg_max\(.*\)\s+by bin\(_time, 900s\)/,
@@ -82,6 +91,8 @@ describe("an Atom's metrics", () => {
 					at: Date.parse("2026-10-09T14:30:00Z"),
 					cpu: 0.25,
 					memory: 0.5,
+					disk: 0.42,
+					evicted: 312,
 					maximum: { requests: 1.9, forwarded: 0.1, pushes: 1.9 },
 					average: { requests: 0.2, forwarded: 1 / 130, pushes: 0.2 },
 				},
@@ -92,7 +103,98 @@ describe("an Atom's metrics", () => {
 				forwarded: 0.1,
 				pushes: 0.2,
 			},
+			volumes: [],
 		});
+	});
+
+	test("chart the fullest replica's disk at its fullest and sum the replicas' evictions", async () => {
+		await queryAtomMetrics({
+			deploymentId: "dep_123",
+			range: "24h",
+			createdAt: createdDaysAgo(30),
+		});
+
+		expect(queries[0].pipeline).toMatch(
+			/disk = max\(diskShare\),\s+evicted = sum\(todouble\(data\.interval\.diskEvicted\)\)\s+by bin\(_time, 10s\)/,
+		);
+		expect(queries[0].pipeline).toMatch(
+			/disk = max\(disk\),\s+evicted = sum\(evicted\),[\s\S]*by bin\(_time, 900s\)/,
+		);
+		expect(queries[0].pipeline).not.toContain("diskExpired");
+	});
+
+	test("leave disk unknown, not empty, for a period no replica reported its volume in", async () => {
+		periodRows = [
+			{ _time: "2026-10-09T14:30:00Z", disk: null, seconds: 900 },
+			{ _time: "2026-10-09T14:45:00Z", seconds: 900 },
+		];
+
+		const metrics = await queryAtomMetrics({
+			deploymentId: "dep_123",
+			range: "24h",
+			createdAt: createdDaysAgo(30),
+		});
+
+		expect(queries[0].pipeline).toContain(
+			"iff(diskTotalBytes > 0, (diskTotalBytes - todouble(data.disk.availBytes)) / diskTotalBytes, real(null))",
+		);
+		expect(
+			metrics.points.map(({ disk, evicted }) => ({ disk, evicted })),
+		).toEqual([
+			{ disk: null, evicted: 0 },
+			{ disk: null, evicted: 0 },
+		]);
+	});
+
+	test("list each replica's last reported volume fullest first, dropping one that couldn't read it", async () => {
+		volumeRows = [
+			{
+				replicaId: "replica_a",
+				_time: "2026-10-09T14:31:00Z",
+				totalBytes: 20 * GIB,
+				availBytes: 15 * GIB,
+				usedBytes: 5 * GIB,
+			},
+			{
+				replicaId: "replica_b",
+				_time: "2026-10-09T14:31:05Z",
+				totalBytes: 50 * GIB,
+				availBytes: 10 * GIB,
+				usedBytes: 40 * GIB,
+			},
+			{
+				replicaId: "replica_c",
+				_time: "2026-10-09T14:31:02Z",
+				totalBytes: 0,
+				availBytes: 0,
+				usedBytes: 0,
+			},
+			{ replicaId: "replica_d", _time: "2026-10-09T14:31:03Z" },
+		];
+
+		const metrics = await queryAtomMetrics({
+			deploymentId: "dep_123",
+			range: "1h",
+			createdAt: createdDaysAgo(1),
+		});
+
+		expect(queries[2].pipeline).toMatch(
+			/summarize arg_max\(_time, totalBytes, availBytes\)\s+by replicaId = tostring\(\['attributes\.horizon\.replica_id'\]\)/,
+		);
+		expect(metrics.volumes).toEqual([
+			{
+				replica_id: "replica_b",
+				used_bytes: 40 * GIB,
+				total_bytes: 50 * GIB,
+				at: Date.parse("2026-10-09T14:31:05Z"),
+			},
+			{
+				replica_id: "replica_a",
+				used_bytes: 5 * GIB,
+				total_bytes: 20 * GIB,
+				at: Date.parse("2026-10-09T14:31:00Z"),
+			},
+		]);
 	});
 
 	test("plot a young Atom's few minutes at the raw 10s resolution", async () => {

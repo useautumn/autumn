@@ -200,6 +200,29 @@ export const cacheNotRunning = () =>
 		statusCode: 409,
 	});
 
+/** A volume grow resends the Atom's whole compute, which needs one of the machines Autumn sizes. */
+export const cacheMachineUnknown = () =>
+	new RecaseError({
+		message:
+			"Atom runs on a machine Autumn doesn't size, so its storage can't grow from here.",
+		code: ErrCode.ByocCacheNotReady,
+		statusCode: 409,
+	});
+
+/** A volume only grows; alien fails a shrink after accepting it, so it is refused before. */
+export const cacheStorageCannotShrink = ({
+	currentGib,
+	requestedGib,
+}: {
+	currentGib: number;
+	requestedGib: number;
+}) =>
+	new RecaseError({
+		message: `Atom's storage can only grow: ${requestedGib} GiB is less than its ${currentGib} GiB per replica.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+
 /** Setup finishes on the first checks, which only reach a connected Atom. */
 export const cacheNotConnected = () =>
 	new RecaseError({
@@ -289,6 +312,7 @@ export const cacheDeploymentToApiCache = ({
 	cpu: cacheDeployment.cpu,
 	memory: cacheDeployment.memory,
 	region: cacheDeployment.region,
+	volume_size_gib: cacheDeployment.volume_size_gib,
 	network: cacheDeployment.network,
 	stages: cacheDeployment.stages,
 	error: cacheDeployment.error,

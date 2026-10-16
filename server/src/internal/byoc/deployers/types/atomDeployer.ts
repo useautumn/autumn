@@ -1,4 +1,5 @@
 import type {
+	ApiAtomUpdate,
 	ByocCacheMachine,
 	ByocCacheNetwork,
 	ByocCacheStage,
@@ -21,6 +22,8 @@ export type AtomDeployment = {
 	removedStages: ByocCacheStage[];
 	/** Why the deploy or teardown stopped, in the runner's words. */
 	error: string | null;
+	/** The latest change applied to the running deployment, e.g. a storage grow; null when the runner reports none. */
+	update: ApiAtomUpdate | null;
 };
 
 export type AtomSetup = {
@@ -42,6 +45,7 @@ export type AtomDeployer = {
 		names: AtomNames;
 		auth: AtomAuth;
 		machine: ByocCacheMachine;
+		volumeSizeGib: number;
 		region: string;
 		network?: ByocCacheNetwork | null;
 	}): Promise<AtomSetup>;
@@ -56,6 +60,12 @@ export type AtomDeployer = {
 	resize(params: {
 		deploymentGroupId: string;
 		machine: ByocCacheMachine;
+	}): Promise<void>;
+	/** Grows each replica's volume online, on the machine it runs on now; a smaller size than the deployment has is refused. */
+	growVolume(params: {
+		deploymentGroupId: string;
+		machine: ByocCacheMachine;
+		volumeSizeGib: number;
 	}): Promise<void>;
 	/** Resumes a failed deploy from the step that failed. */
 	retry(params: { deploymentGroupId: string }): Promise<void>;

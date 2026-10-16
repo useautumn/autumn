@@ -101,6 +101,7 @@ const metrics = spyOn(atomMetricsModule, "queryAtomMetrics").mockResolvedValue({
 	period_seconds: 10,
 	points: [],
 	latest: null,
+	volumes: [],
 });
 
 beforeEach(() => {
@@ -186,7 +187,9 @@ test("staff start the shadow Atom multi-tenant on the customer's alien stack, un
 	expect(started?.pools).toEqual({
 		stateful: { machine: "c8g.xlarge", machines: 2 },
 	});
-	expect(started?.containers).toEqual({ atom: { cpu: 3, memory: "6Gi" } });
+	expect(started?.containers).toEqual({
+		atom: { cpu: 3, memory: "6Gi", volumeSizeGib: 20 },
+	});
 	const variables = Object.fromEntries(
 		(started?.environmentVariables ?? []).map(({ name, value }) => [
 			name,
@@ -391,7 +394,9 @@ test("a new shadow Atom made while the deleted one comes down gets its own names
 	expect(started?.externalId).toMatch(SHADOW_EXTERNAL_ID);
 	expect(started?.label).toMatch(SHADOW_STACK_NAME);
 	expect(started?.label).not.toBe(first.stack_name);
-	expect(started?.containers).toEqual({ atom: { cpu: 7, memory: "12Gi" } });
+	expect(started?.containers).toEqual({
+		atom: { cpu: 7, memory: "12Gi", volumeSizeGib: 20 },
+	});
 	expect(stored).toMatchObject({
 		deploymentGroupId: "dg_2",
 		externalId: started?.externalId,

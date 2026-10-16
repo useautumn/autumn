@@ -3,11 +3,17 @@ import {
 	type ByocCacheMachine,
 	findByocCacheMachineByInstanceType,
 } from "@autumn/shared";
-import { RadioGroup, RadioGroupItem } from "@autumn/ui";
+import { InfoTooltip, RadioGroup, RadioGroupItem } from "@autumn/ui";
 import { useId } from "react";
 import { LabelTag } from "@/components/general/LabelTag";
 import { TABLE_TRAY_SURFACE_DIVIDER_CLASS } from "@/components/general/table";
 import { cn } from "@/lib/utils";
+import {
+	ATOM_ACTIVE_CUSTOMERS_NOTE,
+	ATOM_CAPACITY_FOOTNOTE,
+	atomActiveCustomersLabel,
+	atomChecksPerSecondLabel,
+} from "./atomMachineCapacity";
 import {
 	atomMachineLabel,
 	atomMachinesLabel,
@@ -15,17 +21,20 @@ import {
 } from "./atomMachineDisplay";
 
 const GRID_CLASS =
-	"grid grid-cols-[minmax(0,1fr)_64px_80px_144px_96px] items-center gap-4 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
+	"grid grid-cols-[minmax(0,1fr)_64px_120px_88px_120px_72px] items-center gap-3 px-4 [&>*:not(:first-child)]:text-right [&>*:not(:first-child)]:tabular-nums";
 
-/** Atom's sizes as rows on a section's surface; the one it runs on now is marked Current. */
+/** Atom's sizes as rows on a section's surface, each with what it handles and priced with its volumes; the one it runs on now is marked Current. */
 export const AtomMachineTable = ({
 	selected,
 	current,
+	volumeSizeGib,
 	onSelect,
 	disabled = false,
 }: {
 	selected: ByocCacheMachine;
 	current?: ByocCacheMachine | null;
+	/** Null while a typed size is not valid yet, so no row shows a price for it. */
+	volumeSizeGib: number | null;
 	onSelect: (machine: ByocCacheMachine) => void;
 	disabled?: boolean;
 }) => {
@@ -53,8 +62,12 @@ export const AtomMachineTable = ({
 				)}
 			>
 				<span>Size</span>
-				<span>vCPU</span>
-				<span>Memory</span>
+				<span title="Across both replicas">Checks/s</span>
+				<span className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
+					Active customers
+					<InfoTooltip>{ATOM_ACTIVE_CUSTOMERS_NOTE}</InfoTooltip>
+				</span>
+				<span>CPU · RAM</span>
 				<span>Machines</span>
 				<span>Est. / month</span>
 			</div>
@@ -80,17 +93,30 @@ export const AtomMachineTable = ({
 							</span>
 							{isCurrent && <LabelTag label="CURRENT" />}
 						</span>
-						<span>{machine.cpu}</span>
-						<span>{machine.memory} GiB</span>
+						<span>{atomChecksPerSecondLabel(machine)}</span>
+						<span>{atomActiveCustomersLabel(machine)}</span>
+						<span>
+							{machine.cpu} · {machine.memory} GiB
+						</span>
 						<span className="font-mono text-xs">
 							{atomMachinesLabel(machine)}
 						</span>
 						<span className="text-foreground">
-							{atomMonthlyEstimate(machine)}
+							{volumeSizeGib === null
+								? "—"
+								: atomMonthlyEstimate({ machine, volumeSizeGib })}
 						</span>
 					</label>
 				);
 			})}
+			<p
+				className={cn(
+					TABLE_TRAY_SURFACE_DIVIDER_CLASS,
+					"px-4 py-2 text-xs text-tertiary-foreground",
+				)}
+			>
+				{ATOM_CAPACITY_FOOTNOTE}
+			</p>
 		</RadioGroup>
 	);
 };

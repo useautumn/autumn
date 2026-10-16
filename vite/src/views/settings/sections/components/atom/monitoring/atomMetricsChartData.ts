@@ -42,20 +42,27 @@ type AtomTrafficValues = {
 	pushes: number | null;
 };
 
-/** CPU and memory are averages under either statistic. */
+/** CPU and memory are averages under either statistic; disk and evictions are the same under both. */
 export type AtomMetricsValues = AtomTrafficValues & {
 	cpu: number | null;
 	memory: number | null;
+	disk: number | null;
+	evicted: number | null;
 };
 
-/** One period from `at` to `endAt`, plotted at its midpoint `x` so a bar spans exactly its period. */
-export type AtomMetricsRow = AtomMetricsValues & {
+/** A span on the time axis, plotted at its midpoint `x`, and whichever values it has. */
+export type AtomMetricsPlotRow = {
 	at: number;
 	endAt: number;
 	x: number;
-	/** Both statistics' values for the hover; the row's own are the chosen statistic's. */
-	statistics: Record<AtomMetricsStatistic, AtomMetricsValues>;
-};
+} & Partial<AtomMetricsValues>;
+
+/** One period from `at` to `endAt`, plotted at its midpoint `x` so a bar spans exactly its period. */
+export type AtomMetricsRow = AtomMetricsPlotRow &
+	AtomMetricsValues & {
+		/** Both statistics' values for the hover; the row's own are the chosen statistic's. */
+		statistics: Record<AtomMetricsStatistic, AtomMetricsValues>;
+	};
 
 /** The last minute's traffic. */
 export type AtomMetricsReading = AtomTrafficValues & { at: number };
@@ -81,7 +88,7 @@ export type AtomMetricsChartData = {
 	lastTrafficAt: number | null;
 };
 
-const localOffsetMs = (at: number) =>
+export const localOffsetMs = (at: number) =>
 	-new Date(at).getTimezoneOffset() * MINUTE_MS;
 
 /** Ticks on round local times, e.g. every 3 hours from midnight. */
@@ -141,13 +148,15 @@ export const toAtomMetricsChartData = ({
 	);
 	const toRow = (period: number): AtomMetricsRow => {
 		const point = pointsByPeriod.get(period);
-		const utilization = {
+		const unsplit = {
 			cpu: point?.cpu ?? null,
 			memory: point?.memory ?? null,
+			disk: point?.disk ?? null,
+			evicted: point?.evicted ?? null,
 		};
 		const statistics = {
-			maximum: { ...utilization, ...ratesToTraffic(point?.maximum) },
-			average: { ...utilization, ...ratesToTraffic(point?.average) },
+			maximum: { ...unsplit, ...ratesToTraffic(point?.maximum) },
+			average: { ...unsplit, ...ratesToTraffic(point?.average) },
 		};
 		return {
 			at: period * periodMs,

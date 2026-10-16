@@ -50,13 +50,42 @@ export type ByocCacheMachine = (typeof BYOC_CACHE_MACHINES)[number];
 /** Every Atom runs this many replicas, one per machine; `packages/alien/stacks/byoc/alien.json` declares the same. */
 export const BYOC_CACHE_REPLICAS = 2;
 
-/** Each replica's data volume, as `packages/alien/stacks/byoc/alien.json` sizes it; the Atom keeps its files within 80% of it. */
-export const BYOC_CACHE_DISK_GB = 20;
+/** Each replica's data volume unless its Atom picks another, as `packages/alien/stacks/byoc/alien.json` sizes it. */
+export const DEFAULT_BYOC_CACHE_VOLUME_GIB = 20;
 
-/** AWS list price in us-east-1: (EC2 hourly × 730 h + the gp3 data disk × $0.08/GB-month) × replicas. */
-export const byocCacheMachineMonthlyUsd = (machine: ByocCacheMachine) =>
+/** The sizes the dashboard offers; any whole GiB from the default up to alien's cap is accepted. */
+export const BYOC_CACHE_VOLUME_PRESETS_GIB = [20, 50, 100] as const;
+export const MIN_BYOC_CACHE_VOLUME_GIB = DEFAULT_BYOC_CACHE_VOLUME_GIB;
+export const MAX_BYOC_CACHE_VOLUME_GIB = 65_536;
+
+/** The Atom evicts cached customers once its volume is this full (`apps/atom/src/disk/createDiskEvictor.ts`). */
+export const ATOM_DISK_EVICTION_SHARE = 0.8;
+
+const GP3_USD_PER_GIB_MONTH = 0.08;
+const HOURS_PER_MONTH = 730;
+
+/** AWS list price in us-east-1 for both replicas' EC2 machines. */
+export const byocCacheComputeMonthlyUsd = (machine: ByocCacheMachine) =>
+	machine.hourlyUsd * HOURS_PER_MONTH * BYOC_CACHE_REPLICAS;
+
+/** AWS list price in us-east-1 for both replicas' gp3 data volumes. */
+export const byocCacheStorageMonthlyUsd = ({
+	volumeSizeGib,
+}: {
+	volumeSizeGib: number;
+}) => volumeSizeGib * GP3_USD_PER_GIB_MONTH * BYOC_CACHE_REPLICAS;
+
+/** Both replicas' machines and volumes, rounded to whole dollars. */
+export const byocCacheMonthlyUsd = ({
+	machine,
+	volumeSizeGib,
+}: {
+	machine: ByocCacheMachine;
+	volumeSizeGib: number;
+}) =>
 	Math.round(
-		(machine.hourlyUsd * 730 + BYOC_CACHE_DISK_GB * 0.08) * BYOC_CACHE_REPLICAS,
+		byocCacheComputeMonthlyUsd(machine) +
+			byocCacheStorageMonthlyUsd({ volumeSizeGib }),
 	);
 
 /** The container size every Atom ran before sizes existed, so a setup that names none is unchanged. */

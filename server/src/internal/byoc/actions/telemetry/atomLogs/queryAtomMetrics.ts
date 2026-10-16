@@ -2,6 +2,7 @@ import type {
 	AtomMetricsPoint,
 	AtomMetricsRange,
 	AtomMetricsRates,
+	AtomVolume,
 	GetAtomMetricsResponse,
 } from "@autumn/shared";
 import {
@@ -57,12 +58,14 @@ export const atomMetricsPeriodSeconds = ({
 	);
 };
 
-/** Every replica's health line summed into the window it landed in. */
+/** Every replica's health line summed into the window it landed in; disk is the fullest replica's, null where none knew its volume. */
 const windowsPipeline = ({ windowSeconds }: { windowSeconds: number }) => `
 	${ATOM_HEALTH_LINES}
 	| extend data = parse_json(line).data
 	| where todouble(data.interval.seconds) > 0
-	| extend lineSeconds = todouble(data.interval.seconds)
+	| extend lineSeconds = todouble(data.interval.seconds),
+		diskTotalBytes = todouble(data.disk.totalBytes)
+	| extend diskShare = iff(diskTotalBytes > 0, (diskTotalBytes - todouble(data.disk.availBytes)) / diskTotalBytes, real(null))
 	| summarize requests = sum(todouble(data.interval.requests)),
 		forwarded = sum(todouble(data.interval.forwarded)),
 		pushes = sum(todouble(data.interval.pushes)),
@@ -70,7 +73,9 @@ const windowsPipeline = ({ windowSeconds }: { windowSeconds: number }) => `
 		cpuSeconds = sum(todouble(data.interval.cpuSeconds)),
 		coreSeconds = sum(lineSeconds * todouble(data.container.cpuLimitCores)),
 		memoryBytes = sum(todouble(data.container.memoryBytes)),
-		memoryLimitBytes = sum(todouble(data.container.memoryLimitBytes))
+		memoryLimitBytes = sum(todouble(data.container.memoryLimitBytes)),
+		disk = max(diskShare),
+		evicted = sum(todouble(data.interval.diskEvicted))
 		by bin(_time, ${windowSeconds}s)
 	| extend requestsPerSecond = requests / seconds,
 		forwardedPerSecond = forwarded / seconds,
@@ -91,6 +96,8 @@ const periodsPipeline = ({
 		forwarded = sum(forwarded),
 		pushes = sum(pushes),
 		seconds = sum(seconds),
+		disk = max(disk),
+		evicted = sum(evicted),
 		arg_max(requestsPerSecond, forwardedPerSecond, pushesPerSecond)
 		by bin(_time, ${periodSeconds}s)
 	| sort by _time asc`;
@@ -103,6 +110,16 @@ const LATEST_PIPELINE = `
 		forwarded = sum(forwarded),
 		pushes = sum(pushes),
 		seconds = sum(seconds)`;
+
+/** Each replica's newest health line, for the volume it reported last. */
+const VOLUMES_PIPELINE = `
+	| where line contains '"atom_health"'
+	| extend data = parse_json(line).data
+	| extend totalBytes = todouble(data.disk.totalBytes),
+		availBytes = todouble(data.disk.availBytes)
+	| summarize arg_max(_time, totalBytes, availBytes)
+		by replicaId = tostring(['attributes.horizon.replica_id'])
+	| extend usedBytes = totalBytes - availBytes`;
 
 type AxiomRow = Record<string, unknown>;
 
@@ -129,6 +146,8 @@ const periodToPoint = (row: AxiomRow): AtomMetricsPoint => ({
 	at: Date.parse(axiomStringFrom(row._time)),
 	cpu: numberOrNull(row.cpu),
 	memory: numberOrNull(row.memory),
+	disk: numberOrNull(row.disk),
+	evicted: axiomNumberFrom(row.evicted),
 	maximum: windowRatesOf(row),
 	average: totalRatesOf(row),
 });
@@ -136,7 +155,25 @@ const periodToPoint = (row: AxiomRow): AtomMetricsPoint => ({
 /** Axiom adds a totals row with no _time beside the windows. */
 const isTimedRow = (row: AxiomRow) => Boolean(row._time);
 
-/** CPU, memory and traffic per period, plus the last minute's, from the health line every Atom logs every 10s with what changed since the last. */
+const volumeOf = (row: AxiomRow): AtomVolume => ({
+	replica_id: axiomStringFrom(row.replicaId),
+	used_bytes: axiomNumberFrom(row.usedBytes),
+	total_bytes: axiomNumberFrom(row.totalBytes),
+	at: Date.parse(axiomStringFrom(row._time)),
+});
+
+const usedShareOf = (volume: AtomVolume) =>
+	volume.used_bytes / volume.total_bytes;
+
+/** Fullest first; a replica that couldn't read its volume reports a zero total, which is unknown, not empty. */
+const volumesOf = (rows: AxiomRow[]) =>
+	rows
+		.filter(isTimedRow)
+		.map(volumeOf)
+		.filter((volume) => volume.total_bytes > 0)
+		.sort((a, b) => usedShareOf(b) - usedShareOf(a));
+
+/** CPU, memory, disk and traffic per period, the last minute's rates and each replica's volume, from the health line every Atom logs every 10s with what changed since the last. */
 export const queryAtomMetrics = async ({
 	deploymentId,
 	range,
@@ -152,7 +189,7 @@ export const queryAtomMetrics = async ({
 		createdAt,
 		now: Date.now(),
 	});
-	const [periods, latestRows] = await Promise.all([
+	const [periods, latestRows, volumeRows] = await Promise.all([
 		queryAtomLogs({
 			deploymentId,
 			startTime: `now-${range}`,
@@ -166,6 +203,11 @@ export const queryAtomMetrics = async ({
 			startTime: "now-1m",
 			pipeline: LATEST_PIPELINE,
 		}),
+		queryAtomLogs({
+			deploymentId,
+			startTime: "now-5m",
+			pipeline: VOLUMES_PIPELINE,
+		}),
 	]);
 	const latest = latestRows.find(isTimedRow);
 	return {
@@ -177,5 +219,6 @@ export const queryAtomMetrics = async ({
 					...totalRatesOf(latest),
 				}
 			: null,
+		volumes: volumesOf(volumeRows),
 	};
 };

@@ -12,6 +12,8 @@ export type AlienDeployment = {
 	stackState?: unknown;
 	/** The settings the deployment runs with; read its machines with `deploymentToPoolMachine`. */
 	stackSettings?: unknown;
+	/** alien's durable update operations; read the current one with `deploymentToUpdate`. */
+	updateState?: unknown;
 };
 
 /** Fixed-size compute pools by name: each runs `machines` of one EC2 `machine` type. */
@@ -20,10 +22,10 @@ export type AlienFixedPools = Record<
 	{ machine: string; machines: number }
 >;
 
-/** Each container's per-replica allocation by resource id, inside the ranges the release declares; memory in binary units, e.g. `6Gi`. */
+/** Each container's per-replica allocation by resource id, inside the ranges the release declares; memory in binary units, e.g. `6Gi`. Its volume can only grow. */
 export type AlienContainerResources = Record<
 	string,
-	{ cpu: number; memory: string }
+	{ cpu: number; memory: string; volumeSizeGib: number }
 >;
 
 /** Where a setup puts the deployment's network: alien's `stackSettings.defaults.network`. */
@@ -98,10 +100,11 @@ export type AlienClient = {
 	}): Promise<AlienDeployment | null>;
 	/** Resumes a failed deployment from where it stopped. */
 	retryDeployment(params: { deployment: AlienDeployment }): Promise<void>;
-	/** alien replaces a pool's machines; a pool's volumes follow its containers. */
+	/** alien replaces a pool's machines; a pool's volumes follow its containers. With `containers`, alien also grows their volumes online. */
 	updateDeploymentCompute(params: {
 		deployment: AlienDeployment;
 		pools: AlienFixedPools;
+		containers?: AlienContainerResources;
 	}): Promise<void>;
 	deleteDeployment(params: { deployment: AlienDeployment }): Promise<void>;
 	revokeSetupLinksOnceDeleted(params: {
