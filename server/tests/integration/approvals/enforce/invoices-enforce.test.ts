@@ -15,6 +15,7 @@ import { createInvoice } from "@tests/integration/invoices/create/utils/expectCr
 import { rules } from "@tests/utils/fixtures/rules";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
 
 /** Invoice actions are checked against the member's rules on the invoice total and refund (E5b). */
 
@@ -136,6 +137,25 @@ test.concurrent(
 				}),
 				violations: [{ field: "total", actual: "500" }],
 			});
+
+			// A denied invoice for a new customer leaves no customer behind.
+			const newCustomerId = `approvals-invoices-new-${Date.now()}`;
+			expectPermissionDenied({
+				res: await postRaw({
+					client,
+					path: "/invoices.create",
+					body: customInvoice({ customerId: newCustomerId, amount: 500 }),
+				}),
+				violations: [{ field: "total", actual: "500" }],
+			});
+			expect(
+				await CusService.get({
+					db: ctx.db,
+					idOrInternalId: newCustomerId,
+					orgId: ctx.org.id,
+					env: ctx.env,
+				}),
+			).toBeFalsy();
 		} finally {
 			await cleanup();
 		}

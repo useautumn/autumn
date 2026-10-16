@@ -7,7 +7,7 @@ import type {
 	PreviewInvoiceCredits,
 	StripeDiscountWithCoupon,
 } from "@autumn/shared";
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { CustomerNotFoundError, ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getExpandedStripeCustomer } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
@@ -17,6 +17,7 @@ import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/st
 import { resolveParamDiscounts } from "@/internal/billing/v2/providers/stripe/utils/discounts/resolveParamDiscounts";
 import { stripeCustomerToInvoiceCredits } from "@/internal/billing/v2/utils/billingPlan/preview/invoiceCredits/stripeCustomerToInvoiceCredits";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer";
+import { initFullCustomer } from "@/internal/customers/cusUtils/initCustomer";
 import { InvoiceTemplateService } from "@/internal/orgs/invoiceTemplates/InvoiceTemplateService";
 import { ProductService } from "@/internal/products/ProductService";
 import type { InvoicePeriod } from "../compute/prorateInvoiceLineAmount";
@@ -103,10 +104,13 @@ export const setupCreateInvoiceContext = async ({
 	ctx,
 	params,
 	preview,
+	previewNewCustomer = false,
 }: {
 	ctx: AutumnContext;
 	params: CreateInvoiceParams;
 	preview: boolean;
+	/** Previews an unknown customer as an unsaved one instead of 404ing. */
+	previewNewCustomer?: boolean;
 }): Promise<CreateInvoiceContext> => {
 	const hasCharges =
 		(params.plans?.length ?? 0) > 0 ||
@@ -127,6 +131,11 @@ export const setupCreateInvoiceContext = async ({
 		customerId: params.customer_id,
 		skipCreate: preview,
 		skipUpdate: preview,
+	}).catch((error) => {
+		if (!(previewNewCustomer && error instanceof CustomerNotFoundError)) {
+			throw error;
+		}
+		return initFullCustomer({ ctx, customerId: params.customer_id });
 	});
 	const entitiesById = await loadInvoiceEntities({
 		ctx,
