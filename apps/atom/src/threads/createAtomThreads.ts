@@ -1,5 +1,6 @@
 import type { AtomEnv } from "@autumn/env/atom";
 import type { AutumnLogger } from "@autumn/logging";
+import { markAtomReady } from "../init/atomHealth.js";
 import { startHealthLog } from "../init/startHealthLog.js";
 import type { AtomServer } from "../init/types/atomServer.js";
 import { MEMBERSHIP_INTS } from "../replicas/membership/createMembership.js";
@@ -220,7 +221,7 @@ export const createAtomThreads = ({
 			threads.map((_, index) => keepStarting({ index })),
 		);
 		if (!started.every(Boolean)) return;
-		Atomics.store(new Int32Array(readyFlag), 0, 1);
+		markAtomReady({ ready: new Int32Array(readyFlag), at: Date.now() });
 		ctx.logger.info(
 			{ type: "atom_ready", data: { bunVersion: Bun.version } },
 			`Atom listening at http://${env.ATOM_HOSTNAME}:${env.ATOM_PORT} on ${env.ATOM_THREADS} threads (Bun ${Bun.version})`,
