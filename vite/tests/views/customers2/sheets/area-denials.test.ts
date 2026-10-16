@@ -11,9 +11,7 @@ mock.module("sonner", () => ({ toast: { error: toastError } }));
 const { APPROVAL_OPENERS } = await import(
 	"@/components/forms/shared/permission/approvalOpeners"
 );
-const { APPROVAL_ACTION_IDS } = await import(
-	"@/components/forms/shared/permission/canDo"
-);
+const { ACTIONS } = await import("@autumn/shared");
 const { toastWriteError } = await import(
 	"@/components/forms/shared/permission/toastWriteError"
 );
@@ -27,7 +25,7 @@ describe("approval openers", () => {
 	test.each(Object.entries(APPROVAL_OPENERS))(
 		"%s gates on a known action (%s)",
 		(_opener, action) => {
-			expect<readonly string[]>(APPROVAL_ACTION_IDS).toContain(action);
+			expect(Object.keys(ACTIONS)).toContain(action);
 		},
 	);
 

@@ -1,4 +1,4 @@
-import type { ApprovalActionId } from "./canDo";
+import type { ApprovalAction } from "@autumn/shared";
 
 /**
  * The action each dashboard opener is gated on through `useCanDo`.
@@ -26,4 +26,4 @@ export const APPROVAL_OPENERS = {
 	createApiKey: "api_keys.create",
 	createMigration: "migrations.create",
 	runMigration: "migrations.run",
-} as const satisfies Record<string, ApprovalActionId>;
+} as const satisfies Record<string, ApprovalAction>;
