@@ -9,8 +9,8 @@ import { serveAtomApp } from "../http/serveAtomApp.js";
 import { createPushReceiver } from "../pushes/createPushReceiver.js";
 import { getPushQueue } from "../pushQueue/getPushQueue.js";
 import { leaveRing } from "../replicas/handover/leaveRing.js";
-import { timeStage } from "../threads/stats/stageClock.js";
 import { startReadinessProber } from "../replicas/membership/startReadinessProber.js";
+import { timeStage } from "../threads/stats/stageClock.js";
 import { startLoopWatch } from "../threads/stats/startLoopWatch.js";
 import { startThreadStatsTick } from "../threads/stats/startThreadStatsTick.js";
 import type {

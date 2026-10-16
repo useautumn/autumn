@@ -13,7 +13,6 @@ import { CannotAnswerError } from "../../../lib/forward/cannotAnswerError.js";
 import { timeStage } from "../../../threads/stats/stageClock.js";
 import type { CurrentSubject } from "../../types/currentSubject.js";
 import type { SlotProcessorContext } from "../../types/slotProcessor.js";
-import { timeStage } from "../../../threads/stats/stageClock.js";
 import { isSameLock, LockTermsConflictError } from "./lockTerms.js";
 
 /**

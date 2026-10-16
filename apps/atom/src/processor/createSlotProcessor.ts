@@ -146,6 +146,9 @@ export const createSlotProcessor = ({
 			});
 		},
 		setSubject: async (params) => {
+			const subject = timeStage("pushApply", () =>
+				subjectPushToStoredSubject(params),
+			);
 			try {
 				const stored = await timeStage("pushApply", () =>
 					setSubject({ ctx, subject }),

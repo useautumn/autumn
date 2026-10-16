@@ -1,13 +1,13 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { isServing } from "../../init/atomHealth.js";
 import { CannotAnswerError } from "../../lib/forward/cannotAnswerError.js";
+import { timeStage } from "../../threads/stats/stageClock.js";
 import {
 	type Hop,
 	hopToPeer,
 	PeerTimeout,
 	peerTimeoutReply,
 } from "../forward/hopToPeer.js";
-import { timeStage } from "../../threads/stats/stageClock.js";
 import type { AtomHttpContext, AtomHttpEnv } from "../types/atomHttp.js";
 
 const customerIdOf = (body: unknown): string | null => {

@@ -92,7 +92,11 @@ describe("the stage clock", () => {
 			}),
 		);
 
-		expect(Object.keys(pushed)).toEqual(["stagePushApplyUs"]);
+		// A push reconciles what the journal owes the customer, so its lookups count to their own stage.
+		expect(Object.keys(pushed).sort()).toEqual([
+			"stageJournalOwedUs",
+			"stagePushApplyUs",
+		]);
 		expect(Object.keys(checked).sort()).toEqual([
 			"stageEngineDecisionUs",
 			"stageEngineFoldStepUs",
