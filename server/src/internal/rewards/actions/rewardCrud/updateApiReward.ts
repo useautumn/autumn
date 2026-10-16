@@ -6,8 +6,6 @@ import {
 	FeatureType,
 	findFeatureById,
 	normalizePromoCodes,
-	type Price,
-	type Product,
 	RecaseError,
 	type Reward,
 	type RewardEntitlement,
@@ -15,18 +13,11 @@ import {
 	type UpdateRewardParams,
 	type UpdateRewardResponse,
 } from "@autumn/shared";
-import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import {
-	createStripeCoupon,
-	resolveCouponStripeProductIds,
-} from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardRepo } from "../../repos/index.js";
-import { initRewardStripePrices } from "../../rewardUtils.js";
 import { getRewardPrices } from "../getRewardPrices.js";
-import { restoreStripeCoupon } from "../restoreStripeCoupon.js";
-import { validateCouponStripeProductScope } from "../validateCouponStripeProductScope.js";
+import { replaceStripeCoupon } from "../replaceStripeCoupon.js";
 import { validateRewardUniqueness } from "../validateRewardUniqueness.js";
 import { requireApiReward, toApiRewardResponse } from "./apiRewardUtils.js";
 
@@ -199,47 +190,6 @@ const assertBodyMatchesRewardType = ({
 	}
 };
 
-/** Stripe cannot update coupons in place, so the discount is deleted and recreated */
-const recreateStripeCoupon = async ({
-	ctx,
-	previous,
-	updated,
-}: {
-	ctx: AutumnContext;
-	previous: Reward;
-	updated: Reward;
-}) => {
-	const { org, env, logger } = ctx;
-	const prices: (Price & { product: Product })[] = await getRewardPrices({
-		ctx,
-		priceIds: updated.discount_config?.price_ids ?? [],
-	});
-
-	await initRewardStripePrices({ ctx, prices });
-
-	// Preflight before deleting, so a plan missing in Stripe fails the update
-	// while the existing coupon is still intact.
-	await validateCouponStripeProductScope({
-		ctx,
-		reward: updated,
-		prices,
-	});
-	resolveCouponStripeProductIds({ reward: updated, prices });
-
-	const stripeCli = createStripeCli({ org, env });
-	try {
-		await stripeCli.coupons.del(previous.id);
-		await stripeCli.coupons.del(previous.internal_id);
-	} catch (_) {}
-
-	try {
-		await createStripeCoupon({ reward: updated, org, env, prices, logger });
-	} catch (error) {
-		await restoreStripeCoupon({ ctx, reward: previous });
-		throw error;
-	}
-};
-
 export const updateApiReward = async ({
 	ctx,
 	params,
@@ -272,10 +222,14 @@ export const updateApiReward = async ({
 
 	// 3. Feature grants have no Stripe coupon; discounts must be recreated
 	if (!isFeatureGrant) {
-		await recreateStripeCoupon({
+		await replaceStripeCoupon({
 			ctx,
-			previous: reward,
-			updated: updatedReward,
+			reward,
+			updatedReward,
+			prices: await getRewardPrices({
+				ctx,
+				priceIds: updatedReward.discount_config?.price_ids ?? [],
+			}),
 		});
 	}
 
