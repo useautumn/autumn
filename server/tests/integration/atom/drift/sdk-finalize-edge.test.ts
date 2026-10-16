@@ -178,18 +178,9 @@ const lockThroughSdk = async ({
 	expect(locked.allowed).toBe(true);
 };
 
-const finalizeThroughSdk = ({
-	sdk,
-	customerId,
-	lockId,
-}: {
-	sdk: Autumn;
-	customerId: string;
-	lockId: string;
-}) =>
+const finalizeThroughSdk = ({ sdk, lockId }: { sdk: Autumn; lockId: string }) =>
 	sdk.balances
 		.finalize({
-			customerId,
 			lockId,
 			action: "confirm",
 			overrideValue: CONFIRMED,
@@ -245,7 +236,7 @@ test.skipIf(!replicaSetRunsHere)(
 		try {
 			set.holdHandIns();
 			await lockThroughSdk({ sdk, customerId, lockId });
-			const finalized = await finalizeThroughSdk({ sdk, customerId, lockId });
+			const finalized = await finalizeThroughSdk({ sdk, lockId });
 
 			expect(finalized).toEqual({ status: 200, reply: { success: true } });
 			expect(api.seen).toEqual([]);
@@ -297,7 +288,6 @@ test.skipIf(!replicaSetRunsHere)(
 					apiUrl: settledApi.url,
 					customerId,
 				}),
-				customerId,
 				lockId,
 			});
 
@@ -349,7 +339,6 @@ test.skipIf(!replicaSetRunsHere)(
 			set.holdHandIns();
 			const finalized = await finalizeThroughSdk({
 				sdk: sdkFor({ edgeUrl: slowEdge.url, apiUrl: api.url, customerId }),
-				customerId,
 				lockId,
 			});
 
@@ -395,7 +384,6 @@ test.skipIf(!replicaSetRunsHere)(
 			});
 			const finalized = await finalizeThroughSdk({
 				sdk: sdkFor({ edgeUrl: edge.url, apiUrl: api.url, customerId }),
-				customerId,
 				lockId,
 			});
 
