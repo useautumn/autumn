@@ -151,14 +151,14 @@ export const AtomSection = () => {
 		removing,
 		nextStackName,
 		nextStackNameSuffix,
-		access,
+		limits,
 		isLoading,
 		error,
 		refetch,
 	} = useAtomsQuery();
 	const view = atomViewOf({ selected, isLoading, atomCount: atoms.length });
-	const canCreate = access?.can_create ?? false;
-	const refusal = access && atomCreateRefusal(access);
+	const canCreate = limits?.can_create ?? false;
+	const refusal = limits && atomCreateRefusal(limits);
 	// The list is not polled once every Atom settles, so it is re-read on the way back to it.
 	const showAll = () => {
 		refetch();
@@ -211,7 +211,7 @@ export const AtomSection = () => {
 				</AtomScope>
 			);
 		return (
-			access && <AtomList atoms={atoms} access={access} onOpen={setSelected} />
+			limits && <AtomList atoms={atoms} limits={limits} onOpen={setSelected} />
 		);
 	};
 

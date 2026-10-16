@@ -5,7 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getBillingAutumnClient } from "./getBillingAutumnClient.js";
 
 /** What Autumn's own billing lets this request's org use, logged and overridden per request. */
-export const requestFeatureAccess = ({ ctx }: { ctx: AutumnContext }) =>
+export const featureAccess = ({ ctx }: { ctx: AutumnContext }) =>
 	createFeatureAccess({
 		ctx: {
 			autumn: getBillingAutumnClient(),

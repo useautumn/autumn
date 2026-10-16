@@ -1,7 +1,7 @@
 import type { BillingFeatureId } from "@autumn/billing";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { MiddlewareHandler } from "hono";
-import { requestFeatureAccess } from "@/external/autumn/requestFeatureAccess.js";
+import { featureAccess } from "@/external/autumn/featureAccess.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 /** Refuses the route unless the org's plan on Autumn's own billing includes the feature. */
@@ -15,7 +15,7 @@ export const billingFeatureMiddleware =
 	}): MiddlewareHandler<HonoEnv> =>
 	async (c, next) => {
 		const ctx = c.get("ctx");
-		const allowed = await requestFeatureAccess({ ctx }).hasFeature({
+		const allowed = await featureAccess({ ctx }).hasFeature({
 			orgId: ctx.org.id,
 			featureId,
 		});

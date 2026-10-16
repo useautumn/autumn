@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { toDeploymentGroupName } from "@autumn/alien";
-import type { AtomAccess } from "@autumn/billing";
+import type { AtomLimits } from "@autumn/billing";
 import { SHADOW_ATOM_EXTERNAL_ID } from "@autumn/edge-config";
 import {
-	type ApiAtomAccess,
+	type ApiAtomLimits,
 	type ApiByocCache,
 	type AppEnv,
 	type ByocCacheDeployment,
@@ -244,8 +244,8 @@ export const atomNotFound = ({ atomId }: { atomId: string }) =>
 	});
 
 /** Why a new Atom is refused, in the words the org sees. */
-export const atomCreateRefused = ({ access }: { access: AtomAccess }) =>
-	access.reason === "not_on_plan"
+export const atomCreateRefused = ({ limits }: { limits: AtomLimits }) =>
+	limits.reason === "not_on_plan"
 		? new RecaseError({
 				message:
 					"Atom isn't included in your plan. Contact hey@useautumn.com to enable it.",
@@ -253,21 +253,21 @@ export const atomCreateRefused = ({ access }: { access: AtomAccess }) =>
 				statusCode: 403,
 			})
 		: new RecaseError({
-				message: `This environment already runs ${access.limit} Atoms. Delete one to create another.`,
+				message: `This environment already runs ${limits.limit} Atoms. Delete one to create another.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 409,
 			});
 
-export const atomAccessToApi = ({
-	access,
+export const atomLimitsToApi = ({
+	limits,
 }: {
-	access: AtomAccess;
-}): ApiAtomAccess => ({
-	included: access.included,
-	limit: access.limit,
-	used: access.used,
-	can_create: access.canCreate,
-	reason: access.reason,
+	limits: AtomLimits;
+}): ApiAtomLimits => ({
+	included: limits.included,
+	limit: limits.limit,
+	used: limits.used,
+	can_create: limits.canCreate,
+	reason: limits.reason,
 });
 
 export const cacheDeploymentToApiCache = ({

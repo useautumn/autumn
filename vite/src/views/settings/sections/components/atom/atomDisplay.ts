@@ -1,5 +1,5 @@
 import {
-	type ApiAtomAccess,
+	type ApiAtomLimits,
 	type ApiByocCache,
 	type AtomCheck,
 	BYOC_CACHE_DISK_GB,
@@ -153,11 +153,11 @@ export const atomDisplayName = (cache: ApiByocCache) =>
 	cache.name ?? cache.region ?? cache.stack_name;
 
 /** Why New Atom is off, as its tooltip says it; null when it is on. */
-export const atomCreateRefusal = (access: ApiAtomAccess): string | null => {
-	if (access.reason === "not_on_plan")
+export const atomCreateRefusal = (limits: ApiAtomLimits): string | null => {
+	if (limits.reason === "not_on_plan")
 		return "Atom isn't included in your plan.";
-	if (access.reason === "limit_reached")
-		return `This environment runs at most ${access.limit} Atoms.`;
+	if (limits.reason === "limit_reached")
+		return `This environment runs at most ${limits.limit} Atoms.`;
 	return null;
 };
 

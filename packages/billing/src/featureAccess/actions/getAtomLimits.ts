@@ -1,6 +1,6 @@
 import { BillingFeatureId } from "../billingFeatureIds";
 import { ATOMS_LIMIT } from "../featureLimits";
-import type { AtomAccess, AtomAccessReason } from "../types/atomAccess";
+import type { AtomLimits, AtomLimitsReason } from "../types/atomLimits";
 import type { FeatureAccessContext } from "../types/featureAccessContext";
 import { hasFeature } from "./hasFeature";
 
@@ -10,31 +10,32 @@ const refusalReason = ({
 }: {
 	included: boolean;
 	used: number;
-}): AtomAccessReason | null => {
+}): AtomLimitsReason | null => {
 	if (!included) return "not_on_plan";
 	if (used >= ATOMS_LIMIT) return "limit_reached";
 	return null;
 };
 
-/** The org's Atom access; `countActive` counts the Atoms it runs now, which only the caller's store knows. */
-export const atomAccess = async ({
+/** Decides whether the org can create another Atom: Atoms are on its plan and it runs fewer than the limit. */
+export const getAtomLimits = async ({
 	ctx,
 	orgId,
-	countActive,
+	activeAtoms,
 }: {
 	ctx: FeatureAccessContext;
 	orgId: string;
-	countActive: () => Promise<number>;
-}): Promise<AtomAccess> => {
-	const [included, used] = await Promise.all([
-		hasFeature({ ctx, orgId, featureId: BillingFeatureId.Atoms }),
-		countActive(),
-	]);
-	const reason = refusalReason({ included, used });
+	activeAtoms: number;
+}): Promise<AtomLimits> => {
+	const included = await hasFeature({
+		ctx,
+		orgId,
+		featureId: BillingFeatureId.Atoms,
+	});
+	const reason = refusalReason({ included, used: activeAtoms });
 	return {
 		included,
 		limit: ATOMS_LIMIT,
-		used,
+		used: activeAtoms,
 		canCreate: reason === null,
 		reason,
 	};

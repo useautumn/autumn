@@ -42,8 +42,6 @@ const accessWith = ({
 	return { featureAccess, checks };
 };
 
-const countOf = (count: number) => () => Promise.resolve(count);
-
 describe("createFeatureAccess", () => {
 	test("in production, the org's plan decides", async () => {
 		const onPlan = accessWith({ allowed: true });
@@ -98,12 +96,12 @@ describe("createFeatureAccess", () => {
 		expect(checks).toEqual([]);
 	});
 
-	test("atoms: under the limit on the plan, the org can create another", async () => {
+	test("getAtomLimits: under the limit on the plan, the org can create another", async () => {
 		const { featureAccess } = accessWith({ allowed: true });
 		expect(
-			await featureAccess.atoms({
+			await featureAccess.getAtomLimits({
 				orgId: "org_1",
-				countActive: countOf(ATOMS_LIMIT - 1),
+				activeAtoms: ATOMS_LIMIT - 1,
 			}),
 		).toEqual({
 			included: true,
@@ -114,12 +112,12 @@ describe("createFeatureAccess", () => {
 		});
 	});
 
-	test("atoms: at the limit, creating is refused as limit_reached", async () => {
+	test("getAtomLimits: at the limit, creating is refused as limit_reached", async () => {
 		const { featureAccess } = accessWith({ allowed: true });
 		expect(
-			await featureAccess.atoms({
+			await featureAccess.getAtomLimits({
 				orgId: "org_1",
-				countActive: countOf(ATOMS_LIMIT),
+				activeAtoms: ATOMS_LIMIT,
 			}),
 		).toEqual({
 			included: true,
@@ -130,10 +128,10 @@ describe("createFeatureAccess", () => {
 		});
 	});
 
-	test("atoms: off the plan, creating is refused as not_on_plan, whatever the count", async () => {
+	test("getAtomLimits: off the plan, creating is refused as not_on_plan, whatever the count", async () => {
 		const { featureAccess } = accessWith({ allowed: false });
 		expect(
-			await featureAccess.atoms({ orgId: "org_1", countActive: countOf(0) }),
+			await featureAccess.getAtomLimits({ orgId: "org_1", activeAtoms: 0 }),
 		).toEqual({
 			included: false,
 			limit: ATOMS_LIMIT,
@@ -143,15 +141,15 @@ describe("createFeatureAccess", () => {
 		});
 	});
 
-	test("atoms: staging keeps the limit while skipping the plan", async () => {
+	test("getAtomLimits: staging keeps the limit while skipping the plan", async () => {
 		const { featureAccess } = accessWith({
 			allowed: false,
 			runtimeEnv: STAGING,
 		});
 		expect(
-			await featureAccess.atoms({
+			await featureAccess.getAtomLimits({
 				orgId: "org_1",
-				countActive: countOf(ATOMS_LIMIT),
+				activeAtoms: ATOMS_LIMIT,
 			}),
 		).toMatchObject({
 			included: true,

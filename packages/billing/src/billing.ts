@@ -9,9 +9,9 @@ export { BillingFeatureId } from "./featureAccess/billingFeatureIds";
 export type { FeatureAccess } from "./featureAccess/createFeatureAccess";
 export { createFeatureAccess } from "./featureAccess/createFeatureAccess";
 export type {
-	AtomAccess,
-	AtomAccessReason,
-} from "./featureAccess/types/atomAccess";
+	AtomLimits,
+	AtomLimitsReason,
+} from "./featureAccess/types/atomLimits";
 export type { FeatureAccessContext } from "./featureAccess/types/featureAccessContext";
 export type { PaymentVolumeReport } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";
 export { pushPaymentVolume } from "./paymentVolume/actions/pushPaymentVolume/pushPaymentVolume";

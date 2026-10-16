@@ -1,14 +1,14 @@
 import type { ListByocAtomsResponse } from "@autumn/shared";
+import { featureAccess } from "@/external/autumn/featureAccess.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cacheDeploymentRepo } from "../../repos/cacheDeploymentRepo.js";
 import {
-	atomAccessToApi,
+	atomLimitsToApi,
 	cacheDeploymentToApiCache,
 	cacheOwner,
 	nextAtomStackName,
 } from "../../utils/byocCacheUtils.js";
 import { isCacheBeingRemoved } from "../../utils/classifyCacheDeployment.js";
-import { readAtomAccess } from "./readAtomAccess.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 
 /** Every Atom the env has, as alien has them now: those it runs, those still coming down, the stack name the next one takes, and what the plan lets it do. */
@@ -18,11 +18,14 @@ export const listAtoms = async ({
 	ctx: AutumnContext;
 }): Promise<ListByocAtomsResponse> => {
 	const { org, env } = ctx;
-	const [active, removing, access] = await Promise.all([
+	const [active, removing] = await Promise.all([
 		cacheDeploymentRepo.findActive({ ctx }),
 		cacheDeploymentRepo.findRemoving({ ctx }),
-		readAtomAccess({ ctx }),
 	]);
+	const limits = await featureAccess({ ctx }).getAtomLimits({
+		orgId: org.id,
+		activeAtoms: active.length,
+	});
 	const rows = [...active, ...removing];
 	const refreshed = (
 		await Promise.all(
@@ -46,6 +49,6 @@ export const listAtoms = async ({
 		),
 		next_stack_name: next.stackName,
 		next_stack_name_suffix: next.suffix,
-		access: atomAccessToApi({ access }),
+		limits: atomLimitsToApi({ limits }),
 	};
 };

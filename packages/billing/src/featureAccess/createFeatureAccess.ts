@@ -1,4 +1,4 @@
-import { atomAccess } from "./actions/atomAccess";
+import { getAtomLimits } from "./actions/getAtomLimits";
 import { hasFeature } from "./actions/hasFeature";
 import type { BillingFeatureId } from "./billingFeatureIds";
 import type { FeatureAccessContext } from "./types/featureAccessContext";
@@ -9,10 +9,12 @@ export const createFeatureAccess = ({
 }: {
 	ctx: FeatureAccessContext;
 }) => ({
+	/** Decides whether the org's plan includes the feature. */
 	hasFeature: (params: { orgId: string; featureId: BillingFeatureId }) =>
 		hasFeature({ ctx, ...params }),
-	atoms: (params: { orgId: string; countActive: () => Promise<number> }) =>
-		atomAccess({ ctx, ...params }),
+	/** Decides whether the org can create another Atom, given how many it runs now. */
+	getAtomLimits: (params: { orgId: string; activeAtoms: number }) =>
+		getAtomLimits({ ctx, ...params }),
 });
 
 export type FeatureAccess = ReturnType<typeof createFeatureAccess>;

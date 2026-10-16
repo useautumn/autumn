@@ -239,16 +239,16 @@ test.skipIf(hostedAtom)(
 		const listed = await autumn.post("/byoc.list_atoms", {});
 		expect(listed).toMatchObject({
 			atoms: [{ id: fetched.cache.id }],
-			access: { included: true, used: 1, can_create: true, reason: null },
+			limits: { included: true, used: 1, can_create: true, reason: null },
 		});
-		const { limit } = listed.access;
+		const { limit } = listed.limits;
 		const others: { id: string }[] = [];
 		for (let count = 1; count < limit; count++)
 			others.push(await autumn.post("/byoc.create_atom", {}));
 		expect(
 			new Set([fetched.cache.id, ...others.map(({ id }) => id)]).size,
 		).toBe(limit);
-		expect((await autumn.post("/byoc.list_atoms", {})).access).toEqual({
+		expect((await autumn.post("/byoc.list_atoms", {})).limits).toEqual({
 			included: true,
 			limit,
 			used: limit,

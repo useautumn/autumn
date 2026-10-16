@@ -9,6 +9,7 @@ import {
 	DEFAULT_BYOC_CACHE_AWS_REGION,
 	DEFAULT_BYOC_CACHE_MACHINE,
 } from "@autumn/shared";
+import { featureAccess } from "@/external/autumn/featureAccess.js";
 import { withLock } from "@/external/redis/utils/lockUtils/withLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { encryptData } from "@/utils/encryptUtils.js";
@@ -33,7 +34,6 @@ import {
 } from "../../utils/byocCacheUtils.js";
 import { toCacheStages } from "../../utils/cacheStageUtils.js";
 import { nextFreeAtomId } from "../../utils/nextFreeAtomId.js";
-import { readAtomAccess } from "./readAtomAccess.js";
 import { refreshCacheDeployment } from "./refreshCacheDeployment.js";
 import { startCacheDeploymentWatch } from "./startCacheDeploymentWatch.js";
 import { withAtomLock } from "./withAtomLock.js";
@@ -192,12 +192,15 @@ const startNewCache = async ({
 	params: CreateByocCacheParams;
 }): Promise<CreateByocCacheResponse> => {
 	const { org, env } = ctx;
-	const [active, removing, access] = await Promise.all([
+	const [active, removing] = await Promise.all([
 		cacheDeploymentRepo.findActive({ ctx }),
 		cacheDeploymentRepo.findRemoving({ ctx }),
-		readAtomAccess({ ctx }),
 	]);
-	if (!access.canCreate) throw atomCreateRefused({ access });
+	const limits = await featureAccess({ ctx }).getAtomLimits({
+		orgId: org.id,
+		activeAtoms: active.length,
+	});
+	if (!limits.canCreate) throw atomCreateRefused({ limits });
 	// Every Atom the env has keeps its stack, as do groups that outlived theirs; a new one is named apart from all of them.
 	const atomId = await nextFreeAtomId({
 		owner: cacheOwner({ org, env }),
