@@ -34,6 +34,17 @@ describe("toastWriteError", () => {
 		expect(toastError).not.toHaveBeenCalled();
 	});
 
+	test("a denial still toasts where the sheet can't render it inline", () => {
+		toastWriteError({
+			error: permissionDenied,
+			fallback: "Failed",
+			inlineDenials: false,
+		});
+		expect(toastError).toHaveBeenCalledWith(
+			"Sales can grant up to 50 credits.",
+		);
+	});
+
 	test("any other error still toasts", () => {
 		toastWriteError({ error: new Error("boom"), fallback: "Failed" });
 		expect(toastError).toHaveBeenCalledWith("Failed");
