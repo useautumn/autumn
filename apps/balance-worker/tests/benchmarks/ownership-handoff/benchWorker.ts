@@ -325,9 +325,12 @@ function takeAndMirror({ now }: { now: number }) {
 			? tcpWindowOf({ previous: lastTcp.counters, current: counters })
 			: null;
 	lastTcp.counters = counters;
+	const servedSends = sends.filter(({ partition }) =>
+		partitions.isAdmitted({ partition }),
+	);
 	verdictSamples.kept = [
 		...verdictSamples.kept.filter((kept) => kept.at > now - keepSamplesMs),
-		{ at: now, tcp, sends },
+		{ at: now, tcp, sends: servedSends },
 	];
 	const verdict = judgeOwnNetwork({ samples: verdictSamples.kept, now });
 	queueMicrotask(() =>
@@ -336,6 +339,7 @@ function takeAndMirror({ now }: { now: number }) {
 			verdict,
 			tcp,
 			sends,
+			servedPartitions: servedSends.map(({ partition }) => partition),
 		}),
 	);
 	return sends;
