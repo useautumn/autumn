@@ -461,6 +461,12 @@ export function createLibrdkafkaConsumer({
 		});
 	}
 
+	async function leave(): Promise<void> {
+		const native = state.native;
+		if (!native || state.leaving || state.gaveUp) return;
+		await leaveGroupWithin({ native });
+	}
+
 	async function stop(): Promise<void> {
 		state.running = false;
 		state.wake.abort();
@@ -507,6 +513,7 @@ export function createLibrdkafkaConsumer({
 		pause,
 		resume,
 		stop,
+		leave,
 		disconnect,
 		events: ConsumerEventNames,
 		on,

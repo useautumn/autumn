@@ -43,6 +43,7 @@ function createFakeTailKafka({
 		running = false;
 		lifecycle.push("stop");
 	}
+	async function leave(): Promise<void> {}
 	async function disconnect(): Promise<void> {
 		lifecycle.push("disconnect");
 	}
@@ -76,6 +77,7 @@ function createFakeTailKafka({
 		subscribe,
 		run,
 		stop,
+		leave,
 		disconnect,
 		commitOffsets,
 		seek,

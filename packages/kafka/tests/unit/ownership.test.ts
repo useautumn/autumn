@@ -507,6 +507,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 		async function stop(): Promise<void> {
 			running = false;
 		}
+		async function leave(): Promise<void> {}
 		async function disconnect(): Promise<void> {
 			disconnects++;
 			running = false;
@@ -616,6 +617,7 @@ describe("ownershipConsumption", function ownershipConsumptionTests() {
 			subscribe,
 			run,
 			stop,
+			leave,
 			disconnect,
 			commitOffsets,
 			seek,

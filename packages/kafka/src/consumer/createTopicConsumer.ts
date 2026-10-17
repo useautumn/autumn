@@ -1,5 +1,6 @@
 import { isConsumerGroupGoneError } from "./consumerErrors.js";
 import {
+	leaveConsumerGroup,
 	restartConsumer,
 	startConsumer,
 	stopConsumer,
@@ -38,6 +39,10 @@ export function createTopicConsumer({
 
 	function stop(): Promise<void> {
 		return stopConsumer({ ctx, state });
+	}
+
+	function leave(): Promise<void> {
+		return leaveConsumerGroup({ ctx, state });
 	}
 
 	function restart(): Promise<void> {
@@ -112,6 +117,7 @@ export function createTopicConsumer({
 	return {
 		start,
 		stop,
+		leave,
 		restart,
 		withdrawPartition,
 		resumePartition,
