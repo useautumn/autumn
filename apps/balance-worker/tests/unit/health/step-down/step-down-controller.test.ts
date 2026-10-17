@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import type { SlotHeartbeat } from "../../../../src/blueGreen/types/slotHeartbeat.js";
 import type { OwnNetworkVerdict } from "../../../../src/health/ownNetwork/types/ownNetworkVerdict.js";
 import { createStepDownController } from "../../../../src/health/stepDown/createStepDownController.js";
-import type { FleetListing } from "../../../../src/health/stepDown/types/fleetHeartbeats.js";
+import type { FleetProgress } from "../../../../src/health/stepDown/types/fleetProgress.js";
 import type { StepDownPermitResult } from "../../../../src/health/stepDown/types/stepDownPermits.js";
-import { partitionsFrom, peerHeartbeat } from "./peerHeartbeats.js";
 
 const DEGRADED: OwnNetworkVerdict = {
 	state: "degraded",
@@ -14,42 +12,66 @@ const DEGRADED: OwnNetworkVerdict = {
 	retransmitRatio: 0.3,
 	busyPartitions: 8,
 	stalledPartitions: 6,
+	heldPartitions: 4,
+	stalledHoldings: [
+		{ partition: 0, holding: 1 },
+		{ partition: 1, holding: 1 },
+	],
+	losesPackets: true,
 };
 
-function healthyPeers(): SlotHeartbeat[] {
-	return ["http://a", "http://b", "http://c"].map((endpoint, index) =>
-		peerHeartbeat({
-			endpoint,
-			partitions: partitionsFrom({ first: index * 4, count: 4 }),
-		}),
-	);
+const RECOVERED: OwnNetworkVerdict = {
+	...DEGRADED,
+	state: "healthy",
+	retransmitRatio: 0.001,
+	stalledPartitions: 0,
+	losesPackets: false,
+};
+
+function fleetAt({
+	call,
+	keepsUp = () => true,
+}: {
+	call: number;
+	keepsUp?: (partition: number, call: number) => boolean;
+}): FleetProgress {
+	const highWatermarks = new Map<number, bigint>();
+	const nextOffsets = new Map<number, bigint>();
+	for (let partition = 0; partition < 16; partition++) {
+		const high = BigInt(1_000 + call * 10);
+		highWatermarks.set(partition, high);
+		nextOffsets.set(partition, keepsUp(partition, call) ? high - 1n : 999n);
+	}
+	return { highWatermarks, nextOffsets };
 }
 
 function harness({
-	writtenSince,
+	keepsUp,
 	permit = {
 		ok: true,
 		permit: { slot: 0, key: "slot-0", acquisitionId: "acquisition-1" },
 	},
 	owns = true,
 	currentVerdict = () => DEGRADED,
-	readPeersGate,
+	readGate,
 	releaseFailures = 0,
 	baselineFails = false,
+	holdingOf = (partition) => (partition <= 3 ? 1 : undefined),
 }: {
-	writtenSince: (now: number) => SlotHeartbeat[];
+	holdingOf?: (partition: number) => number | undefined;
+	keepsUp?: (partition: number, call: number) => boolean;
 	permit?: StepDownPermitResult;
 	owns?: boolean;
 	currentVerdict?: () => OwnNetworkVerdict;
-	readPeersGate?: Promise<void>;
+	readGate?: Promise<void>;
 	releaseFailures?: number;
 	baselineFails?: boolean;
-}) {
+} = {}) {
 	const time = { now: 10_000 };
 	const calls: string[] = [];
 	const logs: { level: string; message: string }[] = [];
 	const listeners = new Set<(verdict: OwnNetworkVerdict) => void>();
-	const state = { steppedDown: false, releaseFailures };
+	const state = { steppedDown: false, releaseFailures, reads: 0 };
 	function log(level: string) {
 		return (...args: unknown[]) => {
 			logs.push({ level, message: String(args[0]) });
@@ -64,16 +86,15 @@ function harness({
 				},
 				verdict: currentVerdict,
 			},
-			readPeers: async ({ since }: { since: FleetListing | null }) => {
-				calls.push("read-peers");
-				await readPeersGate;
-				if (since === null && baselineFails)
-					throw new Error("S3 did not answer");
-				return {
-					listing: new Map(),
-					changed: since === null ? [] : writtenSince(time.now),
-				};
+			readFleetProgress: async () => {
+				calls.push("read-progress");
+				const call = state.reads++;
+				await readGate;
+				if (call === 0 && baselineFails)
+					throw new Error("Postgres did not answer");
+				return fleetAt({ call, keepsUp });
 			},
+			ownPartitions: () => new Set([0, 1, 2, 3]),
 			permits: {
 				acquire: async () => {
 					calls.push("acquire");
@@ -93,6 +114,7 @@ function harness({
 				},
 				isSteppedDown: () => state.steppedDown,
 				hasAssignment: () => owns,
+				holdingOf: ({ partition }) => holdingOf(partition),
 			},
 			logger: { info: log("info"), warn: log("warn"), error: log("error") },
 			now: () => time.now,
@@ -101,12 +123,12 @@ function harness({
 			},
 		},
 		config: {
-			selfEndpoint: "http://self",
 			peerWaitMs: 6_000,
 			peerPollMs: 1_000,
-			partitionCount: 16,
-			ackAgeLimitMs: 3_000,
-			minPeers: 2,
+			minKeptUp: 2,
+			recheckAttempts: 3,
+			recheckIntervalMs: 1_000,
+			minStalledPartitions: 2,
 		},
 	});
 	async function fire(): Promise<void> {
@@ -118,73 +140,66 @@ function harness({
 }
 
 function readsOf(calls: string[]): number {
-	return calls.filter((call) => call === "read-peers").length;
+	return calls.filter((call) => call === "read-progress").length;
 }
 
 describe("step-down controller", () => {
-	test("steps down once peers that wrote after it began vouch and a permit is granted", async () => {
-		const { controller, calls, logs, fire } = harness({
-			writtenSince: healthyPeers,
-		});
+	test("steps down once the rest of the fleet keeps up with its logs and a permit is granted", async () => {
+		const { controller, calls, logs, fire } = harness();
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-peers", "read-peers", "acquire", "step-down"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
 		expect(logs).toContainEqual({
 			level: "error",
 			message: "Own network degraded and peers healthy: stepping down",
 		});
 		await fire();
-		expect(calls).toEqual(["read-peers", "read-peers", "acquire", "step-down"]);
-	});
-
-	test("waits for peers to write after it began, polling until they do", async () => {
-		const { controller, calls, fire } = harness({
-			writtenSince: (now) => (now >= 12_000 ? healthyPeers() : []),
-		});
-		controller.start();
-		await fire();
 		expect(calls).toEqual([
-			"read-peers",
-			"read-peers",
-			"read-peers",
+			"read-progress",
+			"read-progress",
 			"acquire",
 			"step-down",
 		]);
 	});
 
-	test("stays when peers are degraded too, then checks again on the next verdict", async () => {
-		const { controller, calls, logs, fire } = harness({
-			writtenSince: () =>
-				healthyPeers().map((heartbeat) =>
-					peerHeartbeat({
-						endpoint: heartbeat.endpoint,
-						partitions: heartbeat.partitions.byPartition.map(
-							({ partition }) => partition,
-						),
-						ownNetwork: "degraded",
-					}),
-				),
+	test("waits for the fleet to show progress past the baseline, polling until it does", async () => {
+		const { controller, calls, fire } = harness({
+			keepsUp: (_partition, call) => call >= 2,
 		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
+	});
+
+	test("stays when the rest of the fleet falls behind too, then checks again on the next verdict", async () => {
+		const { controller, calls, logs, fire } = harness({ keepsUp: () => false });
 		controller.start();
 		await fire();
 		expect(readsOf(calls)).toBe(7);
 		expect(calls).not.toContain("acquire");
 		expect(logs).toContainEqual({
 			level: "warn",
-			message:
-				"Own network degraded, but peers do not vouch for theirs: staying",
+			message: "Own network degraded, but the fleet is not keeping up: staying",
 		});
 		await fire();
 		expect(readsOf(calls)).toBe(14);
 		expect(calls).not.toContain("step-down");
 	});
 
-	test("stays when the peers that vouch hold too few of the partitions", async () => {
+	test("stays when only the worker's own partitions and too few others keep up", async () => {
 		const { controller, calls, fire } = harness({
-			writtenSince: () => [
-				peerHeartbeat({ endpoint: "http://a", partitions: [0, 1] }),
-				peerHeartbeat({ endpoint: "http://b", partitions: [2, 3] }),
-			],
+			keepsUp: (partition) => partition <= 4,
 		});
 		controller.start();
 		await fire();
@@ -193,27 +208,23 @@ describe("step-down controller", () => {
 	});
 
 	test("a baseline that cannot be read keeps the worker in", async () => {
-		const { controller, calls, logs, fire } = harness({
-			writtenSince: healthyPeers,
-			baselineFails: true,
-		});
+		const { controller, calls, logs, fire } = harness({ baselineFails: true });
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-peers"]);
+		expect(calls).toEqual(["read-progress"]);
 		expect(logs).toContainEqual({
 			level: "warn",
-			message: "Peer heartbeats could not be read",
+			message: "Fleet progress could not be read",
 		});
 	});
 
 	test("stays when no permit is granted", async () => {
 		const { controller, calls, logs, fire } = harness({
-			writtenSince: healthyPeers,
 			permit: { ok: false, reason: "all_taken" },
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-peers", "read-peers", "acquire"]);
+		expect(calls).toEqual(["read-progress", "read-progress", "acquire"]);
 		expect(logs).toContainEqual({
 			level: "error",
 			message:
@@ -223,21 +234,81 @@ describe("step-down controller", () => {
 
 	test("a network that recovered before the permit landed keeps the worker in and gives the permit back", async () => {
 		const { controller, calls, logs, fire } = harness({
-			writtenSince: healthyPeers,
-			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+			currentVerdict: () => RECOVERED,
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-peers", "read-peers", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 		expect(logs).toContainEqual({
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
 		});
 	});
 
+	test("a trip whose stalled partitions were let go before the permit landed keeps the worker in, though the loss goes on", async () => {
+		const moved = { on: false };
+		const { controller, calls, logs, fire } = harness({
+			holdingOf: (partition) => (moved.on && partition <= 1 ? 2 : 1),
+			currentVerdict: () => {
+				moved.on = true;
+				return DEGRADED;
+			},
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
+		expect(logs).toContainEqual({
+			level: "warn",
+			message: "Own network recovered before the step-down: staying",
+		});
+	});
+
+	test("loss that pauses for a sample after the permit lands still steps down within the re-check", async () => {
+		const verdicts = [RECOVERED, DEGRADED];
+		const { controller, calls, fire } = harness({
+			currentVerdict: () => verdicts.shift() ?? DEGRADED,
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
+	});
+
+	test("a verdict that flickers off degraded while the loss goes on still steps down", async () => {
+		for (const flicker of [
+			{ ...DEGRADED, state: "healthy" as const, stalledPartitions: 1 },
+			{ ...DEGRADED, state: "insufficient_data" as const, segments: 0 },
+		]) {
+			const { controller, calls, fire } = harness({
+				currentVerdict: () => flicker,
+			});
+			controller.start();
+			await fire();
+			expect(calls).toEqual([
+				"read-progress",
+				"read-progress",
+				"acquire",
+				"step-down",
+			]);
+		}
+	});
+
 	test("a worker that owns nothing never checks", async () => {
 		const { controller, calls, fire } = harness({
-			writtenSince: healthyPeers,
 			owns: false,
 		});
 		controller.start();
@@ -247,17 +318,21 @@ describe("step-down controller", () => {
 
 	test("a permit that could not be given back after a recovery is released again at stop", async () => {
 		const { controller, calls, fire } = harness({
-			writtenSince: healthyPeers,
-			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+			currentVerdict: () => RECOVERED,
 			releaseFailures: 1,
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-peers", "read-peers", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 		await controller.stop();
 		expect(calls).toEqual([
-			"read-peers",
-			"read-peers",
+			"read-progress",
+			"read-progress",
 			"acquire",
 			"release",
 			"release",
@@ -267,19 +342,18 @@ describe("step-down controller", () => {
 	test("stop waits for a check in flight, which then takes no permit and steps nothing down", async () => {
 		const gate = Promise.withResolvers<void>();
 		const { controller, calls, fire } = harness({
-			writtenSince: healthyPeers,
-			readPeersGate: gate.promise,
+			readGate: gate.promise,
 		});
 		controller.start();
 		await fire();
 		const stopping = controller.stop();
 		gate.resolve();
 		await stopping;
-		expect(calls).toEqual(["read-peers"]);
+		expect(calls).toEqual(["read-progress"]);
 	});
 
 	test("stop lets go of the verdicts and releases a permit it holds", async () => {
-		const { controller, calls, fire } = harness({ writtenSince: healthyPeers });
+		const { controller, calls, fire } = harness();
 		controller.start();
 		await fire();
 		await controller.stop();

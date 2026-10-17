@@ -58,20 +58,4 @@ describe("in-flight watch", () => {
 		await expect(slowSend).rejects.toThrow("Local: Message timed out");
 		expect(watch.takeLongestMs({ now: 2_000 })).toBe(1_700);
 	});
-
-	test("settled sends are reported to the listener with their outcome", async () => {
-		const { now } = clock();
-		const outcomes: boolean[] = [];
-		const watch = createInFlightWatch({
-			now,
-			onSettled: ({ ok }) => outcomes.push(ok),
-		});
-		await watch.track(async () => "acked");
-		await expect(
-			watch.track(async () => {
-				throw new Error("refused");
-			}),
-		).rejects.toThrow("refused");
-		expect(outcomes).toEqual([true, false]);
-	});
 });

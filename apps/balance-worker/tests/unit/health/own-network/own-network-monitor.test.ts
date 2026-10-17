@@ -6,7 +6,7 @@ import type { TcpCounters } from "../../../../src/logging/eventLoopStalls/tcpCou
 
 const THRESHOLDS: OwnNetworkThresholds = {
 	windowMs: 3_000,
-	minSegments: 150,
+	minRetransmits: 15,
 	retransmitRatio: 0.05,
 	stallMs: 1_000,
 	minStalledPartitions: 2,
@@ -32,11 +32,15 @@ function countersOf({
 function harness({
 	lossy,
 	stuck,
-	held = () => true,
+	holdingOf = () => 1,
+	sendHolding = holdingOf,
+	heldCount = () => 3,
 }: {
 	lossy: () => boolean;
 	stuck: () => boolean;
-	held?: (partition: number) => boolean;
+	holdingOf?: (partition: number) => number | undefined;
+	sendHolding?: (partition: number) => number | undefined;
+	heldCount?: () => number;
 }) {
 	const time = { now: 0 };
 	const totals = { outSegs: 0, retransSegs: 0 };
@@ -45,18 +49,30 @@ function harness({
 	function readTcp(): TcpCounters {
 		return countersOf(totals);
 	}
-	function take() {
-		return stuck()
-			? [80, 81, 82].map((partition) => ({
-					partition,
-					longestInFlightMs: 1_500,
-				}))
-			: [];
+	function take({
+		isCurrent,
+	}: {
+		now: number;
+		isCurrent(holding: { partition: number; holding: number }): boolean;
+	}) {
+		if (!stuck()) return [];
+		const sends: {
+			partition: number;
+			holding: number;
+			longestInFlightMs: number;
+		}[] = [];
+		for (const partition of [80, 81, 82]) {
+			const holding = sendHolding(partition);
+			if (holding === undefined || !isCurrent({ partition, holding })) continue;
+			sends.push({ partition, holding, longestInFlightMs: 1_500 });
+		}
+		return sends;
 	}
 	const monitor = createOwnNetworkMonitor({
 		ctx: {
 			sends: { take },
-			isHeld: ({ partition }) => held(partition),
+			holdingOf: ({ partition }) => holdingOf(partition),
+			heldCount,
 			readTcp,
 			now: () => time.now,
 			schedule: (task) => {
@@ -119,11 +135,12 @@ describe("own network monitor", () => {
 		expect(heard).toHaveLength(0);
 	});
 
-	test("sends on partitions the worker no longer serves do not count", () => {
+	test("sends on partitions the worker no longer holds do not count", () => {
 		const { monitor, tick } = harness({
 			lossy: () => true,
 			stuck: () => true,
-			held: (partition) => partition === 82,
+			holdingOf: (partition) => (partition === 82 ? 1 : undefined),
+			heldCount: () => 1,
 		});
 		monitor.start();
 		for (let index = 0; index < 4; index++) tick();
@@ -139,7 +156,8 @@ describe("own network monitor", () => {
 		const { monitor, tick } = harness({
 			lossy: () => true,
 			stuck: () => true,
-			held: (partition) => held.has(partition),
+			holdingOf: (partition) => (held.has(partition) ? 1 : undefined),
+			heldCount: () => held.size,
 		});
 		monitor.start();
 		for (let index = 0; index < 4; index++) tick();
@@ -152,24 +170,37 @@ describe("own network monitor", () => {
 		});
 	});
 
-	test("a partition held again starts without the stalls of its earlier holding", () => {
-		const held = new Set([80, 81, 82]);
+	test("a partition let go and taken again between two samples starts without its earlier stalls", () => {
+		const holding = { current: 1 };
 		const stuck = { on: true };
 		const { monitor, tick } = harness({
 			lossy: () => true,
 			stuck: () => stuck.on,
-			held: (partition) => held.has(partition),
+			holdingOf: () => holding.current,
 		});
 		monitor.start();
 		for (let index = 0; index < 4; index++) tick();
 		expect(monitor.verdict().state).toBe("degraded");
-		held.clear();
+		holding.current = 2;
 		stuck.on = false;
-		tick();
-		for (const partition of [80, 81, 82]) held.add(partition);
 		expect(monitor.verdict()).toMatchObject({
 			state: "healthy",
 			stalledPartitions: 0,
+		});
+	});
+
+	test("stalls count against every partition the worker holds, not only the busy ones", () => {
+		const { monitor, tick } = harness({
+			lossy: () => true,
+			stuck: () => true,
+			heldCount: () => 8,
+		});
+		monitor.start();
+		for (let index = 0; index < 4; index++) tick();
+		expect(monitor.verdict()).toMatchObject({
+			state: "healthy",
+			stalledPartitions: 3,
+			heldPartitions: 8,
 		});
 	});
 

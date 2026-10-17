@@ -64,8 +64,12 @@ export function createPartitions({
 		return state.directory.findOwnedRuntime(target) !== undefined;
 	}
 
-	function isHeld({ partition }: PartitionTarget): boolean {
-		return state.assigned.has(partition) || state.handingOff.has(partition);
+	function holdingOf({ partition }: PartitionTarget): number | undefined {
+		return state.holdings.get(partition);
+	}
+
+	function heldPartitions(): number[] {
+		return [...state.holdings.keys()];
 	}
 
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
@@ -93,7 +97,8 @@ export function createPartitions({
 		partitions,
 		hasAssignment,
 		isAdmitted,
-		isHeld,
+		holdingOf,
+		heldPartitions,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
@@ -140,6 +145,8 @@ function createPartitionState(): PartitionsState {
 	return {
 		directory: createRuntimeDirectory(),
 		assigned: new Set(),
+		holdings: new Map(),
+		nextHolding: 0,
 		entries: new Map(),
 		handingOff: new Map(),
 		retiringEntries: new Map(),

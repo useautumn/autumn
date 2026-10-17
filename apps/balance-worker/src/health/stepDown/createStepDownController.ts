@@ -2,9 +2,11 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { Partitions } from "../../partitions/types/partitions.js";
 import type { OwnNetworkMonitor } from "../ownNetwork/types/ownNetworkMonitor.js";
 import type { OwnNetworkVerdict } from "../ownNetwork/types/ownNetworkVerdict.js";
-import { judgePeers } from "./judgePeers.js";
-import type { FleetListing, FleetRead } from "./types/fleetHeartbeats.js";
-import type { PeerVerdict } from "./types/peerVerdict.js";
+import { judgeFleetProgress } from "./judgeFleetProgress.js";
+import type {
+	FleetProgress,
+	FleetProgressVerdict,
+} from "./types/fleetProgress.js";
 import type { StepDownController } from "./types/stepDownController.js";
 import type {
 	StepDownPermit,
@@ -13,21 +15,25 @@ import type {
 
 type StepDownControllerContext = {
 	monitor: Pick<OwnNetworkMonitor, "onDegraded" | "verdict">;
-	readPeers(params: { since: FleetListing | null }): Promise<FleetRead>;
+	readFleetProgress(): Promise<FleetProgress>;
+	ownPartitions(): ReadonlySet<number>;
 	permits: StepDownPermits;
-	partitions: Pick<Partitions, "stepDown" | "isSteppedDown" | "hasAssignment">;
+	partitions: Pick<
+		Partitions,
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "holdingOf"
+	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
 	sleep?: (ms: number) => Promise<void>;
 };
 
 type StepDownControllerConfig = {
-	selfEndpoint: string;
 	peerWaitMs: number;
 	peerPollMs: number;
-	partitionCount: number;
-	ackAgeLimitMs: number;
-	minPeers: number;
+	minKeptUp: number;
+	recheckAttempts: number;
+	recheckIntervalMs: number;
+	minStalledPartitions: number;
 };
 
 export function createStepDownController({
@@ -73,11 +79,11 @@ export function createStepDownController({
 		verdict: OwnNetworkVerdict;
 	}): Promise<void> {
 		try {
-			const peers = await awaitPeersVouching();
+			const peers = await awaitFleetKeepingUp();
 			if (!isEligible()) return;
 			if (!peers.ok) {
 				ctx.logger.warn(
-					"Own network degraded, but peers do not vouch for theirs: staying",
+					"Own network degraded, but the fleet is not keeping up: staying",
 					{ verdict, peers },
 				);
 				return;
@@ -90,10 +96,10 @@ export function createStepDownController({
 				);
 				return;
 			}
-			const current = ctx.monitor.verdict();
-			if (current.state !== "degraded" || !isEligible()) {
+			const current = await awaitContinuingLoss({ trigger: verdict });
+			if (!current || !isEligible()) {
 				ctx.logger.warn("Own network recovered before the step-down: staying", {
-					verdict: current,
+					verdict: ctx.monitor.verdict(),
 				});
 				if (!(await releasePermit({ permit: granted.permit })))
 					state.permit = granted.permit;
@@ -120,43 +126,57 @@ export function createStepDownController({
 		}
 	}
 
-	async function awaitPeersVouching(): Promise<PeerVerdict> {
-		const baseline = await readPeersOrNone({ since: null });
-		let peers = judgeWritten({ heartbeats: [] });
-		if (!baseline) return peers;
+	async function awaitContinuingLoss({
+		trigger,
+	}: {
+		trigger: OwnNetworkVerdict;
+	}): Promise<OwnNetworkVerdict | null> {
+		for (let attempt = 1; attempt <= config.recheckAttempts; attempt++) {
+			const current = ctx.monitor.verdict();
+			if (current.losesPackets && stillHoldsStalls({ trigger })) return current;
+			if (attempt < config.recheckAttempts && !state.stopped)
+				await sleep(config.recheckIntervalMs);
+		}
+		return null;
+	}
+
+	function stillHoldsStalls({
+		trigger,
+	}: {
+		trigger: OwnNetworkVerdict;
+	}): boolean {
+		const held = trigger.stalledHoldings.filter(
+			({ partition, holding }) =>
+				ctx.partitions.holdingOf({ partition }) === holding,
+		);
+		return held.length >= config.minStalledPartitions;
+	}
+
+	async function awaitFleetKeepingUp(): Promise<FleetProgressVerdict> {
+		const baseline = await readProgressOrNone();
+		let verdict: FleetProgressVerdict = { ok: false, active: 0, keptUp: 0 };
+		if (!baseline) return verdict;
 		const deadline = now() + config.peerWaitMs;
 		while (!state.stopped && now() + config.peerPollMs <= deadline) {
 			await sleep(config.peerPollMs);
-			const read = await readPeersOrNone({ since: baseline.listing });
-			peers = judgeWritten({ heartbeats: read?.changed ?? [] });
-			if (peers.ok) return peers;
+			const current = await readProgressOrNone();
+			if (!current) continue;
+			verdict = judgeFleetProgress({
+				before: baseline,
+				after: current,
+				ownPartitions: ctx.ownPartitions(),
+				minKeptUp: config.minKeptUp,
+			});
+			if (verdict.ok) return verdict;
 		}
-		return peers;
+		return verdict;
 	}
 
-	function judgeWritten({
-		heartbeats,
-	}: {
-		heartbeats: FleetRead["changed"];
-	}): PeerVerdict {
-		return judgePeers({
-			heartbeats,
-			selfEndpoint: config.selfEndpoint,
-			partitionCount: config.partitionCount,
-			ackAgeLimitMs: config.ackAgeLimitMs,
-			minPeers: config.minPeers,
-		});
-	}
-
-	async function readPeersOrNone({
-		since,
-	}: {
-		since: FleetListing | null;
-	}): Promise<FleetRead | null> {
+	async function readProgressOrNone(): Promise<FleetProgress | null> {
 		try {
-			return await ctx.readPeers({ since });
+			return await ctx.readFleetProgress();
 		} catch (cause) {
-			ctx.logger.warn("Peer heartbeats could not be read", { error: cause });
+			ctx.logger.warn("Fleet progress could not be read", { error: cause });
 			return null;
 		}
 	}

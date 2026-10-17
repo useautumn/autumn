@@ -225,7 +225,9 @@ describe("Kafka owned partition runtime factory", () => {
 			const producerConfigs: ProducerConfig[] = [];
 			const producer = {} as KafkaProducerClient;
 			const watched: number[] = [];
-			const sendWatches = createPartitionSendWatches();
+			const sendWatches = createPartitionSendWatches({
+				ctx: { holdingOf: () => 1 },
+			});
 			function watchFor({ partition }: { partition: number }) {
 				watched.push(partition);
 				return sendWatches.watchFor({ partition });

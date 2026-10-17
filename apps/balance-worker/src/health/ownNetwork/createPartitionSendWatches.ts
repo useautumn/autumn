@@ -1,41 +1,66 @@
 import { createInFlightWatch } from "./createInFlightWatch.js";
 import type { InFlightWatch } from "./types/inFlightWatch.js";
 import type { PartitionSendSample } from "./types/ownNetworkSample.js";
-import type { PartitionSendWatches } from "./types/partitionSendWatches.js";
+import type {
+	PartitionHolding,
+	PartitionSendWatches,
+} from "./types/partitionSendWatches.js";
 
 export function createPartitionSendWatches({
-	now = () => performance.now(),
+	ctx,
 }: {
-	now?: () => number;
-} = {}): PartitionSendWatches {
-	const watches = new Map<number, InFlightWatch>();
-	const state: { lastAckAt: number | null } = { lastAckAt: null };
+	ctx: {
+		holdingOf(params: { partition: number }): number | undefined;
+		now?: () => number;
+	};
+}): PartitionSendWatches {
+	const now = ctx.now ?? (() => performance.now());
+	const watches = new Map<
+		string,
+		PartitionHolding & { watch: InFlightWatch }
+	>();
 
-	function noteSettled({ ok }: { ok: boolean }): void {
-		if (ok) state.lastAckAt = now();
-	}
-
-	function watchFor({ partition }: { partition: number }): InFlightWatch {
-		const existing = watches.get(partition);
-		if (existing) return existing;
-		const watch = createInFlightWatch({ now, onSettled: noteSettled });
-		watches.set(partition, watch);
+	function watchOf({ partition, holding }: PartitionHolding): InFlightWatch {
+		const key = `${partition}:${holding}`;
+		const existing = watches.get(key);
+		if (existing) return existing.watch;
+		const watch = createInFlightWatch({ now });
+		watches.set(key, { partition, holding, watch });
 		return watch;
 	}
 
-	function take({ now: at }: { now: number }): PartitionSendSample[] {
+	function watchFor({
+		partition,
+	}: {
+		partition: number;
+	}): Pick<InFlightWatch, "track"> {
+		function track<Value>(work: () => Promise<Value>): Promise<Value> {
+			const holding = ctx.holdingOf({ partition });
+			if (holding === undefined) return work();
+			return watchOf({ partition, holding }).track(work);
+		}
+		return { track };
+	}
+
+	function take({
+		now: at,
+		isCurrent,
+	}: {
+		now: number;
+		isCurrent(holding: PartitionHolding): boolean;
+	}): PartitionSendSample[] {
 		const samples: PartitionSendSample[] = [];
-		for (const [partition, watch] of watches) {
+		for (const [key, { partition, holding, watch }] of watches) {
+			if (!isCurrent({ partition, holding })) {
+				watches.delete(key);
+				continue;
+			}
 			const longestInFlightMs = watch.takeLongestMs({ now: at });
 			if (longestInFlightMs !== null)
-				samples.push({ partition, longestInFlightMs });
+				samples.push({ partition, holding, longestInFlightMs });
 		}
 		return samples;
 	}
 
-	function readLastAckAgeMs(): number | null {
-		return state.lastAckAt === null ? null : now() - state.lastAckAt;
-	}
-
-	return { watchFor, take, readLastAckAgeMs };
+	return { watchFor, take };
 }

@@ -15,13 +15,6 @@ export function slotHeartbeatKeyOf({
 	return `${SLOT_HEARTBEAT_KEY_PREFIX}/${fleetId}/${instanceId}.json`;
 }
 
-export const SlotWorkSchema = z.object({
-	lastSendAckAgeMs: z.number().nullable(),
-	ownNetwork: z.enum(["healthy", "degraded", "insufficient_data"]),
-	steppedDown: z.boolean(),
-});
-export type SlotWork = z.infer<typeof SlotWorkSchema>;
-
 export const SlotProbeResultSchema = z.object({
 	ok: z.boolean(),
 	latencyMs: z.number(),
@@ -68,7 +61,6 @@ export const SlotHeartbeatSchema = z.object({
 	}),
 	/** Absent where cold starts are not honoured; null until this worker handles its first request. */
 	coldStart: ColdStartAckSchema.nullable().optional(),
-	work: SlotWorkSchema.optional(),
 	startedAt: z.string(),
 	writtenAt: z.string(),
 });

@@ -10,12 +10,11 @@ import type { SlotGate } from "./createSlotGate.js";
 import {
 	type SlotHeartbeat,
 	type SlotProbeResult,
-	type SlotWork,
 	slotHeartbeatKeyOf,
 } from "./types/slotHeartbeat.js";
 import type { TaskIdentity } from "./types/taskIdentity.js";
 
-const HEARTBEAT_INTERVAL_MS = 5_000;
+const HEARTBEAT_INTERVAL_MS = 20_000;
 
 type SlotHeartbeatContext = {
 	s3Client: EdgeConfigS3Client;
@@ -27,7 +26,6 @@ type SlotHeartbeatContext = {
 	/** False until the partition service is running and has been dealt its assignment. */
 	readAssignmentSettled(): boolean;
 	readStoreHealthy(): boolean;
-	readWork(): SlotWork;
 	probes: { kafka(): Promise<void>; postgres(): Promise<void> };
 	/** Present only where cold starts are honoured (staging); the heartbeat then always carries the latest ack. */
 	readColdStart?(): ColdStartAck | null;
@@ -77,7 +75,6 @@ export function createSlotHeartbeat({
 		const health = ctx.readPartitions();
 		const gate = ctx.gate.describe();
 		const storeHealthy = ctx.readStoreHealthy();
-		const work = ctx.readWork();
 		// A heartbeat with no partitions would satisfy `prepared == total` vacuously.
 		const assigned = ctx.readAssignmentSettled() && health.length > 0;
 		return {
@@ -109,7 +106,6 @@ export function createSlotHeartbeat({
 				})),
 			},
 			...(ctx.readColdStart ? { coldStart: ctx.readColdStart() } : {}),
-			work,
 			startedAt,
 			writtenAt: new Date().toISOString(),
 		};

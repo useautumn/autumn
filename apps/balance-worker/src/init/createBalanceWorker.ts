@@ -26,6 +26,8 @@ import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
 import { createAdminBucketObjects } from "../external/s3/createAdminBucketObjects.js";
 import type { AdminBucketObjects } from "../external/s3/types/adminBucketObjects.js";
 import { createPartitionSendWatches } from "../health/ownNetwork/createPartitionSendWatches.js";
+import { readFleetProgress } from "../health/stepDown/readFleetProgress.js";
+import type { FleetProgress } from "../health/stepDown/types/fleetProgress.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
 	createInlineHandler,
@@ -200,7 +202,16 @@ export async function createBalanceWorker({
 		const commitPositions = createCommitPositions({
 			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
 		});
-		const sendWatches = createPartitionSendWatches();
+		function readHolding({
+			partition,
+		}: {
+			partition: number;
+		}): number | undefined {
+			return partitions.holdingOf({ partition });
+		}
+		const sendWatches = createPartitionSendWatches({
+			ctx: { holdingOf: readHolding },
+		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
@@ -271,11 +282,21 @@ export async function createBalanceWorker({
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 			},
 		});
+		const fleetDb = resources.postgres.db;
+		function readWorkerFleetProgress(): Promise<FleetProgress> {
+			if (!fleetDb)
+				throw new Error("No Postgres client to read fleet progress");
+			return readFleetProgress({
+				ctx: { partitionOffsets: resources.admin, db: fleetDb },
+				topic: env.BALANCE_WORKER_METERING_TOPIC,
+			});
+		}
 		const stepDown = createWorkerStepDown({
 			ctx: {
 				sendWatches,
 				partitions,
 				logger: dependencies.logger,
+				readFleetProgress: fleetDb ? readWorkerFleetProgress : undefined,
 				objects: slotGate
 					? adminBucketObjectsOf({ edgeConfigs: resources.edgeConfigs })
 					: undefined,
@@ -411,7 +432,6 @@ export async function createBalanceWorker({
 							isAdmitted: partitions.isAdmitted,
 							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
-							readWork: stepDown.readWork,
 							probes: { kafka: probeKafka, postgres: probePostgres },
 							readColdStart: coldStart?.readAck,
 							logger: dependencies.logger,

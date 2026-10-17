@@ -6,6 +6,7 @@ import {
 	insertPartitionProgress,
 	readNextOffset,
 	readPartitionProgress,
+	readTopicNextOffsets,
 } from "../../../src/meteringLog/repos/partitionProgress.js";
 
 const dialect = new PgDialect();
@@ -21,6 +22,29 @@ const capturingDb = ({ rows }: { rows: unknown[] }) => {
 };
 
 describe("partitionProgress repo", () => {
+	test("readTopicNextOffsets reads every partition's bookmark for the topic in one statement", async () => {
+		const { db, statements } = capturingDb({
+			rows: [
+				{ partition_id: 0, next_offset: "43" },
+				{ partition_id: "7", next_offset: 9n },
+			],
+		});
+		expect(
+			await readTopicNextOffsets({ ctx: { db }, topic: "metering" }),
+		).toEqual(
+			new Map([
+				[0, 43n],
+				[7, 9n],
+			]),
+		);
+		expect(statements).toHaveLength(1);
+		expect(statements[0]?.params).toEqual(["metering"]);
+		const broken = capturingDb({ rows: [{ partition_id: 0 }] });
+		await expect(
+			readTopicNextOffsets({ ctx: { db: broken.db }, topic: "metering" }),
+		).rejects.toThrow();
+	});
+
 	test("readNextOffset normalises int8 however the driver returns it", async () => {
 		for (const raw of ["43", 43, 43n]) {
 			const { db } = capturingDb({

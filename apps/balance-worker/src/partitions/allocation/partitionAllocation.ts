@@ -4,6 +4,7 @@ import {
 	watchForSuccessor,
 } from "../lifecycle/handOffPartition.js";
 import { subscribeEntryUnavailable } from "../lifecycle/partitionStartup.js";
+import { refreshHoldings } from "../lifecycle/refreshHoldings.js";
 import {
 	isRejoinableCrash,
 	noteConsumerJoined,
@@ -70,6 +71,7 @@ function applyPartitionAllocation({
 }: PartitionsScope & { change: PartitionAssignment }): void {
 	if (state.status !== "running") return;
 	state.assigned = new Set(change.partitions);
+	refreshHoldings({ state });
 	ctx.served?.assign({ partitions: change.partitions });
 	noteConsumerJoined({ ctx, state });
 	discardUnallocatedHealth({ state, partitions: change.partitions });
@@ -130,6 +132,7 @@ function revokePartitionAllocation({
 	clearPartitionRetries({ state });
 	state.generation += 1;
 	beginPartitionHandoffs({ ctx, state });
+	refreshHoldings({ state });
 	const entriesToStop = detachPartitions({ state, revocation });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 }
@@ -146,6 +149,7 @@ function crashPartitionAllocation({
 	clearPartitionRetries({ state });
 	const allocationGeneration = ++state.generation;
 	const entriesToStop = detachPartitions({ state, failure: crash });
+	refreshHoldings({ state });
 	reportPartitionError({ ctx, cause: crash.cause });
 	state.lifecycle = retireAllocation({ ctx, state, entriesToStop });
 	if (crash.restart) return;

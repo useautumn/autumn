@@ -2,10 +2,8 @@ import type { InFlightWatch } from "./types/inFlightWatch.js";
 
 export function createInFlightWatch({
 	now = () => performance.now(),
-	onSettled,
 }: {
 	now?: () => number;
-	onSettled?: (outcome: { ok: boolean }) => void;
 } = {}): InFlightWatch {
 	const startedAtById = new Map<number, number>();
 	const state: { nextId: number; settledLongestMs: number | null } = {
@@ -13,7 +11,7 @@ export function createInFlightWatch({
 		settledLongestMs: null,
 	};
 
-	function settle({ id, ok }: { id: number; ok: boolean }): void {
+	function settle({ id }: { id: number }): void {
 		const startedAt = startedAtById.get(id);
 		startedAtById.delete(id);
 		if (startedAt !== undefined)
@@ -21,7 +19,6 @@ export function createInFlightWatch({
 				state.settledLongestMs ?? 0,
 				now() - startedAt,
 			);
-		onSettled?.({ ok });
 	}
 
 	async function track<Value>(work: () => Promise<Value>): Promise<Value> {
@@ -29,10 +26,10 @@ export function createInFlightWatch({
 		startedAtById.set(id, now());
 		try {
 			const value = await work();
-			settle({ id, ok: true });
+			settle({ id });
 			return value;
 		} catch (cause) {
-			settle({ id, ok: false });
+			settle({ id });
 			throw cause;
 		}
 	}

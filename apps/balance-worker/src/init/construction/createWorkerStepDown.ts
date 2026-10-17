@@ -1,22 +1,20 @@
 import {
-	BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
-	BALANCE_WORKER_STEP_DOWN_PEER_ACK_AGE_MS,
+	BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
+	BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
+	BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 	BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMITS,
+	BALANCE_WORKER_STEP_DOWN_PROGRESS_TIMEOUT_MS,
+	BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
-import type { SlotWork } from "../../blueGreen/types/slotHeartbeat.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
 import { createOwnNetworkMonitor } from "../../health/ownNetwork/createOwnNetworkMonitor.js";
 import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
 import { createStepDownController } from "../../health/stepDown/createStepDownController.js";
 import { createStepDownPermits } from "../../health/stepDown/createStepDownPermits.js";
-import { readFleetHeartbeats } from "../../health/stepDown/readFleetHeartbeats.js";
-import type {
-	FleetListing,
-	FleetRead,
-} from "../../health/stepDown/types/fleetHeartbeats.js";
+import type { FleetProgress } from "../../health/stepDown/types/fleetProgress.js";
 import type { StepDownController } from "../../health/stepDown/types/stepDownController.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 
@@ -24,10 +22,15 @@ type WorkerStepDownContext = {
 	sendWatches: PartitionSendWatches;
 	partitions: Pick<
 		Partitions,
-		"stepDown" | "isSteppedDown" | "hasAssignment" | "isHeld"
+		| "stepDown"
+		| "isSteppedDown"
+		| "hasAssignment"
+		| "holdingOf"
+		| "heldPartitions"
 	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	objects?: AdminBucketObjects;
+	readFleetProgress?: () => Promise<FleetProgress>;
 };
 
 type WorkerStepDownConfig = {
@@ -56,19 +59,18 @@ export function createWorkerStepDown({
 }: {
 	ctx: WorkerStepDownContext;
 	config: WorkerStepDownConfig;
-}): { readWork(): SlotWork; start(): void; stop(): Promise<void> } {
+}): { start(): void; stop(): Promise<void> } {
+	function heldCount(): number {
+		return ctx.partitions.heldPartitions().length;
+	}
 	const ownNetwork = createOwnNetworkMonitor({
-		ctx: { sends: ctx.sendWatches, isHeld: ctx.partitions.isHeld },
+		ctx: {
+			sends: ctx.sendWatches,
+			holdingOf: ctx.partitions.holdingOf,
+			heldCount,
+		},
 	});
 	const controller = createController({ ctx, config, ownNetwork });
-
-	function readWork(): SlotWork {
-		return {
-			lastSendAckAgeMs: ctx.sendWatches.readLastAckAgeMs(),
-			ownNetwork: ownNetwork.verdict().state,
-			steppedDown: ctx.partitions.isSteppedDown(),
-		};
-	}
 
 	function start(): void {
 		ownNetwork.start();
@@ -81,24 +83,29 @@ export function createWorkerStepDown({
 		await stopped;
 	}
 
-	return { readWork, start, stop };
+	return { start, stop };
 }
 
-function readPeersOf({
-	objects,
-	fleetId,
+function readFleetProgressWithin({
+	read,
+	timeoutMs,
 }: {
-	objects: AdminBucketObjects;
-	fleetId: string;
-}): (params: { since: FleetListing | null }) => Promise<FleetRead> {
-	function readPeers({
-		since,
-	}: {
-		since: FleetListing | null;
-	}): Promise<FleetRead> {
-		return readFleetHeartbeats({ ctx: { objects }, fleetId, since });
+	read: () => Promise<FleetProgress>;
+	timeoutMs: number;
+}): () => Promise<FleetProgress> {
+	async function readWithin(): Promise<FleetProgress> {
+		const late = Promise.withResolvers<never>();
+		function expire(): void {
+			late.reject(new Error(`Fleet progress took longer than ${timeoutMs} ms`));
+		}
+		const timer = setTimeout(expire, timeoutMs);
+		try {
+			return await Promise.race([read(), late.promise]);
+		} finally {
+			clearTimeout(timer);
+		}
 	}
-	return readPeers;
+	return readWithin;
 }
 
 function createController({
@@ -110,9 +117,12 @@ function createController({
 	config: WorkerStepDownConfig;
 	ownNetwork: ReturnType<typeof createOwnNetworkMonitor>;
 }): StepDownController | undefined {
-	const { objects } = ctx;
+	const { objects, readFleetProgress } = ctx;
 	const { fleetId } = config;
-	if (!objects || !fleetId) return undefined;
+	if (!objects || !fleetId || !readFleetProgress) return undefined;
+	function ownPartitions(): ReadonlySet<number> {
+		return new Set(ctx.partitions.heldPartitions());
+	}
 	const permits = createStepDownPermits({
 		ctx: { objects },
 		config: {
@@ -128,18 +138,24 @@ function createController({
 	return createStepDownController({
 		ctx: {
 			monitor: ownNetwork,
-			readPeers: readPeersOf({ objects, fleetId }),
+			readFleetProgress: readFleetProgressWithin({
+				read: readFleetProgress,
+				timeoutMs: BALANCE_WORKER_STEP_DOWN_PROGRESS_TIMEOUT_MS,
+			}),
+			ownPartitions,
 			permits,
 			partitions: ctx.partitions,
 			logger: ctx.logger,
 		},
 		config: {
-			selfEndpoint: config.endpoint,
 			peerWaitMs: BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
 			peerPollMs: BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
-			partitionCount: config.partitionCount,
-			ackAgeLimitMs: BALANCE_WORKER_STEP_DOWN_PEER_ACK_AGE_MS,
-			minPeers: BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
+			minKeptUp: Math.ceil(
+				config.partitionCount * BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
+			),
+			recheckAttempts: BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
+			recheckIntervalMs: BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
+			minStalledPartitions: BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
 		},
 	});
 }
