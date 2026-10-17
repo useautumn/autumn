@@ -44,6 +44,7 @@ import {
 
 /** How long `stop()` serves the group's revocation after leaving before it gives up waiting. */
 const LEAVE_TIMEOUT_MS = 5_000;
+const LEAVE_LOOP_STALL_MS = 500;
 /** How long a restart waits for a given-up client to close before abandoning it. */
 const RETIRE_TIMEOUT_MS = 10_000;
 /** How long `stop` waits for the consume loop to notice it; past this it leaves the group and closes without it. */
@@ -104,6 +105,7 @@ export function createLibrdkafkaConsumer({
 		run: null,
 		running: false,
 		leaving: false,
+		leaveDone: null,
 		loop: null,
 		wake: new AbortController(),
 		assigned: new Map(),
@@ -112,6 +114,7 @@ export function createLibrdkafkaConsumer({
 		seekTargets: new Map(),
 		inflightSeeks: new Set(),
 		lastPollAt: performance.now(),
+		loopPollInFlight: false,
 		paused: new Set(),
 		skippedFrom: new Map(),
 		pendingSeeks: new Map(),
@@ -249,6 +252,7 @@ export function createLibrdkafkaConsumer({
 
 	async function connect(): Promise<void> {
 		state.leaving = false;
+		state.leaveDone = null;
 	}
 
 	async function subscribe({
@@ -301,6 +305,7 @@ export function createLibrdkafkaConsumer({
 		const native = state.native;
 		state.native = null;
 		state.gaveUp = false;
+		state.leaveDone = null;
 		state.topics = [];
 		await settleSeeks({ scope });
 		if (native) await closeNative(native);
@@ -409,14 +414,29 @@ export function createLibrdkafkaConsumer({
 		native.unsubscribe();
 		const deadline = performance.now() + LEAVE_TIMEOUT_MS;
 		while (state.assigned.size > 0 && performance.now() < deadline) {
-			const served = Promise.withResolvers<void>();
-			function onServed(): void {
-				served.resolve();
-			}
-			native.consume(1, onServed);
-			await served.promise;
+			if (!isLoopPolling()) await pollOnce(native);
 			await Bun.sleep(IDLE_POLL_MS);
 		}
+	}
+
+	function isLoopPolling(): boolean {
+		const fresh = performance.now() - state.lastPollAt < LEAVE_LOOP_STALL_MS;
+		if (state.loopPollInFlight) return fresh;
+		return state.running && state.loop !== null && fresh;
+	}
+
+	async function pollOnce(native: NativeConsumer): Promise<void> {
+		const served = Promise.withResolvers<void>();
+		function onServed(): void {
+			served.resolve();
+		}
+		native.consume(1, onServed);
+		await served.promise;
+	}
+
+	function leaveOnce({ native }: { native: NativeConsumer }): Promise<void> {
+		state.leaveDone ??= leaveGroupWithin({ native });
+		return state.leaveDone;
 	}
 
 	/** A loop parked on something that never answers must not hold the process: the group is left and the client closed regardless. */
@@ -461,14 +481,19 @@ export function createLibrdkafkaConsumer({
 		});
 	}
 
+	async function leave(): Promise<void> {
+		const native = state.native;
+		if (!native || state.gaveUp) return;
+		await leaveOnce({ native });
+	}
+
 	async function stop(): Promise<void> {
 		state.running = false;
 		state.wake.abort();
 		await awaitLoop();
 		state.loop = null;
 		const native = state.native;
-		if (native && !state.leaving && !state.gaveUp)
-			await leaveGroupWithin({ native });
+		if (native && !state.gaveUp) await leaveOnce({ native });
 	}
 
 	async function disconnect(): Promise<void> {
@@ -507,6 +532,7 @@ export function createLibrdkafkaConsumer({
 		pause,
 		resume,
 		stop,
+		leave,
 		disconnect,
 		events: ConsumerEventNames,
 		on,

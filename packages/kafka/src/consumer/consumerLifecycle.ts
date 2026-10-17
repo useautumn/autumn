@@ -119,6 +119,17 @@ function observeBatchProgress({
 	});
 }
 
+export async function leaveConsumerGroup({
+	ctx,
+	state,
+}: {
+	ctx: TopicConsumerContext;
+	state: TopicConsumerState;
+}): Promise<void> {
+	if (!state.isStarted || state.isStopped) return;
+	await ctx.consumer.leave();
+}
+
 export async function stopConsumer({
 	ctx,
 	state,

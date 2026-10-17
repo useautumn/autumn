@@ -24,6 +24,9 @@ export interface AllocationScope extends PartitionsScope {
 
 export type PartitionsState = {
 	directory: PartitionDirectory;
+	assigned: Set<number>;
+	holdings: Map<number, number>;
+	nextHolding: number;
 	entries: Map<number, PartitionEntry>;
 	/** Revoked but still serving until a successor is ready or the wait times out. */
 	handingOff: Map<number, PartitionEntry>;
@@ -40,6 +43,8 @@ export type PartitionsState = {
 		timer: ReturnType<typeof setTimeout> | null;
 	};
 	status: "created" | "running" | "stopping" | "stopped";
+	steppedDown: boolean;
+	steppedDownSignal: { promise: Promise<void>; resolve(): void };
 	retirementFailed: boolean;
 	generation: number;
 	lifecycle: Promise<void>;

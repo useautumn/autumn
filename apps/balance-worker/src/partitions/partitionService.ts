@@ -6,10 +6,15 @@ import {
 	startHealthRefresh,
 	stopHealthRefresh,
 } from "./health/partitionHealth.js";
-import { beginPartitionHandoffs } from "./lifecycle/handOffPartition.js";
+import {
+	beginPartitionHandoffs,
+	cancelPartitionHandoff,
+} from "./lifecycle/handOffPartition.js";
+import { refreshHoldings } from "./lifecycle/refreshHoldings.js";
 import { clearConsumerRejoin } from "./lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
+	closePartitionAdmission,
 	detachPartitions,
 	stopPartitions,
 } from "./lifecycle/stopPartitions.js";
@@ -18,6 +23,7 @@ import type {
 	AllocationScope,
 	PartitionEntry,
 	PartitionsScope,
+	PartitionsState,
 } from "./types/partitionState.js";
 import type { PartitionServiceStopReason } from "./types/partitions.js";
 
@@ -52,6 +58,43 @@ export async function startPartitionService({
 	}
 }
 
+export function stepDownPartitionService({
+	ctx,
+	state,
+}: PartitionsScope): Promise<void> {
+	if (state.status !== "running" && state.status !== "stopping")
+		return stopPartitionService({ ctx, state });
+	state.steppedDown = true;
+	state.steppedDownSignal.resolve();
+	for (const entry of [...state.handingOff.values()])
+		withdrawHandoffNow({ state, entry });
+	void leaveGroupNow({ ctx });
+	return stopPartitionService({ ctx, state });
+}
+
+function withdrawHandoffNow({
+	state,
+	entry,
+}: {
+	state: PartitionsState;
+	entry: PartitionEntry;
+}): void {
+	if (state.status === "running" && cancelPartitionHandoff({ state, entry }))
+		return;
+	state.directory.withdraw({ partition: entry.partition });
+	closePartitionAdmission({ entry });
+}
+
+async function leaveGroupNow({
+	ctx,
+}: Pick<PartitionsScope, "ctx">): Promise<void> {
+	try {
+		await ctx.consumer.leave();
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
 export function stopPartitionService({
 	ctx,
 	state,
@@ -63,6 +106,7 @@ export function stopPartitionService({
 		return Promise.resolve();
 	}
 	state.status = "stopping";
+	state.assigned.clear();
 	stopHealthRefresh({ state });
 	clearPartitionRetries({ state });
 	clearConsumerRejoin({ state });
@@ -73,9 +117,10 @@ export function stopPartitionService({
 	// Serving partitions keep serving until a successor is ready; the rest stop as before.
 	const handingOff = [
 		...state.handingOff.values(),
-		...beginPartitionHandoffs({ ctx, state }),
+		...(state.steppedDown ? [] : beginPartitionHandoffs({ ctx, state })),
 	];
 	const entriesToStop = [...handingOff, ...detachPartitions({ state })];
+	refreshHoldings({ state });
 	const previousLifecycle = state.lifecycle;
 	const healthRefresh = state.healthRefreshPromise;
 	state.stopPromise = finishPartitionServiceStop({
@@ -134,6 +179,7 @@ export async function stopServiceThenNotify({
 	reason,
 }: PartitionsScope & { reason: PartitionServiceStopReason }): Promise<void> {
 	await stopPartitionServiceSafely({ ctx, state });
+	if (state.steppedDown) return;
 	try {
 		ctx.onServiceStopped?.(reason);
 	} catch (cause) {

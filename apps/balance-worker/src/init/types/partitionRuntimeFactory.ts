@@ -14,6 +14,7 @@ import type {
 } from "@autumn/kafka";
 import type { AutumnLogger } from "@autumn/logging";
 import type { PartitionCheckpointMaintenance } from "../../checkpoint/scheduling/partitionCheckpointMaintenance.js";
+import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
 import type { OwnershipHandoffLink } from "../../kafka/createOwnershipHandoffLink.js";
 import type { OwnerEpochCell } from "../../kafka/ownerEpochCell.js";
 import type { PartitionOwnershipPublication } from "../../partitions/types/partitions.js";
@@ -85,6 +86,7 @@ export type PartitionRuntimeFactoryContext = {
 	commandOffsets?: {
 		commit(offsets: Pick<KafkaOffsetCommit, "topics">): Promise<void>;
 	};
+	sendWatches?: Pick<PartitionSendWatches, "watchFor">;
 };
 
 export type PartitionRuntimeFactoryConfig = {

@@ -177,6 +177,7 @@ export type Consumer = {
 	pause(topics: { topic: string; partitions?: number[] }[]): void;
 	resume(topics: { topic: string; partitions?: number[] }[]): void;
 	stop(): Promise<void>;
+	leave(): Promise<void>;
 	disconnect(): Promise<void>;
 	readonly events: ConsumerEvents;
 	on<Name extends ConsumerEventName>(

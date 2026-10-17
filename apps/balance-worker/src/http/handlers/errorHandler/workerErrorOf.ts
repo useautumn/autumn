@@ -5,6 +5,7 @@ import {
 } from "@autumn/balance-engine";
 import {
 	PARTITION_RECOVERY_REASON,
+	STEPPING_DOWN_REASON,
 	type WorkerErrorResponse,
 	WorkerProtocolError,
 } from "@autumn/balance-worker-client/protocol";
@@ -162,6 +163,7 @@ export function workerErrorOf({ cause }: { cause: unknown }): {
 		error = {
 			code: "NOT_OWNER",
 			message: "Route is not admitted by this worker",
+			...(cause.steppingDown && { reason: STEPPING_DOWN_REASON }),
 			...(cause.successor && { successor: cause.successor }),
 		};
 	} else if (cause instanceof CommitPositionsOverlapError) {

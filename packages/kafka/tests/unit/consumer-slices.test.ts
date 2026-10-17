@@ -44,6 +44,7 @@ function createConsumerFixture(options: FixtureOptions = {}) {
 		runConfig = config;
 	}
 	async function stop(): Promise<void> {}
+	async function leave(): Promise<void> {}
 	async function disconnect(): Promise<void> {}
 	async function commitOffsets(
 		offsets: Array<{ topic: string; partition: number; offset: string }>,
@@ -63,6 +64,7 @@ function createConsumerFixture(options: FixtureOptions = {}) {
 		subscribe,
 		run,
 		stop,
+		leave,
 		disconnect,
 		commitOffsets,
 		seek,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { parseTrackCommand } from "@autumn/balance-engine";
 import type { KafkaProducerClient, ProducerConfig } from "@autumn/kafka";
+import { createPartitionSendWatches } from "../../../../src/health/ownNetwork/createPartitionSendWatches.js";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
 import { commitSummaries } from "../../../../src/logging/commitSummaries.js";
@@ -218,11 +219,19 @@ describe("Kafka owned partition runtime factory", () => {
 		}
 	});
 
-	test("creates each assigned runtime with its partition-scoped producer", () => {
+	test("creates each assigned runtime with its partition-scoped producer and send watch", () => {
 		const fixture = createStoreFixture();
 		try {
 			const producerConfigs: ProducerConfig[] = [];
 			const producer = {} as KafkaProducerClient;
+			const watched: number[] = [];
+			const sendWatches = createPartitionSendWatches({
+				ctx: { holdingOf: () => 1 },
+			});
+			function watchFor({ partition }: { partition: number }) {
+				watched.push(partition);
+				return sendWatches.watchFor({ partition });
+			}
 			const createRuntime = createPartitionRuntimeFactory({
 				ctx: {
 					kafka: {
@@ -243,6 +252,7 @@ describe("Kafka owned partition runtime factory", () => {
 						retryPolicy: config.checkpointRetryPolicy,
 					}),
 					partitionResolver: { partitionForIdentity: () => 0 },
+					sendWatches: { watchFor },
 				},
 				config,
 			});
@@ -271,6 +281,7 @@ describe("Kafka owned partition runtime factory", () => {
 				"autumn-balance-worker:staging:metering-events-v1:0",
 				"autumn-balance-worker:staging:metering-events-v1:1",
 			]);
+			expect(watched).toEqual([0, 1]);
 		} finally {
 			closeStoreFixture(fixture);
 		}

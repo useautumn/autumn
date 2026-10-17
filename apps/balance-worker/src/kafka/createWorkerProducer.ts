@@ -7,6 +7,7 @@ import {
 
 export { createWorkerProducerConfig } from "../init/workerConfig.js";
 
+import type { InFlightWatch } from "../health/ownNetwork/types/inFlightWatch.js";
 import {
 	OwnedPartitionLogDivergedError,
 	OwnedPartitionUnfencedError,
@@ -26,6 +27,7 @@ export function createWorkerProducer({
 		session: KafkaProducerSession;
 		/** The epoch the partition's writer holds; undefined until a claim names it. */
 		ownerEpoch?: () => string | undefined;
+		sendWatch?: Pick<InFlightWatch, "track">;
 	};
 	config: { topic: string; partition: number };
 }): WorkerProducer {
@@ -33,6 +35,14 @@ export function createWorkerProducer({
 	const { topic, partition } = config;
 	const { isUsable } = session;
 	let expectedNextOffset: bigint | null = null;
+
+	function sendWatched(
+		...params: Parameters<KafkaProducerSession["send"]>
+	): ReturnType<KafkaProducerSession["send"]> {
+		const { sendWatch } = ctx;
+		if (!sendWatch) return session.send(...params);
+		return sendWatch.track(() => session.send(...params));
+	}
 
 	function disconnect({
 		waitForTransactions = false,
@@ -67,7 +77,7 @@ export function createWorkerProducer({
 		let landed: { offset: bigint };
 		try {
 			landed = await sendOwnerFence({
-				sender: session,
+				sender: { send: sendWatched },
 				topic,
 				partition,
 				ownerEpoch,
@@ -115,7 +125,7 @@ export function createWorkerProducer({
 			throw new OwnedPartitionUnfencedError({ topic, partition });
 		let metadata: Awaited<ReturnType<KafkaProducerSession["send"]>>;
 		try {
-			metadata = await session.send(...params);
+			metadata = await sendWatched(...params);
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}

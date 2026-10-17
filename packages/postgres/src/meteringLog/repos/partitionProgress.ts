@@ -68,6 +68,38 @@ export const readPartitionProgress = async ({
 	};
 };
 
+const topicProgressRowSchema = z.object({
+	partition_id: z
+		.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)])
+		.transform(Number),
+	next_offset: nextOffsetSchema,
+});
+
+export const readTopicNextOffsets = async ({
+	ctx,
+	topic,
+}: {
+	ctx: ProgressContext;
+	topic: string;
+}): Promise<ReadonlyMap<number, bigint>> => {
+	const { rows } = await ctx.db.execute(sql`
+		SELECT partition_id, next_offset
+		FROM partition_progress
+		WHERE topic = ${topic}
+	`);
+	const nextOffsets = new Map<number, bigint>();
+	for (const row of rows) {
+		const parsed = topicProgressRowSchema.safeParse(row);
+		if (!parsed.success)
+			throw new RowsInvalidError({
+				table: "partition_progress",
+				issues: parsed.error.issues,
+			});
+		nextOffsets.set(parsed.data.partition_id, parsed.data.next_offset);
+	}
+	return nextOffsets;
+};
+
 export const readNextOffset = async (
 	params: { ctx: ProgressContext } & PartitionPosition,
 ): Promise<bigint | null> =>

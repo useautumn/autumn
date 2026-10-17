@@ -81,7 +81,11 @@ export function createPartitionRuntimeFactory({
 			}),
 		});
 		const producer = createWorkerProducer({
-			ctx: { session, ownerEpoch: epochCell.read },
+			ctx: {
+				session,
+				ownerEpoch: epochCell.read,
+				sendWatch: ctx.sendWatches?.watchFor({ partition }),
+			},
 			config: { topic, partition },
 		});
 		const ownership = createOwnershipPublisher({

@@ -7,6 +7,7 @@ import type {
 } from "../types/partitionState.js";
 import type { PartitionFailure } from "../types/partitions.js";
 import { PartitionHandoffCancelledError } from "./partitionLifecycleErrors.js";
+import { refreshHoldings } from "./refreshHoldings.js";
 import { startPartitions } from "./startPartitions.js";
 import { closePartitionAdmission } from "./stopPartitions.js";
 
@@ -166,7 +167,7 @@ async function handOffPartition({
 		const drained = await entry.drain;
 		if (!drained?.ok) return;
 		// The claim is the successor's signal to fence: it must follow the drain, never precede it.
-		if (successor) {
+		if (successor && !state.steppedDown) {
 			const { routeEpoch } = await entry.publication.claim({
 				endpoint: successor,
 			});
@@ -191,8 +192,10 @@ async function handOffPartition({
 			try {
 				await entry.runtime.waitForQuiescence();
 			} finally {
-				if (state.handingOff.get(partition) === entry)
+				if (state.handingOff.get(partition) === entry) {
 					state.handingOff.delete(partition);
+					refreshHoldings({ state });
+				}
 			}
 		}
 	}

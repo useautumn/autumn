@@ -22,6 +22,7 @@ async function completeWorkerStartup({
 		await ctx.catalogInvalidations?.start();
 		state.listener = await ctx.listen();
 		ctx.healthReporter?.start();
+		ctx.stepDown?.start();
 		await ctx.partitions.start();
 		ctx.coldStart?.start();
 		state.status = "running";

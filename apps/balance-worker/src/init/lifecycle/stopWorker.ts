@@ -29,6 +29,7 @@ export async function completeWorkerShutdown({
 	state.status = "stopping";
 	ctx.coldStart?.stop();
 	ctx.healthReporter?.stop();
+	const steppedDown = ctx.stepDown?.stop();
 	const errors: unknown[] = [];
 	try {
 		await ctx.partitions.stop();
@@ -42,6 +43,11 @@ export async function completeWorkerShutdown({
 	}
 	try {
 		await ctx.catalogInvalidations?.stop();
+	} catch (cause) {
+		errors.push(cause);
+	}
+	try {
+		await steppedDown;
 	} catch (cause) {
 		errors.push(cause);
 	}

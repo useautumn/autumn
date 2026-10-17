@@ -15,6 +15,7 @@ export type KafkaConsumerClient = Pick<
 	| "pause"
 	| "resume"
 	| "stop"
+	| "leave"
 	| "disconnect"
 	| "events"
 	| "on"
@@ -83,6 +84,7 @@ export function isRecordsHandler(
 export type TopicConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	leave(): Promise<void>;
 	/** Joins the group again after kafkajs gave it up; only between `start` and `stop`. */
 	restart(): Promise<void>;
 	withdrawPartition(position: { partition: number }): Promise<void>;

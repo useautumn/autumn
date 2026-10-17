@@ -10,10 +10,15 @@ export class PartitionRouteMismatchError extends Error {
 export class PartitionRouteNotOwnedError extends Error {
 	/** Named once the handoff has claimed a route for the successor; absent while it is still unnamed or released. */
 	readonly successor: WorkerRouteSuccessor | undefined;
+	readonly steppingDown: boolean;
 
-	constructor({ successor }: { successor?: WorkerRouteSuccessor } = {}) {
+	constructor({
+		successor,
+		steppingDown = false,
+	}: { successor?: WorkerRouteSuccessor; steppingDown?: boolean } = {}) {
 		super("Partition route is not admitted by this worker");
 		this.name = "PartitionRouteNotOwnedError";
 		this.successor = successor;
+		this.steppingDown = steppingDown;
 	}
 }

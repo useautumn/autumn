@@ -165,6 +165,9 @@ const fixture = ({
 				stop: async () => {
 					events.push("consumer-stop");
 				},
+				leave: async () => {
+					events.push("consumer-leave");
+				},
 				pause: () => undefined,
 				resume: () => undefined,
 			},
@@ -517,6 +520,9 @@ describe("partitionLifecycle", function partitionLifecycleTests() {
 				stop: async () => {
 					lifecycle.push("consumer-stop");
 					if (consumerStopFailure) throw consumerStopFailure;
+				},
+				leave: async () => {
+					lifecycle.push("consumer-leave");
 				},
 				pause: ({ partitions }) => {
 					lifecycle.push(`pause:${partitions.join(",")}`);

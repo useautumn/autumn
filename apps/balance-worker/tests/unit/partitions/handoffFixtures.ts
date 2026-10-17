@@ -5,6 +5,7 @@ import type {
 	PartitionChangeListeners,
 	PartitionOwnershipPublication,
 	PartitionRuntimeFactory,
+	PartitionServiceStopReason,
 	PartitionsConfig,
 	PartitionsDependencies,
 	PartitionUnavailableListener,
@@ -126,6 +127,7 @@ export type WorkerOptions = {
 	announceDrainingGate?: Promise<void>;
 	prepareGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
+	stopFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
 	/** Holds the fence a worker writes after claiming for itself. */
 	fenceGate?: Promise<void>;
@@ -145,6 +147,7 @@ export const createWorker = ({
 	announceDrainingGate,
 	prepareGate,
 	prepareFailures,
+	stopFailures,
 	activateGate,
 	fenceGate,
 	awaitReadyAnnouncement,
@@ -154,6 +157,7 @@ export const createWorker = ({
 }: WorkerOptions) => {
 	const { events } = log;
 	const errors: unknown[] = [];
+	const stopped: PartitionServiceStopReason[] = [];
 	const endpoint = `http://${name}`;
 	let listeners: PartitionChangeListeners;
 	/** A killed process: nothing it starts afterwards completes, and nothing it publishes lands. */
@@ -228,6 +232,10 @@ export const createWorker = ({
 			stop: async () => {
 				status = "stopped";
 				record("stop");
+				const failure = stopFailures?.get(partition);
+				if (failure === undefined) return;
+				stopFailures?.delete(partition);
+				throw failure;
 			},
 			waitForQuiescence: async () => undefined,
 			getHealth,
@@ -377,6 +385,9 @@ export const createWorker = ({
 				stop: async () => {
 					events.push(`${name}:consumer-stop`);
 				},
+				leave: async () => {
+					events.push(`${name}:consumer-leave`);
+				},
 				pause: ({ topic, partitions }) => {
 					pauses.push(`${topic}:${partitions.join(",")}`);
 				},
@@ -405,6 +416,9 @@ export const createWorker = ({
 				errors.push(cause);
 			},
 			onUnhealthyPartition: () => undefined,
+			onServiceStopped: (reason) => {
+				stopped.push(reason);
+			},
 		},
 	});
 	const causeForPartition = () => new Error("revoked");
@@ -414,12 +428,14 @@ export const createWorker = ({
 		ownership,
 		events,
 		errors,
+		stopped,
 		pauses,
 		resumes,
 		status: (partition: number) => statuses.get(partition)?.(),
 		assign: (partitions: number[]) =>
 			listeners.onAssigned({ partitions, causeForPartition }),
 		revoke: () => listeners.onRevoked({ causeForPartition }),
+		crash: (cause: unknown) => listeners.onCrashed({ cause, restart: false }),
 		has: (event: string) => events.includes(`${name}:${event}`),
 		index: (event: string) => events.indexOf(`${name}:${event}`),
 		fail: (partition: number, cause?: unknown) =>

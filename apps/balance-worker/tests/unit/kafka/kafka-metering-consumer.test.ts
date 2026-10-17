@@ -239,6 +239,9 @@ const createFakeKafkaConsumer = ({
 		stop: async () => {
 			lifecycle.push("stop");
 		},
+		leave: async () => {
+			lifecycle.push("leave");
+		},
 		disconnect: async () => {
 			lifecycle.push("disconnect");
 		},
@@ -1937,6 +1940,9 @@ describe("consumerLifecycle", function consumerLifecycleTests() {
 			events.push("stop");
 			if (stopFailure) throw stopFailure;
 		}
+		async function leave(): Promise<void> {
+			events.push("leave");
+		}
 		async function disconnect(): Promise<void> {
 			events.push("disconnect");
 			if (disconnectFailure) throw disconnectFailure;
@@ -1956,6 +1962,7 @@ describe("consumerLifecycle", function consumerLifecycleTests() {
 			subscribe,
 			run,
 			stop,
+			leave,
 			disconnect,
 			commitOffsets,
 			seek,

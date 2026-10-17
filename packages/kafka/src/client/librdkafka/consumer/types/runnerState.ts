@@ -19,6 +19,7 @@ export type ConsumerRunnerState = {
 	running: boolean;
 	/** Set while leaving the group: group changes are no longer the caller's business. */
 	leaving: boolean;
+	leaveDone: Promise<void> | null;
 	loop: Promise<void> | null;
 	/** Aborted by `stop`: the loop's waits end at once instead of running out their time. */
 	wake: AbortController;
@@ -34,6 +35,7 @@ export type ConsumerRunnerState = {
 	inflightSeeks: Set<Promise<void>>;
 	/** When the runner last polled; librdkafka leaves the group once max.poll.interval.ms passes without one. */
 	lastPollAt: number;
+	loopPollInFlight: boolean;
 	paused: Set<string>;
 	/** One past the last record handed to the handler since the partition's last seek or assignment. */
 	deliveredNext: Map<string, number>;

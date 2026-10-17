@@ -1,0 +1,44 @@
+import { describe, expect, test } from "bun:test";
+import type { FleetProgress } from "../../../../src/health/stepDown/types/fleetProgress.js";
+import { readFleetProgressWithin } from "../../../../src/init/construction/createWorkerStepDown.js";
+
+const EMPTY: FleetProgress = {
+	highWatermarks: new Map(),
+	nextOffsets: new Map(),
+};
+
+describe("bounded fleet progress reads", () => {
+	test("a joined read reports when the read it joined began, not when it was joined", async () => {
+		const time = { now: 0 };
+		const slow = Promise.withResolvers<FleetProgress>();
+		const read = readFleetProgressWithin({
+			read: () => slow.promise,
+			timeoutMs: 20,
+			now: () => time.now,
+		});
+		await expect(read()).rejects.toThrow("took longer than 20 ms");
+		time.now = 50;
+		const joined = read();
+		slow.resolve(EMPTY);
+		expect((await joined).readStartedAt).toBe(0);
+	});
+
+	test("a read that outlasts its bound fails that poll, and the next poll joins it instead of starting another", async () => {
+		const slow = Promise.withResolvers<FleetProgress>();
+		const started = { reads: 0 };
+		const read = readFleetProgressWithin({
+			read: () => {
+				started.reads += 1;
+				return slow.promise;
+			},
+			timeoutMs: 20,
+		});
+		await expect(read()).rejects.toThrow("took longer than 20 ms");
+		const second = read();
+		expect(started.reads).toBe(1);
+		slow.resolve(EMPTY);
+		expect(await second).toMatchObject(EMPTY);
+		await read();
+		expect(started.reads).toBe(2);
+	});
+});

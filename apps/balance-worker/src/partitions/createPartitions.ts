@@ -11,6 +11,7 @@ import { listPartitionHealth } from "./health/partitionHealth.js";
 import { consumerStatusOf } from "./lifecycle/rejoinConsumer.js";
 import {
 	startPartitionService,
+	stepDownPartitionService,
 	stopPartitionService,
 } from "./partitionService.js";
 import type { PartitionsState } from "./types/partitionState.js";
@@ -43,6 +44,14 @@ export function createPartitions({
 		return stopPartitionService({ ctx, state });
 	}
 
+	function stepDown(): Promise<void> {
+		return stepDownPartitionService({ ctx, state });
+	}
+
+	function isSteppedDown(): boolean {
+		return state.steppedDown;
+	}
+
 	function partitions(): OwnedPartitionHealth[] {
 		return listPartitionHealth({ state });
 	}
@@ -55,8 +64,18 @@ export function createPartitions({
 		return state.directory.findOwnedRuntime(target) !== undefined;
 	}
 
+	function holdingOf({ partition }: PartitionTarget): number | undefined {
+		return state.holdings.get(partition);
+	}
+
+	function heldPartitions(): number[] {
+		return [...state.holdings.keys()];
+	}
+
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
-		return state.handoffSettlements.get(partition) ?? Promise.resolve();
+		const settlement = state.handoffSettlements.get(partition);
+		if (!settlement) return Promise.resolve();
+		return Promise.race([settlement, state.steppedDownSignal.promise]);
 	}
 
 	function findSuccessor({
@@ -73,9 +92,13 @@ export function createPartitions({
 	return {
 		start,
 		stop,
+		stepDown,
+		isSteppedDown,
 		partitions,
 		hasAssignment,
 		isAdmitted,
+		holdingOf,
+		heldPartitions,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
@@ -121,6 +144,9 @@ function resolvePartitionConfig(
 function createPartitionState(): PartitionsState {
 	return {
 		directory: createRuntimeDirectory(),
+		assigned: new Set(),
+		holdings: new Map(),
+		nextHolding: 0,
 		entries: new Map(),
 		handingOff: new Map(),
 		retiringEntries: new Map(),
@@ -130,6 +156,8 @@ function createPartitionState(): PartitionsState {
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
 		status: "created",
+		steppedDown: false,
+		steppedDownSignal: Promise.withResolvers<void>(),
 		retirementFailed: false,
 		generation: 0,
 		lifecycle: Promise.resolve(),

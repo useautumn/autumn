@@ -294,6 +294,7 @@ export function createWorkerPartitions({
 			consumer: {
 				start: meteringConsumer.start,
 				stop: meteringConsumer.stop,
+				leave: meteringConsumer.leave,
 				restart: meteringConsumer.restart,
 				pause,
 				resume,

@@ -25,8 +25,10 @@ export async function resolveRequestRuntime({
 	const runtime = ctx.ownership.findRuntime(route);
 	if (runtime) return runtime;
 	// Mid-handoff the successor is not named yet: answering now would send the caller back here.
-	await ctx.ownership.awaitHandoff?.({ partition });
+	if (!ctx.ownership.isSteppedDown?.())
+		await ctx.ownership.awaitHandoff?.({ partition });
 	throw new PartitionRouteNotOwnedError({
 		successor: ctx.ownership.findSuccessor?.({ partition }),
+		steppingDown: ctx.ownership.isSteppedDown?.() ?? false,
 	});
 }

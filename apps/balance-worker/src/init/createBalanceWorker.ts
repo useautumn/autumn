@@ -1,8 +1,12 @@
 import { cpus } from "node:os";
 import { logUnknownInput } from "@autumn/balance-engine";
-import { defaultBalanceWorkerThreadsEdgeConfig } from "@autumn/edge-config";
+import {
+	defaultBalanceWorkerThreadsEdgeConfig,
+	type EdgeConfigLocation,
+} from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+	BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
 import type {
@@ -10,6 +14,7 @@ import type {
 	KafkaProducerClient,
 	ProducerConfig,
 } from "@autumn/kafka";
+import { S3Client } from "@aws-sdk/client-s3";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -18,6 +23,11 @@ import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createCjsChildrenDedupe } from "../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
+import { createAdminBucketObjects } from "../external/s3/createAdminBucketObjects.js";
+import type { AdminBucketObjects } from "../external/s3/types/adminBucketObjects.js";
+import { createPartitionSendWatches } from "../health/ownNetwork/createPartitionSendWatches.js";
+import { readFleetProgress } from "../health/stepDown/readFleetProgress.js";
+import type { FleetProgress } from "../health/stepDown/types/fleetProgress.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
 	createInlineHandler,
@@ -48,6 +58,7 @@ import { createPartitionLoad } from "../processor/writer/partitionLoad/createPar
 import { createCommitPositions } from "../runtime/commitPositions/createCommitPositions.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
+import { createWorkerStepDown } from "./construction/createWorkerStepDown.js";
 import { startWorkerThreads } from "./construction/startWorkerThreads.js";
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
@@ -78,6 +89,19 @@ import {
 
 /** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
 const PRODUCER_ACK_RING_BYTES = 1 << 20;
+
+function adminBucketObjectsOf({
+	edgeConfigs,
+}: {
+	edgeConfigs: { adminBucket: { location: EdgeConfigLocation } } | undefined;
+}): AdminBucketObjects | undefined {
+	if (!edgeConfigs) return undefined;
+	const { bucket, region } = edgeConfigs.adminBucket.location;
+	return createAdminBucketObjects({
+		ctx: { client: new S3Client({ region, maxAttempts: 1 }) },
+		config: { bucket, timeoutMs: BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS },
+	});
+}
 
 export async function createBalanceWorker({
 	ctx: dependencies,
@@ -178,6 +202,16 @@ export async function createBalanceWorker({
 		const commitPositions = createCommitPositions({
 			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
 		});
+		function readHolding({
+			partition,
+		}: {
+			partition: number;
+		}): number | undefined {
+			return partitions.holdingOf({ partition });
+		}
+		const sendWatches = createPartitionSendWatches({
+			ctx: { holdingOf: readHolding },
+		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
@@ -195,6 +229,7 @@ export async function createBalanceWorker({
 				subjectSnapshotsConfig: resources.edgeConfigs?.subjectSnapshotsConfig,
 				dbControl: resources.edgeConfigs?.dbControl,
 				commandOffsets: { commit: commitCommandOffsets },
+				sendWatches,
 			},
 			config: runtimeConfig,
 		});
@@ -245,6 +280,33 @@ export async function createBalanceWorker({
 				commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 				partitionsConsumedConcurrently: env.BALANCE_WORKER_PARTITION_COUNT,
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
+			},
+		});
+		const fleetDb = resources.postgres.db;
+		function readWorkerFleetProgress(): Promise<FleetProgress> {
+			if (!fleetDb)
+				throw new Error("No Postgres client to read fleet progress");
+			return readFleetProgress({
+				ctx: { partitionOffsets: resources.admin, db: fleetDb },
+				topic: env.BALANCE_WORKER_METERING_TOPIC,
+			});
+		}
+		const stepDown = createWorkerStepDown({
+			ctx: {
+				sendWatches,
+				partitions,
+				logger: dependencies.logger,
+				readFleetProgress: fleetDb ? readWorkerFleetProgress : undefined,
+				objects: slotGate
+					? adminBucketObjectsOf({ edgeConfigs: resources.edgeConfigs })
+					: undefined,
+			},
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+				fleetId,
+				imageSha: identity.imageSha,
+				partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 			},
 		});
 		const app = createBalanceWorkerApp({
@@ -483,6 +545,7 @@ export async function createBalanceWorker({
 			edgeConfigs: resources.edgeConfigs,
 			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
 			healthReporter: { start: startTelemetry, stop: stopTelemetry },
+			stepDown,
 			catalogInvalidations: resources.catalogInvalidations,
 			coldStart,
 			listen,
