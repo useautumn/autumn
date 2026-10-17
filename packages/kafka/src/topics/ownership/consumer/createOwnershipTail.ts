@@ -61,6 +61,7 @@ export function createOwnershipTail({
 		status: "created",
 		listenersByPartition: new Map(),
 		viewByPartition: new Map(),
+		lastOffsetByPartition: new Map(),
 		removeListeners: new Set(),
 		stopping: null,
 	};
@@ -142,6 +143,9 @@ export function createOwnershipTail({
 			report({ cause });
 			return;
 		}
+		const lastOffset = state.lastOffsetByPartition.get(partition);
+		if (lastOffset !== undefined && entry.offset <= lastOffset) return;
+		state.lastOffsetByPartition.set(partition, entry.offset);
 		remember(entry);
 		const listeners = state.listenersByPartition.get(partition);
 		if (!listeners || listeners.size === 0) return;
