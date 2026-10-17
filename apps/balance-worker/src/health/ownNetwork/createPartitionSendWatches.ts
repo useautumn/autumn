@@ -5,16 +5,14 @@ import type { PartitionSendWatches } from "./types/partitionSendWatches.js";
 
 export function createPartitionSendWatches({
 	now = () => performance.now(),
-	wallNow = Date.now,
 }: {
 	now?: () => number;
-	wallNow?: () => number;
 } = {}): PartitionSendWatches {
 	const watches = new Map<number, InFlightWatch>();
 	const state: { lastAckAt: number | null } = { lastAckAt: null };
 
 	function noteSettled({ ok }: { ok: boolean }): void {
-		if (ok) state.lastAckAt = wallNow();
+		if (ok) state.lastAckAt = now();
 	}
 
 	function watchFor({ partition }: { partition: number }): InFlightWatch {
@@ -35,9 +33,9 @@ export function createPartitionSendWatches({
 		return samples;
 	}
 
-	function readLastAckAt(): number | null {
-		return state.lastAckAt;
+	function readLastAckAgeMs(): number | null {
+		return state.lastAckAt === null ? null : now() - state.lastAckAt;
 	}
 
-	return { watchFor, take, readLastAckAt };
+	return { watchFor, take, readLastAckAgeMs };
 }

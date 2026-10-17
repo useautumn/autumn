@@ -3,68 +3,49 @@ import type { PeerVerdict } from "./types/peerVerdict.js";
 
 export function judgePeers({
 	heartbeats,
-	unreadable,
 	selfEndpoint,
-	faultAt,
-	now,
-	membershipMs,
-	skewMs,
+	partitionCount,
+	ackAgeLimitMs,
 	minPeers,
 }: {
 	heartbeats: readonly SlotHeartbeat[];
-	unreadable: number;
 	selfEndpoint: string;
-	faultAt: number;
-	now: number;
-	membershipMs: number;
-	skewMs: number;
+	partitionCount: number;
+	ackAgeLimitMs: number;
 	minPeers: number;
 }): PeerVerdict {
-	const members = [...latestByEndpoint({ heartbeats }).values()].filter(
+	const vouching = heartbeats.filter(
 		(heartbeat) =>
 			heartbeat.endpoint !== selfEndpoint &&
-			!heartbeat.work?.steppedDown &&
-			Date.parse(heartbeat.writtenAt) >= now - membershipMs,
+			vouchesForItsWork({ heartbeat, ackAgeLimitMs }),
 	);
-	const healthy = members.filter((heartbeat) =>
-		vouchesSince({ heartbeat, after: faultAt + skewMs, until: now + skewMs }),
-	).length;
-	const live = members.length + unreadable;
+	const peers = new Set(vouching.map(({ endpoint }) => endpoint));
+	const partitions = new Set(
+		vouching.flatMap(({ partitions }) =>
+			partitions.byPartition.map(({ partition }) => partition),
+		),
+	);
 	return {
-		ok: healthy >= minPeers && healthy * 2 >= live,
-		live,
-		healthy,
+		ok: peers.size >= minPeers && partitions.size * 2 >= partitionCount,
+		vouching: peers.size,
+		partitions: partitions.size,
+		partitionCount,
 	};
 }
 
-function latestByEndpoint({
-	heartbeats,
-}: {
-	heartbeats: readonly SlotHeartbeat[];
-}): Map<string, SlotHeartbeat> {
-	const latest = new Map<string, SlotHeartbeat>();
-	for (const heartbeat of heartbeats) {
-		const known = latest.get(heartbeat.endpoint);
-		if (!known || Date.parse(heartbeat.writtenAt) > Date.parse(known.writtenAt))
-			latest.set(heartbeat.endpoint, heartbeat);
-	}
-	return latest;
-}
-
-function vouchesSince({
+function vouchesForItsWork({
 	heartbeat,
-	after,
-	until,
+	ackAgeLimitMs,
 }: {
 	heartbeat: SlotHeartbeat;
-	after: number;
-	until: number;
+	ackAgeLimitMs: number;
 }): boolean {
 	const { work } = heartbeat;
-	if (!work || work.ownNetwork === "degraded" || work.lastSendAckAt === null)
-		return false;
-	return [heartbeat.writtenAt, work.lastSendAckAt].every((stamp) => {
-		const at = Date.parse(stamp);
-		return at > after && at <= until;
-	});
+	return (
+		work !== undefined &&
+		!work.steppedDown &&
+		work.ownNetwork !== "degraded" &&
+		work.lastSendAckAgeMs !== null &&
+		work.lastSendAckAgeMs <= ackAgeLimitMs
+	);
 }

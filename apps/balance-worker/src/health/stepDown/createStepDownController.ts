@@ -3,7 +3,7 @@ import type { Partitions } from "../../partitions/types/partitions.js";
 import type { OwnNetworkMonitor } from "../ownNetwork/types/ownNetworkMonitor.js";
 import type { OwnNetworkVerdict } from "../ownNetwork/types/ownNetworkVerdict.js";
 import { judgePeers } from "./judgePeers.js";
-import type { FleetHeartbeats } from "./types/fleetHeartbeats.js";
+import type { FleetListing, FleetRead } from "./types/fleetHeartbeats.js";
 import type { PeerVerdict } from "./types/peerVerdict.js";
 import type { StepDownController } from "./types/stepDownController.js";
 import type {
@@ -13,12 +13,11 @@ import type {
 
 type StepDownControllerContext = {
 	monitor: Pick<OwnNetworkMonitor, "onDegraded" | "verdict">;
-	readPeers(): Promise<FleetHeartbeats>;
+	readPeers(params: { since: FleetListing | null }): Promise<FleetRead>;
 	permits: StepDownPermits;
 	partitions: Pick<Partitions, "stepDown" | "isSteppedDown" | "hasAssignment">;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
-	wallNow?: () => number;
 	sleep?: (ms: number) => Promise<void>;
 };
 
@@ -26,8 +25,8 @@ type StepDownControllerConfig = {
 	selfEndpoint: string;
 	peerWaitMs: number;
 	peerPollMs: number;
-	membershipMs: number;
-	skewMs: number;
+	partitionCount: number;
+	ackAgeLimitMs: number;
 	minPeers: number;
 };
 
@@ -39,7 +38,6 @@ export function createStepDownController({
 	config: StepDownControllerConfig;
 }): StepDownController {
 	const now = ctx.now ?? (() => performance.now());
-	const wallNow = ctx.wallNow ?? Date.now;
 	const sleep = ctx.sleep ?? Bun.sleep;
 	const state: {
 		phase: "watching" | "checking" | "stepped_down";
@@ -75,9 +73,7 @@ export function createStepDownController({
 		verdict: OwnNetworkVerdict;
 	}): Promise<void> {
 		try {
-			const faultAt =
-				wallNow() - (now() - (verdict.windowStartedAt ?? verdict.at));
-			const peers = await awaitPeersVouching({ faultAt });
+			const peers = await awaitPeersVouching();
 			if (!isEligible()) return;
 			if (!peers.ok) {
 				ctx.logger.warn(
@@ -124,36 +120,44 @@ export function createStepDownController({
 		}
 	}
 
-	async function awaitPeersVouching({
-		faultAt,
-	}: {
-		faultAt: number;
-	}): Promise<PeerVerdict> {
+	async function awaitPeersVouching(): Promise<PeerVerdict> {
+		const baseline = await readPeersOrNone({ since: null });
+		let peers = judgeWritten({ heartbeats: [] });
+		if (!baseline) return peers;
 		const deadline = now() + config.peerWaitMs;
-		for (;;) {
-			const { heartbeats, unreadable } = await readPeersOrNone();
-			const peers = judgePeers({
-				heartbeats,
-				unreadable,
-				selfEndpoint: config.selfEndpoint,
-				faultAt,
-				now: wallNow(),
-				membershipMs: config.membershipMs,
-				skewMs: config.skewMs,
-				minPeers: config.minPeers,
-			});
-			if (peers.ok || state.stopped || now() + config.peerPollMs > deadline)
-				return peers;
+		while (!state.stopped && now() + config.peerPollMs <= deadline) {
 			await sleep(config.peerPollMs);
+			const read = await readPeersOrNone({ since: baseline.listing });
+			peers = judgeWritten({ heartbeats: read?.changed ?? [] });
+			if (peers.ok) return peers;
 		}
+		return peers;
 	}
 
-	async function readPeersOrNone(): Promise<FleetHeartbeats> {
+	function judgeWritten({
+		heartbeats,
+	}: {
+		heartbeats: FleetRead["changed"];
+	}): PeerVerdict {
+		return judgePeers({
+			heartbeats,
+			selfEndpoint: config.selfEndpoint,
+			partitionCount: config.partitionCount,
+			ackAgeLimitMs: config.ackAgeLimitMs,
+			minPeers: config.minPeers,
+		});
+	}
+
+	async function readPeersOrNone({
+		since,
+	}: {
+		since: FleetListing | null;
+	}): Promise<FleetRead | null> {
 		try {
-			return await ctx.readPeers();
+			return await ctx.readPeers({ since });
 		} catch (cause) {
 			ctx.logger.warn("Peer heartbeats could not be read", { error: cause });
-			return { heartbeats: [], unreadable: 0 };
+			return null;
 		}
 	}
 

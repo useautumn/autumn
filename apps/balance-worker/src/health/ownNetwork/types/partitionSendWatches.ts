@@ -4,5 +4,5 @@ import type { PartitionSendSample } from "./ownNetworkSample.js";
 export type PartitionSendWatches = {
 	watchFor(params: { partition: number }): InFlightWatch;
 	take(params: { now: number }): PartitionSendSample[];
-	readLastAckAt(): number | null;
+	readLastAckAgeMs(): number | null;
 };

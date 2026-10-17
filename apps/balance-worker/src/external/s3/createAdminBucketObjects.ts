@@ -39,9 +39,8 @@ export function createAdminBucketObjects({
 			const page = (await send(
 				new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken }),
 			)) as ListObjectsV2CommandOutput;
-			for (const { Key, LastModified } of page.Contents ?? [])
-				if (Key && LastModified)
-					listed.push({ key: Key, lastModifiedAt: LastModified.getTime() });
+			for (const { Key, ETag } of page.Contents ?? [])
+				if (Key && ETag) listed.push({ key: Key, etag: ETag });
 			ContinuationToken = page.IsTruncated
 				? page.NextContinuationToken
 				: undefined;

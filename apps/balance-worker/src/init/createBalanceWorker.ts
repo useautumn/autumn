@@ -285,6 +285,7 @@ export async function createBalanceWorker({
 				endpoint: address.endpoint,
 				fleetId,
 				imageSha: identity.imageSha,
+				partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 			},
 		});
 		const app = createBalanceWorkerApp({
