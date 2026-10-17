@@ -13,6 +13,7 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { rewriteApprovalRuleIds } from "@/internal/approvals/renames/rewriteApprovalRuleIds.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import {
 	applyPreparedPlanLicenseSync,
@@ -402,6 +403,14 @@ export const updateProduct = async ({
 		rewardPrograms,
 		logger: ctx.logger,
 	});
+	if (productUpdates.id && productUpdates.id !== fullProduct.id) {
+		await rewriteApprovalRuleIds({
+			ctx,
+			key: "plan_id",
+			fromId: fullProduct.id,
+			toId: productUpdates.id,
+		});
+	}
 	if (preparedLicenseSync && !willVersion) {
 		await applyPreparedPlanLicenseSync({
 			ctx,
