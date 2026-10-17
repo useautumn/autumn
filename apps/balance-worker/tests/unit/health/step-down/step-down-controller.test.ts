@@ -62,23 +62,27 @@ const DEGRADED: OwnNetworkVerdict = {
 
 function harness({
 	peersAt,
-	permit = { ok: true, permit: { slot: 0, key: "slot-0" } },
+	permit = {
+		ok: true,
+		permit: { slot: 0, key: "slot-0", acquisitionId: "acquisition-1" },
+	},
 	owns = true,
 	currentVerdict = () => DEGRADED,
 	readPeersGate,
+	releaseFailures = 0,
 }: {
 	peersAt: (wall: number) => SlotHeartbeat[];
 	permit?: StepDownPermitResult;
 	owns?: boolean;
 	currentVerdict?: () => OwnNetworkVerdict;
 	readPeersGate?: Promise<void>;
+	releaseFailures?: number;
 }) {
 	const time = { now: 10_000, wall: WALL_START };
 	const calls: string[] = [];
 	const logs: { level: string; message: string }[] = [];
 	const listeners = new Set<(verdict: OwnNetworkVerdict) => void>();
-	const renewals: (() => void)[] = [];
-	const state = { steppedDown: false };
+	const state = { steppedDown: false, releaseFailures };
 	function log(level: string) {
 		return (...args: unknown[]) => {
 			logs.push({ level, message: String(args[0]) });
@@ -103,12 +107,11 @@ function harness({
 					calls.push("acquire");
 					return permit;
 				},
-				renew: async () => {
-					calls.push("renew");
-					return true;
-				},
 				release: async () => {
 					calls.push("release");
+					if (state.releaseFailures === 0) return;
+					state.releaseFailures -= 1;
+					throw new Error("S3 did not answer");
 				},
 			},
 			partitions: {
@@ -126,10 +129,6 @@ function harness({
 				time.now += ms;
 				time.wall += ms;
 			},
-			schedule: ({ run }) => {
-				renewals.push(run);
-				return () => undefined;
-			},
 		},
 		config: {
 			selfEndpoint: "http://self",
@@ -138,7 +137,6 @@ function harness({
 			membershipMs: 300_000,
 			skewMs: 1_000,
 			minPeers: 2,
-			permitRenewMs: 600_000,
 		},
 	});
 	async function fire(): Promise<void> {
@@ -146,7 +144,7 @@ function harness({
 		await Bun.sleep(0);
 		await Bun.sleep(0);
 	}
-	return { controller, calls, logs, fire, time, renewals };
+	return { controller, calls, logs, fire, time };
 }
 
 const faultAt = WALL_START - 3_000;
@@ -256,16 +254,17 @@ describe("step-down controller", () => {
 		expect(calls).toEqual([]);
 	});
 
-	test("a stepped-down worker keeps renewing its permit", async () => {
-		const { controller, calls, fire, renewals } = harness({
+	test("a permit that could not be given back after a recovery is released again at stop", async () => {
+		const { controller, calls, fire } = harness({
 			peersAt: healthyPeersAt,
+			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+			releaseFailures: 1,
 		});
 		controller.start();
 		await fire();
-		expect(renewals).toHaveLength(1);
-		renewals[0]?.();
-		await Bun.sleep(0);
-		expect(calls.at(-1)).toBe("renew");
+		expect(calls).toEqual(["read-peers", "acquire", "release"]);
+		await controller.stop();
+		expect(calls).toEqual(["read-peers", "acquire", "release", "release"]);
 	});
 
 	test("stop waits for a check in flight, which then takes no permit and steps nothing down", async () => {
