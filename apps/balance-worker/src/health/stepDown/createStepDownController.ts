@@ -20,11 +20,7 @@ type StepDownControllerContext = {
 	permits: StepDownPermits;
 	partitions: Pick<
 		Partitions,
-		| "stepDown"
-		| "isSteppedDown"
-		| "hasAssignment"
-		| "holdingOf"
-		| "heldPartitions"
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "holdingOf"
 	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
@@ -157,7 +153,7 @@ export function createStepDownController({
 		).length;
 		return (
 			stillStalled >= config.minStalledPartitions &&
-			stillStalled * 2 > ctx.partitions.heldPartitions().length
+			stillStalled * 2 > trigger.busyPartitions
 		);
 	}
 

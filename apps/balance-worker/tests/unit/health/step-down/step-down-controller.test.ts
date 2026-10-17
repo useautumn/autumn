@@ -126,7 +126,6 @@ function harness({
 				isSteppedDown: () => state.steppedDown,
 				hasAssignment: () => owns,
 				holdingOf: ({ partition }) => holdingOf(partition),
-				heldPartitions: () => held,
 			},
 			logger: { info: log("info"), warn: log("warn"), error: log("error") },
 			now: () => time.now,
