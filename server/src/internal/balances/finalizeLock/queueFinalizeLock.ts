@@ -1,8 +1,22 @@
+import { createHash } from "node:crypto";
 import type { FinalizeLockParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
+
+export const getFinalizeLockMessageGroupId = ({
+	orgId,
+	env,
+	lockId,
+}: {
+	orgId: string;
+	env: string;
+	lockId: string;
+}) =>
+	`finalize:${createHash("sha256")
+		.update(`${orgId}:${env}:lock:${lockId}`)
+		.digest("hex")}`;
 
 /** Queues a finalize-lock replay on the track queue when Redis is down.
  *  Returns the accepted response, or null when queueing is unavailable. */
@@ -25,7 +39,11 @@ export const queueFinalizeLock = async ({
 		await addTaskToQueue({
 			jobName: JobName.FinalizeLock,
 			queueUrl,
-			messageGroupId: `${ctx.org.id}:${ctx.env}:lock:${params.lock_id}`,
+			messageGroupId: getFinalizeLockMessageGroupId({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				lockId: params.lock_id,
+			}),
 			messageDeduplicationId: ctx.id,
 			payload: {
 				orgId: ctx.org.id,
