@@ -114,6 +114,7 @@ export function createLibrdkafkaConsumer({
 		seekTargets: new Map(),
 		inflightSeeks: new Set(),
 		lastPollAt: performance.now(),
+		loopPollInFlight: false,
 		paused: new Set(),
 		skippedFrom: new Map(),
 		pendingSeeks: new Map(),
@@ -419,11 +420,9 @@ export function createLibrdkafkaConsumer({
 	}
 
 	function isLoopPolling(): boolean {
-		return (
-			state.running &&
-			state.loop !== null &&
-			performance.now() - state.lastPollAt < LEAVE_LOOP_STALL_MS
-		);
+		const fresh = performance.now() - state.lastPollAt < LEAVE_LOOP_STALL_MS;
+		if (state.loopPollInFlight) return fresh;
+		return state.running && state.loop !== null && fresh;
 	}
 
 	async function pollOnce(native: NativeConsumer): Promise<void> {

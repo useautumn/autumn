@@ -114,12 +114,14 @@ async function consumeChunk({
 		done.resolve(error ?? null);
 	}
 	scope.state.lastPollAt = performance.now();
+	scope.state.loopPollInFlight = true;
 	try {
 		native.consume(MAX_RECORDS_PER_CONSUME, consumed);
 	} catch (cause) {
 		done.resolve(cause as NativeKafkaError);
 	}
 	const error = await done.promise;
+	scope.state.loopPollInFlight = false;
 	scope.state.collector = null;
 	return { partitions: [...byKey.values()], error, dispatchedEpochs };
 }
@@ -419,7 +421,12 @@ async function deliverPartition({
 			await runBatch({ scope, native, topic, partition, messages, endOffset });
 	}
 	for (const item of fetched.items) {
-		if (!state.assigned.has(key) || state.restartPending || !state.running)
+		if (
+			!state.assigned.has(key) ||
+			state.restartPending ||
+			!state.running ||
+			state.leaving
+		)
 			return;
 		if ((state.seekEpoch.get(key) ?? 0) !== fetched.seekEpoch) return;
 		if (state.paused.has(key)) {
