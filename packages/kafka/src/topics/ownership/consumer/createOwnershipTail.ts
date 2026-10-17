@@ -80,7 +80,7 @@ export function createOwnershipTail({
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 		} else if (
 			record.type === "unowned" ||
@@ -92,7 +92,7 @@ export function createOwnershipTail({
 				activePreparation: null,
 				release:
 					record.type === "released" ? { endpoint: record.endpoint } : null,
-				readyEndpoints: view?.readyEndpoints ?? [],
+				readies: view?.readies ?? [],
 			});
 		} else if (record.type === "draining" && view?.owner === record.endpoint) {
 			view.activeDrain = {
@@ -108,13 +108,16 @@ export function createOwnershipTail({
 					activeDrain: null,
 					activePreparation: preparation,
 					release: null,
-					readyEndpoints: [],
+					readies: [],
 				});
 		} else if (record.type === "ready" && view) {
 			if (view.activePreparation?.endpoint === record.endpoint)
 				view.activePreparation = null;
-			if (!view.readyEndpoints.includes(record.endpoint))
-				view.readyEndpoints = [...view.readyEndpoints, record.endpoint];
+			const { endpoint, readyAt } = record;
+			const known = view.readies.some(
+				(ready) => ready.endpoint === endpoint && ready.readyAt === readyAt,
+			);
+			if (!known) view.readies = [...view.readies, { endpoint, readyAt }];
 		}
 	}
 
