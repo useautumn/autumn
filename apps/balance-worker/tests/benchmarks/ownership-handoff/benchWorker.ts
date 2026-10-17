@@ -13,6 +13,12 @@ import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { subjectLoadGate } from "../../../src/external/postgres/subjectLoadGate.js";
 import { createPartitionSendWatches } from "../../../src/health/ownNetwork/createPartitionSendWatches.js";
+import {
+	DEFAULT_OWN_NETWORK_THRESHOLDS,
+	judgeOwnNetwork,
+} from "../../../src/health/ownNetwork/judgeOwnNetwork.js";
+import type { OwnNetworkSample } from "../../../src/health/ownNetwork/types/ownNetworkSample.js";
+import type { PartitionSendWatches } from "../../../src/health/ownNetwork/types/partitionSendWatches.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -28,6 +34,10 @@ import {
 import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import { databaseTimings } from "../../../src/logging/databaseTimings.js";
+import {
+	readTcpCounters,
+	tcpWindowOf,
+} from "../../../src/logging/eventLoopStalls/tcpCounters.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
 import { createDirectoryAdminBucketObjects } from "./directoryAdminBucketObjects.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
@@ -50,13 +60,15 @@ function emit(event: string, fields: Record<string, unknown> = {}): void {
 	);
 }
 function ignoreLog(): void {}
+const STEP_DOWN_LINE = /step/i;
+function isReported(first: unknown): boolean {
+	if (typeof first === "string") return STEP_DOWN_LINE.test(first);
+	return typeof first === "object" && first !== null && "event" in first;
+}
 const logger = {
 	debug: ignoreLog,
-	/** Only structured lines (the rejoin's `balance_worker.*` events); the rest is noise here. */
 	info: (...args: unknown[]) => {
-		const [first] = args;
-		if (typeof first === "object" && first !== null && "event" in first)
-			emit("log.info", { args: describe(args) });
+		if (isReported(args[0])) emit("log.info", { args: describe(args) });
 	},
 	warn: (...args: unknown[]) => emit("log.warn", { args: describe(args) }),
 	error: (...args: unknown[]) => emit("log.error", { args: describe(args) }),
@@ -217,12 +229,23 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 	};
 }
 
-const consumer = resources.kafka.consumer(
+const groupConsumer = resources.kafka.consumer(
 	createWorkerConsumerConfig({
 		groupId,
 		timings: runtimeConfig.timings,
 	}),
 );
+async function leaveTimed(): Promise<void> {
+	emit("consumer.leave.start");
+	try {
+		await groupConsumer.leave();
+		emit("consumer.leave.done");
+	} catch (cause) {
+		emit("consumer.leave.failed", { cause: describe(cause) });
+		throw cause;
+	}
+}
+const consumer = { ...groupConsumer, leave: leaveTimed };
 consumer.on(consumer.events.REBALANCING, () => emit("consumer.rebalancing"));
 consumer.on(consumer.events.GROUP_JOIN, (event) =>
 	emit("consumer.group_join", {
@@ -284,9 +307,40 @@ const partitions = createWorkerPartitions({
 		healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 	},
 });
+const verdictSamples: { kept: OwnNetworkSample[] } = { kept: [] };
+const lastTcp = { counters: readTcpCounters() };
+const keepSamplesMs = DEFAULT_OWN_NETWORK_THRESHOLDS.windowMs + 2_000;
+function takeAndMirror({ now }: { now: number }) {
+	const sends = sendWatches.take({ now });
+	const counters = readTcpCounters();
+	const tcp =
+		counters && lastTcp.counters
+			? tcpWindowOf({ previous: lastTcp.counters, current: counters })
+			: null;
+	lastTcp.counters = counters;
+	verdictSamples.kept = [
+		...verdictSamples.kept.filter((kept) => kept.at > now - keepSamplesMs),
+		{ at: now, tcp, sends },
+	];
+	const verdict = judgeOwnNetwork({ samples: verdictSamples.kept, now });
+	queueMicrotask(() =>
+		emit("own_network.tick", {
+			work: stepDown.readWork(),
+			verdict,
+			tcp,
+			sends,
+		}),
+	);
+	return sends;
+}
+const watchedSends: PartitionSendWatches = {
+	watchFor: sendWatches.watchFor,
+	readLastAckAt: sendWatches.readLastAckAt,
+	take: takeAndMirror,
+};
 const stepDown = createWorkerStepDown({
 	ctx: {
-		sendWatches,
+		sendWatches: watchedSends,
 		partitions,
 		logger,
 		objects:
@@ -350,7 +404,12 @@ const slotHeartbeat =
 			})
 		: undefined;
 
-emit("worker.starting", { groupId, fleetId });
+emit("worker.starting", {
+	groupId,
+	fleetId,
+	pid: process.pid,
+	endpoint: address.endpoint,
+});
 await resources.edgeConfigs?.start();
 await resources.catalogInvalidations?.start();
 const listener = Bun.serve({
