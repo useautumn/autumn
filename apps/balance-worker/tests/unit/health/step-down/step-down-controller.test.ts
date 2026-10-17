@@ -56,7 +56,9 @@ function harness({
 	readGate,
 	releaseFailures = 0,
 	baselineFails = false,
+	holdingOf = (partition) => (partition <= 3 ? 1 : undefined),
 }: {
+	holdingOf?: (partition: number) => number | undefined;
 	keepsUp?: (partition: number, call: number) => boolean;
 	permit?: StepDownPermitResult;
 	owns?: boolean;
@@ -112,6 +114,7 @@ function harness({
 				},
 				isSteppedDown: () => state.steppedDown,
 				hasAssignment: () => owns,
+				holdingOf: ({ partition }) => holdingOf(partition),
 			},
 			logger: { info: log("info"), warn: log("warn"), error: log("error") },
 			now: () => time.now,
@@ -123,6 +126,9 @@ function harness({
 			peerWaitMs: 6_000,
 			peerPollMs: 1_000,
 			minKeptUp: 2,
+			recheckAttempts: 3,
+			recheckIntervalMs: 1_000,
+			minStalledPartitions: 2,
 		},
 	});
 	async function fire(): Promise<void> {
@@ -242,6 +248,39 @@ describe("step-down controller", () => {
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
 		});
+	});
+
+	test("a trip whose stalled partitions were let go before the permit landed keeps the worker in, though the loss goes on", async () => {
+		const moved = { on: false };
+		const { controller, calls, logs, fire } = harness({
+			holdingOf: (partition) => (moved.on && partition <= 1 ? 2 : 1),
+			currentVerdict: () => {
+				moved.on = true;
+				return DEGRADED;
+			},
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "release"]);
+		expect(logs).toContainEqual({
+			level: "warn",
+			message: "Own network recovered before the step-down: staying",
+		});
+	});
+
+	test("loss that pauses for a sample after the permit lands still steps down within the re-check", async () => {
+		const verdicts = [RECOVERED, DEGRADED];
+		const { controller, calls, fire } = harness({
+			currentVerdict: () => verdicts.shift() ?? DEGRADED,
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
 	});
 
 	test("a verdict that flickers off degraded while the loss goes on still steps down", async () => {
