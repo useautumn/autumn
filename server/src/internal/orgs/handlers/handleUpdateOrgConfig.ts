@@ -12,7 +12,12 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 
-const validKeys = new Set(Object.keys(OrgConfigSchema.shape));
+// approvals_enforced is never set through this route.
+const validKeys = new Set(
+	Object.keys(OrgConfigSchema.shape).filter(
+		(key) => key !== "approvals_enforced",
+	),
+);
 // Not `OrgConfigSchema.partial()`: its `.default()`s expand a single-field
 // request into the full object, clobbering other flags on merge.
 const bodySchema = z.record(z.string(), z.unknown());

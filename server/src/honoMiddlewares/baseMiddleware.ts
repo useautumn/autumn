@@ -156,6 +156,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		state: {},
 
 		testOptions: {
+			includePermissionFacts:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-include-permission-facts") === "true",
+			approvalsSandboxAsLive:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-approvals-sandbox-as-live") === "true",
 			asyncBalanceUpdate:
 				process.env.NODE_ENV !== "production" &&
 				c.req.header("x-async-balance-update") === "true",

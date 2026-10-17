@@ -40,14 +40,15 @@ export const previewPendingPlanIfAny = async ({
 		customerProduct,
 		deferredData,
 	});
-	const { billingContext, billingPlan } = replacementPreview;
+	const { billingContext, billingPlan, approval } = replacementPreview;
 	if (!rebills || !billingPlan) return;
 
 	// The edit re-attaches the plan, so it previews as a plan update at the full new price.
-	return billingPlanToUpdateSubscriptionPreview({
+	const preview = await billingPlanToUpdateSubscriptionPreview({
 		ctx,
 		billingContext,
 		billingPlan,
 		intent: UpdateSubscriptionPreviewIntent.UpdatePlan,
 	});
+	return { preview, approval };
 };
