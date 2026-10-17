@@ -8,6 +8,11 @@
  * from that directory and holds its ready announcements until the record names it.
  */
 import type { BalanceWorkerEnv } from "@autumn/env/balanceWorker";
+import {
+	createKafka,
+	createKafkaClient,
+	createKafkaTransport,
+} from "@autumn/kafka";
 import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
@@ -31,7 +36,10 @@ import {
 	createWorkerConsumerConfig,
 	workerConsumerGroupIdOf,
 } from "../../../src/init/workerConfig.js";
-import { openWorkerResources } from "../../../src/init/workerResources.js";
+import {
+	openWorkerResources,
+	WORKER_KAFKA_PRODUCER_LIMITS,
+} from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import { databaseTimings } from "../../../src/logging/databaseTimings.js";
 import {
@@ -142,11 +150,22 @@ const ownershipHandoff = createOwnershipHandoffLink({
 		producerLimits: runtimeConfig.producerLimits,
 	},
 });
+const partitionProducers = createKafka(
+	createKafkaClient({
+		clientId: `balance-worker-producers-${crypto.randomUUID()}`,
+		brokers: env.KAFKA_BROKERS,
+		transport: createKafkaTransport({
+			authMode: env.KAFKA_AUTH_MODE,
+			sasl: env.KAFKA_SASL,
+		}),
+		limits: WORKER_KAFKA_PRODUCER_LIMITS,
+	}),
+);
 const sendWatches = createPartitionSendWatches();
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
 		logger,
-		kafka: resources.kafka,
+		kafka: { producer: partitionProducers.producer },
 		ownershipOffsets: resources.admin,
 		ownershipHandoff,
 		stateStore: resources.stateStore,
