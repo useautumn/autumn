@@ -1,5 +1,5 @@
 /** The admin bucket as a directory: one file per key, so the orchestrator writes the slot record with plain fs. */
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";
 
@@ -23,7 +23,11 @@ export function createDirectoryEdgeConfigClient({
 				return { Body: { transformToString: async () => text } };
 			}
 			mkdirSync(dirname(path), { recursive: true });
-			await Bun.write(path, Body);
+			const scratch = join(directory, ".scratch");
+			mkdirSync(scratch, { recursive: true });
+			const temporary = join(scratch, `${process.pid}-${crypto.randomUUID()}`);
+			await Bun.write(temporary, Body);
+			renameSync(temporary, path);
 			return {};
 		},
 	};
