@@ -1,9 +1,12 @@
 import {
+	BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
+	BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
 	BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 	BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMITS,
 	BALANCE_WORKER_STEP_DOWN_PROGRESS_TIMEOUT_MS,
+	BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
@@ -150,6 +153,9 @@ function createController({
 			minKeptUp: Math.ceil(
 				config.partitionCount * BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 			),
+			recheckAttempts: BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
+			recheckIntervalMs: BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
+			minStalledPartitions: BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
 		},
 	});
 }

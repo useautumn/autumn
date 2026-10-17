@@ -18,7 +18,10 @@ type StepDownControllerContext = {
 	readFleetProgress(): Promise<FleetProgress>;
 	ownPartitions(): ReadonlySet<number>;
 	permits: StepDownPermits;
-	partitions: Pick<Partitions, "stepDown" | "isSteppedDown" | "hasAssignment">;
+	partitions: Pick<
+		Partitions,
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "holdingOf"
+	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
 	sleep?: (ms: number) => Promise<void>;
@@ -28,6 +31,9 @@ type StepDownControllerConfig = {
 	peerWaitMs: number;
 	peerPollMs: number;
 	minKeptUp: number;
+	recheckAttempts: number;
+	recheckIntervalMs: number;
+	minStalledPartitions: number;
 };
 
 export function createStepDownController({
@@ -90,10 +96,10 @@ export function createStepDownController({
 				);
 				return;
 			}
-			const current = ctx.monitor.verdict();
-			if (hasRecovered(current) || !isEligible()) {
+			const current = await awaitContinuingLoss({ trigger: verdict });
+			if (!current || !isEligible()) {
 				ctx.logger.warn("Own network recovered before the step-down: staying", {
-					verdict: current,
+					verdict: ctx.monitor.verdict(),
 				});
 				if (!(await releasePermit({ permit: granted.permit })))
 					state.permit = granted.permit;
@@ -118,6 +124,32 @@ export function createStepDownController({
 		} finally {
 			if (state.phase === "checking") state.phase = "watching";
 		}
+	}
+
+	async function awaitContinuingLoss({
+		trigger,
+	}: {
+		trigger: OwnNetworkVerdict;
+	}): Promise<OwnNetworkVerdict | null> {
+		for (let attempt = 1; attempt <= config.recheckAttempts; attempt++) {
+			const current = ctx.monitor.verdict();
+			if (current.losesPackets && stillHoldsStalls({ trigger })) return current;
+			if (attempt < config.recheckAttempts && !state.stopped)
+				await sleep(config.recheckIntervalMs);
+		}
+		return null;
+	}
+
+	function stillHoldsStalls({
+		trigger,
+	}: {
+		trigger: OwnNetworkVerdict;
+	}): boolean {
+		const held = trigger.stalledHoldings.filter(
+			({ partition, holding }) =>
+				ctx.partitions.holdingOf({ partition }) === holding,
+		);
+		return held.length >= config.minStalledPartitions;
 	}
 
 	async function awaitFleetKeepingUp(): Promise<FleetProgressVerdict> {
@@ -182,8 +214,4 @@ export function createStepDownController({
 	}
 
 	return { start, stop };
-}
-
-function hasRecovered(verdict: OwnNetworkVerdict): boolean {
-	return verdict.state !== "insufficient_data" && !verdict.losesPackets;
 }
