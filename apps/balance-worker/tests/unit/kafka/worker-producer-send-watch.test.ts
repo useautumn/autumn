@@ -13,7 +13,7 @@ const partition = 4;
 function createHeldSession() {
 	const held: {
 		record: ProducerRecord;
-		settle: PromiseWithResolvers<RecordMetadata[]>;
+		settle: ReturnType<typeof Promise.withResolvers<RecordMetadata[]>>;
 	}[] = [];
 	const session: KafkaProducerSession = {
 		connect: async () => {},
