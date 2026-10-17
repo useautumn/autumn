@@ -353,7 +353,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: { endpoint: "http://successor:8080" },
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			await fixture.deliver({
 				partition: 4,
@@ -372,7 +372,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 		} finally {
 			await tail.stop();
@@ -417,7 +417,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			// Only the owner's own drain counts; a stranger's is a late record.
 			await fixture.deliver({
@@ -437,7 +437,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				},
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			// A claim or release concludes the drain.
 			await fixture.deliver({
@@ -449,7 +449,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			expect(tail.readView({ partition: 4 })).toBeNull();
 			expect(errors).toEqual([]);
@@ -551,16 +551,16 @@ describe("ownershipTail", function ownershipTailTests() {
 		}
 	});
 
-	test("remembers which workers announced ready since the partition was last claimed", async () => {
+	test("remembers each ready, by worker and stamp, since the partition was last claimed", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
 		try {
-			const readyBy = (endpoint: string): OwnershipRecord => ({
+			const readyBy = (endpoint: string, readyAt = 4): OwnershipRecord => ({
 				schemaVersion: 1,
 				type: "ready",
 				partition: 3,
 				endpoint,
-				readyAt: 4,
+				readyAt,
 			});
 			await fixture.deliver({
 				partition: 3,
@@ -579,17 +579,19 @@ describe("ownershipTail", function ownershipTailTests() {
 					}),
 					serialized({ record: readyBy("http://third:8080"), offset: 14n }),
 					serialized({ record: readyBy("http://second:8080"), offset: 15n }),
+					serialized({ record: readyBy("http://second:8080", 6), offset: 16n }),
 				],
 			});
-			expect(tail.readView({ partition: 3 })?.readyEndpoints).toEqual([
-				"http://second:8080",
-				"http://third:8080",
+			expect(tail.readView({ partition: 3 })?.readies).toEqual([
+				{ endpoint: "http://second:8080", readyAt: 4 },
+				{ endpoint: "http://third:8080", readyAt: 4 },
+				{ endpoint: "http://second:8080", readyAt: 6 },
 			]);
 			await fixture.deliver({
 				partition: 3,
-				messages: [serialized({ record: claimed, offset: 16n })],
+				messages: [serialized({ record: claimed, offset: 17n })],
 			});
-			expect(tail.readView({ partition: 3 })?.readyEndpoints).toEqual([]);
+			expect(tail.readView({ partition: 3 })?.readies).toEqual([]);
 			expect(errors).toEqual([]);
 		} finally {
 			await tail.stop();
@@ -657,7 +659,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			expect(heard).toEqual([11n, 12n, 13n]);
 			expect(errors).toEqual([]);
