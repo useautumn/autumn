@@ -189,7 +189,7 @@ describe("own network monitor", () => {
 		});
 	});
 
-	test("stalls count against every partition the worker holds, not only the busy ones", () => {
+	test("stalls count against the partitions that had sends, not every partition the worker holds", () => {
 		const { monitor, tick } = harness({
 			lossy: () => true,
 			stuck: () => true,
@@ -198,7 +198,7 @@ describe("own network monitor", () => {
 		monitor.start();
 		for (let index = 0; index < 4; index++) tick();
 		expect(monitor.verdict()).toMatchObject({
-			state: "healthy",
+			state: "degraded",
 			stalledPartitions: 3,
 			heldPartitions: 8,
 		});

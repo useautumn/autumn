@@ -10,8 +10,8 @@ const DEGRADED: OwnNetworkVerdict = {
 	windowStartedAt: 7_000,
 	segments: 300,
 	retransmitRatio: 0.3,
-	busyPartitions: 8,
-	stalledPartitions: 6,
+	busyPartitions: 4,
+	stalledPartitions: 3,
 	heldPartitions: 4,
 	stalledHoldings: [
 		{ partition: 0, holding: 1 },
@@ -126,7 +126,6 @@ function harness({
 				isSteppedDown: () => state.steppedDown,
 				hasAssignment: () => owns,
 				holdingOf: ({ partition }) => holdingOf(partition),
-				heldPartitions: () => held,
 			},
 			logger: { info: log("info"), warn: log("warn"), error: log("error") },
 			now: () => time.now,
@@ -266,6 +265,27 @@ describe("step-down controller", () => {
 		});
 	});
 
+	test("a check with no progress read it could judge says so, rather than that the fleet fell behind", async () => {
+		for (const unjudged of [
+			{ baselineFails: true },
+			{ readDelayMs: (call: number) => (call === 0 ? 0 : 3_500) },
+		]) {
+			const { controller, logs, fire } = harness(unjudged);
+			controller.start();
+			await fire();
+			expect(logs).toContainEqual({
+				level: "warn",
+				message:
+					"Own network degraded, but fleet progress could not be judged: staying",
+			});
+			expect(logs).not.toContainEqual({
+				level: "warn",
+				message:
+					"Own network degraded, but the fleet is not keeping up: staying",
+			});
+		}
+	});
+
 	test("stays when no permit is granted", async () => {
 		const { controller, calls, logs, fire } = harness({
 			permit: { ok: false, reason: "all_taken" },
@@ -321,11 +341,12 @@ describe("step-down controller", () => {
 		});
 	});
 
-	test("a trip whose stalled partitions are no longer most of the partitions held keeps the worker in", async () => {
+	test("a trip whose stalled partitions are no longer most of those that had sends keeps the worker in", async () => {
 		const moved = { on: false };
 		const tripped: OwnNetworkVerdict = {
 			...DEGRADED,
 			heldPartitions: 8,
+			busyPartitions: 8,
 			stalledPartitions: 5,
 			stalledHoldings: [0, 1, 2, 3, 4].map((partition) => ({
 				partition,
@@ -348,6 +369,31 @@ describe("step-down controller", () => {
 			"read-progress",
 			"acquire",
 			"release",
+		]);
+	});
+
+	test("a starved worker's trip on most of its busy partitions steps down, though it holds more", async () => {
+		const starved: OwnNetworkVerdict = {
+			...DEGRADED,
+			heldPartitions: 4,
+			busyPartitions: 2,
+			stalledPartitions: 2,
+			stalledHoldings: [
+				{ partition: 0, holding: 1 },
+				{ partition: 1, holding: 1 },
+			],
+		};
+		const { controller, calls, fire } = harness({
+			trigger: starved,
+			currentVerdict: () => starved,
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
 		]);
 	});
 

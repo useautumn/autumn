@@ -3,10 +3,7 @@ import type { Partitions } from "../../partitions/types/partitions.js";
 import type { OwnNetworkMonitor } from "../ownNetwork/types/ownNetworkMonitor.js";
 import type { OwnNetworkVerdict } from "../ownNetwork/types/ownNetworkVerdict.js";
 import { judgeFleetProgress } from "./judgeFleetProgress.js";
-import type {
-	FleetProgressVerdict,
-	TimedFleetProgress,
-} from "./types/fleetProgress.js";
+import type { FleetCheck, TimedFleetProgress } from "./types/fleetProgress.js";
 import type { StepDownController } from "./types/stepDownController.js";
 import type {
 	StepDownPermit,
@@ -20,11 +17,7 @@ type StepDownControllerContext = {
 	permits: StepDownPermits;
 	partitions: Pick<
 		Partitions,
-		| "stepDown"
-		| "isSteppedDown"
-		| "hasAssignment"
-		| "holdingOf"
-		| "heldPartitions"
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "holdingOf"
 	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
@@ -85,8 +78,16 @@ export function createStepDownController({
 		verdict: OwnNetworkVerdict;
 	}): Promise<void> {
 		try {
-			const peers = await awaitFleetKeepingUp();
+			const fleet = await awaitFleetKeepingUp();
 			if (!isEligible()) return;
+			if (!fleet.judged) {
+				ctx.logger.warn(
+					"Own network degraded, but fleet progress could not be judged: staying",
+					{ verdict },
+				);
+				return;
+			}
+			const peers = fleet.verdict;
 			if (!peers.ok) {
 				ctx.logger.warn(
 					"Own network degraded, but the fleet is not keeping up: staying",
@@ -157,20 +158,20 @@ export function createStepDownController({
 		).length;
 		return (
 			stillStalled >= config.minStalledPartitions &&
-			stillStalled * 2 > ctx.partitions.heldPartitions().length
+			stillStalled * 2 > trigger.busyPartitions
 		);
 	}
 
-	async function awaitFleetKeepingUp(): Promise<FleetProgressVerdict> {
+	async function awaitFleetKeepingUp(): Promise<FleetCheck> {
 		const baseline = await readProgressOrNone();
-		let verdict: FleetProgressVerdict = { ok: false, active: 0, keptUp: 0 };
-		if (!baseline) return verdict;
+		let check: FleetCheck = { judged: false };
+		if (!baseline) return check;
 		const deadline = baseline.completedAt + config.peerWaitMs;
 		while (!state.stopped && now() + config.peerPollMs <= deadline) {
 			await sleep(config.peerPollMs);
 			const current = await readProgressOrNone();
 			if (!current || current.completedAt > deadline) continue;
-			verdict = judgeFleetProgress({
+			const verdict = judgeFleetProgress({
 				before: baseline.progress,
 				after: current.progress,
 				ownPartitions: ctx.ownPartitions(),
@@ -178,9 +179,10 @@ export function createStepDownController({
 				elapsedMs: current.completedAt - baseline.progress.readStartedAt,
 				maxLagMs: config.maxOwnerLagMs,
 			});
-			if (verdict.ok) return verdict;
+			check = { judged: true, verdict };
+			if (verdict.ok) return check;
 		}
-		return verdict;
+		return check;
 	}
 
 	async function readProgressOrNone(): Promise<{
