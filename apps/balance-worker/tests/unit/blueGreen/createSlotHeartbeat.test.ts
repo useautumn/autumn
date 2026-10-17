@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import type { SlotGateDescription } from "../../../src/blueGreen/isActiveSlot.js";
-import type { SlotWork } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import {
 	SlotHeartbeatSchema,
 	slotHeartbeatKeyOf,
@@ -37,7 +36,6 @@ const createHarness = ({
 	storeHealthy = true,
 	admitted = new Set<number>(),
 	assignmentSettled = true,
-	work = { lastSendAckAgeMs: null, ownNetwork: "healthy", steppedDown: false },
 }: {
 	gate: SlotGateDescription;
 	partitions: ReturnType<typeof health>[];
@@ -45,7 +43,6 @@ const createHarness = ({
 	storeHealthy?: boolean;
 	admitted?: Set<number>;
 	assignmentSettled?: boolean;
-	work?: SlotWork;
 }) => {
 	const written: { key: string; body: unknown }[] = [];
 	const s3Client: EdgeConfigS3Client = {
@@ -56,7 +53,6 @@ const createHarness = ({
 		},
 	};
 	let tick: (() => void) | undefined;
-	let intervalMs: number | undefined;
 	let cancelled = false;
 	const heartbeat = createSlotHeartbeat({
 		ctx: {
@@ -67,11 +63,9 @@ const createHarness = ({
 			isAdmitted: ({ partition }) => admitted.has(partition),
 			readAssignmentSettled: () => assignmentSettled,
 			readStoreHealthy: () => storeHealthy,
-			readWork: () => work,
 			probes,
-			schedule: (task) => {
-				tick = task.run;
-				intervalMs = task.intervalMs;
+			schedule: ({ run }) => {
+				tick = run;
 				return () => {
 					cancelled = true;
 				};
@@ -88,7 +82,6 @@ const createHarness = ({
 		heartbeat,
 		written,
 		tick: () => tick?.(),
-		intervalMs: () => intervalMs,
 		cancelled: () => cancelled,
 	};
 };
@@ -167,25 +160,6 @@ describe("blue-green slot heartbeat", () => {
 			gate: "active",
 			ok: true,
 			partitions: { prepared: 0, ready: 1, admitted: 1, total: 3 },
-		});
-	});
-
-	test("every 5 s it reports the worker's own work: how long since a send was acknowledged, its network verdict and any step-down", async () => {
-		const { heartbeat, written, intervalMs } = createHarness({
-			gate: { active: true, reason: "active" },
-			partitions: [health({ partition: 0, status: "ready" })],
-			work: {
-				lastSendAckAgeMs: 250,
-				ownNetwork: "degraded",
-				steppedDown: true,
-			},
-		});
-		await heartbeat.start();
-		expect(intervalMs()).toBe(5_000);
-		expect(SlotHeartbeatSchema.parse(written[0]?.body).work).toEqual({
-			lastSendAckAgeMs: 250,
-			ownNetwork: "degraded",
-			steppedDown: true,
 		});
 	});
 

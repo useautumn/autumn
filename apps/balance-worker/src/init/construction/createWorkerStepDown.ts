@@ -6,7 +6,6 @@ import {
 	BALANCE_WORKER_STEP_DOWN_PROGRESS_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
-import type { SlotWork } from "../../blueGreen/types/slotHeartbeat.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
 import { createOwnNetworkMonitor } from "../../health/ownNetwork/createOwnNetworkMonitor.js";
 import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
@@ -53,19 +52,11 @@ export function createWorkerStepDown({
 }: {
 	ctx: WorkerStepDownContext;
 	config: WorkerStepDownConfig;
-}): { readWork(): SlotWork; start(): void; stop(): Promise<void> } {
+}): { start(): void; stop(): Promise<void> } {
 	const ownNetwork = createOwnNetworkMonitor({
 		ctx: { sends: ctx.sendWatches, isHeld: ctx.partitions.isHeld },
 	});
 	const controller = createController({ ctx, config, ownNetwork });
-
-	function readWork(): SlotWork {
-		return {
-			lastSendAckAgeMs: ctx.sendWatches.readLastAckAgeMs(),
-			ownNetwork: ownNetwork.verdict().state,
-			steppedDown: ctx.partitions.isSteppedDown(),
-		};
-	}
 
 	function start(): void {
 		ownNetwork.start();
@@ -78,7 +69,7 @@ export function createWorkerStepDown({
 		await stopped;
 	}
 
-	return { readWork, start, stop };
+	return { start, stop };
 }
 
 function readFleetProgressWithin({

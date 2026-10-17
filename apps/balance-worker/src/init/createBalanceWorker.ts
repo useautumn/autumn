@@ -423,7 +423,6 @@ export async function createBalanceWorker({
 							isAdmitted: partitions.isAdmitted,
 							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
-							readWork: stepDown.readWork,
 							probes: { kafka: probeKafka, postgres: probePostgres },
 							readColdStart: coldStart?.readAck,
 							logger: dependencies.logger,
