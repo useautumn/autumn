@@ -685,7 +685,7 @@ describe("Balance worker HTTP", () => {
 			awaitHandoff: () => new Promise<void>(() => undefined),
 		});
 		const answered = await Promise.race([
-			post().then((response) => response.status),
+			Promise.resolve(post()).then((response) => response.status),
 			Bun.sleep(200).then(() => "still waiting"),
 		]);
 		expect(answered).toBe(409);
