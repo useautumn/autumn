@@ -78,6 +78,7 @@ export function createOwnershipTail({
 				owner: record.endpoint,
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
 			});
 		} else if (
 			record.type === "unowned" ||
@@ -87,6 +88,8 @@ export function createOwnershipTail({
 				owner: null,
 				activeDrain: null,
 				activePreparation: null,
+				release:
+					record.type === "released" ? { endpoint: record.endpoint } : null,
 			});
 		} else if (record.type === "draining" && view?.owner === record.endpoint) {
 			view.activeDrain = {
@@ -101,6 +104,7 @@ export function createOwnershipTail({
 					owner: null,
 					activeDrain: null,
 					activePreparation: preparation,
+					release: null,
 				});
 		} else if (
 			record.type === "ready" &&

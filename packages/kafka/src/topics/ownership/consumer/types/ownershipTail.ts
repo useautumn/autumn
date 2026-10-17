@@ -18,6 +18,7 @@ export type OwnershipTailView = {
 	activeDrain: { endpoint: string; successor: string } | null;
 	/** A worker that announced it is preparing the partition and has not yet been named, released, or announced ready. */
 	activePreparation: { endpoint: string } | null;
+	release: { endpoint: string } | null;
 };
 
 /** One consumer per worker following the ownership log from where it stood at

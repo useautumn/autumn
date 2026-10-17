@@ -551,6 +551,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				owner: "http://third.test",
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
 			});
 			const second = f.publication.awaitDraining({ signal: controller.signal });
 			f.deliver({
@@ -578,6 +579,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				owner: "http://third.test",
 				activeDrain: { endpoint: "http://third.test", successor: "http://x" },
 				activePreparation: null,
+				release: null,
 			});
 			expect(f.publication.readActiveDrain()).toEqual({
 				endpoint: "http://third.test",
