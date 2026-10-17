@@ -19,10 +19,12 @@ const fixture = ({
 	failStart = false,
 	failQuiescence = false,
 	healthReporter,
+	stepDown,
 }: {
 	failStart?: boolean;
 	failQuiescence?: boolean;
 	healthReporter?: { start(): void; stop(): void };
+	stepDown?: { start(): void; stop(): Promise<void> };
 } = {}) => {
 	const calls: string[] = [];
 	let finishDrain: () => void = () => undefined;
@@ -32,6 +34,7 @@ const fixture = ({
 	const process = createLifecycleFixture({
 		ctx: {
 			healthReporter,
+			stepDown,
 			partitions: {
 				start: async () => {
 					calls.push("start");
@@ -181,6 +184,33 @@ test.concurrent(
 		await stopping;
 		await process.stop();
 		expect(reportCalls).toEqual(["start", "stop"]);
+	},
+);
+
+test.concurrent(
+	"resources settle only once the step-down has stopped, so its permit is given back first",
+	async () => {
+		const released = Promise.withResolvers<void>();
+		const { process, calls, finishDrain } = fixture({
+			stepDown: {
+				start: () => calls.push("step-down-start"),
+				stop: async () => {
+					await released.promise;
+					calls.push("step-down-stopped");
+				},
+			},
+		});
+		await process.start();
+		expect(calls).toContain("step-down-start");
+		const stopping = process.stop();
+		finishDrain();
+		await Bun.sleep(20);
+		expect(calls).not.toContain("quiescence");
+		released.resolve();
+		await stopping;
+		expect(calls.indexOf("step-down-stopped")).toBeLessThan(
+			calls.indexOf("quiescence"),
+		);
 	},
 );
 
