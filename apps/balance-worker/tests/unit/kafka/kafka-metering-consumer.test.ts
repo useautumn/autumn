@@ -30,16 +30,22 @@ import {
 } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import { createProducedOffsets } from "../../../src/processor/writer/producedOffsets/createProducedOffsets.js";
 import { createRecentCommands } from "../../../src/processor/writer/recentCommands/createRecentCommands.js";
+import { createPartitionRuntime } from "../../../src/runtime/createPartitionRuntime.js";
 import {
 	OwnedPartitionProducerFencedError,
 	OwnerEpochSupersededError,
 } from "../../../src/runtime/runtimeErrors.js";
 import type { OwnerFence } from "../../../src/state/types/stateStore.js";
 import {
+	createSyntheticWorkerDb,
+	createTestCatalogCache,
+} from "../../fixtures/catalog.js";
+import {
 	applyDurableMutation,
 	createInitializeMutation,
 	restoreSubjectStates,
 } from "../../fixtures/mutations.js";
+import { waitFor } from "../partitions/handoffFixtures.js";
 import {
 	closeStoreFixture,
 	createMutation,
@@ -1537,6 +1543,124 @@ describe("replay window", () => {
 			}
 		},
 	);
+	test("a successor that prepared remembers a command its predecessor applied after the preparation stopped", async () => {
+		const fixture = createStoreFixture({ nextOffset: 3n });
+		const port = createFakeKafkaConsumer();
+		let high = "3";
+		const consumer = createKafkaMeteringConsumer({
+			consumer: port,
+			partitionOffsets: {
+				fetchTopicOffsets: async () => [
+					{ partition, offset: high, low: "0", high },
+				],
+				fetchTopicOffsetsByTimestamp: async () => [{ partition, offset: "1" }],
+			},
+			stateStore: fixture.store,
+			topic,
+		});
+		const recentCommands = createRecentCommands({
+			windowMs: 600_000,
+			now: () => 0,
+		});
+		const runtime = createPartitionRuntime({
+			ctx: {
+				stateStore: fixture.store,
+				db: createSyntheticWorkerDb(),
+				catalogCache: createTestCatalogCache(),
+				producer: {
+					connect: async () => undefined,
+					fence: async () => undefined,
+					disconnect: async () => undefined,
+				},
+				appender: { appendCommitted: async () => ({ baseOffset: 0n }) },
+				follower: consumer.createReplay({ partition, recentCommands }),
+				preparationFollower: consumer.createReplay({
+					partition,
+					recentCommands,
+					readOnly: true,
+				}),
+				bootstrapper: {
+					bootstrap: async () => ({ kind: "continued", nextOffset: 0n }),
+				},
+				partitionResolver: { partitionForIdentity: () => partition },
+				receiptPolicy: { retentionMs: 1_000, now: () => 0 },
+				recentCommands,
+			},
+			config: {
+				topic,
+				partition,
+				writerLimits: {
+					maxBatchSize: 10,
+					maxPendingCommands: 10,
+					maxPendingCommandsPerCustomer: 10,
+				},
+				recoveryDrainTimeoutMs: 10,
+			},
+		});
+		try {
+			const state = createState();
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition,
+				states: [state],
+			});
+			await consumer.start();
+
+			const preparing = runtime.prepare();
+			await waitFor(() => port.seeks.length === 1);
+			const replayed = [
+				createMutation({ state, commandId: "cmd_first" }),
+				createMutation({ state, commandId: "cmd_second" }),
+			];
+			for (const [index, record] of replayed.entries()) {
+				await port.deliver({
+					offset: String(index + 1),
+					...serializeMeteringRecord({ record }),
+				});
+			}
+			await preparing;
+			for (const record of replayed)
+				expect(
+					recentCommands.read({ identity, commandId: record.id }),
+				).not.toBeNull();
+
+			const late = createMutation({
+				state,
+				commandId: "cmd_after_preparation",
+			});
+			applyDurableMutation({
+				store: fixture.store,
+				topic,
+				partition,
+				offset: 3n,
+				mutation: late,
+			});
+			high = "4";
+			expect(fixture.store.readNextOffset({ topic, partition })).toBe(4n);
+			const stored = fixture.store.readState({ identity });
+
+			const activating = runtime.activate();
+			await waitFor(() => port.seeks.length === 2);
+			if (BigInt(port.seeks[1]?.offset ?? "4") <= 3n) {
+				await port.deliver({
+					offset: "3",
+					...serializeMeteringRecord({ record: late }),
+				});
+			}
+			await activating;
+
+			expect(recentCommands.read({ identity, commandId: late.id })).toEqual({
+				fingerprint: late.receipt.fingerprint,
+			});
+			expect(fixture.store.readState({ identity })).toEqual(stored);
+		} finally {
+			await runtime.stop();
+			await consumer.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
 	test("a read-only partition remembers every record and writes nothing to the store", async () => {
 		const readOnlyPartitions = new Set([partition]);
 		const { fixture, recentCommands, handler } = createWindowedHandler({
