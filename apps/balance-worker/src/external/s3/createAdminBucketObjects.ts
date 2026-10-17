@@ -1,15 +1,11 @@
 import {
-	DeleteObjectCommand,
 	GetObjectCommand,
 	type GetObjectCommandOutput,
-	ListObjectsV2Command,
-	type ListObjectsV2CommandOutput,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import type {
 	AdminBucketObjects,
 	AdminObject,
-	AdminObjectListing,
 	AdminS3Client,
 } from "./types/adminBucketObjects.js";
 
@@ -26,26 +22,6 @@ export function createAdminBucketObjects({
 		return ctx.client.send(command, {
 			abortSignal: AbortSignal.timeout(config.timeoutMs),
 		});
-	}
-
-	async function list({
-		prefix,
-	}: {
-		prefix: string;
-	}): Promise<AdminObjectListing[]> {
-		const listed: AdminObjectListing[] = [];
-		let ContinuationToken: string | undefined;
-		do {
-			const page = (await send(
-				new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken }),
-			)) as ListObjectsV2CommandOutput;
-			for (const { Key, ETag } of page.Contents ?? [])
-				if (Key && ETag) listed.push({ key: Key, etag: ETag });
-			ContinuationToken = page.IsTruncated
-				? page.NextContinuationToken
-				: undefined;
-		} while (ContinuationToken);
-		return listed;
 	}
 
 	async function read({ key }: { key: string }): Promise<AdminObject | null> {
@@ -105,11 +81,7 @@ export function createAdminBucketObjects({
 		return write({ key, body, condition: { IfMatch: etag } });
 	}
 
-	async function remove({ key }: { key: string }): Promise<void> {
-		await send(new DeleteObjectCommand({ Bucket, Key: key }));
-	}
-
-	return { list, read, create, replace, remove };
+	return { read, create, replace };
 }
 
 function statusOf(cause: unknown): number | undefined {

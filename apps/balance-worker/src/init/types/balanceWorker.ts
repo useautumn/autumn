@@ -73,7 +73,7 @@ export type WorkerResourcesContext = {
 	stateStore: StateStore;
 	/** `client` is the raw pool, for the heartbeat's probe; a test's stand-in has none. */
 	postgres: Pick<PostgresClient, "close"> &
-		Partial<Pick<PostgresClient, "client">>;
+		Partial<Pick<PostgresClient, "client" | "db">>;
 	db: WorkerDb;
 	dynamo: Pick<DynamoClient, "close">;
 	idempotencyKeys: IdempotencyKeyStore;

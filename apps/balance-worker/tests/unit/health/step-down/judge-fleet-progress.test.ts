@@ -6,8 +6,12 @@ function progressOf(
 	entries: [partition: number, highWatermark: bigint, nextOffset: bigint][],
 ): FleetProgress {
 	return {
-		highWatermarks: new Map(entries.map(([partition, high]) => [partition, high])),
-		nextOffsets: new Map(entries.map(([partition, , next]) => [partition, next])),
+		highWatermarks: new Map(
+			entries.map(([partition, high]) => [partition, high]),
+		),
+		nextOffsets: new Map(
+			entries.map(([partition, , next]) => [partition, next]),
+		),
 	};
 }
 

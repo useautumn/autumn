@@ -83,7 +83,8 @@ function harness({
 				calls.push("read-progress");
 				const call = state.reads++;
 				await readGate;
-				if (call === 0 && baselineFails) throw new Error("Postgres did not answer");
+				if (call === 0 && baselineFails)
+					throw new Error("Postgres did not answer");
 				return fleetAt({ call, keepsUp });
 			},
 			ownPartitions: () => new Set([0, 1, 2, 3]),
@@ -136,13 +137,23 @@ describe("step-down controller", () => {
 		const { controller, calls, logs, fire } = harness();
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "step-down"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
 		expect(logs).toContainEqual({
 			level: "error",
 			message: "Own network degraded and peers healthy: stepping down",
 		});
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "step-down"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
 	});
 
 	test("waits for the fleet to show progress past the baseline, polling until it does", async () => {
@@ -216,7 +227,12 @@ describe("step-down controller", () => {
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 		expect(logs).toContainEqual({
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
@@ -229,7 +245,7 @@ describe("step-down controller", () => {
 			{ ...DEGRADED, state: "insufficient_data" as const, segments: 0 },
 		]) {
 			const { controller, calls, fire } = harness({
-					currentVerdict: () => flicker,
+				currentVerdict: () => flicker,
 			});
 			controller.start();
 			await fire();
@@ -258,7 +274,12 @@ describe("step-down controller", () => {
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 		await controller.stop();
 		expect(calls).toEqual([
 			"read-progress",

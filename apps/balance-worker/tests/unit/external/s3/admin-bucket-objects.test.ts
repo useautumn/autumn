@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	DeleteObjectCommand,
-	GetObjectCommand,
-	ListObjectsV2Command,
-	PutObjectCommand,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { createAdminBucketObjects } from "../../../../src/external/s3/createAdminBucketObjects.js";
 
 function s3Error({ name, status }: { name: string; status: number }): Error {
@@ -101,36 +96,5 @@ describe("admin bucket objects", () => {
 		await expect(objects.read({ key: "broken.json" })).rejects.toThrow(
 			"InternalError",
 		);
-	});
-
-	test("list follows every page and keeps each key's ETag, so a caller can tell which objects were written since", async () => {
-		const { client } = fakeClient((command) => {
-			if (!(command instanceof ListObjectsV2Command)) return {};
-			return command.input.ContinuationToken === "page-2"
-				? {
-						Contents: [{ Key: "p/b.json", ETag: '"e-b"' }],
-						IsTruncated: false,
-					}
-				: {
-						Contents: [{ Key: "p/a.json", ETag: '"e-a"' }],
-						IsTruncated: true,
-						NextContinuationToken: "page-2",
-					};
-		});
-		const objects = objectsOf(client);
-		expect(await objects.list({ prefix: "p/" })).toEqual([
-			{ key: "p/a.json", etag: '"e-a"' },
-			{ key: "p/b.json", etag: '"e-b"' },
-		]);
-	});
-
-	test("remove deletes the key", async () => {
-		const { client, sent } = fakeClient(() => ({}));
-		await objectsOf(client).remove({ key: "k.json" });
-		expect(sent[0]?.command).toBeInstanceOf(DeleteObjectCommand);
-		expect((sent[0]?.command as DeleteObjectCommand).input).toMatchObject({
-			Bucket: "admin-bucket",
-			Key: "k.json",
-		});
 	});
 });

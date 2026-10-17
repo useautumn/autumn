@@ -47,6 +47,7 @@ export {
 	type PartitionProgressRow,
 	readNextOffset,
 	readPartitionProgress,
+	readTopicNextOffsets,
 } from "./meteringLog/repos/partitionProgress.js";
 export { getOrgWithFeatures } from "./organizations/repos/getOrgWithFeatures.js";
 export { listPooledBalancesWithoutOtherContributions } from "./pooledBalances/repos/listPooledBalancesWithoutOtherContributions.js";

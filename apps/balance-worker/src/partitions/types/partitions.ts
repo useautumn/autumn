@@ -227,6 +227,7 @@ export type Partitions = {
 	/** Claimed and admitted to the route directory, so requests can be served. */
 	isAdmitted(target: PartitionTarget): boolean;
 	isHeld(target: PartitionTarget): boolean;
+	heldPartitions(): number[];
 	findRuntime(route: PartitionRoute): PartitionRuntimePort | undefined;
 	/** Settles once a partition mid-handoff has named its successor, so a caller can refresh its route once. */
 	awaitHandoff(target: PartitionTarget): Promise<void>;

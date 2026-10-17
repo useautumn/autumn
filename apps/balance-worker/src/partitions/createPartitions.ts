@@ -68,6 +68,10 @@ export function createPartitions({
 		return state.assigned.has(partition) || state.handingOff.has(partition);
 	}
 
+	function heldPartitions(): number[] {
+		return [...new Set([...state.assigned, ...state.handingOff.keys()])];
+	}
+
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
 		const settlement = state.handoffSettlements.get(partition);
 		if (!settlement) return Promise.resolve();
@@ -94,6 +98,7 @@ export function createPartitions({
 		hasAssignment,
 		isAdmitted,
 		isHeld,
+		heldPartitions,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,

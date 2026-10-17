@@ -1,7 +1,4 @@
-import type {
-	AdminBucketObjects,
-	AdminObjectListing,
-} from "../../../../src/external/s3/types/adminBucketObjects.js";
+import type { AdminBucketObjects } from "../../../../src/external/s3/types/adminBucketObjects.js";
 
 export function createMemoryAdminObjects({
 	now = Date.now,
@@ -19,13 +16,6 @@ export function createMemoryAdminObjects({
 		stored.set(key, { text: body, etag: `"v${state.version}"`, at: now() });
 	}
 	const objects: AdminBucketObjects = {
-		list: async ({ prefix }) => {
-			guard();
-			const listed: AdminObjectListing[] = [];
-			for (const [key, object] of stored)
-				if (key.startsWith(prefix)) listed.push({ key, etag: object.etag });
-			return listed;
-		},
 		read: async ({ key }) => {
 			guard();
 			reads.count += 1;
@@ -43,10 +33,6 @@ export function createMemoryAdminObjects({
 			if (stored.get(key)?.etag !== etag) return false;
 			put({ key, body });
 			return true;
-		},
-		remove: async ({ key }) => {
-			guard();
-			stored.delete(key);
 		},
 	};
 	return { objects, stored, state, put, reads };
