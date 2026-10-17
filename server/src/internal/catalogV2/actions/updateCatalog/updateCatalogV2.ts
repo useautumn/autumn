@@ -1,5 +1,7 @@
 import type { UpdateCatalogParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { updateCatalogPlanToApprovalChecks } from "@/internal/approvals/facts/catalog/updateCatalogPlanToApprovalChecks";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals";
 import { assertRewardScope } from "@/internal/catalogV2/actions/updateCatalog/errors/assertRewardScope";
 import { handleUpdateCatalogErrors } from "@/internal/catalogV2/actions/updateCatalog/errors/handleUpdateCatalogErrors";
 import { planCatalogUpdate } from "@/internal/catalogV2/actions/updateCatalog/planCatalogUpdate";
@@ -83,7 +85,13 @@ export async function updateCatalogV2({
 		return { catalogContext, updateCatalogPlan };
 	}
 
-	// 4. Execute
+	// 4. Approvals: each plan and feature the computed update writes, with its own verb
+	await checkCatalogApprovals({
+		ctx,
+		checks: updateCatalogPlanToApprovalChecks({ updateCatalogPlan }),
+	});
+
+	// 5. Execute
 	const catalogResult = await executeUpdateCatalogPlan({
 		ctx,
 		updateCatalogPlan,

@@ -228,6 +228,16 @@ export const ErrCode = {
 	// Approvals
 	InvalidApprovalRule: "invalid_approval_rule",
 
+	// Roles
+	RoleNotFound: "role_not_found",
+	RoleExists: "role_exists",
+	RoleBuiltIn: "role_built_in",
+	RoleInUse: "role_in_use",
+
+	// Approval rules
+	ApprovalRuleNotFound: "approval_rule_not_found",
+	ApprovalRuleEditorRequired: "approval_rule_editor_required",
+
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };

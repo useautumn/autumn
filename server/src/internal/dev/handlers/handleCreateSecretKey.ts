@@ -6,6 +6,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
 import { auth } from "@/utils/auth";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
@@ -32,6 +33,12 @@ export const handleCreateSecretKey = createRoute({
 				});
 			}
 		}
+
+		await checkRouteApproval({
+			ctx,
+			action: "api_keys.create",
+			buildFacts: async () => null,
+		});
 
 		// 1. Create API key
 		let prefix = ApiKeyPrefix.Sandbox;

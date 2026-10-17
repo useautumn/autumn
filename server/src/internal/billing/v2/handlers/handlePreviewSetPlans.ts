@@ -3,6 +3,7 @@ import {
 	Scopes,
 	SetPlansParamsV0Schema,
 } from "@autumn/shared";
+import { billingApprovalToPreviewFields } from "@/internal/approvals/preview/billingApprovalToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildSetPlansPreview } from "@/internal/billing/v2/actions/setPlans/preview/buildSetPlansPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
@@ -20,6 +21,12 @@ export const handlePreviewSetPlans = createRoute({
 			preview: true,
 		});
 
-		return c.json(await buildSetPlansPreview({ ctx, result }), 200);
+		return c.json(
+			{
+				...(await buildSetPlansPreview({ ctx, result })),
+				...billingApprovalToPreviewFields({ approval: result.approval }),
+			},
+			200,
+		);
 	},
 });

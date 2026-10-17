@@ -3,6 +3,7 @@ import { MigrationFilterSchema } from "@autumn/shared/api/migrations/filters/mig
 import { OperationsSchema } from "@autumn/shared/api/migrations/operations/operations.js";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
 const CreateMigrationBody = z.object({
@@ -19,6 +20,11 @@ export const handleCreateMigration = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const insert = c.req.valid("json");
+		await checkRouteApproval({
+			ctx,
+			action: "migrations.create",
+			buildFacts: async () => null,
+		});
 
 		const migration = await migrationRepo.insert({ ctx, insert });
 

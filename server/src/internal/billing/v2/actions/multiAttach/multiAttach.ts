@@ -7,6 +7,8 @@ import type {
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/check/checkBillingApproval";
+import type { BillingApprovalOutcome } from "@/internal/approvals/check/types/billingApprovalOutcome";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import {
 	findPendingInvoiceConflict,
@@ -33,6 +35,8 @@ export interface MultiAttachResult {
 	billingContext: MultiAttachBillingContext;
 	billingPlan?: BillingPlan;
 	billingResult?: BillingResult;
+	/** Present on previews: what the approval check was judged as and on. */
+	approval?: BillingApprovalOutcome;
 }
 
 export async function multiAttach({
@@ -101,15 +105,27 @@ export async function multiAttach({
 	handleMultiAttachBillingPlanErrors({ ctx, billingContext, billingPlan });
 	handleMultiAttachBackdateCheckoutError({ billingContext, params });
 
+	// Approvals: the one check, shared by the preview and the write
+	const previewBillingPlan = preview
+		? await computeAttachPreviewBillingPlan({
+				ctx,
+				billingContext,
+				autumnBillingPlan,
+			})
+		: undefined;
+	const approval = await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan: { ...billingPlan, preview: previewBillingPlan },
+		route: "billing.multi_attach",
+		preview,
+	});
+
 	if (preview) {
-		const previewBillingPlan = await computeAttachPreviewBillingPlan({
-			ctx,
-			billingContext,
-			autumnBillingPlan,
-		});
 		return {
 			billingContext,
 			billingPlan: { ...billingPlan, preview: previewBillingPlan },
+			approval,
 		};
 	}
 

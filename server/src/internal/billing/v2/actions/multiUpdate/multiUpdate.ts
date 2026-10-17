@@ -8,6 +8,8 @@ import {
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/check/checkBillingApproval";
+import type { BillingApprovalOutcome } from "@/internal/approvals/check/types/billingApprovalOutcome";
 import { executeMultiSubscriptionBillingPlan } from "@/internal/billing/v2/execute/executeMultiSubscriptionBillingPlan";
 import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -23,6 +25,8 @@ export type MultiUpdateResult = {
 	billingPlan: BillingPlan;
 	billingResult?: BillingResult;
 	previewResponse?: MultiUpdatePreviewResponseV0;
+	/** Present on previews, one per item. */
+	approvals?: BillingApprovalOutcome[];
 };
 
 export async function multiUpdate({
@@ -83,6 +87,19 @@ export async function multiUpdate({
 		stripe: stripeBillingPlans[0]?.stripeBillingPlan ?? {},
 	};
 
+	// Approvals: each item judged on its own change, like the write
+	const approvals = await Promise.all(
+		itemResults.map(({ billingContext, itemPlan }) =>
+			checkBillingApproval({
+				ctx,
+				billingContext,
+				billingPlan: { autumn: itemPlan, stripe: {} },
+				route: "billing.multi_update",
+				preview,
+			}),
+		),
+	);
+
 	if (preview) {
 		const previewResponse = await buildMultiUpdatePreviewResponse({
 			ctx,
@@ -94,6 +111,7 @@ export async function multiUpdate({
 			billingPlan,
 			billingResult: undefined,
 			previewResponse,
+			approvals,
 		};
 	}
 

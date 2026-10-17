@@ -8,7 +8,9 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	unique,
 } from "drizzle-orm/pg-core";
+import type { RoleAccessMap } from "../api/roles/roleAccess.js";
 import type { AppEnv } from "../models/genModels/genEnums.js";
 import {
 	type Organization,
@@ -157,6 +159,32 @@ export const invitation = pgTable(
 	(table) => [
 		index("invitation_organizationId_idx").on(table.organizationId),
 		index("invitation_email_idx").on(table.email),
+	],
+).enableRLS();
+
+/** Custom org roles (better-auth dynamic access control); built-in roles live in code. */
+export const organizationRole = pgTable(
+	"organization_role",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		// The role's id (slug): what member.role and rule subjects store.
+		role: text("role").notNull(),
+		// better-auth's own AC statements (member/invitation management), not product scopes.
+		permission: text("permission").notNull(),
+		// Display name, returned as `name`.
+		label: text("label").notNull(),
+		access: jsonb("access").$type<RoleAccessMap>().notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }),
+	},
+	(table) => [
+		unique("organization_role_org_role_key").on(
+			table.organizationId,
+			table.role,
+		),
 	],
 ).enableRLS();
 

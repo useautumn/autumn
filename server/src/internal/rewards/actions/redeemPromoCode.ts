@@ -8,6 +8,9 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { assertFirstTimeStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval.js";
+import { buildApprovalCustomerFacts } from "@/internal/approvals/facts/customer/buildApprovalCustomerFacts.js";
+import { rewardRedeemToFacts } from "@/internal/approvals/facts/rewards/rewardRedeemToFacts.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -120,6 +123,16 @@ export const redeemPromoCode = async ({
 			promoCode: code,
 		});
 	}
+
+	await checkRouteApproval({
+		ctx,
+		action: "rewards.redeem",
+		buildFacts: async () =>
+			rewardRedeemToFacts({
+				customer: await buildApprovalCustomerFacts({ ctx, fullCustomer }),
+				reward,
+			}),
+	});
 
 	// 5. Create entitlements for each reward entitlement config
 	await grantRewardEntitlements({

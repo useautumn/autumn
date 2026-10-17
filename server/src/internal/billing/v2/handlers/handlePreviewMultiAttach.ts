@@ -1,4 +1,9 @@
-import { AffectedResource, MultiAttachParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	MultiAttachParamsV0Schema,
+	Scopes,
+} from "@autumn/shared";
+import { billingApprovalToPreviewFields } from "@/internal/approvals/preview/billingApprovalToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
@@ -13,11 +18,12 @@ export const handlePreviewMultiAttach = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const { billingContext, billingPlan } = await billingActions.multiAttach({
-			ctx,
-			params: body,
-			preview: true,
-		});
+		const { billingContext, billingPlan, approval } =
+			await billingActions.multiAttach({
+				ctx,
+				params: body,
+				preview: true,
+			});
 
 		if (!billingPlan) {
 			throw new Error("Billing plan not found for preview");
@@ -29,6 +35,9 @@ export const handlePreviewMultiAttach = createRoute({
 			billingPlan,
 		});
 
-		return c.json(previewResponse, 200);
+		return c.json(
+			{ ...previewResponse, ...billingApprovalToPreviewFields({ approval }) },
+			200,
+		);
 	},
 });

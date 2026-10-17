@@ -5,6 +5,7 @@ import {
 	isCustomerProductPaidRecurring,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan/executeAutumnBillingPlan.js";
 import { releaseLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/releaseLicenseAssignmentsForEntity.js";
@@ -55,20 +56,24 @@ export const cancelSubsForEntity = async ({
 		)
 			continue;
 
-		await billingActions.updateSubscription({
+		await withApprovalSkipped({
 			ctx,
-			params: {
-				customer_id: customerId,
-				customer_product_id: customerProduct.id,
-				entity_id: entity.id ?? entity.internal_id,
-				cancel_action: "cancel_immediately",
-				proration_behavior: "none",
-				redirect_mode: "if_required",
-			},
+			run: () =>
+				billingActions.updateSubscription({
+					ctx,
+					params: {
+						customer_id: customerId,
+						customer_product_id: customerProduct.id,
+						entity_id: entity.id ?? entity.internal_id,
+						cancel_action: "cancel_immediately",
+						proration_behavior: "none",
+						redirect_mode: "if_required",
+					},
 
-			options: {
-				skipAutumnCheckout: true,
-			},
+					options: {
+						skipAutumnCheckout: true,
+					},
+				}),
 		});
 	}
 };

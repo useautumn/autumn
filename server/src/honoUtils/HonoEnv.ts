@@ -20,6 +20,10 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	/** The acting member's org role. Set only when a member acts (dashboard or OAuth token), never for API keys. */
+	role?: string;
+	/** System work started by Autumn, not the member on this request: approval rules don't judge it. */
+	skipApproval?: boolean;
 	apiKeyId?: string;
 	impersonatedBy?: string;
 	customerId?: string;
@@ -96,6 +100,10 @@ export type RequestContext = {
 	skipSubjectCacheDeletion?: boolean;
 
 	testOptions?: {
+		/** `x-include-permission-facts: true`: billing previews also return the approval facts (non-prod only). */
+		includePermissionFacts?: boolean;
+		/** `x-approvals-sandbox-as-live: true`: approval rules apply as if the sandbox were live (non-prod only). */
+		approvalsSandboxAsLive?: boolean;
 		asyncBalanceUpdate?: boolean;
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;

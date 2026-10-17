@@ -9,6 +9,11 @@ import {
 	SUBSCRIPTION_CACHE_TTL_SECONDS,
 } from "@autumn/cache";
 import { AppEnv } from "@autumn/shared";
+import {
+	APPROVAL_RULES_CACHE_TTL_SECONDS,
+	buildApprovalRulesCacheKey,
+	buildApprovalRulesGenerationKey,
+} from "@/external/redis/actions/approvalRulesCache/approvalRulesCache.js";
 import { buildCheckoutCacheKey } from "@/external/redis/actions/autumnCheckoutCache/autumnCheckoutCache.js";
 import { buildCustomerJwtAuthCacheKey } from "@/external/redis/actions/customerJwtAuthCache/customerJwtAuthCache.js";
 import { buildExpiredCustomerProductsCacheKey } from "@/external/redis/actions/expiredCustomerProductsCache/expiredCustomerProductsCache.js";
@@ -54,6 +59,16 @@ describe("misc redis key formats", () => {
 	test("secret key verification", () => {
 		expect(buildSecretKeyCacheKey("abc123hash")).toBe("secret_key:abc123hash");
 		expect(SECRET_KEY_CACHE_TTL_SECONDS).toBe(3600);
+	});
+
+	test("approval rules", () => {
+		expect(buildApprovalRulesCacheKey({ orgId: "org_1" })).toBe(
+			"approval_rules:org_1",
+		);
+		expect(buildApprovalRulesGenerationKey({ orgId: "org_1" })).toBe(
+			"approval_rules_gen:org_1",
+		);
+		expect(APPROVAL_RULES_CACHE_TTL_SECONDS).toBe(300);
 	});
 
 	test("org with features", () => {

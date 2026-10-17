@@ -8,6 +8,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { updateDefaultPaymentMethod } from "@/external/stripe/stripeCusUtils";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { setupPaymentToAttachParams } from "@/internal/billing/v2/actions/setupPayment/setupPaymentUtils";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -84,11 +85,15 @@ export const handleSetupPaymentMetadata = async ({
 					buildBillingLockKey({ orgId: org.id, env, customerId }),
 				),
 			fn: () =>
-				billingActions.attach({
+				withApprovalSkipped({
 					ctx,
-					params: attachParams,
-					preview: false,
-					skipAutumnCheckout: true,
+					run: () =>
+						billingActions.attach({
+							ctx,
+							params: attachParams,
+							preview: false,
+							skipAutumnCheckout: true,
+						}),
 				}),
 		});
 

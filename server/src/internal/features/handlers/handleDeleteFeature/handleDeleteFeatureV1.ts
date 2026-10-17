@@ -1,5 +1,6 @@
 import { FeatureNotFoundError, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
@@ -15,6 +16,11 @@ export const handleDeleteFeatureV1 = createRoute({
 		if (!feature) {
 			throw new FeatureNotFoundError({ featureId: feature_id });
 		}
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "features.delete", featureId: feature_id }],
+		});
 
 		const creditSystems = getCreditSystemsFromFeature({
 			featureId: feature_id,

@@ -47,6 +47,9 @@ export const previewPendingReattach = async ({
 		ctx,
 		params: attachParams,
 		preview: true,
+		approvalRoute: "billing.update",
+		// A denied edit must leave the pending plan and its payment in place.
+		approvalGatesWrite: true,
 	});
 
 	const replacementProduct =

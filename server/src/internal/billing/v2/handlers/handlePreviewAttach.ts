@@ -5,6 +5,7 @@ import {
 	AttachParamsV1Schema,
 	Scopes,
 } from "@autumn/shared";
+import { billingApprovalToPreviewFields } from "@/internal/approvals/preview/billingApprovalToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
@@ -21,11 +22,12 @@ export const handlePreviewAttach = createRoute({
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 
-		const { billingContext, billingPlan } = await billingActions.attach({
-			ctx,
-			params: body,
-			preview: true,
-		});
+		const { billingContext, billingPlan, approval } =
+			await billingActions.attach({
+				ctx,
+				params: body,
+				preview: true,
+			});
 
 		// billingPlan is always present when preview: true
 		if (!billingPlan) {
@@ -39,6 +41,9 @@ export const handlePreviewAttach = createRoute({
 			billingPlan,
 		});
 
-		return c.json(previewResponse, 200);
+		return c.json(
+			{ ...previewResponse, ...billingApprovalToPreviewFields({ approval }) },
+			200,
+		);
 	},
 });

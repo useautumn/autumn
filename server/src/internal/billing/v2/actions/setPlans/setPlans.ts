@@ -6,6 +6,8 @@ import {
 } from "@autumn/shared";
 import { checkoutSessionLock } from "@/external/redis/actions/checkoutSessionLock/checkoutSessionLock.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkBillingApproval } from "@/internal/approvals/check/checkBillingApproval";
+import type { BillingRoute } from "@/internal/approvals/check/types/billingRoute";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
@@ -35,11 +37,17 @@ export const setPlans = async ({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	approvalRoute = "billing.set_plans",
 }: {
 	ctx: AutumnContext;
 	params: SetPlansParamsV0;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	/** create_schedule runs through set plans, but is judged as itself. */
+	approvalRoute?: Extract<
+		BillingRoute,
+		"billing.set_plans" | "billing.create_schedule"
+	>;
 }): Promise<SetPlansResult> => {
 	// Explicit, so a checkout that resumes these params keeps the same policy.
 	const resolvedParams: SetPlansParamsV0 = {
@@ -140,14 +148,22 @@ export const setPlans = async ({
 		schedulePlan: { phases, immediatePhaseTransition, customerProductChanges },
 	};
 
+	// Approvals: the one check, shared by the preview and the write
 	if (preview) {
 		billingPlan.preview = await computeAttachPreviewBillingPlan({
 			ctx,
 			billingContext,
 			autumnBillingPlan,
 		});
-		return result;
 	}
+	result.approval = await checkBillingApproval({
+		ctx,
+		billingContext,
+		billingPlan,
+		route: approvalRoute,
+		preview,
+	});
+	if (preview) return result;
 
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({

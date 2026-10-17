@@ -1,6 +1,7 @@
 import { AuthType, CopyProductParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { SANDBOX_ORG_HEADER } from "@/honoMiddlewares/sandboxAccess.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { copyProductForOrgs } from "./copyProductForOrgs.js";
 import { isSameEnvVariantCopy } from "./isSameEnvVariantCopy.js";
@@ -23,6 +24,10 @@ export const handleCopyProductV2 = createRoute({
 		const { db, org, env: fromEnv, authType } = ctx;
 		const { product_id: fromProductId } = c.req.param();
 		const { env: toEnv, id: toId, name: toName } = body;
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "plans.create", planId: toId }],
+		});
 
 		const fromNamedSandboxDashboard =
 			authType === AuthType.Dashboard &&

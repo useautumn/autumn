@@ -7,6 +7,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
+import { dropMemberFromRules } from "../../../approvals/actions/dropMemberFromRules";
 
 export const handleRemoveMember = createRoute({
 	scopes: { ANY: [Scopes.Admin, Scopes.Owner] },
@@ -79,6 +80,12 @@ export const handleRemoveMember = createRoute({
 					eq(member.organizationId, org.id),
 				),
 			);
+
+		await dropMemberFromRules({
+			db,
+			orgId: org.id,
+			userId: existingMember.userId,
+		});
 
 		// Revoke all sessions for this user in this organization
 		try {

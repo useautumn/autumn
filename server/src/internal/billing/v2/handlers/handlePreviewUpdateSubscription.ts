@@ -7,6 +7,7 @@ import {
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
+import { billingApprovalToPreviewFields } from "@/internal/approvals/preview/billingApprovalToPreviewFields";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { handleSwitchCollectionMethodErrors } from "@/internal/billing/v2/actions/switchCollectionMethod/errors/handleSwitchCollectionMethodErrors";
 import { setupSwitchCollectionMethodContext } from "@/internal/billing/v2/actions/switchCollectionMethod/setup/setupSwitchCollectionMethodContext";
@@ -47,14 +48,19 @@ export const handlePreviewUpdateSubscription = createRoute({
 		} = body;
 
 		if (!isSwitch && !liveUpdate) {
-			const pendingPreview = await previewPendingPlanIfAny({
-				ctx,
-				params: body,
-			});
-			if (pendingPreview) return c.json(pendingPreview, 200);
+			const pending = await previewPendingPlanIfAny({ ctx, params: body });
+			if (pending) {
+				return c.json(
+					{
+						...pending.preview,
+						...billingApprovalToPreviewFields({ approval: pending.approval }),
+					},
+					200,
+				);
+			}
 		}
 
-		const { billingContext, billingPlan } =
+		const { billingContext, billingPlan, approval } =
 			await billingActions.updateSubscription({
 				ctx,
 				params: liveUpdate?.params ?? (isSwitch ? unchangedPlanParams : body),
@@ -75,7 +81,12 @@ export const handlePreviewUpdateSubscription = createRoute({
 			billingPlan,
 			intent: billingPlanToUpdateSubscriptionPreviewIntent({ billingContext }),
 		});
+		// Rules don't decide collection-method switches, so their preview carries no approval fields.
+		if (isSwitch) return c.json(previewResponse, 200);
 
-		return c.json(previewResponse, 200);
+		return c.json(
+			{ ...previewResponse, ...billingApprovalToPreviewFields({ approval }) },
+			200,
+		);
 	},
 });

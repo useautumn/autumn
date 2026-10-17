@@ -9,6 +9,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 
 export const handleCreateFeatureV2 = createRoute({
@@ -26,6 +27,11 @@ export const handleCreateFeatureV2 = createRoute({
 				...body,
 			},
 			originalFeature: undefined,
+		});
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "features.create", featureId: body.feature_id }],
 		});
 
 		// Body is now always in the latest V1 format, regardless of API version

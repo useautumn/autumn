@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { agentRulesRpcRouter } from "@/internal/agent/rules/agentRulesRouter";
 import { referralRpcRouter } from "@/internal/api/rewards/referralRouter";
+import { approvalRulesRpcRouter } from "@/internal/approvals/approvalRulesRpcRouter";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter";
 import { billingRpcRouter } from "@/internal/billing/billingRouter";
 import { byocRpcRouter } from "@/internal/byoc/byocRouter";
@@ -20,6 +21,7 @@ import { migrationRpcRouter } from "@/internal/migrations/v2/migrationRouter";
 import { organizationRpcRouter } from "@/internal/orgs/organizationRpcRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
+import { handleListRoles } from "@/internal/roles/handlers/handleListRoles";
 import { sandboxesRpcRouter } from "@/internal/sandboxes/sandboxesRouter";
 import { stripeReadRpcRouter } from "@/internal/stripeRead/stripeReadRouter";
 import { webhooksRpcRouter } from "@/internal/webhooks/webhooksRouter";
@@ -36,6 +38,9 @@ rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", catalogRpcRouter);
 rpcRouter.route("", catalogV2RpcRouter);
 rpcRouter.route("", billingRpcRouter);
+// Agents need role ids for rule subjects; managing roles stays in the dashboard.
+rpcRouter.post("/roles.list", ...handleListRoles);
+rpcRouter.route("", approvalRulesRpcRouter);
 rpcRouter.route("", dfuRpcRouter);
 rpcRouter.route("", balancesRpcRouter);
 rpcRouter.route("", eventsRpcRouter);
