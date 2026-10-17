@@ -129,6 +129,7 @@ function createPartitionState(): PartitionsState {
 		consumerRejoin: { attempts: 0, timer: null },
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
+		lastReadyAt: 0,
 		status: "created",
 		retirementFailed: false,
 		generation: 0,
