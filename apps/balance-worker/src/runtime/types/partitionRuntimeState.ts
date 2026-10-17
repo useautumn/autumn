@@ -35,6 +35,7 @@ export type PartitionRuntimeState = {
 	terminalError: OwnedPartitionRecoveryRequiredError | null;
 	failureReason: string | null;
 	producerConnectionAttempted: boolean;
+	producerConnection: Promise<void> | null;
 	followerStartAttempted: boolean;
 	startPromise: Promise<void> | null;
 	stopPromise: Promise<void> | null;

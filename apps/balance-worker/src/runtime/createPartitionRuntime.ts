@@ -6,6 +6,7 @@ import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
 import { fenceRuntime } from "./lifecycle/fenceRuntime.js";
 import {
 	activateRuntime,
+	connectRuntime,
 	prepareRuntime,
 	startRuntime,
 } from "./lifecycle/startRuntime.js";
@@ -85,6 +86,10 @@ export function createPartitionRuntime({
 		return prepareRuntime({ ctx, state });
 	}
 
+	function connect(): Promise<void> {
+		return connectRuntime({ ctx, state });
+	}
+
 	function activate(): Promise<void> {
 		return activateRuntime({ ctx, state });
 	}
@@ -138,6 +143,7 @@ export function createPartitionRuntime({
 	return {
 		start,
 		prepare,
+		connect,
 		activate,
 		fence,
 		drain,
@@ -184,6 +190,7 @@ function createRuntimeState(): PartitionRuntimeState {
 		terminalError: null,
 		failureReason: null,
 		producerConnectionAttempted: false,
+		producerConnection: null,
 		followerStartAttempted: false,
 		startPromise: null,
 		stopPromise: null,

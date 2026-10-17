@@ -39,11 +39,10 @@ export async function completeRuntimeStartup({
 
 	try {
 		const startedAt = performance.now();
-		state.producerConnectionAttempted = true;
-		await ctx.producer.connect();
+		await connectRuntimeProducer({ ctx, state });
 		assertStartupContinues({ state });
 		const connectedAt = performance.now();
-		await ctx.producer.fence();
+		await ctx.producer.fenceOwnership?.();
 		assertStartupContinues({ state });
 		const fencedAt = performance.now();
 		await claimOwnedPartition({ ctx });
@@ -108,6 +107,36 @@ export async function completeRuntimeStartup({
 			throw new OwnedPartitionNotReadyError({ status: state.status });
 		throw await enterRuntimeRecovery({ ctx, state, cause });
 	}
+}
+
+export async function completeRuntimeConnection({
+	ctx,
+	state,
+}: PartitionRuntimeScope): Promise<void> {
+	try {
+		await connectRuntimeProducer({ ctx, state });
+	} catch (cause) {
+		if (state.terminalError) throw state.terminalError;
+		if (state.status === "draining")
+			throw new OwnedPartitionNotReadyError({ status: state.status });
+		throw await enterRuntimeRecovery({ ctx, state, cause });
+	}
+}
+
+function connectRuntimeProducer({
+	ctx,
+	state,
+}: PartitionRuntimeScope): Promise<void> {
+	state.producerConnectionAttempted = true;
+	state.producerConnection ??= connectAndFenceProducer({ ctx });
+	return state.producerConnection;
+}
+
+async function connectAndFenceProducer({
+	ctx,
+}: Pick<PartitionRuntimeScope, "ctx">): Promise<void> {
+	await ctx.producer.connect();
+	await ctx.producer.fence();
 }
 
 async function claimOwnedPartition({

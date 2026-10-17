@@ -1,6 +1,7 @@
 import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
 import {
+	completeRuntimeConnection,
 	completeRuntimePreparation,
 	completeRuntimeStartup,
 } from "./startupSteps.js";
@@ -36,6 +37,18 @@ export function prepareRuntime({
 	state.status = "preparing";
 	state.preparationFollower = follower;
 	state.startPromise = completeRuntimePreparation({ ctx, state, follower });
+	return state.startPromise;
+}
+
+export function connectRuntime({
+	ctx,
+	state,
+}: PartitionRuntimeScope): Promise<void> {
+	if (state.status !== "prepared")
+		return Promise.reject(
+			new OwnedPartitionNotReadyError({ status: state.status }),
+		);
+	state.startPromise = completeRuntimeConnection({ ctx, state });
 	return state.startPromise;
 }
 

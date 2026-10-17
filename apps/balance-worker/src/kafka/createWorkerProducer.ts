@@ -57,8 +57,6 @@ export function createWorkerProducer({
 		} catch (cause) {
 			throw translateKafkaProducerError({ topic, partition, cause });
 		}
-		// A handoff names the epoch before activation: the marker goes in here and the catch-up covers it.
-		await fenceOwnership();
 	}
 	async function fenceOwnership(): Promise<{ offset: bigint } | null> {
 		if (session.mode !== "idempotent") return null;

@@ -118,6 +118,7 @@ export type RuntimeUnavailableListener = (failure: RuntimeFailure) => void;
 export type PartitionRuntime = {
 	/** Read-only, on the preparation follower: its stop settles before activation starts the real one. */
 	prepare(): Promise<void>;
+	connect(): Promise<void>;
 	activate(): Promise<void>;
 	/** After the claim: writes the owner's fence marker and reads up to it, so nothing a stale owner appends can slip in. */
 	fence(): Promise<void>;
