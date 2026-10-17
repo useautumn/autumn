@@ -297,6 +297,102 @@ When a feature is part of a [credit system](/documentation/modelling-pricing/cre
 
 When more than one cap applies to a check (the cap on the evaluated feature and a cap on its parent credit system), Autumn enforces the **tightest** one — the remaining headroom is the minimum across all armed caps.
 
+## Balance Allocations
+
+A balance allocation reserves part of a customer's shared balance for one [entity](/documentation/customers/feature-entities). No other entity can draw from that reservation. Set allocations with `balanceAllocations` when [updating a customer](/api-reference/customers/updateCustomer).
+
+> **Example** <br />
+> An org (the customer) has 1,000 credits a month shared across its workspaces (entities). You allocate 400 to `workspace_a` and 300 to `workspace_b`. Workspace A can always spend its 400, whatever B does. The 300 left unreserved is open to any workspace.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "org_123",
+  billingControls: {
+    balanceAllocations: [{
+      featureId: "credits",
+      interval: "month",
+      allocations: [
+        { entityId: "workspace_a", amount: 400 },
+        { entityId: "workspace_b", amount: 300 },
+      ],
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="org_123",
+    billing_controls={
+        "balance_allocations": [{
+            "feature_id": "credits",
+            "interval": "month",
+            "allocations": [
+                {"entity_id": "workspace_a", "amount": 400},
+                {"entity_id": "workspace_b", "amount": 300},
+            ],
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "billing_controls": {
+      "balance_allocations": [{
+        "feature_id": "credits",
+        "interval": "month",
+        "allocations": [
+          {"entity_id": "workspace_a", "amount": 400},
+          {"entity_id": "workspace_b", "amount": 300}
+        ]
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature whose shared balance is allocated |
+| `interval` | string | Reset interval of the shared balance being allocated, e.g. `"month"` |
+| `allocations` | array | Every `{ entity_id, amount }` for this feature. Entities left out release their share; `amount: 0` does the same. |
+
+### How it works
+
+- **Allocations can't exceed the shared balance.** Reserving more than is available returns `allocation_exceeds_available`.
+- **An allocation is a guaranteed share, not a cap.** An entity spends its own share first, then any unreserved credits. To also cap an entity, add a [usage limit](#usage-limits).
+- **Shares refill every cycle** with the shared balance, and each entity's usage against its share resets to 0.
+- **If the shared balance shrinks** below what's reserved (for example after a downgrade), every share is scaled down proportionally until the next cycle refills it.
+- **Each update replaces the full list.** Omit `balance_allocations` to keep the current allocations; pass `[]` to un-allocate them all.
+
+### Reading allocations
+
+- The customer's balance shows `allocated` (credits reserved for entities) and `unallocated` (shared credits any entity can use).
+- An entity's balance row shows `source: "customer"` and `allocation.amount`.
+- `check` on an entity returns what it can spend: its unused share plus unallocated credits.
+
+Allocations are set on the customer, not the entity, because they divide the customer's shared balance.
+
+### Usage limits vs. balance allocations
+
+- **Usage limit:** a maximum that can be drawn from the available balance.
+- **Balance allocation:** a reservation for a particular entity, that no other entity can draw from.
+
+Example: a pool of 100 credits shared by 3 users. You could have:
+
+- **Usage limit of 50 each:** no single user can spend more than 50. The limits can add up to more than the pool (150 here), since each one only caps what that user can spend.
+- **Allocation of 33 each:** every user is guaranteed 33, whatever the others do. Allocations can't add up to more than 100, because you can't reserve more than what's available.
+
+You can also combine them: an allocation of 20 plus a usage limit of 50 means a user always has 20 available and can never spend more than 50.
+
 ## Usage Alerts
 
 Usage alerts fire a webhook when a customer's usage crosses a threshold. They don't block usage — they notify, so you can take action like sending a warning email or prompting an upgrade.
@@ -498,7 +594,7 @@ Billing controls can be set at two levels:
 Overrides are resolved **per feature**: an entity's own entry for a feature wins, and the customer's entries fill in any features the entity doesn't set. For usage limits specifically, an inherited (customer-level) cap counts usage against the **shared customer window** — it's the same aggregate cap, not a separate per-entity copy. An entity-level usage limit, by contrast, gets its own per-entity window and counter.
 
 > **Example — per-entity cap** <br />
-> An org (the customer) has 1,000 monthly API calls shared across its workspaces (entities). You set a customer-level usage limit of 1,000/month so the org can't exceed its plan, and an entity-level limit of 200/day on a noisy workspace so it can't starve the others. The workspace is blocked at 200/day; the org is blocked at 1,000/month.
+> An org (the customer) has 1,000 monthly API calls shared across its workspaces (entities). You set an entity-level limit of 200/day on a noisy workspace so it can't starve the others. The workspace is blocked at 200/day, and the org's 1,000-call balance still caps all workspaces combined.
 
 <CodeGroup>
 
