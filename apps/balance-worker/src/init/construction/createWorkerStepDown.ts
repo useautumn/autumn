@@ -1,6 +1,7 @@
 import {
 	BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
 	BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
+	BALANCE_WORKER_STEP_DOWN_MAX_OWNER_LAG_MS,
 	BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 	BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
@@ -86,13 +87,25 @@ export function createWorkerStepDown({
 	return { start, stop };
 }
 
-function readFleetProgressWithin({
+export function readFleetProgressWithin({
 	read,
 	timeoutMs,
 }: {
 	read: () => Promise<FleetProgress>;
 	timeoutMs: number;
 }): () => Promise<FleetProgress> {
+	const state: { inFlight: Promise<FleetProgress> | null } = { inFlight: null };
+	async function readThenSettle(): Promise<FleetProgress> {
+		try {
+			return await read();
+		} finally {
+			state.inFlight = null;
+		}
+	}
+	function startOrJoin(): Promise<FleetProgress> {
+		state.inFlight ??= readThenSettle();
+		return state.inFlight;
+	}
 	async function readWithin(): Promise<FleetProgress> {
 		const late = Promise.withResolvers<never>();
 		function expire(): void {
@@ -100,7 +113,7 @@ function readFleetProgressWithin({
 		}
 		const timer = setTimeout(expire, timeoutMs);
 		try {
-			return await Promise.race([read(), late.promise]);
+			return await Promise.race([startOrJoin(), late.promise]);
 		} finally {
 			clearTimeout(timer);
 		}
@@ -153,6 +166,7 @@ function createController({
 			minKeptUp: Math.ceil(
 				config.partitionCount * BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 			),
+			maxOwnerLagMs: BALANCE_WORKER_STEP_DOWN_MAX_OWNER_LAG_MS,
 			recheckAttempts: BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
 			recheckIntervalMs: BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
 			minStalledPartitions: BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,

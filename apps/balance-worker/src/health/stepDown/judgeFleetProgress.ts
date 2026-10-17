@@ -8,11 +8,15 @@ export function judgeFleetProgress({
 	after,
 	ownPartitions,
 	minKeptUp,
+	elapsedMs,
+	maxLagMs,
 }: {
 	before: FleetProgress;
 	after: FleetProgress;
 	ownPartitions: ReadonlySet<number>;
 	minKeptUp: number;
+	elapsedMs: number;
+	maxLagMs: number;
 }): FleetProgressVerdict {
 	let active = 0;
 	let keptUp = 0;
@@ -21,8 +25,16 @@ export function judgeFleetProgress({
 		const baselineHigh = before.highWatermarks.get(partition);
 		if (baselineHigh === undefined || highWatermark <= baselineHigh) continue;
 		active += 1;
-		const nextOffset = after.nextOffsets.get(partition);
-		if (nextOffset !== undefined && nextOffset > baselineHigh) keptUp += 1;
+		const owner = {
+			baselineNext: before.nextOffsets.get(partition),
+			next: after.nextOffsets.get(partition),
+		};
+		if (owner.baselineNext === undefined || owner.next === undefined) continue;
+		if (owner.next <= owner.baselineNext || owner.next <= baselineHigh)
+			continue;
+		const arrived = highWatermark - baselineHigh;
+		const lag = highWatermark - owner.next;
+		if (lag * BigInt(elapsedMs) <= arrived * BigInt(maxLagMs)) keptUp += 1;
 	}
 	return { ok: keptUp >= minKeptUp && keptUp * 2 >= active, active, keptUp };
 }

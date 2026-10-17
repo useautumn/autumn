@@ -20,7 +20,11 @@ type StepDownControllerContext = {
 	permits: StepDownPermits;
 	partitions: Pick<
 		Partitions,
-		"stepDown" | "isSteppedDown" | "hasAssignment" | "holdingOf"
+		| "stepDown"
+		| "isSteppedDown"
+		| "hasAssignment"
+		| "holdingOf"
+		| "heldPartitions"
 	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	now?: () => number;
@@ -31,6 +35,7 @@ type StepDownControllerConfig = {
 	peerWaitMs: number;
 	peerPollMs: number;
 	minKeptUp: number;
+	maxOwnerLagMs: number;
 	recheckAttempts: number;
 	recheckIntervalMs: number;
 	minStalledPartitions: number;
@@ -145,27 +150,33 @@ export function createStepDownController({
 	}: {
 		trigger: OwnNetworkVerdict;
 	}): boolean {
-		const held = trigger.stalledHoldings.filter(
+		const stillStalled = trigger.stalledHoldings.filter(
 			({ partition, holding }) =>
 				ctx.partitions.holdingOf({ partition }) === holding,
+		).length;
+		return (
+			stillStalled >= config.minStalledPartitions &&
+			stillStalled * 2 > ctx.partitions.heldPartitions().length
 		);
-		return held.length >= config.minStalledPartitions;
 	}
 
 	async function awaitFleetKeepingUp(): Promise<FleetProgressVerdict> {
 		const baseline = await readProgressOrNone();
+		const baselineAt = now();
 		let verdict: FleetProgressVerdict = { ok: false, active: 0, keptUp: 0 };
 		if (!baseline) return verdict;
-		const deadline = now() + config.peerWaitMs;
+		const deadline = baselineAt + config.peerWaitMs;
 		while (!state.stopped && now() + config.peerPollMs <= deadline) {
 			await sleep(config.peerPollMs);
 			const current = await readProgressOrNone();
-			if (!current) continue;
+			if (!current || now() > deadline) continue;
 			verdict = judgeFleetProgress({
 				before: baseline,
 				after: current,
 				ownPartitions: ctx.ownPartitions(),
 				minKeptUp: config.minKeptUp,
+				elapsedMs: now() - baselineAt,
+				maxLagMs: config.maxOwnerLagMs,
 			});
 			if (verdict.ok) return verdict;
 		}
