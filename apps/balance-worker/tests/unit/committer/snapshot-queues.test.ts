@@ -461,7 +461,7 @@ describe("snapshot lane writes: refreshes", () => {
 			requestCount: () => requests.length,
 		});
 		await store.initializePartition({ topic, partition: 4, nextOffset: 7n });
-		await store.claimPartition({ topic, partition: 4 });
+		await store.claimPartition({ topic, partition: 4, ownerEpoch: "3" });
 
 		deletes.enqueueRefresh({
 			topic,
@@ -494,7 +494,7 @@ describe("snapshot lane writes: refreshes", () => {
 			requestCount: () => requests.length,
 		});
 		await store.initializePartition({ topic, partition: 4, nextOffset: 7n });
-		await store.claimPartition({ topic, partition: 4 });
+		await store.claimPartition({ topic, partition: 4, ownerEpoch: "3" });
 		deletes.enqueueDelete({ topic, partition: 4, customerKey: keyOf(1) });
 		await drained();
 		expect(requests[0]?.bookmarks).toEqual([]);
