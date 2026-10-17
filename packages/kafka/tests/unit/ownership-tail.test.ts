@@ -353,6 +353,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: { endpoint: "http://successor:8080" },
 				release: null,
+				readyEndpoints: [],
 			});
 			await fixture.deliver({
 				partition: 4,
@@ -371,6 +372,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 		} finally {
 			await tail.stop();
@@ -415,6 +417,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			// Only the owner's own drain counts; a stranger's is a late record.
 			await fixture.deliver({
@@ -434,6 +437,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				},
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			// A claim or release concludes the drain.
 			await fixture.deliver({
@@ -445,6 +449,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			expect(tail.readView({ partition: 4 })).toBeNull();
 			expect(errors).toEqual([]);
@@ -638,6 +643,7 @@ describe("ownershipTail", function ownershipTailTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			expect(heard).toEqual([11n, 12n, 13n]);
 			expect(errors).toEqual([]);

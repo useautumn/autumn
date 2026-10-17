@@ -552,6 +552,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			const second = f.publication.awaitDraining({ signal: controller.signal });
 			f.deliver({
@@ -580,6 +581,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: { endpoint: "http://third.test", successor: "http://x" },
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 			expect(f.publication.readActiveDrain()).toEqual({
 				endpoint: "http://third.test",
@@ -617,6 +619,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: release === null ? null : { endpoint: release },
+				readyEndpoints: [],
 			});
 			const releasedBy = (endpoint: string): OwnershipRecord => ({
 				schemaVersion: 1,
@@ -679,6 +682,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: { endpoint: "http://other.test" },
+				readyEndpoints: [],
 			});
 			f.deliver({
 				partition: 2,

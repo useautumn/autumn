@@ -80,6 +80,7 @@ export function createOwnershipTail({
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
+				readyEndpoints: [],
 			});
 		} else if (
 			record.type === "unowned" ||
@@ -91,6 +92,7 @@ export function createOwnershipTail({
 				activePreparation: null,
 				release:
 					record.type === "released" ? { endpoint: record.endpoint } : null,
+				readyEndpoints: view?.readyEndpoints ?? [],
 			});
 		} else if (record.type === "draining" && view?.owner === record.endpoint) {
 			view.activeDrain = {
@@ -106,12 +108,13 @@ export function createOwnershipTail({
 					activeDrain: null,
 					activePreparation: preparation,
 					release: null,
+					readyEndpoints: [],
 				});
-		} else if (
-			record.type === "ready" &&
-			view?.activePreparation?.endpoint === record.endpoint
-		) {
-			view.activePreparation = null;
+		} else if (record.type === "ready" && view) {
+			if (view.activePreparation?.endpoint === record.endpoint)
+				view.activePreparation = null;
+			if (!view.readyEndpoints.includes(record.endpoint))
+				view.readyEndpoints = [...view.readyEndpoints, record.endpoint];
 		}
 	}
 
