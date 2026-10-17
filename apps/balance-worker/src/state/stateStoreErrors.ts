@@ -12,6 +12,29 @@ export class PartitionProgressNotFoundError extends Error {
 	}
 }
 
+export class PartitionClaimRefusedError extends Error {
+	readonly topic: string;
+	readonly partition: number;
+	readonly ownerEpoch: string;
+	constructor({
+		topic,
+		partition,
+		ownerEpoch,
+	}: {
+		topic: string;
+		partition: number;
+		ownerEpoch: string;
+	}) {
+		super(
+			`Claim of ${topic}[${partition}] at epoch ${ownerEpoch} refused: a newer owner holds the partition`,
+		);
+		this.name = "PartitionClaimRefusedError";
+		this.topic = topic;
+		this.partition = partition;
+		this.ownerEpoch = ownerEpoch;
+	}
+}
+
 export class MeteringStatePartitionMismatchError extends Error {
 	constructor({ partitionKey }: { partitionKey: string }) {
 		super(`Metering state ${partitionKey} belongs to another Kafka partition`);

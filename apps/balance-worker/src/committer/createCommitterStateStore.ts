@@ -2,6 +2,8 @@ import type {
 	EdgeConfigStore,
 	SubjectSnapshotsEdgeConfig,
 } from "@autumn/edge-config";
+import { epochClaimToken } from "@autumn/postgres";
+import { PartitionClaimRefusedError } from "../state/stateStoreErrors.js";
 import type { CommitterDb } from "../types/committerDb.js";
 import { applyDurableMutations } from "./actions/applyDurableMutations.js";
 import {
@@ -96,9 +98,21 @@ export const createCommitterStateStore = ({
 			run: () => advanceOwnerFenceProgress({ ctx, ...params, claimToken }),
 		});
 	}
-	async function claimPartition(position: PartitionPosition): Promise<void> {
-		const claimToken = crypto.randomUUID();
-		await ctx.db.claimPartitionProgress({ ...position, claimToken });
+	async function claimPartition({
+		ownerEpoch,
+		...position
+	}: PartitionPosition & { ownerEpoch?: string }): Promise<void> {
+		const id = crypto.randomUUID();
+		const epoch = ownerEpoch === undefined ? undefined : BigInt(ownerEpoch);
+		const claimToken =
+			epoch === undefined ? id : epochClaimToken({ ownerEpoch: epoch, id });
+		const claimed = await ctx.db.claimPartitionProgress({
+			...position,
+			claimToken,
+			ownerEpoch: epoch,
+		});
+		if (!claimed && ownerEpoch !== undefined)
+			throw new PartitionClaimRefusedError({ ...position, ownerEpoch });
 		claimTokens.set(keyOf(position), claimToken);
 	}
 	function readOwnerFence(params: PartitionPosition) {
