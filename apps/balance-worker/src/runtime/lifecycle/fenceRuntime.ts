@@ -1,5 +1,6 @@
 import { OwnedPartitionNotReadyError } from "../runtimeErrors.js";
 import type { PartitionRuntimeScope } from "../types/partitionRuntimeState.js";
+import { claimOwnedPartition } from "./claimOwnedPartition.js";
 import { enterRuntimeRecovery } from "./enterRuntimeRecovery.js";
 
 /**
@@ -28,6 +29,7 @@ export async function fenceRuntime({
 			nextOffset: fenced.offset + 1n,
 			signal,
 		});
+		await claimOwnedPartition({ ctx });
 	} catch (cause) {
 		if (state.terminalError) throw state.terminalError;
 		throw await enterRuntimeRecovery({ ctx, state, cause });
