@@ -30,5 +30,8 @@ export const describeNumberMatcher = ({
 			return bound === undefined ? undefined : `${symbol} ${format(bound)}`;
 		}),
 	];
-	return parts.filter((part): part is string => Boolean(part)).join(" and ");
+	return (
+		parts.filter((part): part is string => Boolean(part)).join(" and ") ||
+		"any amount"
+	);
 };
