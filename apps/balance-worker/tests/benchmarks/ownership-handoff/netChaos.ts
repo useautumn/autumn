@@ -763,6 +763,7 @@ function verdictSummary(verdict: unknown) {
 			v.retransmitRatio === null || v.retransmitRatio === undefined
 				? null
 				: Number(v.retransmitRatio.toFixed(4)),
+		busyPartitions: v.busyPartitions,
 		stalledPartitions: v.stalledPartitions,
 		heldPartitions: v.heldPartitions,
 		losesPackets: v.losesPackets,
@@ -807,12 +808,12 @@ const timelines = Object.fromEntries(
 				(e) =>
 					e.worker === worker.name && e.event === event && e.t >= faultStart,
 			);
+		const firstDegraded = mine.find((t) => t.verdict.state === "degraded");
 		return [
 			worker.name,
 			{
-				firstDegradedMs: relOrNull(
-					mine.find((t) => t.verdict.state === "degraded")?.t,
-				),
+				firstDegradedMs: relOrNull(firstDegraded?.t),
+				firstDegradedVerdict: verdictSummary(firstDegraded?.verdict),
 				firstCheckMs: relOrNull(
 					fleetReads.find(
 						(e) => e.worker === worker.name && e.startedAt >= faultStart,
@@ -851,7 +852,7 @@ const timelines = Object.fromEntries(
 						worker: worker.name,
 						event: "log.warn",
 						match:
-							/not keeping up|could not be read|too slowly to judge|recovered before the step-down/,
+							/not keeping up|could not be judged|could not be read|too slowly to judge|recovered before the step-down/,
 					}),
 					...logsOf({
 						worker: worker.name,
