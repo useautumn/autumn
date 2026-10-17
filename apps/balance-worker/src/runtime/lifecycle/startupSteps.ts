@@ -1,8 +1,6 @@
-import { PartitionClaimRefusedError } from "../../state/stateStoreErrors.js";
 import { PartitionBootstrapRefusedError } from "../bootstrap/partitionBootstrapErrors.js";
 import {
 	OwnedPartitionNotReadyError,
-	OwnedPartitionProducerFencedError,
 	PartitionPreparationFailedError,
 } from "../runtimeErrors.js";
 import type {
@@ -13,6 +11,7 @@ import type {
 	PartitionRuntimeScope,
 	PartitionRuntimeState,
 } from "../types/partitionRuntimeState.js";
+import { claimOwnedPartition } from "./claimOwnedPartition.js";
 import {
 	stopPreparationInBackground,
 	stopRuntimePreparation,
@@ -85,22 +84,6 @@ export async function completeRuntimeStartup({
 		if (state.status === "draining")
 			throw new OwnedPartitionNotReadyError({ status: state.status });
 		throw await enterRuntimeRecovery({ ctx, state, cause });
-	}
-}
-
-async function claimOwnedPartition({
-	ctx,
-}: Pick<PartitionRuntimeScope, "ctx">): Promise<void> {
-	const { topic, partition } = ctx.config;
-	try {
-		await ctx.stateStore.claimPartition?.({
-			topic,
-			partition,
-			ownerEpoch: ctx.ownerEpoch?.(),
-		});
-	} catch (cause) {
-		if (!(cause instanceof PartitionClaimRefusedError)) throw cause;
-		throw new OwnedPartitionProducerFencedError({ topic, partition, cause });
 	}
 }
 

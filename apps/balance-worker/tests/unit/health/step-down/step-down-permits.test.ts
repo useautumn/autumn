@@ -81,15 +81,74 @@ describe("step-down permits", () => {
 		expect(result).toMatchObject({ ok: false, reason: "unavailable" });
 	});
 
-	test("release frees only the holder's own permit", async () => {
+	test("release frees only the holder's own permit, and a released slot is taken again", async () => {
 		const memory = createMemoryAdminObjects();
 		const a = permitsFor({ memory, holder: "a", now: Date.now });
 		const b = permitsFor({ memory, holder: "b", now: Date.now });
+		const c = permitsFor({ memory, holder: "c", now: Date.now });
 		const held = await a.acquire();
+		await b.acquire();
 		if (!held.ok) throw new Error("Expected a permit");
-		await b.release({ permit: held.permit });
-		expect(memory.stored.size).toBe(1);
+		await c.release({ permit: held.permit });
+		expect(await c.acquire()).toEqual({ ok: false, reason: "all_taken" });
 		await a.release({ permit: held.permit });
-		expect(memory.stored.size).toBe(0);
+		expect(await c.acquire()).toMatchObject({
+			ok: true,
+			permit: { slot: 0 },
+		});
+	});
+
+	test("a holder that keeps renewing keeps its slot past the first expiry", async () => {
+		const time = { now: 0 };
+		const memory = createMemoryAdminObjects({ now: () => time.now });
+		const now = () => time.now;
+		const a = permitsFor({ memory, holder: "a", now });
+		const b = permitsFor({ memory, holder: "b", now });
+		const heldA = await a.acquire();
+		const heldB = await b.acquire();
+		if (!heldA.ok || !heldB.ok) throw new Error("Expected permits");
+		time.now = 5 * HOUR;
+		expect(await a.renew({ permit: heldA.permit })).toBe(true);
+		expect(await b.renew({ permit: heldB.permit })).toBe(true);
+		time.now = 7 * HOUR;
+		const c = permitsFor({ memory, holder: "c", now });
+		expect(await c.acquire()).toEqual({ ok: false, reason: "all_taken" });
+		expect(await c.renew({ permit: heldA.permit })).toBe(false);
+	});
+
+	test("a release that loses its race to a new holder leaves that holder's permit in place", async () => {
+		const time = { now: 0 };
+		const memory = createMemoryAdminObjects({ now: () => time.now });
+		const now = () => time.now;
+		const a = permitsFor({ memory, holder: "a", now });
+		const b = permitsFor({ memory, holder: "b", now });
+		const heldA = await a.acquire();
+		const heldB = await b.acquire();
+		if (!heldA.ok || !heldB.ok) throw new Error("Expected permits");
+		time.now = 6 * HOUR + 1;
+		expect(await b.renew({ permit: heldB.permit })).toBe(true);
+		memory.state.afterRead = async () => {
+			const taken = await permitsFor({ memory, holder: "c", now }).acquire();
+			expect(taken).toMatchObject({ ok: true, permit: { slot: 0 } });
+		};
+		await a.release({ permit: heldA.permit });
+		expect(await permitsFor({ memory, holder: "d", now }).acquire()).toEqual({
+			ok: false,
+			reason: "all_taken",
+		});
+	});
+
+	test("a permit record that does not parse is never taken over", async () => {
+		const memory = createMemoryAdminObjects();
+		memory.put({
+			key: "admin/balance-worker-step-down/prod/slot-0.json",
+			body: "{not json",
+		});
+		const taken = await permitsFor({
+			memory,
+			holder: "a",
+			now: Date.now,
+		}).acquire();
+		expect(taken).toMatchObject({ ok: true, permit: { slot: 1 } });
 	});
 });

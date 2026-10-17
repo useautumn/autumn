@@ -140,21 +140,6 @@ describe("partitionProgress repo", () => {
 		expect(statements[0]?.params).toEqual(["metering", 7, 0n, "claim_a"]);
 	});
 
-	test("a claim with no known epoch replaces the partition's claim token unconditionally and answers that it took", async () => {
-		const { db, statements } = capturingDb({ rows: [] });
-		const claimed = await claimPartitionProgress({
-			ctx: { db },
-			topic: "metering",
-			partition: 7,
-			claimToken: "claim_b",
-		});
-		expect(claimed).toBe(true);
-		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
-			"UPDATE partition_progress SET claim_token = $1 WHERE topic = $2 AND partition_id = $3",
-		);
-		expect(statements[0]?.params).toEqual(["claim_b", "metering", 7]);
-	});
-
 	test("a claim with an epoch binds its token, position and epoch, and answers what the statement answered", async () => {
 		const token = epochClaimToken({ ownerEpoch: 512n, id: "u1" });
 		const took = capturingDb({ rows: [{ claimed: true }] });

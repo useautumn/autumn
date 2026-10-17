@@ -13,6 +13,7 @@ import {
 import { clearConsumerRejoin } from "./lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
+	closePartitionAdmission,
 	detachPartitions,
 	stopPartitions,
 } from "./lifecycle/stopPartitions.js";
@@ -21,6 +22,7 @@ import type {
 	AllocationScope,
 	PartitionEntry,
 	PartitionsScope,
+	PartitionsState,
 } from "./types/partitionState.js";
 import type { PartitionServiceStopReason } from "./types/partitions.js";
 
@@ -59,12 +61,26 @@ export function stepDownPartitionService({
 	ctx,
 	state,
 }: PartitionsScope): Promise<void> {
-	if (state.status !== "running") return stopPartitionService({ ctx, state });
+	if (state.status !== "running" && state.status !== "stopping")
+		return stopPartitionService({ ctx, state });
 	state.steppedDown = true;
 	for (const entry of [...state.handingOff.values()])
-		cancelPartitionHandoff({ state, entry });
+		withdrawHandoffNow({ state, entry });
 	void leaveGroupNow({ ctx });
 	return stopPartitionService({ ctx, state });
+}
+
+function withdrawHandoffNow({
+	state,
+	entry,
+}: {
+	state: PartitionsState;
+	entry: PartitionEntry;
+}): void {
+	if (state.status === "running" && cancelPartitionHandoff({ state, entry }))
+		return;
+	state.directory.withdraw({ partition: entry.partition });
+	closePartitionAdmission({ entry });
 }
 
 async function leaveGroupNow({

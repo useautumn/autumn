@@ -400,8 +400,12 @@ const createRuntime = ({
 describe("owned partition runtime", () => {
 	function createBareFencedRuntime({
 		fenceOwnership,
+		ownerEpoch,
+		claimPartition,
 	}: {
 		fenceOwnership: () => Promise<{ offset: bigint } | null>;
+		ownerEpoch?: () => string | undefined;
+		claimPartition?: SqliteStateStore["claimPartition"];
 	}) {
 		const fixture = createStoreFixture();
 		const events: string[] = [];
@@ -414,7 +418,10 @@ describe("owned partition runtime", () => {
 		};
 		const runtime = createPartitionRuntime({
 			ctx: {
-				stateStore: fixture.store,
+				stateStore: claimPartition
+					? { ...fixture.store, claimPartition }
+					: fixture.store,
+				ownerEpoch,
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				producer: {
@@ -487,6 +494,55 @@ describe("owned partition runtime", () => {
 		}
 	});
 
+	test("a self-claimed runtime claims nothing at activation and claims under the named epoch at its fence", async () => {
+		const claims: unknown[] = [];
+		const epoch: { value: string | undefined } = { value: undefined };
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => ({ offset: 41n }),
+			ownerEpoch: () => epoch.value,
+			claimPartition: async (params) => {
+				claims.push(params);
+			},
+		});
+		try {
+			await f.runtime.start();
+			expect(claims).toEqual([]);
+			epoch.value = "9";
+			await f.runtime.fence();
+			expect(claims).toEqual([{ topic, partition, ownerEpoch: "9" }]);
+			expect(f.runtime.getStatus()).toBe("ready");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
+	test("a claim refused at the fence fences the runtime instead of serving", async () => {
+		const epoch: { value: string | undefined } = { value: undefined };
+		const f = createBareFencedRuntime({
+			fenceOwnership: async () => ({ offset: 41n }),
+			ownerEpoch: () => epoch.value,
+			claimPartition: async () => {
+				throw new PartitionClaimRefusedError({
+					topic,
+					partition,
+					ownerEpoch: "9",
+				});
+			},
+		});
+		try {
+			await f.runtime.start();
+			epoch.value = "9";
+			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+				OwnedPartitionProducerFencedError,
+			);
+			expect(f.runtime.getStatus()).toBe("recovery_required");
+		} finally {
+			await f.runtime.stop().catch(() => undefined);
+			closeStoreFixture(f.fixture);
+		}
+	});
+
 	test("a marker that cannot be written sends the runtime into recovery instead of serving unfenced", async () => {
 		const f = createBareFencedRuntime({
 			fenceOwnership: async () => {
@@ -524,6 +580,7 @@ describe("owned partition runtime", () => {
 			},
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
+			ownerEpoch: () => "7",
 			bootstrap: async ({ logRange }) => {
 				startup.push("bootstrap");
 				expect(runtime.getStatus()).toBe("bootstrapping");
@@ -605,7 +662,9 @@ describe("owned partition runtime", () => {
 			});
 			try {
 				await runtime.start();
-				expect(claims).toEqual([{ topic, partition, ownerEpoch: held }]);
+				expect(claims).toEqual(
+					held === undefined ? [] : [{ topic, partition, ownerEpoch: held }],
+				);
 			} finally {
 				await runtime.stop();
 				closeStoreFixture(fixture);

@@ -115,6 +115,6 @@ export type CommitterStateStore = StateStore & {
 	/** Fills the progress mirror from Postgres; must run before bootstrap reads `readNextOffset`. */
 	loadProgress(params: PartitionPosition): Promise<void>;
 	claimPartition(
-		params: PartitionPosition & { ownerEpoch?: string },
+		params: PartitionPosition & { ownerEpoch: string },
 	): Promise<void>;
 };

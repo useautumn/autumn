@@ -66,7 +66,7 @@ export type StateStore = {
 	claimPartition?(params: {
 		topic: string;
 		partition: number;
-		ownerEpoch?: string;
+		ownerEpoch: string;
 	}): Promise<void>;
 	/** Null for a store that keeps no fence, or a partition whose log has carried none. */
 	readOwnerFence?(params: {

@@ -110,15 +110,8 @@ export const claimPartitionProgress = async ({
 }: {
 	ctx: ProgressContext;
 	claimToken: string;
-	ownerEpoch?: bigint;
+	ownerEpoch: bigint;
 } & PartitionPosition): Promise<boolean> => {
-	if (ownerEpoch === undefined) {
-		await ctx.db.execute(sql`
-			UPDATE partition_progress SET claim_token = ${claimToken}
-			WHERE topic = ${topic} AND partition_id = ${partition}
-		`);
-		return true;
-	}
 	const { rows } = await ctx.db.execute(sql`
 		WITH existing AS (
 			SELECT 1 FROM partition_progress

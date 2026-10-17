@@ -70,9 +70,8 @@ describe.skipIf(!databaseUrl)(
 				)
 			).rows[0]?.claim_token as string | null | undefined;
 
-		const claim = ({ ownerEpoch, id }: { ownerEpoch?: bigint; id: string }) => {
-			const claimToken =
-				ownerEpoch === undefined ? id : epochClaimToken({ ownerEpoch, id });
+		const claim = ({ ownerEpoch, id }: { ownerEpoch: bigint; id: string }) => {
+			const claimToken = epochClaimToken({ ownerEpoch, id });
 			return {
 				claimToken,
 				result: claimPartitionProgress({
@@ -80,7 +79,7 @@ describe.skipIf(!databaseUrl)(
 					topic,
 					partition,
 					claimToken,
-					...(ownerEpoch === undefined ? {} : { ownerEpoch }),
+					ownerEpoch,
 				}),
 			};
 		};
@@ -136,13 +135,6 @@ describe.skipIf(!databaseUrl)(
 			const next = claim({ ownerEpoch: 100n, id: "next" });
 			expect(await next.result).toBe(true);
 			expect(await storedToken()).toBe(next.claimToken);
-		});
-
-		test("with no known epoch the claim replaces whatever is stored", async () => {
-			const held = epochClaimToken({ ownerEpoch: 500n, id: "held" });
-			await seed({ claimToken: held, ownerEpoch: 500n });
-			expect(await claim({ id: "blind" }).result).toBe(true);
-			expect(await storedToken()).toBe("blind");
 		});
 
 		test("a partition with no row yet is not refused", async () => {

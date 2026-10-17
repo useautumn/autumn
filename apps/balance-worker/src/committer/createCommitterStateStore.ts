@@ -101,17 +101,18 @@ export const createCommitterStateStore = ({
 	async function claimPartition({
 		ownerEpoch,
 		...position
-	}: PartitionPosition & { ownerEpoch?: string }): Promise<void> {
-		const id = crypto.randomUUID();
-		const epoch = ownerEpoch === undefined ? undefined : BigInt(ownerEpoch);
-		const claimToken =
-			epoch === undefined ? id : epochClaimToken({ ownerEpoch: epoch, id });
+	}: PartitionPosition & { ownerEpoch: string }): Promise<void> {
+		const epoch = BigInt(ownerEpoch);
+		const claimToken = epochClaimToken({
+			ownerEpoch: epoch,
+			id: crypto.randomUUID(),
+		});
 		const claimed = await ctx.db.claimPartitionProgress({
 			...position,
 			claimToken,
 			ownerEpoch: epoch,
 		});
-		if (!claimed && ownerEpoch !== undefined)
+		if (!claimed)
 			throw new PartitionClaimRefusedError({ ...position, ownerEpoch });
 		claimTokens.set(keyOf(position), claimToken);
 	}

@@ -3,47 +3,68 @@ import type { PeerVerdict } from "./types/peerVerdict.js";
 
 export function judgePeers({
 	heartbeats,
+	unreadable,
 	selfEndpoint,
 	faultAt,
 	now,
-	liveMs,
+	membershipMs,
+	skewMs,
 	minPeers,
 }: {
 	heartbeats: readonly SlotHeartbeat[];
+	unreadable: number;
 	selfEndpoint: string;
 	faultAt: number;
 	now: number;
-	liveMs: number;
+	membershipMs: number;
+	skewMs: number;
 	minPeers: number;
 }): PeerVerdict {
-	const live = heartbeats.filter(
+	const members = [...latestByEndpoint({ heartbeats }).values()].filter(
 		(heartbeat) =>
 			heartbeat.endpoint !== selfEndpoint &&
 			!heartbeat.work?.steppedDown &&
-			Date.parse(heartbeat.writtenAt) >= now - liveMs,
+			Date.parse(heartbeat.writtenAt) >= now - membershipMs,
 	);
-	const healthy = live.filter((heartbeat) =>
-		vouchesSince({ heartbeat, faultAt }),
+	const healthy = members.filter((heartbeat) =>
+		vouchesSince({ heartbeat, after: faultAt + skewMs, until: now + skewMs }),
 	).length;
+	const live = members.length + unreadable;
 	return {
-		ok: healthy >= minPeers && healthy * 2 >= live.length,
-		live: live.length,
+		ok: healthy >= minPeers && healthy * 2 >= live,
+		live,
 		healthy,
 	};
 }
 
+function latestByEndpoint({
+	heartbeats,
+}: {
+	heartbeats: readonly SlotHeartbeat[];
+}): Map<string, SlotHeartbeat> {
+	const latest = new Map<string, SlotHeartbeat>();
+	for (const heartbeat of heartbeats) {
+		const known = latest.get(heartbeat.endpoint);
+		if (!known || Date.parse(heartbeat.writtenAt) > Date.parse(known.writtenAt))
+			latest.set(heartbeat.endpoint, heartbeat);
+	}
+	return latest;
+}
+
 function vouchesSince({
 	heartbeat,
-	faultAt,
+	after,
+	until,
 }: {
 	heartbeat: SlotHeartbeat;
-	faultAt: number;
+	after: number;
+	until: number;
 }): boolean {
 	const { work } = heartbeat;
 	if (!work || work.ownNetwork === "degraded" || work.lastSendAckAt === null)
 		return false;
-	return (
-		Date.parse(heartbeat.writtenAt) > faultAt &&
-		Date.parse(work.lastSendAckAt) > faultAt
-	);
+	return [heartbeat.writtenAt, work.lastSendAckAt].every((stamp) => {
+		const at = Date.parse(stamp);
+		return at > after && at <= until;
+	});
 }

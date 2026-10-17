@@ -530,6 +530,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				topic,
 				partition: 5,
 				claimToken: "owner_b",
+				ownerEpoch: 2n,
 			});
 
 			const lateEvict = await commitFlush({
@@ -595,6 +596,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				topic,
 				partition: 5,
 				claimToken: "owner_b",
+				ownerEpoch: 2n,
 			});
 
 			// What the lane sends for a refresh: no records, the bookmark it last saw, its own claim.

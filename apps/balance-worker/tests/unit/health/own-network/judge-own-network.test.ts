@@ -13,7 +13,6 @@ const THRESHOLDS: OwnNetworkThresholds = {
 	minStalledPartitions: 2,
 };
 
-/** One sample a second ending at `now`, each with the same loss and the same per-partition send ages. */
 function samplesOf({
 	now = 10_000,
 	count = 4,

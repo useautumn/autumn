@@ -166,7 +166,7 @@ async function handOffPartition({
 		const drained = await entry.drain;
 		if (!drained?.ok) return;
 		// The claim is the successor's signal to fence: it must follow the drain, never precede it.
-		if (successor) {
+		if (successor && !state.steppedDown) {
 			const { routeEpoch } = await entry.publication.claim({
 				endpoint: successor,
 			});

@@ -45,20 +45,24 @@ describe("read fleet heartbeats", () => {
 			key: slotHeartbeatKeyOf({ fleetId: "fleet", instanceId: "4-d" }),
 			body: JSON.stringify({ ...heartbeat, endpoint: "http://d" }),
 		});
-		const read = await readFleetHeartbeats({
+		const recent = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",
 			modifiedAfter: 50_000,
 		});
-		expect(read.map(({ endpoint }) => endpoint)).toEqual(["http://d"]);
+		expect(recent.heartbeats.map(({ endpoint }) => endpoint)).toEqual([
+			"http://d",
+		]);
+		expect(recent.unreadable).toBe(0);
 		const all = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",
 			modifiedAfter: 0,
 		});
-		expect(all.map(({ endpoint }) => endpoint).sort()).toEqual([
+		expect(all.heartbeats.map(({ endpoint }) => endpoint).sort()).toEqual([
 			"http://a",
 			"http://d",
 		]);
+		expect(all.unreadable).toBe(1);
 	});
 });

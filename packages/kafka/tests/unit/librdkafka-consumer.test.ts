@@ -1094,6 +1094,65 @@ describe("leaving the group", () => {
 		expect(fake.calls.at(-1)).toBe("disconnect");
 	});
 
+	test("leave lets a running loop serve the revocation instead of polling beside it", async () => {
+		const { fake, consumer, events } = createRunner();
+		const consume = fake.native.consume.bind(fake.native);
+		fake.native.consume = (count, done) => {
+			if (count === 1) fake.calls.push("leave-poll");
+			consume(count, done);
+		};
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => events.includes("join:0,1"));
+		await consumer.leave();
+		expect(fake.calls).toContain("incrementalUnassign:0,1");
+		expect(fake.calls).not.toContain("leave-poll");
+		await consumer.disconnect();
+	});
+
+	test("disconnect waits for a leave's own poll before closing the client", async () => {
+		const { fake, consumer, events } = createRunner();
+		const consume = fake.native.consume.bind(fake.native);
+		const leavePoll = Promise.withResolvers<void>();
+		fake.native.consume = (count, done) => {
+			if (count !== 1) return consume(count, done);
+			fake.calls.push("leave-poll");
+			consume(count, (error, messages) => {
+				void leavePoll.promise.then(() => {
+					fake.calls.push("leave-poll-done");
+					done(error, messages);
+				});
+			});
+		};
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => events.includes("join:0"));
+		const stuck = Promise.withResolvers<void>();
+		fake.gate.held = stuck.promise;
+		await until(() => fake.gate.held === undefined);
+		const leaving = consumer.leave();
+		await until(() => fake.calls.includes("leave-poll"), 3_000);
+		const disconnecting = consumer.disconnect();
+		stuck.resolve();
+		await Bun.sleep(50);
+		expect(fake.calls).not.toContain("disconnect");
+		leavePoll.resolve();
+		await disconnecting;
+		await leaving;
+		expect(fake.calls.indexOf("disconnect")).toBeGreaterThan(
+			fake.calls.indexOf("leave-poll-done"),
+		);
+		expect(fake.calls.filter((call) => call === "unsubscribe")).toHaveLength(1);
+	});
+
 	test("leave before the consumer has a client does nothing", async () => {
 		const { fake, consumer } = createRunner();
 		await consumer.connect();

@@ -16,6 +16,7 @@ import type { PartitionSendWatches } from "./types/partitionSendWatches.js";
 
 type OwnNetworkMonitorContext = {
 	sends: Pick<PartitionSendWatches, "take">;
+	isServing?(params: { partition: number }): boolean;
 	readTcp?: () => TcpCounters | null;
 	now?: () => number;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
@@ -55,7 +56,9 @@ export function createOwnNetworkMonitor({
 		state.samples.push({
 			at,
 			tcp: tcp && previous ? tcpWindowOf({ previous, current: tcp }) : null,
-			sends: ctx.sends.take({ now: at }),
+			sends: ctx.sends
+				.take({ now: at })
+				.filter(({ partition }) => ctx.isServing?.({ partition }) ?? true),
 		});
 		state.samples = state.samples.filter((kept) => kept.at > at - keepMs);
 		state.latest = judgeOwnNetwork({
