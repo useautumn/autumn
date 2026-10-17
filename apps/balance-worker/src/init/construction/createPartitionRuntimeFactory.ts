@@ -132,6 +132,7 @@ export function createPartitionRuntimeFactory({
 				follower,
 				preparationFollower: preparation,
 				producer,
+				ownerEpoch,
 				appender: commitLogging.appender,
 				partitionResolver: ctx.partitionResolver,
 				receiptPolicy: {
