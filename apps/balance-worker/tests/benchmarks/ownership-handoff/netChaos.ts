@@ -59,7 +59,13 @@ if (!outDir) throw new Error("BENCH_OUT_DIR is required");
 const uid = process.getuid?.() ?? 0;
 const gid = process.getgid?.() ?? 0;
 
-type Step = { atMs: number; label: string; cmd?: string; spawn?: string };
+type Step = {
+	atMs: number;
+	label: string;
+	cmd?: string;
+	spawn?: string;
+	afterStepDowns?: { workers: string[]; delayMs: number };
+};
 const steps = JSON.parse(process.env.CHAOS_STEPS ?? "[]") as Step[];
 
 type WorkerEvent = { t: number; worker: string; event: string } & Record<
@@ -644,8 +650,35 @@ for (const victim of VICTIMS)
 	if (!Object.values(ownersAtFault).includes(victim))
 		console.error(`warning: victim ${victim} owns no partition at fault start`);
 let clearAt: number | undefined;
+function hasSteppedDown(worker: string): boolean {
+	return workerEvents.some(
+		(e) =>
+			e.worker === worker &&
+			e.event === "log.error" &&
+			(e.args as unknown[] | undefined)?.[0] ===
+				"Own network degraded and peers healthy: stepping down",
+	);
+}
+async function awaitStepTime(step: Step): Promise<void> {
+	const deadline = faultStart + step.atMs;
+	const gate = step.afterStepDowns;
+	if (!gate) {
+		await Bun.sleep(Math.max(0, deadline - Date.now()));
+		return;
+	}
+	while (!gate.workers.every(hasSteppedDown) && Date.now() < deadline)
+		await Bun.sleep(100);
+	marks.push({
+		t: Date.now(),
+		label: `${step.label}.gate`,
+		output: gate.workers.every(hasSteppedDown)
+			? `stepped down: ${gate.workers.join(",")}`
+			: "deadline reached before every step-down",
+	});
+	await Bun.sleep(gate.delayMs);
+}
 for (const step of steps) {
-	await Bun.sleep(Math.max(0, faultStart + step.atMs - Date.now()));
+	await awaitStepTime(step);
 	await runStep(step);
 	if (step.label === "clear") clearAt = Date.now();
 }
@@ -931,7 +964,12 @@ const ownerMoves = {
 	clearToEnd: movedBetween({ from: clearAt, to: endAt }),
 	faultToEnd: movedBetween({ from: faultStart, to: endAt }),
 	byStep: marks
-		.filter((m) => m.label !== "fault.start" && !m.label.startsWith("safety"))
+		.filter(
+			(m) =>
+				m.label !== "fault.start" &&
+				!m.label.startsWith("safety") &&
+				!m.label.endsWith(".gate"),
+		)
 		.map((m, i, all) => ({
 			after: m.label,
 			...movedBetween({ from: m.t, to: all[i + 1]?.t ?? endAt }),
