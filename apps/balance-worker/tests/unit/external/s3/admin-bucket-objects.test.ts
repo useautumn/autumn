@@ -103,34 +103,24 @@ describe("admin bucket objects", () => {
 		);
 	});
 
-	test("list follows every page and keeps each key's last write time", async () => {
+	test("list follows every page and keeps each key's ETag, so a caller can tell which objects were written since", async () => {
 		const { client } = fakeClient((command) => {
 			if (!(command instanceof ListObjectsV2Command)) return {};
 			return command.input.ContinuationToken === "page-2"
 				? {
-						Contents: [
-							{
-								Key: "p/b.json",
-								LastModified: new Date("2026-10-16T19:39:05Z"),
-							},
-						],
+						Contents: [{ Key: "p/b.json", ETag: '"e-b"' }],
 						IsTruncated: false,
 					}
 				: {
-						Contents: [
-							{
-								Key: "p/a.json",
-								LastModified: new Date("2026-10-16T19:39:00Z"),
-							},
-						],
+						Contents: [{ Key: "p/a.json", ETag: '"e-a"' }],
 						IsTruncated: true,
 						NextContinuationToken: "page-2",
 					};
 		});
 		const objects = objectsOf(client);
 		expect(await objects.list({ prefix: "p/" })).toEqual([
-			{ key: "p/a.json", lastModifiedAt: Date.parse("2026-10-16T19:39:00Z") },
-			{ key: "p/b.json", lastModifiedAt: Date.parse("2026-10-16T19:39:05Z") },
+			{ key: "p/a.json", etag: '"e-a"' },
+			{ key: "p/b.json", etag: '"e-b"' },
 		]);
 	});
 

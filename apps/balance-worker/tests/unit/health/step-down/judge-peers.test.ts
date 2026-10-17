@@ -1,181 +1,103 @@
 import { describe, expect, test } from "bun:test";
-import type { SlotHeartbeat } from "../../../../src/blueGreen/types/slotHeartbeat.js";
 import { judgePeers } from "../../../../src/health/stepDown/judgePeers.js";
+import { partitionsFrom, peerHeartbeat } from "./peerHeartbeats.js";
 
-const FAULT_AT = Date.parse("2026-10-16T19:39:01Z");
-const NOW = FAULT_AT + 4_000;
+const PARTITION_COUNT = 128;
 
-function peer({
-	endpoint,
-	writtenAgoMs = 1_000,
-	lastSendAckAgoMs = 1_500,
-	ownNetwork = "healthy",
-	steppedDown = false,
-	work = true,
-}: {
-	endpoint: string;
-	writtenAgoMs?: number;
-	lastSendAckAgoMs?: number | null;
-	ownNetwork?: "healthy" | "degraded" | "insufficient_data";
-	steppedDown?: boolean;
-	work?: boolean;
-}): SlotHeartbeat {
-	return {
-		serviceName: "balance-workers",
-		fleetId: "fleet",
-		deployment: "prod",
-		endpoint,
-		instanceId: `${endpoint}-${writtenAgoMs}`,
-		pid: 1,
-		identity: { serviceArn: null, imageSha: null },
-		declaredActive: true,
-		gate: "active",
-		storeHealthy: true,
-		ok: true,
-		checks: {
-			kafka: { ok: true, latencyMs: 1 },
-			postgres: { ok: true, latencyMs: 1 },
-		},
-		partitions: {
-			prepared: 0,
-			ready: 8,
-			admitted: 8,
-			total: 8,
-			byPartition: [],
-		},
-		...(work && {
-			work: {
-				lastSendAckAt:
-					lastSendAckAgoMs === null
-						? null
-						: new Date(NOW - lastSendAckAgoMs).toISOString(),
-				ownNetwork,
-				steppedDown,
-			},
-		}),
-		startedAt: new Date(NOW - 3_600_000).toISOString(),
-		writtenAt: new Date(NOW - writtenAgoMs).toISOString(),
-	};
+function fleetPeer(
+	index: number,
+	overrides: Partial<Parameters<typeof peerHeartbeat>[0]> = {},
+) {
+	return peerHeartbeat({
+		endpoint: `http://w${index}`,
+		partitions: partitionsFrom({ first: index * 8, count: 8 }),
+		...overrides,
+	});
 }
 
-function judge(heartbeats: SlotHeartbeat[], unreadable = 0) {
+function fleetPeers(indexes: number[]) {
+	return indexes.map((index) => fleetPeer(index));
+}
+
+function judge(heartbeats: ReturnType<typeof peerHeartbeat>[]) {
 	return judgePeers({
 		heartbeats,
-		unreadable,
 		selfEndpoint: "http://self",
-		faultAt: FAULT_AT,
-		now: NOW,
-		membershipMs: 300_000,
-		skewMs: 1_000,
+		partitionCount: PARTITION_COUNT,
+		ackAgeLimitMs: 3_000,
 		minPeers: 2,
 	});
 }
 
 describe("judge peers", () => {
-	test("peers that acknowledged sends since the fault, and say so since, vouch that the fault is ours", () => {
-		expect(
-			judge([
-				peer({ endpoint: "http://self", ownNetwork: "degraded" }),
-				peer({ endpoint: "http://a" }),
-				peer({ endpoint: "http://b" }),
-				peer({ endpoint: "http://c", writtenAgoMs: 6_000 }),
-			]),
-		).toEqual({ ok: true, live: 3, healthy: 2 });
-	});
-
-	test("a heartbeat written before the fault, or a send acknowledged before it, says nothing about since", () => {
-		expect(
-			judge([
-				peer({ endpoint: "http://a", writtenAgoMs: 5_000 }),
-				peer({ endpoint: "http://b", lastSendAckAgoMs: 4_500 }),
-				peer({ endpoint: "http://c", lastSendAckAgoMs: null }),
-				peer({ endpoint: "http://d" }),
-			]),
-		).toEqual({ ok: false, live: 4, healthy: 1 });
-	});
-
-	test("peers that see the same trouble, as in a fleet-wide stall, keep everyone in", () => {
-		expect(
-			judge([
-				peer({ endpoint: "http://a", ownNetwork: "degraded" }),
-				peer({ endpoint: "http://b", ownNetwork: "degraded" }),
-				peer({ endpoint: "http://c" }),
-				peer({ endpoint: "http://d" }),
-				peer({ endpoint: "http://e", writtenAgoMs: 30_000 }),
-			]),
-		).toEqual({ ok: false, live: 5, healthy: 2 });
-	});
-
-	test("silent peers stay in the count for five minutes; stepped-down peers leave it; old builds never vouch", () => {
-		expect(
-			judge([
-				peer({ endpoint: "http://a" }),
-				peer({ endpoint: "http://b" }),
-				peer({ endpoint: "http://quiet", writtenAgoMs: 120_000 }),
-				peer({ endpoint: "http://gone", writtenAgoMs: 301_000 }),
-				peer({ endpoint: "http://out", steppedDown: true }),
-				peer({ endpoint: "http://old", work: false }),
-			]),
-		).toEqual({ ok: true, live: 4, healthy: 2 });
-		expect(judge([peer({ endpoint: "http://a" })])).toEqual({
-			ok: false,
-			live: 1,
-			healthy: 1,
+	test("peers that wrote since the decision began, acking sends and holding half the partitions, vouch that the fault is ours", () => {
+		expect(judge(fleetPeers([1, 2, 3, 4, 5, 6, 7, 8]))).toEqual({
+			ok: true,
+			vouching: 8,
+			partitions: 64,
+			partitionCount: 128,
 		});
 	});
 
-	test("heartbeats that cannot be read count against the quorum instead of leaving it", () => {
+	test("two healthy peers while thirteen stay silent are no quorum: silence never shrinks the fleet", () => {
+		expect(judge(fleetPeers([1, 2]))).toEqual({
+			ok: false,
+			vouching: 2,
+			partitions: 16,
+			partitionCount: 128,
+		});
+	});
+
+	test("a peer that is degraded, stepped down, has not acked a send lately or runs an old build does not vouch", () => {
+		expect(
+			judge([
+				...fleetPeers([1, 2, 3, 4, 5, 6, 7]),
+				fleetPeer(8, { ownNetwork: "degraded" }),
+				fleetPeer(9, { steppedDown: true }),
+				fleetPeer(10, { lastSendAckAgeMs: 3_001 }),
+				fleetPeer(11, { lastSendAckAgeMs: null }),
+				fleetPeer(12, { work: false }),
+			]),
+		).toEqual({ ok: false, vouching: 7, partitions: 56, partitionCount: 128 });
+	});
+
+	test("a partition two peers report counts once, and one peer holding everything is not enough alone", () => {
+		const everything = peerHeartbeat({
+			endpoint: "http://big",
+			partitions: partitionsFrom({ first: 0, count: 128 }),
+		});
+		expect(judge([everything])).toEqual({
+			ok: false,
+			vouching: 1,
+			partitions: 128,
+			partitionCount: 128,
+		});
+		expect(judge([everything, fleetPeer(1)])).toEqual({
+			ok: true,
+			vouching: 2,
+			partitions: 128,
+			partitionCount: 128,
+		});
+	});
+
+	test("the worker never vouches for itself, and a worker that wrote twice counts once", () => {
+		const self = peerHeartbeat({
+			endpoint: "http://self",
+			partitions: partitionsFrom({ first: 0, count: 64 }),
+		});
+		expect(judge([self, fleetPeer(9)]).ok).toBe(false);
+		expect(
+			judge([fleetPeer(1), ...fleetPeers([1, 2, 3, 4, 5, 6, 7, 8])]).vouching,
+		).toBe(8);
+	});
+
+	test("no clock from another host plays a part", () => {
 		expect(
 			judge(
-				[peer({ endpoint: "http://a" }), peer({ endpoint: "http://b" })],
-				3,
-			),
-		).toEqual({ ok: false, live: 5, healthy: 2 });
-	});
-
-	test("one worker counts once, by its latest heartbeat", () => {
-		expect(
-			judge([
-				peer({ endpoint: "http://a" }),
-				peer({ endpoint: "http://a", writtenAgoMs: 20_000 }),
-				peer({ endpoint: "http://a", writtenAgoMs: 40_000 }),
-				peer({ endpoint: "http://b", writtenAgoMs: 20_000 }),
-				peer({ endpoint: "http://b" }),
-			]),
-		).toEqual({ ok: true, live: 2, healthy: 2 });
-	});
-
-	test("timestamps within the clock skew of the fault, or ahead of now, do not vouch", () => {
-		expect(
-			judge([
-				peer({
-					endpoint: "http://a",
-					writtenAgoMs: 3_500,
-					lastSendAckAgoMs: 3_600,
-				}),
-				peer({
-					endpoint: "http://b",
-					writtenAgoMs: -2_000,
-					lastSendAckAgoMs: -2_500,
-				}),
-				peer({ endpoint: "http://c" }),
-				peer({ endpoint: "http://d" }),
-			]),
-		).toEqual({ ok: true, live: 4, healthy: 2 });
-		expect(
-			judge([
-				peer({
-					endpoint: "http://a",
-					writtenAgoMs: 3_500,
-					lastSendAckAgoMs: 3_600,
-				}),
-				peer({
-					endpoint: "http://b",
-					writtenAgoMs: -2_000,
-					lastSendAckAgoMs: -2_500,
-				}),
-				peer({ endpoint: "http://c" }),
-			]),
-		).toEqual({ ok: false, live: 3, healthy: 1 });
+				[1, 2, 3, 4, 5, 6, 7, 8].map((index) =>
+					fleetPeer(index, { writtenAt: "1999-01-01T00:00:00.000Z" }),
+				),
+			).ok,
+		).toBe(true);
 	});
 });
