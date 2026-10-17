@@ -59,6 +59,7 @@ import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleRegisterAdminShadowAtomOrg } from "./handleRegisterAdminShadowAtomOrg.js";
 import { handleSearchAdminOrgCustomers } from "./handleSearchAdminOrgCustomers";
 import { handleSetAdminShadowAtomOrgPercent } from "./handleSetAdminShadowAtomOrgPercent.js";
+import { handleSetApprovalsEnforced } from "./handleSetApprovalsEnforced.js";
 import {
 	handleCreateSlackAdminInstall,
 	handleDeleteSlackAdminInstall,
@@ -132,6 +133,10 @@ honoAdminRouter.patch(
 honoAdminRouter.delete(
 	"/orgs/:org_id/redis",
 	...handleDeleteAdminOrgRedisConfig,
+);
+honoAdminRouter.patch(
+	"/orgs/:org_id/approvals_enforced",
+	...handleSetApprovalsEnforced,
 );
 honoAdminRouter.get(
 	"/request-block-config",
