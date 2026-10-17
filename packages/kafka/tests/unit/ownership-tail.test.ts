@@ -636,8 +636,22 @@ describe("ownershipTail", function ownershipTailTests() {
 				messages: [
 					serialized({ record: claimedBy("http://former:8080"), offset: 11n }),
 					serialized({ record: releasedBy("http://former:8080"), offset: 12n }),
+					serialized({
+						record: releasedBy("http://current:8080"),
+						offset: 13n,
+					}),
 				],
 			});
+			await fixture.deliver({
+				partition: 4,
+				messages: [
+					serialized({
+						record: { ...claimedBy("http://other:8080"), partition: 4 },
+						offset: 12n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 4 })?.owner).toBe("http://other:8080");
 			expect(tail.readView({ partition: 3 })).toEqual({
 				owner: "http://current:8080",
 				activeDrain: null,
