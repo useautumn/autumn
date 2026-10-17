@@ -70,13 +70,7 @@ describe.skipIf(!databaseUrl)(
 				)
 			).rows[0]?.claim_token as string | null | undefined;
 
-		const claim = ({
-			ownerEpoch,
-			id,
-		}: {
-			ownerEpoch?: bigint;
-			id: string;
-		}) => {
+		const claim = ({ ownerEpoch, id }: { ownerEpoch?: bigint; id: string }) => {
 			const claimToken =
 				ownerEpoch === undefined ? id : epochClaimToken({ ownerEpoch, id });
 			return {

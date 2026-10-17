@@ -191,8 +191,8 @@ describe("partitionProgress repo", () => {
 		expect(epochClaimToken({ ownerEpoch: 5n, id: "u1" })).toBe(
 			"00000000000000000005:u1",
 		);
-		expect(epochClaimToken({ ownerEpoch: 9223372036854775807n, id: "u1" })).toBe(
-			"09223372036854775807:u1",
-		);
+		expect(
+			epochClaimToken({ ownerEpoch: 9223372036854775807n, id: "u1" }),
+		).toBe("09223372036854775807:u1");
 	});
 });
