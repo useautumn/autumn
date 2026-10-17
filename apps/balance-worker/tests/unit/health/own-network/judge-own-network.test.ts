@@ -253,7 +253,7 @@ describe("judge own network", () => {
 		expect(blind.state).toBe("insufficient_data");
 	});
 
-	test("calibrated defaults: a quiet worker whose two slow sends are among eight held partitions stays healthy, whatever its retransmits", () => {
+	test("calibrated defaults: a lossy worker whose only two busy partitions are both slow is degraded, though it holds eight", () => {
 		const verdict = judgeOwnNetwork({
 			heldPartitions: 8,
 			samples: samplesOf({
@@ -264,10 +264,51 @@ describe("judge own network", () => {
 			now: 10_000,
 		});
 		expect(verdict).toMatchObject({
-			state: "healthy",
+			state: "degraded",
 			losesPackets: true,
+			heldPartitions: 8,
 			busyPartitions: 2,
 			stalledPartitions: 2,
+		});
+	});
+
+	test("calibrated defaults: at 50% loss both ways, inbound loss starving the worker, the partitions still sending decide", () => {
+		const verdict = judgeOwnNetwork({
+			heldPartitions: 4,
+			samples: samplesOf({
+				outSegs: 20,
+				retransSegs: 8,
+				sends: stalled([8, 9], 600),
+			}),
+			now: 10_000,
+		});
+		expect(verdict).toMatchObject({
+			state: "degraded",
+			heldPartitions: 4,
+			busyPartitions: 2,
+			stalledPartitions: 2,
+		});
+	});
+
+	test("a partition with two holdings in one window counts once toward the stalled share", () => {
+		const verdict = judgeOwnNetwork({
+			heldPartitions: 3,
+			samples: samplesOf({
+				retransSegs: 30,
+				sends: [
+					{ partition: 80, holding: 1, longestInFlightMs: 1_500 },
+					{ partition: 80, holding: 2, longestInFlightMs: 1_500 },
+					{ partition: 81, holding: 1, longestInFlightMs: 100 },
+					{ partition: 82, holding: 1, longestInFlightMs: 100 },
+				],
+			}),
+			now: 10_000,
+			thresholds: THRESHOLDS,
+		});
+		expect(verdict).toMatchObject({
+			state: "healthy",
+			busyPartitions: 3,
+			stalledPartitions: 1,
 		});
 	});
 

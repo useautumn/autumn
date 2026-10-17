@@ -10,8 +10,8 @@ const DEGRADED: OwnNetworkVerdict = {
 	windowStartedAt: 7_000,
 	segments: 300,
 	retransmitRatio: 0.3,
-	busyPartitions: 8,
-	stalledPartitions: 6,
+	busyPartitions: 4,
+	stalledPartitions: 3,
 	heldPartitions: 4,
 	stalledHoldings: [
 		{ partition: 0, holding: 1 },
@@ -321,11 +321,12 @@ describe("step-down controller", () => {
 		});
 	});
 
-	test("a trip whose stalled partitions are no longer most of the partitions held keeps the worker in", async () => {
+	test("a trip whose stalled partitions are no longer most of those that had sends keeps the worker in", async () => {
 		const moved = { on: false };
 		const tripped: OwnNetworkVerdict = {
 			...DEGRADED,
 			heldPartitions: 8,
+			busyPartitions: 8,
 			stalledPartitions: 5,
 			stalledHoldings: [0, 1, 2, 3, 4].map((partition) => ({
 				partition,
@@ -348,6 +349,31 @@ describe("step-down controller", () => {
 			"read-progress",
 			"acquire",
 			"release",
+		]);
+	});
+
+	test("a starved worker's trip on most of its busy partitions steps down, though it holds more", async () => {
+		const starved: OwnNetworkVerdict = {
+			...DEGRADED,
+			heldPartitions: 4,
+			busyPartitions: 2,
+			stalledPartitions: 2,
+			stalledHoldings: [
+				{ partition: 0, holding: 1 },
+				{ partition: 1, holding: 1 },
+			],
+		};
+		const { controller, calls, fire } = harness({
+			trigger: starved,
+			currentVerdict: () => starved,
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
 		]);
 	});
 
