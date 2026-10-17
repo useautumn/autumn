@@ -41,6 +41,7 @@ export type PartitionsState = {
 	};
 	status: "created" | "running" | "stopping" | "stopped";
 	steppedDown: boolean;
+	steppedDownSignal: { promise: Promise<void>; resolve(): void };
 	retirementFailed: boolean;
 	generation: number;
 	lifecycle: Promise<void>;

@@ -65,7 +65,9 @@ export function createPartitions({
 	}
 
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
-		return state.handoffSettlements.get(partition) ?? Promise.resolve();
+		const settlement = state.handoffSettlements.get(partition);
+		if (!settlement) return Promise.resolve();
+		return Promise.race([settlement, state.steppedDownSignal.promise]);
 	}
 
 	function findSuccessor({
@@ -142,6 +144,7 @@ function createPartitionState(): PartitionsState {
 		partitionRetryTimers: new Map(),
 		status: "created",
 		steppedDown: false,
+		steppedDownSignal: Promise.withResolvers<void>(),
 		retirementFailed: false,
 		generation: 0,
 		lifecycle: Promise.resolve(),

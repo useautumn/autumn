@@ -38,15 +38,14 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 		const { route, commands } = parseTrackBatchRequest({ input });
 		const owner = ctx.ownership.findRuntime(route);
 		if (!owner) {
-			const steppingDown = ctx.ownership.isSteppedDown?.() ?? false;
 			// Mid-handoff the successor is not named yet: answering now would send the caller back here.
-			if (!steppingDown)
+			if (!ctx.ownership.isSteppedDown?.())
 				await ctx.ownership.awaitHandoff?.({ partition: route.partition });
 			throw new PartitionRouteNotOwnedError({
 				successor: ctx.ownership.findSuccessor?.({
 					partition: route.partition,
 				}),
-				steppingDown,
+				steppingDown: ctx.ownership.isSteppedDown?.() ?? false,
 			});
 		}
 		const runtime: Runtime = withRequestBudget({
