@@ -234,6 +234,10 @@ export const ErrCode = {
 	RoleBuiltIn: "role_built_in",
 	RoleInUse: "role_in_use",
 
+	// Approval rules
+	ApprovalRuleNotFound: "approval_rule_not_found",
+	ApprovalRuleEditorRequired: "approval_rule_editor_required",
+
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };
