@@ -37,10 +37,16 @@ function landedAt(baseOffset: string): RecordMetadata[] {
 	return [{ topicName: topic, partition, errorCode: 0, baseOffset }];
 }
 
+function always(): boolean {
+	return true;
+}
+
 describe("worker producer send watch", () => {
 	test("the fence marker and every later send are timed on the partition's watch", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({ now: () => time.now });
+		const watches = createPartitionSendWatches({
+			ctx: { now: () => time.now, holdingOf: () => 1 },
+		});
 		const { session, held } = createHeldSession();
 		const producer = createWorkerProducer({
 			ctx: {
@@ -52,13 +58,13 @@ describe("worker producer send watch", () => {
 		});
 		const fenced = producer.fenceOwnership();
 		time.now = 1_300;
-		expect(watches.take({ now: time.now })).toEqual([
-			{ partition, longestInFlightMs: 1_300 },
+		expect(watches.take({ now: time.now, isCurrent: always })).toEqual([
+			{ partition, holding: 1, longestInFlightMs: 1_300 },
 		]);
 		held[0]?.settle.resolve(landedAt("40"));
 		await fenced;
-		expect(watches.take({ now: time.now })).toEqual([
-			{ partition, longestInFlightMs: 1_300 },
+		expect(watches.take({ now: time.now, isCurrent: always })).toEqual([
+			{ partition, holding: 1, longestInFlightMs: 1_300 },
 		]);
 		const sent = producer.send({
 			topic,
@@ -67,16 +73,16 @@ describe("worker producer send watch", () => {
 		time.now = 1_500;
 		held[1]?.settle.resolve(landedAt("41"));
 		await sent;
-		expect(watches.take({ now: 2_000 })).toEqual([
-			{ partition, longestInFlightMs: 200 },
+		expect(watches.take({ now: 2_000, isCurrent: always })).toEqual([
+			{ partition, holding: 1, longestInFlightMs: 200 },
 		]);
-		time.now = 2_000;
-		expect(watches.readLastAckAgeMs()).toBe(500);
 	});
 
 	test("a send that fails still counts its time and still fails", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({ now: () => time.now });
+		const watches = createPartitionSendWatches({
+			ctx: { now: () => time.now, holdingOf: () => 1 },
+		});
 		const { session, held } = createHeldSession();
 		const producer = createWorkerProducer({
 			ctx: { session, sendWatch: watches.watchFor({ partition }) },
@@ -89,9 +95,8 @@ describe("worker producer send watch", () => {
 		time.now = 2_400;
 		held[0]?.settle.reject(new Error("Local: Message timed out"));
 		await expect(sent).rejects.toThrow();
-		expect(watches.take({ now: 2_500 })).toEqual([
-			{ partition, longestInFlightMs: 2_400 },
+		expect(watches.take({ now: 2_500, isCurrent: always })).toEqual([
+			{ partition, holding: 1, longestInFlightMs: 2_400 },
 		]);
-		expect(watches.readLastAckAgeMs()).toBeNull();
 	});
 });
