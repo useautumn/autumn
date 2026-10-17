@@ -54,7 +54,7 @@ export function ProductNameCell({ row }: { row: Row<ProductV2> }) {
 	return (
 		<div
 			className={cn(
-				"flex h-full items-center gap-1.5 font-medium text-foreground",
+				"flex h-full min-w-0 items-center gap-1.5 font-medium text-foreground",
 				isVariant && "pl-[22px] font-normal text-muted-foreground",
 			)}
 		>
@@ -62,8 +62,9 @@ export function ProductNameCell({ row }: { row: Row<ProductV2> }) {
 			<AdminHover
 				texts={getPlanHoverTexts({ plan: row.original })}
 				side="right"
+				triggerClassName="min-w-0"
 			>
-				{row.original.name}
+				<span className="truncate">{row.original.name}</span>
 			</AdminHover>
 			<PlanTypeBadges
 				product={row.original}
