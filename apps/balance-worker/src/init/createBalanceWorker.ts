@@ -18,6 +18,7 @@ import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createCjsChildrenDedupe } from "../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
+import { createPartitionSendWatches } from "../health/ownNetwork/createPartitionSendWatches.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
 	createInlineHandler,
@@ -48,6 +49,7 @@ import { createPartitionLoad } from "../processor/writer/partitionLoad/createPar
 import { createCommitPositions } from "../runtime/commitPositions/createCommitPositions.js";
 import { createPartitionRuntimeFactory } from "./construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "./construction/createWorkerPartitions.js";
+import { createWorkerStepDown } from "./construction/createWorkerStepDown.js";
 import { startWorkerThreads } from "./construction/startWorkerThreads.js";
 import { startWorker } from "./lifecycle/startWorker.js";
 import { stopWorker } from "./lifecycle/stopWorker.js";
@@ -178,6 +180,7 @@ export async function createBalanceWorker({
 		const commitPositions = createCommitPositions({
 			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
 		});
+		const sendWatches = createPartitionSendWatches();
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,
@@ -195,6 +198,7 @@ export async function createBalanceWorker({
 				subjectSnapshotsConfig: resources.edgeConfigs?.subjectSnapshotsConfig,
 				dbControl: resources.edgeConfigs?.dbControl,
 				commandOffsets: { commit: commitCommandOffsets },
+				sendWatches,
 			},
 			config: runtimeConfig,
 		});
@@ -245,6 +249,21 @@ export async function createBalanceWorker({
 				commandTopic: env.BALANCE_WORKER_COMMAND_TOPIC,
 				partitionsConsumedConcurrently: env.BALANCE_WORKER_PARTITION_COUNT,
 				healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
+			},
+		});
+		const stepDown = createWorkerStepDown({
+			ctx: {
+				sendWatches,
+				partitions,
+				logger: dependencies.logger,
+				adminBucket: slotGate
+					? resources.edgeConfigs?.adminBucket.location
+					: undefined,
+			},
+			config: {
+				deployment: env.BALANCE_WORKER_DEPLOYMENT,
+				endpoint: address.endpoint,
+				fleetId,
 			},
 		});
 		const app = createBalanceWorkerApp({
@@ -370,6 +389,7 @@ export async function createBalanceWorker({
 							isAdmitted: partitions.isAdmitted,
 							readAssignmentSettled: partitions.hasAssignment,
 							readStoreHealthy: readSlotStoreHealthy,
+							readWork: stepDown.readWork,
 							probes: { kafka: probeKafka, postgres: probePostgres },
 							readColdStart: coldStart?.readAck,
 							logger: dependencies.logger,
@@ -465,6 +485,7 @@ export async function createBalanceWorker({
 			cjsChildren.start();
 			healthReporter.start();
 			void slotHeartbeat?.start();
+			stepDown.start();
 			if (!reportsHealth) return;
 			stallMonitor.start();
 			kafkaRequestReporter.start();
@@ -474,6 +495,7 @@ export async function createBalanceWorker({
 			databaseReporter.stop();
 			kafkaRequestReporter.stop();
 			stallMonitor.stop();
+			stepDown.stop();
 			slotHeartbeat?.stop();
 			healthReporter.stop();
 			cjsChildren.stop();

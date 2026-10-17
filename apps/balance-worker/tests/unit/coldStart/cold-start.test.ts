@@ -377,6 +377,11 @@ describe("heartbeat", () => {
 				isAdmitted: () => false,
 				readAssignmentSettled: () => true,
 				readStoreHealthy: () => true,
+				readWork: () => ({
+					lastSendAckAt: null,
+					ownNetwork: "healthy",
+					steppedDown: false,
+				}),
 				probes: {
 					kafka: async () => undefined,
 					postgres: async () => undefined,

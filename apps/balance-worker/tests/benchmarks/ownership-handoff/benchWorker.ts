@@ -299,6 +299,11 @@ const slotHeartbeat =
 					readAssignmentSettled: partitions.hasAssignment,
 					readStoreHealthy: () =>
 						resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false,
+					readWork: () => ({
+						lastSendAckAt: null,
+						ownNetwork: "healthy",
+						steppedDown: partitions.isSteppedDown(),
+					}),
 					probes: {
 						kafka: async () => {
 							await resources.admin.fetchTopicOffsets(
