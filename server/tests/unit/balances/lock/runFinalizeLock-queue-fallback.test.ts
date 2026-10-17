@@ -177,7 +177,8 @@ describe("runFinalizeLock queue fallback", () => {
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackQueueUrl,
-			MessageGroupId: "org_123:sandbox:lock:lock_abc",
+			MessageGroupId:
+				"finalize:46eb255959b997043ded9bfab51f90b853f2d1c8dbb3c968d169afaf58cf5d6b",
 			MessageDeduplicationId: "req_fin_123",
 		});
 		const body = JSON.parse(
@@ -195,6 +196,23 @@ describe("runFinalizeLock queue fallback", () => {
 		});
 		expect(ctx.extraLogs.finalizeLockQueuedForReplay).toBe(true);
 		expect(mockState.releaseClaimCalls.length).toBeGreaterThanOrEqual(1);
+	});
+
+	test("keeps the FIFO message group ID within SQS limits for long lock IDs", async () => {
+		const ctx = makeCtx();
+		const longLockId = `lock_${"x".repeat(120)}`;
+		mockState.v2Behaviors = [
+			new RedisUnavailableError({ source: "test", reason: "not_ready" }),
+		];
+
+		await runFinalizeLock({
+			ctx,
+			params: { ...params, lock_id: longLockId },
+		});
+
+		const messageGroupId = mockState.queueCommands[0]?.MessageGroupId as string;
+		expect(messageGroupId).toHaveLength(73);
+		expect(messageGroupId).not.toContain(longLockId);
 	});
 
 	// ── Contract: redis not ready before the first attempt -> straight to queue
