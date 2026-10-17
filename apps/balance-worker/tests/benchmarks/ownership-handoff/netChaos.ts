@@ -851,7 +851,7 @@ const timelines = Object.fromEntries(
 						worker: worker.name,
 						event: "log.warn",
 						match:
-							/not keeping up|could not be read|recovered before the step-down/,
+							/not keeping up|could not be read|too slowly to judge|recovered before the step-down/,
 					}),
 					...logsOf({
 						worker: worker.name,
@@ -866,6 +866,7 @@ const timelines = Object.fromEntries(
 						peers: argsOf(e)?.peers ?? null,
 						reason: argsOf(e)?.reason ?? null,
 						error: argsOf(e)?.error ?? null,
+						readMs: argsOf(e)?.readMs ?? null,
 						verdict: verdictSummary(argsOf(e)?.verdict),
 					})),
 				exits: workerEvents
