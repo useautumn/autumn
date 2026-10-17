@@ -6,7 +6,7 @@ import type { TcpCounters } from "../../../../src/logging/eventLoopStalls/tcpCou
 
 const THRESHOLDS: OwnNetworkThresholds = {
 	windowMs: 3_000,
-	minSegments: 150,
+	minRetransmits: 15,
 	retransmitRatio: 0.05,
 	stallMs: 1_000,
 	minStalledPartitions: 2,

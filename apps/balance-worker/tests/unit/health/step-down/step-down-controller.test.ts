@@ -14,6 +14,15 @@ const DEGRADED: OwnNetworkVerdict = {
 	retransmitRatio: 0.3,
 	busyPartitions: 8,
 	stalledPartitions: 6,
+	losesPackets: true,
+};
+
+const RECOVERED: OwnNetworkVerdict = {
+	...DEGRADED,
+	state: "healthy",
+	retransmitRatio: 0.001,
+	stalledPartitions: 0,
+	losesPackets: false,
 };
 
 function healthyPeers(): SlotHeartbeat[] {
@@ -224,7 +233,7 @@ describe("step-down controller", () => {
 	test("a network that recovered before the permit landed keeps the worker in and gives the permit back", async () => {
 		const { controller, calls, logs, fire } = harness({
 			writtenSince: healthyPeers,
-			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+			currentVerdict: () => RECOVERED,
 		});
 		controller.start();
 		await fire();
@@ -233,6 +242,26 @@ describe("step-down controller", () => {
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
 		});
+	});
+
+	test("a verdict that flickers off degraded while the loss goes on still steps down", async () => {
+		for (const flicker of [
+			{ ...DEGRADED, state: "healthy" as const, stalledPartitions: 1 },
+			{ ...DEGRADED, state: "insufficient_data" as const, segments: 0 },
+		]) {
+			const { controller, calls, fire } = harness({
+				writtenSince: healthyPeers,
+				currentVerdict: () => flicker,
+			});
+			controller.start();
+			await fire();
+			expect(calls).toEqual([
+				"read-peers",
+				"read-peers",
+				"acquire",
+				"step-down",
+			]);
+		}
 	});
 
 	test("a worker that owns nothing never checks", async () => {
@@ -248,7 +277,7 @@ describe("step-down controller", () => {
 	test("a permit that could not be given back after a recovery is released again at stop", async () => {
 		const { controller, calls, fire } = harness({
 			writtenSince: healthyPeers,
-			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+			currentVerdict: () => RECOVERED,
 			releaseFailures: 1,
 		});
 		controller.start();

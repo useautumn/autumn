@@ -7,7 +7,7 @@ import type { OwnNetworkSample } from "../../../../src/health/ownNetwork/types/o
 
 const THRESHOLDS: OwnNetworkThresholds = {
 	windowMs: 3_000,
-	minSegments: 150,
+	minRetransmits: 15,
 	retransmitRatio: 0.05,
 	stallMs: 1_000,
 	minStalledPartitions: 2,
@@ -117,20 +117,95 @@ describe("judge own network", () => {
 		});
 	});
 
-	test("too few segments, as in a blackhole or an idle task, is not enough data", () => {
+	test("a lossy worker whose traffic collapsed is still judged, by the segments it had to retransmit", () => {
 		const verdict = judgeOwnNetwork({
 			samples: samplesOf({
 				outSegs: 40,
-				retransSegs: 40,
+				retransSegs: 12,
 				sends: stalled([80, 81, 82]),
 			}),
 			now: 10_000,
 			thresholds: THRESHOLDS,
 		});
 		expect(verdict).toMatchObject({
-			state: "insufficient_data",
+			state: "degraded",
 			segments: 120,
+			losesPackets: true,
 		});
+	});
+
+	test("a few retransmits on a quiet worker are not loss, whatever their share", () => {
+		const verdict = judgeOwnNetwork({
+			samples: samplesOf({
+				outSegs: 44,
+				retransSegs: 4,
+				sends: stalled([80, 81, 82]),
+			}),
+			now: 10_000,
+			thresholds: THRESHOLDS,
+		});
+		expect(verdict).toMatchObject({
+			state: "healthy",
+			retransmitRatio: 12 / 132,
+			losesPackets: false,
+		});
+	});
+
+	test("a window with no segments at all is not enough data", () => {
+		const verdict = judgeOwnNetwork({
+			samples: samplesOf({ outSegs: 0, sends: stalled([80, 81, 82]) }),
+			now: 10_000,
+			thresholds: THRESHOLDS,
+		});
+		expect(verdict.state).toBe("insufficient_data");
+	});
+
+	test("the verdict says whether packets are being lost even when the stalls do not corroborate it", () => {
+		const verdict = judgeOwnNetwork({
+			samples: samplesOf({ retransSegs: 30, sends: stalled([80], 1_500) }),
+			now: 10_000,
+			thresholds: THRESHOLDS,
+		});
+		expect(verdict).toMatchObject({ state: "healthy", losesPackets: true });
+	});
+
+	test("calibrated defaults: 20% loss with sends of 350 ms on most partitions is degraded within one window", () => {
+		const verdict = judgeOwnNetwork({
+			samples: samplesOf({
+				outSegs: 100,
+				retransSegs: 20,
+				sends: [...stalled([80, 81, 82], 350), ...stalled([83], 40)],
+			}),
+			now: 10_000,
+		});
+		expect(verdict).toMatchObject({
+			state: "degraded",
+			stalledPartitions: 3,
+			losesPackets: true,
+		});
+	});
+
+	test("calibrated defaults: a healthy worker's busiest window and a fleet-wide Kafka stall's tail loss probes stay healthy", () => {
+		const busy = judgeOwnNetwork({
+			samples: samplesOf({
+				outSegs: 790,
+				retransSegs: 6,
+				sends: stalled([80, 81, 82, 83], 120),
+			}),
+			now: 10_000,
+		});
+		expect(busy).toMatchObject({ state: "healthy", losesPackets: false });
+		const kafkaStall = samplesOf({
+			outSegs: 44,
+			sends: stalled([80, 81, 82, 83], 2_000),
+		});
+		kafkaStall[3] = {
+			...kafkaStall[3],
+			tcp: { outSegs: 83, retransSegs: 10 },
+		};
+		expect(judgeOwnNetwork({ samples: kafkaStall, now: 10_000 })).toMatchObject(
+			{ state: "healthy", losesPackets: false },
+		);
 	});
 
 	test("a window the samples do not yet cover, or missing counters, is not enough data", () => {
