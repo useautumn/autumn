@@ -1,28 +1,31 @@
 import {
+	BALANCE_WORKER_STEP_DOWN_CLOCK_SKEW_MS,
 	BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
-	BALANCE_WORKER_STEP_DOWN_PEER_LIVE_MS,
+	BALANCE_WORKER_STEP_DOWN_PEER_MEMBERSHIP_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
+	BALANCE_WORKER_STEP_DOWN_PERMIT_RENEW_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMIT_TTL_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMITS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
-import type {
-	SlotHeartbeat,
-	SlotWorkReading,
-} from "../../blueGreen/types/slotHeartbeat.js";
+import type { SlotWorkReading } from "../../blueGreen/types/slotHeartbeat.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
 import { createOwnNetworkMonitor } from "../../health/ownNetwork/createOwnNetworkMonitor.js";
 import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
 import { createStepDownController } from "../../health/stepDown/createStepDownController.js";
 import { createStepDownPermits } from "../../health/stepDown/createStepDownPermits.js";
 import { readFleetHeartbeats } from "../../health/stepDown/readFleetHeartbeats.js";
+import type { FleetHeartbeats } from "../../health/stepDown/types/fleetHeartbeats.js";
 import type { StepDownController } from "../../health/stepDown/types/stepDownController.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 
 type WorkerStepDownContext = {
 	sendWatches: PartitionSendWatches;
-	partitions: Pick<Partitions, "stepDown" | "isSteppedDown" | "hasAssignment">;
+	partitions: Pick<
+		Partitions,
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "isAdmitted"
+	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	objects?: AdminBucketObjects;
 };
@@ -41,7 +44,7 @@ export function createWorkerStepDown({
 	config: WorkerStepDownConfig;
 }): { readWork(): SlotWorkReading; start(): void; stop(): void } {
 	const ownNetwork = createOwnNetworkMonitor({
-		ctx: { sends: ctx.sendWatches },
+		ctx: { sends: ctx.sendWatches, isServing: ctx.partitions.isAdmitted },
 	});
 	const controller = createController({ ctx, config, ownNetwork });
 
@@ -72,12 +75,12 @@ function readPeersOf({
 }: {
 	objects: AdminBucketObjects;
 	fleetId: string;
-}): () => Promise<SlotHeartbeat[]> {
-	function readPeers(): Promise<SlotHeartbeat[]> {
+}): () => Promise<FleetHeartbeats> {
+	function readPeers(): Promise<FleetHeartbeats> {
 		return readFleetHeartbeats({
 			ctx: { objects },
 			fleetId,
-			modifiedAfter: Date.now() - BALANCE_WORKER_STEP_DOWN_PEER_LIVE_MS,
+			modifiedAfter: Date.now() - BALANCE_WORKER_STEP_DOWN_PEER_MEMBERSHIP_MS,
 		});
 	}
 	return readPeers;
@@ -116,8 +119,10 @@ function createController({
 			selfEndpoint: config.endpoint,
 			peerWaitMs: BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
 			peerPollMs: BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
-			peerLiveMs: BALANCE_WORKER_STEP_DOWN_PEER_LIVE_MS,
+			membershipMs: BALANCE_WORKER_STEP_DOWN_PEER_MEMBERSHIP_MS,
+			skewMs: BALANCE_WORKER_STEP_DOWN_CLOCK_SKEW_MS,
 			minPeers: BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
+			permitRenewMs: BALANCE_WORKER_STEP_DOWN_PERMIT_RENEW_MS,
 		},
 	});
 }

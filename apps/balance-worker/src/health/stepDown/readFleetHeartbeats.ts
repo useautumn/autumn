@@ -4,6 +4,7 @@ import {
 	SlotHeartbeatSchema,
 } from "../../blueGreen/types/slotHeartbeat.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
+import type { FleetHeartbeats } from "./types/fleetHeartbeats.js";
 
 export async function readFleetHeartbeats({
 	ctx,
@@ -13,7 +14,7 @@ export async function readFleetHeartbeats({
 	ctx: { objects: AdminBucketObjects };
 	fleetId: string;
 	modifiedAfter: number;
-}): Promise<SlotHeartbeat[]> {
+}): Promise<FleetHeartbeats> {
 	const listed = await ctx.objects.list({
 		prefix: `${SLOT_HEARTBEAT_KEY_PREFIX}/${fleetId}/`,
 	});
@@ -23,7 +24,8 @@ export async function readFleetHeartbeats({
 	const read = await Promise.all(
 		recent.map(({ key }) => readHeartbeat({ ctx, key })),
 	);
-	return read.filter((heartbeat) => heartbeat !== null);
+	const heartbeats = read.filter((heartbeat) => heartbeat !== null);
+	return { heartbeats, unreadable: read.length - heartbeats.length };
 }
 
 async function readHeartbeat({
