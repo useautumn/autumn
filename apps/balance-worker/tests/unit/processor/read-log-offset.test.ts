@@ -294,7 +294,7 @@ const createCommitterProcessor = async () => {
 			db: {
 				readPartitionProgress: async () => null,
 				insertPartitionProgress: async () => undefined,
-				claimPartitionProgress: async () => undefined,
+				claimPartitionProgress: async () => true,
 			},
 		},
 	});

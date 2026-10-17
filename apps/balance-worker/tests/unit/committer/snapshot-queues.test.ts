@@ -30,7 +30,7 @@ const createCountingDb = ({
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
-		claimPartitionProgress: async () => {},
+		claimPartitionProgress: async () => true,
 		flush: async (request) => {
 			requests.push(request);
 			inFlight += 1;

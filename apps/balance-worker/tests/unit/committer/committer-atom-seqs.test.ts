@@ -17,7 +17,7 @@ const createRecordingDb = () => {
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
-		claimPartitionProgress: async () => {},
+		claimPartitionProgress: async () => true,
 		flush: async (request) => {
 			flushed.push([...request.changes]);
 			return { applied: request.changes.map(() => true) };
