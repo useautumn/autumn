@@ -338,7 +338,12 @@ async function awaitHandoffClaim({
 	void foreignClaim.then(restartSilence, noop);
 	void release.then(onReleaseHeard, noop);
 	try {
-		await entry.publication.announceReady({ readyAt });
+		try {
+			await entry.publication.announceReady({ readyAt });
+		} catch (cause) {
+			if (!entry.handoffAbort.signal.aborted)
+				reportPartitionError({ ctx, cause });
+		}
 		readySettled = true;
 		claimIfStillFreed();
 		const { routeEpoch } = await claim;
