@@ -53,7 +53,7 @@ export function createWorkerStepDown({
 }: {
 	ctx: WorkerStepDownContext;
 	config: WorkerStepDownConfig;
-}): { readWork(): SlotWorkReading; start(): void; stop(): void } {
+}): { readWork(): SlotWorkReading; start(): void; stop(): Promise<void> } {
 	const ownNetwork = createOwnNetworkMonitor({
 		ctx: { sends: ctx.sendWatches, isServing: ctx.partitions.isAdmitted },
 	});
@@ -72,9 +72,10 @@ export function createWorkerStepDown({
 		controller?.start();
 	}
 
-	function stop(): void {
-		void controller?.stop();
+	async function stop(): Promise<void> {
+		const stopped = controller?.stop();
 		ownNetwork.stop();
+		await stopped;
 	}
 
 	return { readWork, start, stop };

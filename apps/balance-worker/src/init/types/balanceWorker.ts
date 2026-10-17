@@ -57,6 +57,7 @@ export type WorkerLifecycleContext = {
 	/** Polled before partitions start, so the first flush already sees the live knobs. */
 	edgeConfigs?: Pick<WorkerEdgeConfigs, "start">;
 	healthReporter?: { start(): void; stop(): void };
+	stepDown?: { start(): void; stop(): Promise<void> };
 	/** Drops an org's cached catalog rows when the server says they changed. */
 	catalogInvalidations?: Pick<CatalogInvalidationConsumer, "start" | "stop">;
 	/** Staging only: started once partitions are, so a request already pending is handled against them. */
