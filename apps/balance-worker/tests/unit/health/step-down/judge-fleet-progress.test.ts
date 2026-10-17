@@ -157,6 +157,22 @@ describe("judge fleet progress", () => {
 		});
 	});
 
+	test("an interval measured in fractional milliseconds is judged, not refused", () => {
+		const before = progressOf([
+			[1, 100n, 100n],
+			[2, 200n, 200n],
+		]);
+		const after = progressOf([
+			[1, 110n, 108n],
+			[2, 210n, 208n],
+		]);
+		expect(judge({ before, after, elapsedMs: 3_000.25 })).toEqual({
+			ok: true,
+			active: 2,
+			keptUp: 2,
+		});
+	});
+
 	test("fewer partitions keeping up than the minimum is not enough, however many of the active ones kept up", () => {
 		const before = progressOf([[1, 100n, 100n]]);
 		const after = progressOf([[1, 105n, 104n]]);
