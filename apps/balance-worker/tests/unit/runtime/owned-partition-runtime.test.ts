@@ -1826,7 +1826,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				await f.cleanup();
 			}
 		});
-		test("activation logs how long each step took and where its replay read from", async () => {
+		test("activation logs each step's duration and its replay inputs", async () => {
 			const logged: unknown[] = [];
 			const f = createFixture({ info: (entry) => logged.push(entry) });
 			try {
