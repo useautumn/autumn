@@ -2,6 +2,7 @@ import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
@@ -91,6 +92,15 @@ export const handleRunMigration = createRoute({
 					"Migration lazy_run cannot be combined with only. Run targeted customers without lazy_run.",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
+			});
+		}
+
+		// A dry run changes no customer, so like a preview it isn't judged.
+		if (!dryRun) {
+			await checkRouteApproval({
+				ctx,
+				action: "migrations.run",
+				buildFacts: async () => null,
 			});
 		}
 
