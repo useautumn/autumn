@@ -20,7 +20,6 @@ type StepDownControllerContext = {
 	now?: () => number;
 	wallNow?: () => number;
 	sleep?: (ms: number) => Promise<void>;
-	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
 };
 
 type StepDownControllerConfig = {
@@ -30,7 +29,6 @@ type StepDownControllerConfig = {
 	membershipMs: number;
 	skewMs: number;
 	minPeers: number;
-	permitRenewMs: number;
 };
 
 export function createStepDownController({
@@ -43,21 +41,18 @@ export function createStepDownController({
 	const now = ctx.now ?? (() => performance.now());
 	const wallNow = ctx.wallNow ?? Date.now;
 	const sleep = ctx.sleep ?? Bun.sleep;
-	const schedule = ctx.schedule ?? scheduleRenewals;
 	const state: {
 		phase: "watching" | "checking" | "stepped_down";
 		stopped: boolean;
 		permit: StepDownPermit | null;
 		decision: Promise<void> | null;
 		unsubscribe: (() => void) | null;
-		cancelRenewals: (() => void) | null;
 	} = {
 		phase: "watching",
 		stopped: false,
 		permit: null,
 		decision: null,
 		unsubscribe: null,
-		cancelRenewals: null,
 	};
 
 	function isEligible(): boolean {
@@ -104,7 +99,8 @@ export function createStepDownController({
 				ctx.logger.warn("Own network recovered before the step-down: staying", {
 					verdict: current,
 				});
-				await releasePermit({ permit: granted.permit });
+				if (!(await releasePermit({ permit: granted.permit })))
+					state.permit = granted.permit;
 				return;
 			}
 			state.permit = granted.permit;
@@ -117,10 +113,6 @@ export function createStepDownController({
 					permitSlot: granted.permit.slot,
 				},
 			);
-			state.cancelRenewals = schedule({
-				intervalMs: config.permitRenewMs,
-				run: renewPermit,
-			});
 			await ctx.partitions.stepDown();
 			ctx.logger.info(
 				"Stepped down: out of the group and refusing routes until replaced",
@@ -165,38 +157,20 @@ export function createStepDownController({
 		}
 	}
 
-	function renewPermit(): void {
-		const { permit } = state;
-		if (!permit) return;
-		void ctx.permits.renew({ permit }).then(
-			(renewed) => {
-				if (renewed) return;
-				ctx.logger.error(
-					"Step-down permit is no longer ours; it was not renewed",
-					{
-						permitSlot: permit.slot,
-					},
-				);
-			},
-			(cause) => {
-				ctx.logger.warn("Step-down permit not renewed; trying again later", {
-					error: cause,
-				});
-			},
-		);
-	}
-
 	async function releasePermit({
 		permit,
 	}: {
 		permit: StepDownPermit;
-	}): Promise<void> {
+	}): Promise<boolean> {
 		try {
 			await ctx.permits.release({ permit });
+			return true;
 		} catch (cause) {
-			ctx.logger.warn("Step-down permit not released; it expires on its own", {
-				error: cause,
-			});
+			ctx.logger.error(
+				"Step-down permit not released; it holds its slot until released",
+				{ error: cause, permitSlot: permit.slot },
+			);
+			return false;
 		}
 	}
 
@@ -210,27 +184,10 @@ export function createStepDownController({
 		state.unsubscribe?.();
 		state.unsubscribe = null;
 		await state.decision;
-		state.cancelRenewals?.();
-		state.cancelRenewals = null;
 		const { permit } = state;
 		state.permit = null;
 		if (permit) await releasePermit({ permit });
 	}
 
 	return { start, stop };
-}
-
-function scheduleRenewals({
-	intervalMs,
-	run,
-}: {
-	intervalMs: number;
-	run(): void;
-}): () => void {
-	const timer = setInterval(run, intervalMs);
-	timer.unref?.();
-	function cancel(): void {
-		clearInterval(timer);
-	}
-	return cancel;
 }

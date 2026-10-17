@@ -4,8 +4,6 @@ import {
 	BALANCE_WORKER_STEP_DOWN_PEER_MEMBERSHIP_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_POLL_MS,
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
-	BALANCE_WORKER_STEP_DOWN_PERMIT_RENEW_MS,
-	BALANCE_WORKER_STEP_DOWN_PERMIT_TTL_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMITS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
@@ -104,7 +102,6 @@ function createController({
 			deployment: config.deployment,
 			holder: `${config.endpoint}#${process.pid}`,
 			slots: BALANCE_WORKER_STEP_DOWN_PERMITS,
-			ttlMs: BALANCE_WORKER_STEP_DOWN_PERMIT_TTL_MS,
 		},
 	});
 	return createStepDownController({
@@ -122,7 +119,6 @@ function createController({
 			membershipMs: BALANCE_WORKER_STEP_DOWN_PEER_MEMBERSHIP_MS,
 			skewMs: BALANCE_WORKER_STEP_DOWN_CLOCK_SKEW_MS,
 			minPeers: BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
-			permitRenewMs: BALANCE_WORKER_STEP_DOWN_PERMIT_RENEW_MS,
 		},
 	});
 }
