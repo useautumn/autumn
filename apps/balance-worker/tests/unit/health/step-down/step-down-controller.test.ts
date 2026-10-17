@@ -261,7 +261,12 @@ describe("step-down controller", () => {
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 		expect(logs).toContainEqual({
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
