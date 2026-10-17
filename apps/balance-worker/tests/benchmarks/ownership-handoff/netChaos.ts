@@ -18,10 +18,10 @@ import {
 	BALANCE_WORKER_ROUTE_REFRESH_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import {
-	createPartitionReader,
 	meteringIdentityToPartition,
 	ownershipTopic,
 	parseTrustedMeteringRecord,
+	readOwnerHeaders,
 } from "@autumn/kafka";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
@@ -102,9 +102,20 @@ const taps: HttpTap[] = [];
 const routingLogs: { t: number; level: string; message?: string }[] = [];
 const marks: Mark[] = [];
 
-const commit = Bun.spawnSync(["git", "rev-parse", "HEAD"])
-	.stdout.toString()
-	.trim();
+function gitOutput(args: string[]): string {
+	return Bun.spawnSync(["git", ...args])
+		.stdout.toString()
+		.trim();
+}
+const commit = gitOutput(["rev-parse", "HEAD"]);
+const productCommit = gitOutput([
+	"log",
+	"-1",
+	"--format=%H",
+	"--",
+	"apps/balance-worker/src",
+	"packages/*/src",
+]);
 const deployment = `bench-${crypto.randomUUID().slice(0, 8)}`;
 const runDir = join(outDir, `${SCENARIO}-${deployment}`);
 mkdirSync(runDir, { recursive: true });
@@ -935,85 +946,249 @@ for (const worker of workers) {
 }
 await owners.stop();
 await watcher.disconnect();
-const reader = createPartitionReader({
-	ctx: { kafka },
-	config: { topic: topics.metering },
-});
-const offsets = await admin.fetchTopicOffsets(topics.metering);
-const logCount = new Map<string, number>();
-const logPartition = new Map<string, number>();
-let nonMutationRecords = 0;
-for (const { partition, high } of offsets) {
-	const records = await reader.readRange({
-		partition,
-		fromOffset: 0n,
-		toOffset: BigInt(high),
-		timeoutMs: 120_000,
+type LogRecord = {
+	partition: number;
+	offset: bigint;
+	key: Buffer | null;
+	value: Buffer | null;
+	headers: Parameters<typeof readOwnerHeaders>[0]["headers"];
+	createdAt: number;
+};
+async function readMeteringLog(): Promise<{
+	records: LogRecord[];
+	complete: boolean;
+}> {
+	const offsets = await admin.fetchTopicOffsets(topics.metering);
+	const highs = new Map(
+		offsets.map(({ partition, high }) => [partition, BigInt(high)]),
+	);
+	const pending = new Set(
+		[...highs].filter(([, high]) => high > 0n).map(([partition]) => partition),
+	);
+	const records: LogRecord[] = [];
+	const finished = Promise.withResolvers<void>();
+	if (pending.size === 0) finished.resolve();
+	const consumer = kafka.consumer({ groupId: `${deployment}-reconcile` });
+	await consumer.connect();
+	await consumer.subscribe({ topics: [topics.metering], fromBeginning: true });
+	await consumer.run({
+		eachMessage: async ({ partition, message }) => {
+			const offset = BigInt(message.offset);
+			records.push({
+				partition,
+				offset,
+				key: message.key,
+				value: message.value,
+				headers: message.headers,
+				createdAt: Number(message.timestamp),
+			});
+			if (offset + 1n < (highs.get(partition) ?? 0n)) return;
+			pending.delete(partition);
+			if (pending.size === 0) finished.resolve();
+		},
 	});
-	for (const { key, value } of records) {
-		let record: ReturnType<typeof parseTrustedMeteringRecord>;
-		try {
-			record = parseTrustedMeteringRecord({ key, value });
-		} catch {
-			nonMutationRecords += 1;
-			continue;
-		}
-		const id = String(
-			(record as { id?: unknown }).id ?? record.command.commandId,
-		);
-		if (!id.startsWith("hammer-")) continue;
-		logCount.set(id, (logCount.get(id) ?? 0) + 1);
-		logPartition.set(id, partition);
-	}
+	await Promise.race([finished.promise, Bun.sleep(180_000)]);
+	await consumer.disconnect();
+	records.sort((x, y) =>
+		x.partition !== y.partition
+			? x.partition - y.partition
+			: x.offset < y.offset
+				? -1
+				: x.offset > y.offset
+					? 1
+					: 0,
+	);
+	return { records, complete: pending.size === 0 };
 }
-await reader.disconnect();
+const log = await readMeteringLog();
 const outcomeById = new Map(outcomes.map((o) => [o.id, o]));
+const fenceByPartition = new Map<number, { epoch: bigint; offset: bigint }>();
+const acceptedCount = new Map<string, number>();
+const acceptedPartition = new Map<string, number>();
+const loggedIds = new Set<string>();
+const dropped: {
+	id: string;
+	partition: number;
+	offset: string;
+	ownerEpoch: string;
+	fenceEpoch: string;
+	fenceOffset: string;
+	createdRelMs: number;
+	outcome: string | null;
+}[] = [];
+const fences: { partition: number; offset: string; epoch: string }[] = [];
+let otherRecords = 0;
+for (const record of log.records) {
+	const owner = readOwnerHeaders({ headers: record.headers });
+	if (owner.fence) {
+		const epoch = owner.ownerEpoch ?? 0n;
+		fences.push({
+			partition: record.partition,
+			offset: record.offset.toString(),
+			epoch: epoch.toString(),
+		});
+		const current = fenceByPartition.get(record.partition);
+		if (!current || epoch > current.epoch)
+			fenceByPartition.set(record.partition, { epoch, offset: record.offset });
+		continue;
+	}
+	let parsed: ReturnType<typeof parseTrustedMeteringRecord>;
+	try {
+		parsed = parseTrustedMeteringRecord({
+			key: record.key,
+			value: record.value,
+		});
+	} catch {
+		otherRecords += 1;
+		continue;
+	}
+	const id = String(
+		(parsed as { id?: unknown }).id ?? parsed.command.commandId,
+	);
+	if (!id.startsWith("hammer-")) continue;
+	loggedIds.add(id);
+	const fence = fenceByPartition.get(record.partition);
+	const stale =
+		fence !== undefined &&
+		owner.ownerEpoch !== undefined &&
+		record.offset > fence.offset &&
+		owner.ownerEpoch < fence.epoch;
+	if (stale) {
+		dropped.push({
+			id,
+			partition: record.partition,
+			offset: record.offset.toString(),
+			ownerEpoch: String(owner.ownerEpoch),
+			fenceEpoch: fence.epoch.toString(),
+			fenceOffset: fence.offset.toString(),
+			createdRelMs: rel(record.createdAt),
+			outcome: outcomeById.get(id)?.outcome ?? null,
+		});
+		continue;
+	}
+	acceptedCount.set(id, (acceptedCount.get(id) ?? 0) + 1);
+	acceptedPartition.set(id, record.partition);
+}
 const perPartition = [];
 for (const [partition, customer] of [...customers].sort(
-	(a, b) => a[0] - b[0],
+	(x, y) => x[0] - y[0],
 )) {
-	const logged = [...logPartition].filter(([, p]) => p === partition).length;
+	const accepted = [...acceptedPartition].filter(
+		([, p]) => p === partition,
+	).length;
 	const applied = INITIAL_BALANCE - (await customer.readBalance());
 	perPartition.push({
 		partition,
 		ok: outcomes.filter((o) => o.partition === partition && o.outcome === "200")
 			.length,
-		loggedDistinct: logged,
+		acceptedDistinct: accepted,
 		postgresApplied: applied,
-		consistent: applied === logged,
+		consistent: applied === accepted,
 	});
 }
-const failedButLogged = outcomes.filter(
-	(o) => o.outcome !== "200" && logCount.has(o.id),
-);
+const isAccepted = (id: string) => acceptedCount.has(id);
 const reconciliation = {
+	logComplete: log.complete,
 	requests: outcomes.length,
 	ok: outcomes.filter((o) => o.outcome === "200").length,
-	loggedDistinct: logCount.size,
-	duplicates: [...logCount]
+	acceptedDistinct: acceptedCount.size,
+	appliedTwice: [...acceptedCount]
 		.filter(([, n]) => n > 1)
 		.map(([id, n]) => ({ id, n, outcome: outcomeById.get(id)?.outcome })),
-	okMissing: outcomes
-		.filter((o) => o.outcome === "200" && !logCount.has(o.id))
-		.map((o) => ({ id: o.id, partition: o.partition, relMs: rel(o.sentAt) })),
-	failedButLogged: countBy(
-		failedButLogged,
+	acknowledgedButLost: outcomes
+		.filter((o) => o.outcome === "200" && !isAccepted(o.id))
+		.map((o) => ({
+			id: o.id,
+			partition: o.partition,
+			relMs: rel(o.sentAt),
+			onlyInDroppedRecords: loggedIds.has(o.id),
+		})),
+	failedButApplied: countBy(
+		outcomes.filter((o) => o.outcome !== "200" && isAccepted(o.id)),
 		(o) => `${o.outcome}|${o.submitted}`,
 	),
-	failedNotLogged: countBy(
-		outcomes.filter((o) => o.outcome !== "200" && !logCount.has(o.id)),
+	failedNotApplied: countBy(
+		outcomes.filter((o) => o.outcome !== "200" && !isAccepted(o.id)),
 		(o) => `${o.outcome}|${o.submitted}`,
 	),
-	loggedButNeverSent: [...logCount.keys()].filter((id) => !outcomeById.has(id))
-		.length,
-	nonMutationRecords,
+	appliedButNeverSent: [...acceptedCount.keys()].filter(
+		(id) => !outcomeById.has(id),
+	).length,
+	fences: fences.length,
+	otherRecords,
 	postgresMatchesLog: perPartition.every((p) => p.consistent),
 	postgresMismatches: perPartition.filter((p) => !p.consistent),
+};
+const stepDownAtByWorker = new Map(
+	Object.entries(timelines)
+		.filter(([, timeline]) => timeline.stepDownLogMs !== null)
+		.map(([name, timeline]) => [
+			name,
+			faultStart + (timeline.stepDownLogMs as number),
+		]),
+);
+function afterStepDown(worker: string, t: number): boolean {
+	const at = stepDownAtByWorker.get(worker);
+	return at !== undefined && t >= at;
+}
+const aroundFence = {
+	lateAppends: {
+		count: dropped.length,
+		byOutcome: countBy(dropped, (d) => d.outcome ?? "not sent"),
+		alsoApplied: dropped.filter((d) => isAccepted(d.id)).length,
+		records: dropped.slice(0, 50),
+	},
+	lateClaims: ownershipEvents
+		.filter(
+			(e) =>
+				(e.type === "claimed" || e.type === "ready") &&
+				afterStepDown(nameOf(e.endpoint), e.seenAt),
+		)
+		.map((e) => ({
+			relMs: rel(e.seenAt),
+			partition: e.partition,
+			type: e.type,
+			worker: nameOf(e.endpoint),
+		})),
+	recordsAfterStepDown: countBy(
+		ownershipEvents.filter((e) => afterStepDown(nameOf(e.endpoint), e.seenAt)),
+		(e) => `${nameOf(e.endpoint)}:${e.type}`,
+	),
+	staleRecordsSkipped: Object.fromEntries(
+		workers.map((worker) => [
+			worker.name,
+			workerEvents
+				.filter(
+					(e) =>
+						e.worker === worker.name &&
+						e.event === "log.warn" &&
+						(e.args as unknown[])?.[0] === "Stale owner record skipped",
+				)
+				.reduce(
+					(sum, e) =>
+						sum +
+						Number(
+							((e.args as unknown[])[1] as { count?: number })?.count ?? 0,
+						),
+					0,
+				),
+		]),
+	),
+	steppedDownWorkerErrors: countBy(
+		workerEvents.filter(
+			(e) =>
+				/^(log\.error|log\.warn|error|unhealthy)$/.test(e.event) &&
+				afterStepDown(e.worker, e.t),
+		),
+		(e) =>
+			`${e.worker}:${e.event}:${JSON.stringify(e.args ?? e.cause).slice(0, 200)}`,
+	),
 };
 
 const summary = {
 	scenario: SCENARIO,
 	commit,
+	productCommit,
 	deployment,
 	fleetId,
 	config: {
@@ -1088,6 +1263,7 @@ const summary = {
 	perSecond,
 	reconciliation,
 	perPartitionReconciliation: perPartition,
+	aroundFence,
 };
 
 await admin.deleteTopics({ topics: Object.values(topics) });
