@@ -28,5 +28,6 @@ export async function resolveRequestRuntime({
 	await ctx.ownership.awaitHandoff?.({ partition });
 	throw new PartitionRouteNotOwnedError({
 		successor: ctx.ownership.findSuccessor?.({ partition }),
+		steppingDown: ctx.ownership.isSteppedDown?.(),
 	});
 }

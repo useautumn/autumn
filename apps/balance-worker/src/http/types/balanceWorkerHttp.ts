@@ -84,6 +84,7 @@ export type BalanceWorkerHttpContext = {
 		findSuccessor?(target: {
 			partition: number;
 		}): WorkerRouteSuccessor | undefined;
+		isSteppedDown?(): boolean;
 	};
 	partitionResolver: MeteringPartitionResolver;
 	logger: Pick<AutumnLogger, "debug" | "info" | "warn" | "error">;

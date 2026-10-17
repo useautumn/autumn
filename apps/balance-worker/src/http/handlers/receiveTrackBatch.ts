@@ -44,6 +44,7 @@ export function receiveTrackBatch({ ctx }: { ctx: BalanceWorkerHttpContext }) {
 				successor: ctx.ownership.findSuccessor?.({
 					partition: route.partition,
 				}),
+				steppingDown: ctx.ownership.isSteppedDown?.(),
 			});
 		}
 		const runtime: Runtime = withRequestBudget({

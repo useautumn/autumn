@@ -26,6 +26,7 @@ export const WORKER_ERROR_CODES = [
 ] as const;
 export type WorkerErrorCode = (typeof WORKER_ERROR_CODES)[number];
 export const PARTITION_RECOVERY_REASON = "PARTITION_RECOVERY";
+export const STEPPING_DOWN_REASON = "STEPPING_DOWN";
 /** Where a partition went: the route its old owner claimed for the successor, so a caller can try it without a refresh. */
 export type WorkerRouteSuccessor = PartitionRoute & { endpoint: string };
 export type WorkerErrorResponse = {

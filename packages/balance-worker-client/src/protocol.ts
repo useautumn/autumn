@@ -68,6 +68,7 @@ export {
 	PARTITION_RECOVERY_REASON,
 	parseWorkerRequest,
 	readRequestBudgetHeader,
+	STEPPING_DOWN_REASON,
 	WORKER_REQUEST_BUDGET_HEADER,
 	WorkerProtocolError,
 } from "./contracts/worker.js";
