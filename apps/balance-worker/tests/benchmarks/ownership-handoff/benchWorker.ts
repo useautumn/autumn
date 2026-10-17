@@ -22,7 +22,10 @@ import {
 	DEFAULT_OWN_NETWORK_THRESHOLDS,
 	judgeOwnNetwork,
 } from "../../../src/health/ownNetwork/judgeOwnNetwork.js";
-import type { OwnNetworkSample } from "../../../src/health/ownNetwork/types/ownNetworkSample.js";
+import type {
+	OwnNetworkSample,
+	PartitionSendSample,
+} from "../../../src/health/ownNetwork/types/ownNetworkSample.js";
 import type { PartitionSendWatches } from "../../../src/health/ownNetwork/types/partitionSendWatches.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
@@ -333,9 +336,33 @@ const partitions = createWorkerPartitions({
 		healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 	},
 });
-const verdictSamples: { kept: OwnNetworkSample[] } = { kept: [] };
+type HeldSendSample = PartitionSendSample & { holding: number };
+const mirror: {
+	samples: (Omit<OwnNetworkSample, "sends"> & { sends: HeldSendSample[] })[];
+	holdings: Map<number, number>;
+	nextHolding: number;
+} = { samples: [], holdings: new Map(), nextHolding: 0 };
 const lastTcp = { counters: readTcpCounters() };
 const keepSamplesMs = DEFAULT_OWN_NETWORK_THRESHOLDS.windowMs + 2_000;
+function forgetReleasedHoldings(): void {
+	for (const partition of [...mirror.holdings.keys()])
+		if (!partitions.isHeld({ partition })) mirror.holdings.delete(partition);
+}
+function holdingOf(partition: number): number {
+	const known = mirror.holdings.get(partition);
+	if (known !== undefined) return known;
+	const holding = mirror.nextHolding++;
+	mirror.holdings.set(partition, holding);
+	return holding;
+}
+function heldSamples(): OwnNetworkSample[] {
+	return mirror.samples.map((kept) => ({
+		...kept,
+		sends: kept.sends.filter(
+			({ partition, holding }) => mirror.holdings.get(partition) === holding,
+		),
+	}));
+}
 function takeAndMirror({ now }: { now: number }) {
 	const sends = sendWatches.take({ now });
 	const counters = readTcpCounters();
@@ -344,28 +371,30 @@ function takeAndMirror({ now }: { now: number }) {
 			? tcpWindowOf({ previous: lastTcp.counters, current: counters })
 			: null;
 	lastTcp.counters = counters;
-	const servedSends = sends.filter(({ partition }) =>
-		partitions.isAdmitted({ partition }),
-	);
-	verdictSamples.kept = [
-		...verdictSamples.kept.filter((kept) => kept.at > now - keepSamplesMs),
-		{ at: now, tcp, sends: servedSends },
+	forgetReleasedHoldings();
+	const heldSends: HeldSendSample[] = [];
+	for (const send of sends)
+		if (partitions.isHeld({ partition: send.partition }))
+			heldSends.push({ ...send, holding: holdingOf(send.partition) });
+	mirror.samples = [
+		...mirror.samples.filter((kept) => kept.at > now - keepSamplesMs),
+		{ at: now, tcp, sends: heldSends },
 	];
-	const verdict = judgeOwnNetwork({ samples: verdictSamples.kept, now });
+	const verdict = judgeOwnNetwork({ samples: heldSamples(), now });
 	queueMicrotask(() =>
 		emit("own_network.tick", {
 			work: stepDown.readWork(),
 			verdict,
 			tcp,
 			sends,
-			servedPartitions: servedSends.map(({ partition }) => partition),
+			heldPartitions: heldSends.map(({ partition }) => partition),
 		}),
 	);
 	return sends;
 }
 const watchedSends: PartitionSendWatches = {
 	watchFor: sendWatches.watchFor,
-	readLastAckAt: sendWatches.readLastAckAt,
+	readLastAckAgeMs: sendWatches.readLastAckAgeMs,
 	take: takeAndMirror,
 };
 const stepDown = createWorkerStepDown({
@@ -384,6 +413,8 @@ const stepDown = createWorkerStepDown({
 		deployment: env.BALANCE_WORKER_DEPLOYMENT,
 		endpoint: address.endpoint,
 		fleetId,
+		imageSha: null,
+		partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 	},
 });
 const app = createBalanceWorkerApp({
@@ -459,12 +490,13 @@ let stopping: Promise<void> | undefined;
 function stop(): Promise<void> {
 	stopping ??= (async () => {
 		emit("stop.begin");
-		stepDown.stop();
+		const steppedDown = stepDown.stop();
 		slotHeartbeat?.stop();
 		await partitions.stop();
 		emit("stop.partitions_stopped");
 		await listener.stop();
 		await resources.catalogInvalidations?.stop();
+		await steppedDown;
 		await resources.settleResources();
 		resources.closeStore();
 		emit("stop.done");
