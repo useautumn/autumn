@@ -220,11 +220,21 @@ export function createOwnershipPublisher({
 
 	function awaitRelease({
 		signal,
+		afterReadyAt,
 	}: {
 		signal: AbortSignal;
+		afterReadyAt: number;
 	}): Promise<{ endpoint: string }> {
+		let answersReady = false;
 		function matchRelease({ record }: OwnershipTailRecord) {
-			if (record.type !== "released") return undefined;
+			if (
+				record.type === "ready" &&
+				record.endpoint === config.endpoint &&
+				record.readyAt === afterReadyAt
+			)
+				answersReady = true;
+			else if (record.type !== "released") return undefined;
+			if (!answersReady) return undefined;
 			return readRelease() ?? undefined;
 		}
 		return awaitRecord({ signal, match: matchRelease });
@@ -266,7 +276,6 @@ export function createOwnershipPublisher({
 		awaitPreparing,
 		awaitDraining,
 		awaitForeignClaim,
-		readRelease,
 		awaitRelease,
 		awaitClaim,
 		awaitRouteClaim: ({ signal }) => awaitClaim({ signal }),

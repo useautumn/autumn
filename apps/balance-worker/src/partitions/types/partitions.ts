@@ -58,8 +58,10 @@ export type PartitionOwnershipPublication = {
 	awaitForeignClaim(params: {
 		signal: AbortSignal;
 	}): Promise<{ endpoint: string }>;
-	readRelease(): { endpoint: string } | null;
-	awaitRelease(params: { signal: AbortSignal }): Promise<{ endpoint: string }>;
+	awaitRelease(params: {
+		signal: AbortSignal;
+		afterReadyAt: number;
+	}): Promise<{ endpoint: string }>;
 	/** Resolves with the route epoch of a `claimed` naming this worker, rejects with the signal's reason.
 	 *  With `afterReadyAt`, only a claim that follows this worker's `ready` stamped with it counts. */
 	awaitClaim(params: {

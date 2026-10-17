@@ -92,10 +92,16 @@ export const createOwnershipLog = () => {
 		}
 		return null;
 	};
-	const release = ({ partition }: { partition: number }) => {
+	const release = ({
+		partition,
+		from,
+	}: {
+		partition: number;
+		from: number;
+	}) => {
 		let holder: string | null = null;
 		let freedBy: string | null = null;
-		for (const event of records) {
+		for (const event of records.slice(from)) {
 			if (event.partition !== partition) continue;
 			if (event.type === "claimed") {
 				holder = event.endpoint;
@@ -169,6 +175,7 @@ export const createWorker = ({
 	silentPreparation = false,
 }: WorkerOptions) => {
 	const { events } = log;
+	const tailFrom = log.records.length;
 	const errors: unknown[] = [];
 	const endpoint = `http://${name}`;
 	let listeners: PartitionChangeListeners;
@@ -179,7 +186,6 @@ export const createWorker = ({
 		"subscribeUnavailable",
 		"readActivePreparation",
 		"readActiveDrain",
-		"readRelease",
 	]);
 	function untilKilled<Port extends object>(port: Port): Port {
 		return new Proxy(port, {
@@ -340,15 +346,24 @@ export const createWorker = ({
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
-			readRelease: () => log.release({ partition }),
-			awaitRelease: ({ signal }) =>
-				log.await({
+			awaitRelease: ({ signal, afterReadyAt }) => {
+				let answersReady = false;
+				return log.await({
 					signal,
-					match: (event) =>
-						event.type === "unowned" && event.partition === partition
-							? (log.release({ partition }) ?? undefined)
-							: undefined,
-				}),
+					match: (event) => {
+						if (event.partition !== partition) return undefined;
+						if (
+							event.type === "ready" &&
+							event.endpoint === endpoint &&
+							event.readyAt === afterReadyAt
+						)
+							answersReady = true;
+						else if (event.type !== "unowned") return undefined;
+						if (!answersReady) return undefined;
+						return log.release({ partition, from: tailFrom }) ?? undefined;
+					},
+				});
+			},
 			awaitReady: ({ signal }) =>
 				log.await({
 					signal,
