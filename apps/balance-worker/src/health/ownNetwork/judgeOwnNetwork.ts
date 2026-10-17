@@ -1,19 +1,16 @@
 import {
-	BALANCE_WORKER_OWN_NETWORK_MIN_SEGMENTS,
+	BALANCE_WORKER_OWN_NETWORK_MIN_RETRANSMITS,
 	BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
 	BALANCE_WORKER_OWN_NETWORK_RETRANSMIT_RATIO,
 	BALANCE_WORKER_OWN_NETWORK_STALL_MS,
 	BALANCE_WORKER_OWN_NETWORK_WINDOW_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { OwnNetworkSample } from "./types/ownNetworkSample.js";
-import type {
-	OwnNetworkState,
-	OwnNetworkVerdict,
-} from "./types/ownNetworkVerdict.js";
+import type { OwnNetworkVerdict } from "./types/ownNetworkVerdict.js";
 
 export type OwnNetworkThresholds = {
 	windowMs: number;
-	minSegments: number;
+	minRetransmits: number;
 	retransmitRatio: number;
 	stallMs: number;
 	minStalledPartitions: number;
@@ -21,7 +18,7 @@ export type OwnNetworkThresholds = {
 
 export const DEFAULT_OWN_NETWORK_THRESHOLDS: OwnNetworkThresholds = {
 	windowMs: BALANCE_WORKER_OWN_NETWORK_WINDOW_MS,
-	minSegments: BALANCE_WORKER_OWN_NETWORK_MIN_SEGMENTS,
+	minRetransmits: BALANCE_WORKER_OWN_NETWORK_MIN_RETRANSMITS,
 	retransmitRatio: BALANCE_WORKER_OWN_NETWORK_RETRANSMIT_RATIO,
 	stallMs: BALANCE_WORKER_OWN_NETWORK_STALL_MS,
 	minStalledPartitions: BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,
@@ -49,6 +46,9 @@ export function judgeOwnNetwork({
 		(longestMs) => longestMs >= thresholds.stallMs,
 	).length;
 	const retransmitRatio = segments > 0 ? retransmitted / segments : null;
+	const losesPackets =
+		retransmitted >= thresholds.minRetransmits &&
+		(retransmitRatio ?? 0) >= thresholds.retransmitRatio;
 	const verdict = {
 		at: now,
 		windowStartedAt: window[0]?.at ?? null,
@@ -56,21 +56,19 @@ export function judgeOwnNetwork({
 		retransmitRatio,
 		busyPartitions: longestByPartition.size,
 		stalledPartitions,
+		losesPackets,
 	};
 	const coversWindow =
 		(samples[0]?.at ?? Number.POSITIVE_INFINITY) <= windowStart;
 	const countersComplete = window.every((sample) => sample.tcp !== null);
-	if (!coversWindow || !countersComplete || segments < thresholds.minSegments)
+	if (!coversWindow || !countersComplete || segments === 0)
 		return { ...verdict, state: "insufficient_data" };
-	return {
-		...verdict,
-		state: stateOf({
-			retransmitRatio: retransmitRatio ?? 0,
-			busyPartitions: longestByPartition.size,
-			stalledPartitions,
-			thresholds,
-		}),
-	};
+	const stuck = sendsStuckOnMostPartitions({
+		busyPartitions: longestByPartition.size,
+		stalledPartitions,
+		thresholds,
+	});
+	return { ...verdict, state: losesPackets && stuck ? "degraded" : "healthy" };
 }
 
 function longestSendByPartition({
@@ -88,20 +86,17 @@ function longestSendByPartition({
 	return longestByPartition;
 }
 
-function stateOf({
-	retransmitRatio,
+function sendsStuckOnMostPartitions({
 	busyPartitions,
 	stalledPartitions,
 	thresholds,
 }: {
-	retransmitRatio: number;
 	busyPartitions: number;
 	stalledPartitions: number;
 	thresholds: OwnNetworkThresholds;
-}): OwnNetworkState {
-	const losesPackets = retransmitRatio >= thresholds.retransmitRatio;
-	const sendsStuckOnMostPartitions =
+}): boolean {
+	return (
 		stalledPartitions >= thresholds.minStalledPartitions &&
-		stalledPartitions * 2 > busyPartitions;
-	return losesPackets && sendsStuckOnMostPartitions ? "degraded" : "healthy";
+		stalledPartitions * 2 > busyPartitions
+	);
 }

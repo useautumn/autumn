@@ -91,7 +91,7 @@ export function createStepDownController({
 				return;
 			}
 			const current = ctx.monitor.verdict();
-			if (current.state !== "degraded" || !isEligible()) {
+			if (hasRecovered(current) || !isEligible()) {
 				ctx.logger.warn("Own network recovered before the step-down: staying", {
 					verdict: current,
 				});
@@ -194,4 +194,8 @@ export function createStepDownController({
 	}
 
 	return { start, stop };
+}
+
+function hasRecovered(verdict: OwnNetworkVerdict): boolean {
+	return verdict.state !== "insufficient_data" && !verdict.losesPackets;
 }

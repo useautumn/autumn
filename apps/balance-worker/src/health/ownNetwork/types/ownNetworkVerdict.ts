@@ -8,4 +8,5 @@ export type OwnNetworkVerdict = {
 	retransmitRatio: number | null;
 	busyPartitions: number;
 	stalledPartitions: number;
+	losesPackets: boolean;
 };
