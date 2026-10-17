@@ -37,7 +37,7 @@ const PARTITION_COUNT = Number(process.env.CHURN_PARTITIONS ?? 16);
 const WORKERS = Number(process.env.CHURN_WORKERS ?? 4);
 const BASELINE_MS = Number(process.env.CHAOS_BASELINE_MS ?? 15_000);
 const AFTER_CLEAR_MS = Number(process.env.CHAOS_AFTER_CLEAR_MS ?? 60_000);
-const HEARTBEAT_MS = Number(process.env.CHAOS_HEARTBEAT_MS ?? 5_000);
+const HEARTBEAT_MS = Number(process.env.CHAOS_HEARTBEAT_MS ?? 20_000);
 const SCENARIO = process.env.CHAOS_NAME ?? "unnamed";
 const VICTIMS = (process.env.CHAOS_VICTIMS ?? "").split(",").filter(Boolean);
 const NET_PREFIX = process.env.NETCHAOS_PREFIX ?? "bwc";
@@ -722,27 +722,53 @@ const phase = (t: number) =>
 				? "recovery"
 				: "after";
 
+type LoggedVerdict = {
+	at: number;
+	state: string;
+	segments: number;
+	retransmitRatio: number | null;
+	busyPartitions: number;
+	stalledPartitions: number;
+	heldPartitions: number;
+	stalledHoldings: { partition: number; holding: number }[];
+	losesPackets: boolean;
+};
 type Tick = WorkerEvent & {
-	work: {
-		lastSendAckAgeMs: number | null;
-		ownNetwork: string;
-		steppedDown: boolean;
-	};
+	holdings?: Record<string, number>;
+	steppedDown?: boolean;
 	windowLongestMs?: Record<string, number>;
 	windowRetransmitted?: number;
-	verdict: {
-		state: string;
-		segments: number;
-		retransmitRatio: number | null;
-		busyPartitions: number;
-		stalledPartitions: number;
-	};
+	verdict: LoggedVerdict;
 	tcp: { outSegs: number; retransSegs: number; timeouts: number } | null;
-	sends: { partition: number; longestInFlightMs: number }[];
+	sends: { partition: number; holding: number; longestInFlightMs: number }[];
+};
+type FleetRead = WorkerEvent & {
+	startedAt: number;
+	ms: number;
+	error?: unknown;
 };
 const ticks = workerEvents.filter(
 	(e) => e.event === "own_network.tick",
 ) as Tick[];
+const fleetReads = workerEvents.filter(
+	(e) => e.event === "fleet_progress.read",
+) as FleetRead[];
+function verdictSummary(verdict: unknown) {
+	if (!verdict || typeof verdict !== "object") return null;
+	const v = verdict as LoggedVerdict;
+	return {
+		state: v.state,
+		segments: v.segments,
+		retransmitRatio:
+			v.retransmitRatio === null || v.retransmitRatio === undefined
+				? null
+				: Number(v.retransmitRatio.toFixed(4)),
+		stalledPartitions: v.stalledPartitions,
+		heldPartitions: v.heldPartitions,
+		losesPackets: v.losesPackets,
+		stalledHoldings: v.stalledHoldings,
+	};
+}
 function logsOf({
 	worker,
 	event,
@@ -787,15 +813,27 @@ const timelines = Object.fromEntries(
 				firstDegradedMs: relOrNull(
 					mine.find((t) => t.verdict.state === "degraded")?.t,
 				),
-				firstDegradedProductMs: relOrNull(
-					mine.find((t) => t.work.ownNetwork === "degraded")?.t,
+				firstCheckMs: relOrNull(
+					fleetReads.find(
+						(e) => e.worker === worker.name && e.startedAt >= faultStart,
+					)?.startedAt,
 				),
+				fleetReads: (() => {
+					const reads = fleetReads.filter(
+						(e) => e.worker === worker.name && e.startedAt >= faultStart,
+					);
+					return {
+						count: reads.length,
+						failed: reads.filter((e) => e.error !== undefined).length,
+						maxMs: reads.length ? Math.max(...reads.map((e) => e.ms)) : null,
+					};
+				})(),
 				stepDownLogMs: relOrNull(stepping?.t),
 				stepDown: stepping
 					? {
 							peers: argsOf(stepping)?.peers,
 							permitSlot: argsOf(stepping)?.permitSlot,
-							verdict: argsOf(stepping)?.verdict,
+							verdict: verdictSummary(argsOf(stepping)?.verdict),
 						}
 					: null,
 				steppedDownMs: relOrNull(
@@ -813,20 +851,23 @@ const timelines = Object.fromEntries(
 						worker: worker.name,
 						event: "log.warn",
 						match:
-							/do not vouch|could not be read|recovered before the step-down|not renewed|not released/,
+							/not keeping up|could not be read|recovered before the step-down/,
 					}),
 					...logsOf({
 						worker: worker.name,
 						event: "log.error",
-						match: /no step-down permit|check failed|no longer ours/,
+						match: /no step-down permit|check failed|not released/,
 					}),
-				].map((e) => ({
-					relMs: rel(e.t),
-					message: String((e.args as unknown[])[0]),
-					peers: argsOf(e)?.peers ?? null,
-					reason: argsOf(e)?.reason ?? null,
-					error: argsOf(e)?.error ?? null,
-				})),
+				]
+					.sort((x, y) => x.t - y.t)
+					.map((e) => ({
+						relMs: rel(e.t),
+						message: String((e.args as unknown[])[0]),
+						peers: argsOf(e)?.peers ?? null,
+						reason: argsOf(e)?.reason ?? null,
+						error: argsOf(e)?.error ?? null,
+						verdict: verdictSummary(argsOf(e)?.verdict),
+					})),
 				exits: workerEvents
 					.filter(
 						(e) => e.worker === worker.name && e.event === "worker.exited",
@@ -910,9 +951,9 @@ const perSecond = Object.fromEntries(
 				stalled: tick.verdict.stalledPartitions,
 				retrans3s: tick.windowRetransmitted ?? null,
 				longestMs: tick.windowLongestMs ?? null,
+				held: tick.verdict.heldPartitions,
 				mirror: tick.verdict.state,
-				product: tick.work.ownNetwork,
-				steppedDown: tick.work.steppedDown,
+				steppedDown: tick.steppedDown ?? null,
 			})),
 	]),
 );
@@ -957,9 +998,31 @@ const calibration = Object.fromEntries(
 					mine.filter((t) => phase(t.t) === "fault"),
 					(t) => t.verdict.state,
 				),
-				mirrorMatchesProduct: mine.every(
-					(t) => t.verdict.state === t.work.ownNetwork,
-				),
+				mirrorVsProduct: (() => {
+					const tickAt = new Map(mine.map((t) => [t.verdict.at, t]));
+					const logged = workerEvents
+						.filter(
+							(e) =>
+								e.worker === worker.name &&
+								(e.event === "log.warn" || e.event === "log.error"),
+						)
+						.map((e) => argsOf(e)?.verdict as LoggedVerdict | undefined)
+						.filter((v): v is LoggedVerdict => typeof v?.at === "number");
+					const compared = logged.flatMap((v) => {
+						const tick = tickAt.get(v.at);
+						return tick ? [{ v, tick }] : [];
+					});
+					return {
+						logged: logged.length,
+						compared: compared.length,
+						matched: compared.filter(
+							({ v, tick }) =>
+								tick.verdict.state === v.state &&
+								tick.verdict.stalledPartitions === v.stalledPartitions &&
+								tick.verdict.heldPartitions === v.heldPartitions,
+						).length,
+					};
+				})(),
 			},
 		];
 	}),
@@ -1026,7 +1089,7 @@ const windowStats = Object.fromEntries(
 						segmentsPer3s: distributionOf(
 							mine.map((tick) => tick.verdict.segments),
 						),
-						states: countBy(mine, (tick) => tick.work.ownNetwork),
+						states: countBy(mine, (tick) => tick.verdict.state),
 					},
 				];
 			}),
