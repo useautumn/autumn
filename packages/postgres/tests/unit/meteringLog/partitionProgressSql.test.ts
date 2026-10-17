@@ -3,6 +3,7 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import {
 	claimPartitionProgress,
+	epochClaimToken,
 	insertPartitionProgress,
 	readNextOffset,
 	readPartitionProgress,
@@ -139,17 +140,59 @@ describe("partitionProgress repo", () => {
 		expect(statements[0]?.params).toEqual(["metering", 7, 0n, "claim_a"]);
 	});
 
-	test("a claim replaces the partition's claim token and nothing else", async () => {
+	test("a claim with no known epoch replaces the partition's claim token unconditionally and answers that it took", async () => {
 		const { db, statements } = capturingDb({ rows: [] });
-		await claimPartitionProgress({
+		const claimed = await claimPartitionProgress({
 			ctx: { db },
 			topic: "metering",
 			partition: 7,
 			claimToken: "claim_b",
 		});
+		expect(claimed).toBe(true);
 		expect(statements[0]?.sql.replace(/\s+/g, " ").trim()).toBe(
 			"UPDATE partition_progress SET claim_token = $1 WHERE topic = $2 AND partition_id = $3",
 		);
 		expect(statements[0]?.params).toEqual(["claim_b", "metering", 7]);
+	});
+
+	test("a claim with an epoch binds its token, position and epoch, and answers what the statement answered", async () => {
+		const token = epochClaimToken({ ownerEpoch: 512n, id: "u1" });
+		const took = capturingDb({ rows: [{ claimed: true }] });
+		expect(
+			await claimPartitionProgress({
+				ctx: { db: took.db },
+				topic: "metering",
+				partition: 7,
+				claimToken: token,
+				ownerEpoch: 512n,
+			}),
+		).toBe(true);
+		const statement = took.statements[0];
+		expect(statement?.params).toContain(token);
+		expect(statement?.params).toContain("metering");
+		expect(statement?.params).toContain(7);
+		expect(statement?.params).toContain(512n);
+		expect(statement?.sql).toContain("owner_epoch");
+		expect(statement?.sql).toContain("claim_token");
+
+		const refused = capturingDb({ rows: [{ claimed: false }] });
+		expect(
+			await claimPartitionProgress({
+				ctx: { db: refused.db },
+				topic: "metering",
+				partition: 7,
+				claimToken: token,
+				ownerEpoch: 512n,
+			}),
+		).toBe(false);
+	});
+
+	test("the claim token carries the epoch zero-padded to twenty digits, a colon, then the id", () => {
+		expect(epochClaimToken({ ownerEpoch: 5n, id: "u1" })).toBe(
+			"00000000000000000005:u1",
+		);
+		expect(epochClaimToken({ ownerEpoch: 9223372036854775807n, id: "u1" })).toBe(
+			"09223372036854775807:u1",
+		);
 	});
 });
