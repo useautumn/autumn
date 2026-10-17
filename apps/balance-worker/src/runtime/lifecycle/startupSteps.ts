@@ -36,13 +36,17 @@ export async function completeRuntimeStartup({
 	}
 
 	try {
+		const startedAt = performance.now();
 		state.producerConnectionAttempted = true;
 		await ctx.producer.connect();
 		assertStartupContinues({ state });
+		const connectedAt = performance.now();
 		await ctx.producer.fence();
 		assertStartupContinues({ state });
+		const fencedAt = performance.now();
 		await ctx.stateStore.claimPartition?.({ topic, partition });
 		assertStartupContinues({ state });
+		const claimedAt = performance.now();
 
 		// Activation keeps one status: a command that meets it waits instead of reading each step.
 		if (!prepared) state.status = "bootstrapping";
@@ -52,9 +56,12 @@ export async function completeRuntimeStartup({
 			signal,
 		});
 		assertStartupContinues({ state });
+		const rangedAt = performance.now();
 		// Bootstrap again after preparation: the bookmark moved while the predecessor drained.
 		await ctx.bootstrapper.bootstrap({ topic, partition, logRange, signal });
 		assertStartupContinues({ state });
+		const bootstrappedAt = performance.now();
+		const bookmark = ctx.stateStore.readNextOffset({ topic, partition });
 
 		if (!prepared) state.status = "catching_up";
 		state.followerStartAttempted = true;
@@ -63,10 +70,25 @@ export async function completeRuntimeStartup({
 			partition,
 			targetNextOffset: logRange.logEndOffset,
 			onUnavailable,
-			fromBookmark: prepared,
+			preparedNextOffset: state.preparedNextOffset ?? undefined,
 		});
 		assertStartupContinues({ state });
 		state.status = "ready";
+		logActivation({
+			ctx,
+			prepared,
+			marks: {
+				startedAt,
+				connectedAt,
+				fencedAt,
+				claimedAt,
+				rangedAt,
+				bootstrappedAt,
+			},
+			bookmark,
+			preparedNextOffset: state.preparedNextOffset,
+			logEndOffset: logRange.logEndOffset,
+		});
 		function readConsumedNextOffset(): bigint | null {
 			return ctx.follower.readProgress({ topic, partition }).consumedNextOffset;
 		}
@@ -125,6 +147,7 @@ export async function completeRuntimePreparation({
 		});
 		signal.throwIfAborted();
 		const replayedUntil = performance.now();
+		state.preparedNextOffset = logRange.logEndOffset;
 		await stopRuntimePreparation({ state });
 		signal.throwIfAborted();
 		state.status = "prepared";
@@ -186,6 +209,54 @@ function logPreparation({
 			},
 		},
 		`Partition ${topic}[${partition}] prepared in ${totalMs}ms`,
+	);
+}
+
+function logActivation({
+	ctx,
+	prepared,
+	marks,
+	bookmark,
+	preparedNextOffset,
+	logEndOffset,
+}: {
+	ctx: PartitionRuntimeScope["ctx"];
+	prepared: boolean;
+	marks: {
+		startedAt: number;
+		connectedAt: number;
+		fencedAt: number;
+		claimedAt: number;
+		rangedAt: number;
+		bootstrappedAt: number;
+	};
+	bookmark: bigint | null;
+	preparedNextOffset: bigint | null;
+	logEndOffset: bigint;
+}): void {
+	const { topic, partition } = ctx.config;
+	const totalMs = Math.round(performance.now() - marks.startedAt);
+	ctx.logger?.info?.(
+		{
+			event: "balance_worker.partition_activated",
+			data: {
+				topic,
+				partition,
+				prepared,
+				totalMs,
+				connectMs: Math.round(marks.connectedAt - marks.startedAt),
+				fenceMs: Math.round(marks.fencedAt - marks.connectedAt),
+				claimMs: Math.round(marks.claimedAt - marks.fencedAt),
+				logRangeMs: Math.round(marks.rangedAt - marks.claimedAt),
+				bootstrapMs: Math.round(marks.bootstrappedAt - marks.rangedAt),
+				catchUpMs: Math.round(performance.now() - marks.bootstrappedAt),
+				bookmark: bookmark === null ? null : bookmark.toString(),
+				preparedNextOffset:
+					preparedNextOffset === null ? null : preparedNextOffset.toString(),
+				logEndOffset: logEndOffset.toString(),
+			},
+		},
+		`Partition ${topic}[${partition}] activated in ${totalMs}ms`,
 	);
 }
 

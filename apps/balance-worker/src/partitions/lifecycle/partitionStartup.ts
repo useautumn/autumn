@@ -154,7 +154,7 @@ export async function startPartition({
 		if (!isStillStarting()) return;
 
 		const claims = followClaimsNamingSelf({ state, entry });
-		const handedOff = await awaitHandoffClaim({ ctx, entry });
+		const handedOff = await awaitHandoffClaim({ ctx, state, entry });
 		if (!isStillStarting()) return;
 		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
 		watchForSuccessor({ ctx, state, entry });
@@ -286,9 +286,11 @@ function followClaimsNamingSelf({
 /** The route epoch of the predecessor's `claimed` naming this worker, or null when none came in time. */
 async function awaitHandoffClaim({
 	ctx,
+	state,
 	entry,
 }: {
 	ctx: AllocationScope["ctx"];
+	state: PartitionsState;
 	entry: PartitionEntry;
 }): Promise<string | null> {
 	const timeout = new AbortController();
@@ -297,11 +299,16 @@ async function awaitHandoffClaim({
 	}
 	const signal = AbortSignal.any([entry.handoffAbort.signal, timeout.signal]);
 	// Listen before announcing: the claim can only follow the announcement, so nothing is missed.
-	const readyAt = Date.now();
+	const readyAt = Math.max(Date.now(), state.lastReadyAt + 1);
+	state.lastReadyAt = readyAt;
 	const claim = entry.publication.awaitClaim({ signal, afterReadyAt: readyAt });
 	const draining = entry.publication.awaitDraining({ signal });
 	const foreignClaim = entry.publication.awaitForeignClaim({ signal });
-	void Promise.allSettled([claim, draining, foreignClaim]);
+	const release = entry.publication.awaitRelease({
+		signal,
+		afterReadyAt: readyAt,
+	});
+	void Promise.allSettled([claim, draining, foreignClaim, release]);
 	let timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
 	function rearm({ afterMs }: { afterMs: number }): void {
 		if (timeout.signal.aborted) return;
@@ -318,11 +325,30 @@ async function awaitHandoffClaim({
 	function restartSilence(): void {
 		rearm({ afterMs: ctx.config.handoffClaimTimeoutMs });
 	}
+	let readySettled = false;
+	let releaseHeard = false;
+	function claimIfStillFreed(): void {
+		if (!readySettled || !releaseHeard) return;
+		if (!entry.publication.readRelease({ readyAt })) return;
+		timeout.abort(new Error("Handoff predecessor released the partition"));
+	}
+	function onReleaseHeard(): void {
+		releaseHeard = true;
+		claimIfStillFreed();
+	}
 	if (entry.publication.readActiveDrain()) holdForDrain();
 	void draining.then(holdForDrain, noop);
 	void foreignClaim.then(restartSilence, noop);
+	void release.then(onReleaseHeard, noop);
 	try {
-		await entry.publication.announceReady({ readyAt });
+		try {
+			await entry.publication.announceReady({ readyAt });
+		} catch (cause) {
+			if (!entry.handoffAbort.signal.aborted)
+				reportPartitionError({ ctx, cause });
+		}
+		readySettled = true;
+		claimIfStillFreed();
 		const { routeEpoch } = await claim;
 		entry.claimAttempted = true;
 		entry.claimed = true;

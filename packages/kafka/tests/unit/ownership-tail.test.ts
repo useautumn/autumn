@@ -354,6 +354,8 @@ describe("ownershipTail", function ownershipTailTests() {
 				owner: null,
 				activeDrain: null,
 				activePreparation: { endpoint: "http://successor:8080" },
+				release: null,
+				readies: [],
 			});
 			await fixture.deliver({
 				partition: 4,
@@ -371,6 +373,8 @@ describe("ownershipTail", function ownershipTailTests() {
 				owner: "http://successor:8080",
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
+				readies: [],
 			});
 		} finally {
 			await tail.stop();
@@ -414,6 +418,8 @@ describe("ownershipTail", function ownershipTailTests() {
 				owner: "http://successor:8080",
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
+				readies: [],
 			});
 			// Only the owner's own drain counts; a stranger's is a late record.
 			await fixture.deliver({
@@ -432,6 +438,8 @@ describe("ownershipTail", function ownershipTailTests() {
 					successor: "http://third:8080",
 				},
 				activePreparation: null,
+				release: null,
+				readies: [],
 			});
 			// A claim or release concludes the drain.
 			await fixture.deliver({
@@ -442,6 +450,8 @@ describe("ownershipTail", function ownershipTailTests() {
 				owner: null,
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
+				readies: [],
 			});
 			expect(tail.readView({ partition: 4 })).toBeNull();
 			expect(errors).toEqual([]);
@@ -490,6 +500,173 @@ describe("ownershipTail", function ownershipTailTests() {
 			expect(tail.readView({ partition: 3 })?.owner).toBeNull();
 			expect(errors).toEqual([]);
 		} finally {
+			await tail.stop();
+		}
+	});
+
+	test("remembers the owner's own release until the partition is claimed again", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		try {
+			const releasedBy = ({
+				endpoint,
+			}: {
+				endpoint: string;
+			}): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "released",
+				partition: 3,
+				endpoint,
+				releasedAt: 5,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimed, offset: 11n }),
+					serialized({
+						record: releasedBy({ endpoint: "http://former:8080" }),
+						offset: 12n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.release).toBeNull();
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({
+						record: releasedBy({ endpoint: "http://successor:8080" }),
+						offset: 13n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.release).toEqual({
+				endpoint: "http://successor:8080",
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: claimed, offset: 14n })],
+			});
+			expect(tail.readView({ partition: 3 })?.release).toBeNull();
+			expect(errors).toEqual([]);
+		} finally {
+			await tail.stop();
+		}
+	});
+
+	test("remembers each ready, by worker and stamp, since the partition was last claimed", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		try {
+			const readyBy = (endpoint: string, readyAt = 4): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "ready",
+				partition: 3,
+				endpoint,
+				readyAt,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimed, offset: 11n }),
+					serialized({ record: readyBy("http://second:8080"), offset: 12n }),
+					serialized({
+						record: {
+							schemaVersion: 1,
+							type: "released",
+							partition: 3,
+							endpoint: "http://successor:8080",
+							releasedAt: 5,
+						},
+						offset: 13n,
+					}),
+					serialized({ record: readyBy("http://third:8080"), offset: 14n }),
+					serialized({ record: readyBy("http://second:8080"), offset: 15n }),
+					serialized({ record: readyBy("http://second:8080", 6), offset: 16n }),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.readies).toEqual([
+				{ endpoint: "http://second:8080", readyAt: 4 },
+				{ endpoint: "http://third:8080", readyAt: 4 },
+				{ endpoint: "http://second:8080", readyAt: 6 },
+			]);
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: claimed, offset: 17n })],
+			});
+			expect(tail.readView({ partition: 3 })?.readies).toEqual([]);
+			expect(errors).toEqual([]);
+		} finally {
+			await tail.stop();
+		}
+	});
+
+	test("a record at or below the last offset read for its partition changes nothing and reaches no listener", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		const controller = new AbortController();
+		try {
+			const heard: bigint[] = [];
+			tail.tailPartition({
+				partition: 3,
+				signal: controller.signal,
+				onRecord: ({ offset }) => {
+					heard.push(offset);
+				},
+			});
+			const claimedBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "claimed",
+				partition: 3,
+				endpoint,
+				claimedAt: 2,
+			});
+			const releasedBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "released",
+				partition: 3,
+				endpoint,
+				releasedAt: 3,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimedBy("http://former:8080"), offset: 11n }),
+					serialized({ record: releasedBy("http://former:8080"), offset: 12n }),
+					serialized({ record: claimedBy("http://current:8080"), offset: 13n }),
+				],
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimedBy("http://former:8080"), offset: 11n }),
+					serialized({ record: releasedBy("http://former:8080"), offset: 12n }),
+					serialized({
+						record: releasedBy("http://current:8080"),
+						offset: 13n,
+					}),
+				],
+			});
+			await fixture.deliver({
+				partition: 4,
+				messages: [
+					serialized({
+						record: { ...claimedBy("http://other:8080"), partition: 4 },
+						offset: 12n,
+					}),
+				],
+			});
+			expect(tail.readView({ partition: 4 })?.owner).toBe("http://other:8080");
+			expect(tail.readView({ partition: 3 })).toEqual({
+				owner: "http://current:8080",
+				activeDrain: null,
+				activePreparation: null,
+				release: null,
+				readies: [],
+			});
+			expect(heard).toEqual([11n, 12n, 13n]);
+			expect(errors).toEqual([]);
+		} finally {
+			controller.abort();
 			await tail.stop();
 		}
 	});

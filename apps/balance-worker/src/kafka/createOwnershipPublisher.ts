@@ -213,6 +213,38 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchForeignClaim });
 	}
 
+	function readRelease({
+		readyAt,
+	}: {
+		readyAt: number;
+	}): { endpoint: string } | null {
+		const view = ctx.handoff?.tail.readView({ partition: config.partition });
+		if (!view?.release) return null;
+		const ownReady = view.readies.some(
+			(ready) =>
+				ready.endpoint === config.endpoint && ready.readyAt === readyAt,
+		);
+		const rivalReady = view.readies.some(
+			(ready) => ready.endpoint !== config.endpoint,
+		);
+		return ownReady && !rivalReady ? view.release : null;
+	}
+
+	function awaitRelease({
+		signal,
+		afterReadyAt,
+	}: {
+		signal: AbortSignal;
+		afterReadyAt: number;
+	}): Promise<{ endpoint: string }> {
+		function matchRelease({ record }: OwnershipTailRecord) {
+			if (record.type !== "ready" && record.type !== "released")
+				return undefined;
+			return readRelease({ readyAt: afterReadyAt }) ?? undefined;
+		}
+		return awaitRecord({ signal, match: matchRelease });
+	}
+
 	function awaitClaim({
 		signal,
 		afterReadyAt,
@@ -249,6 +281,8 @@ export function createOwnershipPublisher({
 		awaitPreparing,
 		awaitDraining,
 		awaitForeignClaim,
+		readRelease,
+		awaitRelease,
 		awaitClaim,
 		awaitRouteClaim: ({ signal }) => awaitClaim({ signal }),
 	};

@@ -61,6 +61,7 @@ export function createOwnershipTail({
 		status: "created",
 		listenersByPartition: new Map(),
 		viewByPartition: new Map(),
+		lastOffsetByPartition: new Map(),
 		removeListeners: new Set(),
 		stopping: null,
 	};
@@ -78,6 +79,8 @@ export function createOwnershipTail({
 				owner: record.endpoint,
 				activeDrain: null,
 				activePreparation: null,
+				release: null,
+				readies: [],
 			});
 		} else if (
 			record.type === "unowned" ||
@@ -87,6 +90,9 @@ export function createOwnershipTail({
 				owner: null,
 				activeDrain: null,
 				activePreparation: null,
+				release:
+					record.type === "released" ? { endpoint: record.endpoint } : null,
+				readies: view?.readies ?? [],
 			});
 		} else if (record.type === "draining" && view?.owner === record.endpoint) {
 			view.activeDrain = {
@@ -101,12 +107,17 @@ export function createOwnershipTail({
 					owner: null,
 					activeDrain: null,
 					activePreparation: preparation,
+					release: null,
+					readies: [],
 				});
-		} else if (
-			record.type === "ready" &&
-			view?.activePreparation?.endpoint === record.endpoint
-		) {
-			view.activePreparation = null;
+		} else if (record.type === "ready" && view) {
+			if (view.activePreparation?.endpoint === record.endpoint)
+				view.activePreparation = null;
+			const { endpoint, readyAt } = record;
+			const known = view.readies.some(
+				(ready) => ready.endpoint === endpoint && ready.readyAt === readyAt,
+			);
+			if (!known) view.readies = [...view.readies, { endpoint, readyAt }];
 		}
 	}
 
@@ -138,6 +149,9 @@ export function createOwnershipTail({
 			report({ cause });
 			return;
 		}
+		const lastOffset = state.lastOffsetByPartition.get(partition);
+		if (lastOffset !== undefined && entry.offset <= lastOffset) return;
+		state.lastOffsetByPartition.set(partition, entry.offset);
 		remember(entry);
 		const listeners = state.listenersByPartition.get(partition);
 		if (!listeners || listeners.size === 0) return;

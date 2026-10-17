@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setSystemTime, test } from "bun:test";
 import { createStandbyPreparations } from "../../../src/blueGreen/createStandbyPreparations.js";
 import { StateAheadOfKafkaLogEndError } from "../../../src/kafka/meteringConsumer/meteringErrors.js";
 import type { PartitionsDependencies } from "../../../src/partitions/types/partitions.js";
@@ -387,6 +387,279 @@ describe("partition handoff", () => {
 				B.ownership.findRuntime({ partition: 2, routeEpoch: "101" }),
 			).toBeDefined();
 			expect(B.errors).toEqual([]);
+		} finally {
+			await B.ownership.stop();
+		}
+	});
+
+	test("a predecessor that drained and released before the successor was ready lets it claim at once", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+		});
+		try {
+			await B.ownership.start();
+			await ownAlone(A, [2]);
+			A.revoke();
+			await A.ownership.stop();
+			expect(A.index("drained:2")).toBeLessThan(A.index("release:2"));
+
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(B.index("announce:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a predecessor that drains and releases while the successor waits lets it claim at once", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const A = createWorker({
+			name: "A",
+			log,
+			deaf: true,
+			config: { handoffReadyTimeoutMs: 20 },
+		});
+		try {
+			await B.ownership.start();
+			await ownAlone(A, [2]);
+			A.revoke();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			await settle();
+			expect(B.has("activate:2")).toBe(false);
+
+			await A.ownership.stop();
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("drained:2")).toBeLessThan(A.index("release:2"));
+			expect(A.index("release:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a successor whose tail never saw the owner's claim keeps the claim timeout after a release", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			const B = createWorker({
+				name: "B",
+				log,
+				config: { handoffClaimTimeoutMs: 200 },
+			});
+			try {
+				await B.ownership.start();
+				A.revoke();
+				await A.ownership.stop();
+				B.assign([2]);
+				await waitFor(() => B.has("announce:2"));
+				await Bun.sleep(50);
+				expect(B.has("activate:2")).toBe(false);
+				await waitFor(() => B.status(2) === "ready", 1_000);
+				expect(B.errors).toEqual([]);
+			} finally {
+				await B.ownership.stop();
+			}
+		} finally {
+			await A.ownership.stop();
+		}
+	});
+
+	test("a release superseded while the successor's ready is still being sent does not free the partition", async () => {
+		const log = createOwnershipLog();
+		const readySent = deferred();
+		const B = createWorker({
+			name: "B",
+			log,
+			readyGate: readySent.promise,
+			config: { handoffClaimTimeoutMs: 60_000, handoffDrainCapMs: 60_000 },
+		});
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20 },
+		});
+		try {
+			await B.ownership.start();
+			await ownAlone(A, [2]);
+			A.revoke();
+			await A.ownership.stop();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			await settle();
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://C",
+				routeEpoch: log.nextEpoch(),
+			});
+			log.publish({
+				type: "draining",
+				partition: 2,
+				endpoint: "http://C",
+				successor: B.endpoint,
+			});
+			readySent.resolve();
+			await settle();
+			expect(B.has("activate:2")).toBe(false);
+
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: B.endpoint,
+				routeEpoch: log.nextEpoch(),
+			});
+			await waitFor(() => B.status(2) === "ready");
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(B.errors).toEqual([]);
+		} finally {
+			readySent.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("one release frees the partition for one successor: a ready from before the last claim cannot take it", async () => {
+		const log = createOwnershipLog();
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			await C.ownership.start();
+			await B.ownership.start();
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			await settle();
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			log.publish({ type: "unowned", partition: 2, endpoint: "http://A" });
+			await settle();
+			expect(C.has("activate:2")).toBe(false);
+
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(B.has("claim:B:2")).toBe(true);
+			expect(C.has("activate:2")).toBe(false);
+		} finally {
+			await C.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a ready that fails to send keeps the bounded claim wait instead of claiming at once", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			failReady: true,
+			config: { handoffClaimTimeoutMs: 200 },
+		});
+		try {
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			await Bun.sleep(50);
+			expect(B.has("activate:2")).toBe(false);
+			await waitFor(() => B.status(2) === "ready", 1_000);
+		} finally {
+			await B.ownership.stop();
+		}
+	});
+
+	test("each readiness announcement for a partition carries its own stamp, even within one millisecond", async () => {
+		setSystemTime(new Date("2026-10-17T00:00:00.000Z"));
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		function readyStamps(): Array<number | undefined> {
+			return log.records.flatMap((event) =>
+				event.type === "ready" && event.partition === 2 ? [event.readyAt] : [],
+			);
+		}
+		try {
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => readyStamps().length === 1);
+			B.revoke();
+			await waitFor(() => B.has("stop:2"));
+			B.assign([2]);
+			await waitFor(() => readyStamps().length === 2);
+			const [first, second] = readyStamps();
+			expect(second).toBeGreaterThan(first ?? Number.POSITIVE_INFINITY);
+		} finally {
+			setSystemTime();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a release from a worker that no longer owns the partition does not cut the successor's wait", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://C",
+				routeEpoch: log.nextEpoch(),
+			});
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			log.publish({ type: "unowned", partition: 2, endpoint: "http://A" });
+			await Bun.sleep(50);
+			expect(B.has("activate:2")).toBe(false);
+			expect(B.status(2)).toBe("prepared");
 		} finally {
 			await B.ownership.stop();
 		}

@@ -30,9 +30,7 @@ export async function readReplayFloor({
 			timeoutMs: lookupTimeoutMs,
 		});
 		if (offset === null) return bookmark;
-		const logStartOffset = state.lastLogRange?.logStartOffset ?? offset;
-		const floor = offset < logStartOffset ? logStartOffset : offset;
-		return floor < bookmark ? floor : bookmark;
+		return holdReplayFloor({ state, offset, bookmark });
 	} catch (cause) {
 		ctx.logger?.warn("Replay window lookup skipped; starting at the bookmark", {
 			topic,
@@ -41,6 +39,20 @@ export async function readReplayFloor({
 		});
 		return bookmark;
 	}
+}
+
+export function holdReplayFloor({
+	state,
+	offset,
+	bookmark,
+}: {
+	state: PartitionReplayState;
+	offset: bigint;
+	bookmark: bigint;
+}): bigint {
+	const logStartOffset = state.lastLogRange?.logStartOffset ?? offset;
+	const floor = offset < logStartOffset ? logStartOffset : offset;
+	return floor < bookmark ? floor : bookmark;
 }
 
 const LOOKUP_RETRY_DELAY_MS = 100;

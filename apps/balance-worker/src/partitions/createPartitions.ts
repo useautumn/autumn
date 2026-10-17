@@ -155,6 +155,7 @@ function createPartitionState(): PartitionsState {
 		consumerRejoin: { attempts: 0, timer: null },
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
+		lastReadyAt: 0,
 		status: "created",
 		steppedDown: false,
 		steppedDownSignal: Promise.withResolvers<void>(),

@@ -93,6 +93,39 @@ export const createOwnershipLog = () => {
 		}
 		return null;
 	};
+	const release = ({
+		partition,
+		from,
+		endpoint,
+		readyAt,
+	}: {
+		partition: number;
+		from: number;
+		endpoint: string;
+		readyAt: number;
+	}) => {
+		let holder: string | null = null;
+		let freedBy: string | null = null;
+		let readies: { endpoint: string; readyAt?: number }[] = [];
+		for (const event of records.slice(from)) {
+			if (event.partition !== partition) continue;
+			if (event.type === "claimed") {
+				holder = event.endpoint;
+				freedBy = null;
+				readies = [];
+			} else if (event.type === "unowned" && event.endpoint === holder) {
+				holder = null;
+				freedBy = event.endpoint;
+			} else if (event.type === "ready")
+				readies.push({ endpoint: event.endpoint, readyAt: event.readyAt });
+		}
+		if (freedBy === null) return null;
+		const ownReady = readies.some(
+			(ready) => ready.endpoint === endpoint && ready.readyAt === readyAt,
+		);
+		const rivalReady = readies.some((ready) => ready.endpoint !== endpoint);
+		return ownReady && !rivalReady ? { endpoint: freedBy } : null;
+	};
 	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
@@ -115,6 +148,7 @@ export const createOwnershipLog = () => {
 		owner,
 		activeDrain,
 		activePreparation,
+		release,
 	};
 };
 
@@ -137,6 +171,8 @@ export type WorkerOptions = {
 	deaf?: boolean;
 	/** Says nothing before preparing: stands in for a successor on a build without the announcement. */
 	silentPreparation?: boolean;
+	readyGate?: Promise<void>;
+	failReady?: boolean;
 };
 
 export const createWorker = ({
@@ -154,8 +190,11 @@ export const createWorker = ({
 	acquirePreparation,
 	deaf = false,
 	silentPreparation = false,
+	readyGate,
+	failReady = false,
 }: WorkerOptions) => {
 	const { events } = log;
+	const tailFrom = log.records.length;
 	const errors: unknown[] = [];
 	const stopped: PartitionServiceStopReason[] = [];
 	const endpoint = `http://${name}`;
@@ -167,6 +206,7 @@ export const createWorker = ({
 		"subscribeUnavailable",
 		"readActivePreparation",
 		"readActiveDrain",
+		"readRelease",
 	]);
 	function untilKilled<Port extends object>(port: Port): Port {
 		return new Proxy(port, {
@@ -268,12 +308,14 @@ export const createWorker = ({
 			},
 			announceReady: async (params) => {
 				record("announce");
+				if (failReady) throw new Error("Ready send failed");
 				log.publish({
 					type: "ready",
 					partition,
 					endpoint,
 					readyAt: params?.readyAt,
 				});
+				await readyGate;
 			},
 			announcePreparing: async () => {
 				if (silentPreparation) return;
@@ -330,6 +372,25 @@ export const createWorker = ({
 						event.endpoint !== endpoint
 							? { endpoint: event.endpoint }
 							: undefined,
+				}),
+			readRelease: ({ readyAt }) =>
+				log.release({ partition, from: tailFrom, endpoint, readyAt }),
+			awaitRelease: ({ signal, afterReadyAt }) =>
+				log.await({
+					signal,
+					match: (event) => {
+						if (event.partition !== partition) return undefined;
+						if (event.type !== "ready" && event.type !== "unowned")
+							return undefined;
+						return (
+							log.release({
+								partition,
+								from: tailFrom,
+								endpoint,
+								readyAt: afterReadyAt,
+							}) ?? undefined
+						);
+					},
 				}),
 			awaitReady: ({ signal }) =>
 				log.await({

@@ -18,6 +18,8 @@ export type OwnershipTailView = {
 	activeDrain: { endpoint: string; successor: string } | null;
 	/** A worker that announced it is preparing the partition and has not yet been named, released, or announced ready. */
 	activePreparation: { endpoint: string } | null;
+	release: { endpoint: string } | null;
+	readies: { endpoint: string; readyAt: number }[];
 };
 
 /** One consumer per worker following the ownership log from where it stood at
@@ -57,6 +59,7 @@ export type OwnershipTailState = {
 	status: "created" | "starting" | "started" | "stopped";
 	listenersByPartition: Map<number, Set<OwnershipTailListener>>;
 	viewByPartition: Map<number, OwnershipTailView>;
+	lastOffsetByPartition: Map<number, bigint>;
 	/** Consumer event listeners and abort listeners on callers' signals; every one is removed by stop. */
 	removeListeners: Set<() => void>;
 	stopping: Promise<void> | null;

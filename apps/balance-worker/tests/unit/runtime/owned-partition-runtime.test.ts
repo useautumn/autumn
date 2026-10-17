@@ -1597,6 +1597,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		fence = async () => undefined,
 		bootstrap = async () => undefined,
 		activationWaitMs,
+		info,
 	}: {
 		preparation?: (
 			follower: PartitionOutcomeFollowerPort,
@@ -1605,6 +1606,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		fence?: () => Promise<void>;
 		bootstrap?: () => Promise<void>;
 		activationWaitMs?: number;
+		info?: (...args: unknown[]) => void;
 	} = {}) => {
 		const storage = createStoreFixture();
 		const events: string[] = [];
@@ -1615,9 +1617,9 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				events.push(`${name}:range:${end}`);
 				return { logStartOffset: 0n, logEndOffset: end };
 			},
-			startAndCatchUp: async ({ targetNextOffset, fromBookmark }) => {
+			startAndCatchUp: async ({ targetNextOffset, preparedNextOffset }) => {
 				events.push(
-					`${name}:replay:${targetNextOffset}${fromBookmark ? ":from-bookmark" : ""}`,
+					`${name}:replay:${targetNextOffset}${preparedNextOffset === undefined ? "" : `:from:${preparedNextOffset}`}`,
 				);
 				if (failPrepare && name === "prepare") throw new Error("replay failed");
 			},
@@ -1664,6 +1666,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					windowMs: 600_000,
 					now: () => 0,
 				}),
+				logger: info && { info },
 			},
 			config: {
 				topic,
@@ -1816,9 +1819,43 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					"fence",
 					"active:range:9",
 					"bootstrap",
-					"active:replay:9:from-bookmark",
+					"active:replay:9:from:5",
 				]);
 				expect(f.runtime.getStatus()).toBe("ready");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("activation logs each step's duration and its replay inputs", async () => {
+			const logged: unknown[] = [];
+			const f = createFixture({ info: (entry) => logged.push(entry) });
+			try {
+				await f.runtime.prepare();
+				f.setEnd(9n);
+				await f.runtime.activate();
+				const activated = logged.find(
+					(entry) =>
+						(entry as { event?: string }).event ===
+						"balance_worker.partition_activated",
+				) as { data: Record<string, unknown> } | undefined;
+				expect(activated?.data).toMatchObject({
+					topic,
+					partition,
+					prepared: true,
+					preparedNextOffset: "5",
+					bookmark: "0",
+					logEndOffset: "9",
+				});
+				for (const step of [
+					"totalMs",
+					"connectMs",
+					"fenceMs",
+					"claimMs",
+					"logRangeMs",
+					"bootstrapMs",
+					"catchUpMs",
+				])
+					expect(activated?.data[step]).toBeNumber();
 			} finally {
 				await f.cleanup();
 			}

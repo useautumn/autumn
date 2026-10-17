@@ -178,6 +178,7 @@ function createRuntimeState(): PartitionRuntimeState {
 	return {
 		preparationFollower: null,
 		preparationStopPromise: null,
+		preparedNextOffset: null,
 		drainPromise: null,
 		status: "created",
 		terminalError: null,
