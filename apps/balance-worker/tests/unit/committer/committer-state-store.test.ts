@@ -502,9 +502,7 @@ describe("committer state store", () => {
 		expect(fake.claims.get(`${topic}[${partition}]`)).toMatch(
 			/^[0-9a-f-]{36}$/,
 		);
-		expect(fake.claimCalls.map((call) => call.ownerEpoch)).toEqual([
-			undefined,
-		]);
+		expect(fake.claimCalls.map((call) => call.ownerEpoch)).toEqual([undefined]);
 	});
 
 	test("an older owner's claim that lands after its successor's is refused and the successor keeps the partition", async () => {

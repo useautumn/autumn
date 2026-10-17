@@ -148,7 +148,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		const db: CommitterDb = {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: async () => {},
-			claimPartitionProgress: async () => {},
+			claimPartitionProgress: async () => true,
 			flush: async (request) => {
 				inFlight += 1;
 				maxInFlight = Math.max(maxInFlight, inFlight);
@@ -633,7 +633,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: (params) =>
 				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			claimPartitionProgress: async () => {},
+			claimPartitionProgress: async () => true,
 			flush: (request) =>
 				commitFlush({
 					ctx: { db: postgres.db },

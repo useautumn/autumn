@@ -70,7 +70,7 @@ function createRowStore({ nextOffset }: { nextOffset: bigint }) {
 			claimToken: null,
 		}),
 		insertPartitionProgress: async () => {},
-		claimPartitionProgress: async () => {},
+		claimPartitionProgress: async () => true,
 		flush: async (request) => {
 			flushes.push([...request.changes]);
 			const { folded, foldedIndexOf } = foldSubjectRowChanges({
