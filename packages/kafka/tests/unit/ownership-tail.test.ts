@@ -546,6 +546,51 @@ describe("ownershipTail", function ownershipTailTests() {
 		}
 	});
 
+	test("remembers which workers announced ready since the partition was last claimed", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		try {
+			const readyBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "ready",
+				partition: 3,
+				endpoint,
+				readyAt: 4,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimed, offset: 11n }),
+					serialized({ record: readyBy("http://second:8080"), offset: 12n }),
+					serialized({
+						record: {
+							schemaVersion: 1,
+							type: "released",
+							partition: 3,
+							endpoint: "http://successor:8080",
+							releasedAt: 5,
+						},
+						offset: 13n,
+					}),
+					serialized({ record: readyBy("http://third:8080"), offset: 14n }),
+					serialized({ record: readyBy("http://second:8080"), offset: 15n }),
+				],
+			});
+			expect(tail.readView({ partition: 3 })?.readyEndpoints).toEqual([
+				"http://second:8080",
+				"http://third:8080",
+			]);
+			await fixture.deliver({
+				partition: 3,
+				messages: [serialized({ record: claimed, offset: 16n })],
+			});
+			expect(tail.readView({ partition: 3 })?.readyEndpoints).toEqual([]);
+			expect(errors).toEqual([]);
+		} finally {
+			await tail.stop();
+		}
+	});
+
 	test("a record at or below the last offset read for its partition changes nothing and reaches no listener", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
