@@ -140,7 +140,8 @@ export function createStepDownController({
 	}): Promise<OwnNetworkVerdict | null> {
 		for (let attempt = 1; attempt <= config.recheckAttempts; attempt++) {
 			const current = ctx.monitor.verdict();
-			if (current.losesPackets && stillHoldsStalls({ trigger })) return current;
+			if (current.losesPackets && stillHoldsStalls({ trigger, current }))
+				return current;
 			if (attempt < config.recheckAttempts && !state.stopped)
 				await sleep(config.recheckIntervalMs);
 		}
@@ -149,16 +150,18 @@ export function createStepDownController({
 
 	function stillHoldsStalls({
 		trigger,
+		current,
 	}: {
 		trigger: OwnNetworkVerdict;
+		current: OwnNetworkVerdict;
 	}): boolean {
 		const stillStalled = trigger.stalledHoldings.filter(
 			({ partition, holding }) =>
 				ctx.partitions.holdingOf({ partition }) === holding,
 		).length;
+		const busy = Math.max(trigger.busyPartitions, current.busyPartitions);
 		return (
-			stillStalled >= config.minStalledPartitions &&
-			stillStalled * 2 > trigger.busyPartitions
+			stillStalled >= config.minStalledPartitions && stillStalled * 2 > busy
 		);
 	}
 
