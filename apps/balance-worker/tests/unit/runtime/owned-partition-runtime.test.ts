@@ -1606,7 +1606,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		fence?: () => Promise<void>;
 		bootstrap?: () => Promise<void>;
 		activationWaitMs?: number;
-		info?: (entry: unknown, message: string) => void;
+		info?: (...args: unknown[]) => void;
 	} = {}) => {
 		const storage = createStoreFixture();
 		const events: string[] = [];
