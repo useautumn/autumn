@@ -22,7 +22,7 @@ type WorkerStepDownContext = {
 	sendWatches: PartitionSendWatches;
 	partitions: Pick<
 		Partitions,
-		"stepDown" | "isSteppedDown" | "hasAssignment" | "isAdmitted"
+		"stepDown" | "isSteppedDown" | "hasAssignment" | "isHeld"
 	>;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
 	objects?: AdminBucketObjects;
@@ -55,7 +55,7 @@ export function createWorkerStepDown({
 	config: WorkerStepDownConfig;
 }): { readWork(): SlotWorkReading; start(): void; stop(): Promise<void> } {
 	const ownNetwork = createOwnNetworkMonitor({
-		ctx: { sends: ctx.sendWatches, isServing: ctx.partitions.isAdmitted },
+		ctx: { sends: ctx.sendWatches, isHeld: ctx.partitions.isHeld },
 	});
 	const controller = createController({ ctx, config, ownNetwork });
 

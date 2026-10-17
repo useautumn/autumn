@@ -105,6 +105,7 @@ export function stopPartitionService({
 		return Promise.resolve();
 	}
 	state.status = "stopping";
+	state.assigned.clear();
 	stopHealthRefresh({ state });
 	clearPartitionRetries({ state });
 	clearConsumerRejoin({ state });

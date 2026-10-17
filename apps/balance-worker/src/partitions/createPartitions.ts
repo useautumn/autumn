@@ -64,6 +64,10 @@ export function createPartitions({
 		return state.directory.findOwnedRuntime(target) !== undefined;
 	}
 
+	function isHeld({ partition }: PartitionTarget): boolean {
+		return state.assigned.has(partition) || state.handingOff.has(partition);
+	}
+
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
 		const settlement = state.handoffSettlements.get(partition);
 		if (!settlement) return Promise.resolve();
@@ -89,6 +93,7 @@ export function createPartitions({
 		partitions,
 		hasAssignment,
 		isAdmitted,
+		isHeld,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
@@ -134,6 +139,7 @@ function resolvePartitionConfig(
 function createPartitionState(): PartitionsState {
 	return {
 		directory: createRuntimeDirectory(),
+		assigned: new Set(),
 		entries: new Map(),
 		handingOff: new Map(),
 		retiringEntries: new Map(),
