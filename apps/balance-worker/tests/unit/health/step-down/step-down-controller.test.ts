@@ -16,6 +16,7 @@ const DEGRADED: OwnNetworkVerdict = {
 	stalledHoldings: [
 		{ partition: 0, holding: 1 },
 		{ partition: 1, holding: 1 },
+		{ partition: 2, holding: 1 },
 	],
 	losesPackets: true,
 };
@@ -57,7 +58,11 @@ function harness({
 	releaseFailures = 0,
 	baselineFails = false,
 	holdingOf = (partition) => (partition <= 3 ? 1 : undefined),
+	held = [0, 1, 2, 3],
+	trigger = DEGRADED,
 }: {
+	held?: number[];
+	trigger?: OwnNetworkVerdict;
 	holdingOf?: (partition: number) => number | undefined;
 	keepsUp?: (partition: number, call: number) => boolean;
 	permit?: StepDownPermitResult;
@@ -94,7 +99,7 @@ function harness({
 					throw new Error("Postgres did not answer");
 				return fleetAt({ call, keepsUp });
 			},
-			ownPartitions: () => new Set([0, 1, 2, 3]),
+			ownPartitions: () => new Set(held),
 			permits: {
 				acquire: async () => {
 					calls.push("acquire");
@@ -115,6 +120,7 @@ function harness({
 				isSteppedDown: () => state.steppedDown,
 				hasAssignment: () => owns,
 				holdingOf: ({ partition }) => holdingOf(partition),
+				heldPartitions: () => held,
 			},
 			logger: { info: log("info"), warn: log("warn"), error: log("error") },
 			now: () => time.now,
@@ -126,13 +132,14 @@ function harness({
 			peerWaitMs: 6_000,
 			peerPollMs: 1_000,
 			minKeptUp: 2,
+			maxOwnerLagMs: 2_000,
 			recheckAttempts: 3,
 			recheckIntervalMs: 1_000,
 			minStalledPartitions: 2,
 		},
 	});
 	async function fire(): Promise<void> {
-		for (const listener of [...listeners]) listener(DEGRADED);
+		for (const listener of [...listeners]) listener(trigger);
 		await Bun.sleep(0);
 		await Bun.sleep(0);
 	}
@@ -271,6 +278,36 @@ describe("step-down controller", () => {
 			level: "warn",
 			message: "Own network recovered before the step-down: staying",
 		});
+	});
+
+	test("a trip whose stalled partitions are no longer most of the partitions held keeps the worker in", async () => {
+		const moved = { on: false };
+		const tripped: OwnNetworkVerdict = {
+			...DEGRADED,
+			heldPartitions: 8,
+			stalledPartitions: 5,
+			stalledHoldings: [0, 1, 2, 3, 4].map((partition) => ({
+				partition,
+				holding: 1,
+			})),
+		};
+		const { controller, calls, fire } = harness({
+			held: [0, 1, 2, 3, 4, 5, 6, 7],
+			trigger: tripped,
+			holdingOf: (partition) => (moved.on && partition <= 2 ? 2 : 1),
+			currentVerdict: () => {
+				moved.on = true;
+				return tripped;
+			},
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 	});
 
 	test("loss that pauses for a sample after the permit lands still steps down within the re-check", async () => {

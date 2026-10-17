@@ -20,31 +20,56 @@ function judge({
 	after,
 	own = new Set<number>(),
 	minKeptUp = 2,
+	elapsedMs = 3_000,
 }: {
 	before: FleetProgress;
 	after: FleetProgress;
 	own?: ReadonlySet<number>;
 	minKeptUp?: number;
+	elapsedMs?: number;
 }) {
-	return judgeFleetProgress({ before, after, ownPartitions: own, minKeptUp });
+	return judgeFleetProgress({
+		before,
+		after,
+		ownPartitions: own,
+		minKeptUp,
+		elapsedMs,
+		maxLagMs: 2_000,
+	});
 }
 
 describe("judge fleet progress", () => {
-	test("partitions that got new records and whose owners processed past where their logs stood at the baseline keep up", () => {
+	test("an owner keeps up when its bookmark moved past where its log stood and stays within two seconds of arrivals behind the tip", () => {
 		const before = progressOf([
 			[1, 100n, 98n],
 			[2, 200n, 200n],
 			[3, 300n, 290n],
 		]);
 		const after = progressOf([
-			[1, 110n, 105n],
-			[2, 220n, 215n],
-			[3, 330n, 301n],
+			[1, 130n, 125n],
+			[2, 230n, 222n],
+			[3, 330n, 325n],
 		]);
 		expect(judge({ before, after })).toEqual({
 			ok: true,
 			active: 3,
 			keptUp: 3,
+		});
+	});
+
+	test("an owner whose backlog grows while records arrive does not keep up, though it crossed the old tip", () => {
+		const before = progressOf([
+			[1, 100n, 100n],
+			[2, 200n, 200n],
+		]);
+		const after = progressOf([
+			[1, 200n, 101n],
+			[2, 300n, 201n],
+		]);
+		expect(judge({ before, after, minKeptUp: 1 })).toEqual({
+			ok: false,
+			active: 2,
+			keptUp: 0,
 		});
 	});
 
@@ -57,7 +82,7 @@ describe("judge fleet progress", () => {
 		const after = progressOf([
 			[1, 120n, 100n],
 			[2, 220n, 199n],
-			[3, 330n, 320n],
+			[3, 330n, 325n],
 		]);
 		expect(judge({ before, after })).toEqual({
 			ok: false,
@@ -66,18 +91,46 @@ describe("judge fleet progress", () => {
 		});
 	});
 
-	test("an owner that processed nothing new while records arrived does not keep up, even with no backlog at the baseline", () => {
+	test("a bookmark that did not move between the two readings never keeps up, however skewed the readings were", () => {
 		const before = progressOf([
-			[1, 100n, 100n],
+			[1, 100n, 105n],
 			[2, 200n, 200n],
-			[3, 300n, 300n],
 		]);
 		const after = progressOf([
-			[1, 105n, 100n],
-			[2, 205n, 201n],
-			[3, 305n, 300n],
+			[1, 110n, 105n],
+			[2, 210n, 208n],
 		]);
 		expect(judge({ before, after, minKeptUp: 1 })).toEqual({
+			ok: true,
+			active: 2,
+			keptUp: 1,
+		});
+	});
+
+	test("a partition whose bookmark appeared during the check, or is missing from either reading, never keeps up", () => {
+		const before: FleetProgress = {
+			highWatermarks: new Map([
+				[1, 100n],
+				[2, 200n],
+				[3, 300n],
+			]),
+			nextOffsets: new Map([
+				[1, 100n],
+				[3, 300n],
+			]),
+		};
+		const after: FleetProgress = {
+			highWatermarks: new Map([
+				[1, 110n],
+				[2, 210n],
+				[3, 310n],
+			]),
+			nextOffsets: new Map([
+				[1, 108n],
+				[2, 208n],
+			]),
+		};
+		expect(judge({ before, after })).toEqual({
 			ok: false,
 			active: 3,
 			keptUp: 1,
@@ -110,26 +163,6 @@ describe("judge fleet progress", () => {
 		expect(judge({ before, after, minKeptUp: 2 })).toEqual({
 			ok: false,
 			active: 1,
-			keptUp: 1,
-		});
-	});
-
-	test("a partition missing from either reading never keeps up", () => {
-		const before = progressOf([
-			[1, 100n, 100n],
-			[2, 200n, 200n],
-		]);
-		const after: FleetProgress = {
-			highWatermarks: new Map([
-				[1, 110n],
-				[2, 210n],
-				[3, 310n],
-			]),
-			nextOffsets: new Map([[1, 105n]]),
-		};
-		expect(judge({ before, after })).toEqual({
-			ok: false,
-			active: 2,
 			keptUp: 1,
 		});
 	});
