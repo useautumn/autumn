@@ -9,7 +9,11 @@ export function createMemoryAdminObjects({
 	now?: () => number;
 } = {}) {
 	const stored = new Map<string, { text: string; etag: string; at: number }>();
-	const state = { version: 0, unavailable: false };
+	const state: {
+		version: number;
+		unavailable: boolean;
+		afterRead: ((key: string) => Promise<void>) | null;
+	} = { version: 0, unavailable: false, afterRead: null };
 	function guard(): void {
 		if (state.unavailable) throw new Error("S3 did not answer");
 	}
@@ -29,7 +33,11 @@ export function createMemoryAdminObjects({
 		read: async ({ key }) => {
 			guard();
 			const object = stored.get(key);
-			return object ? { text: object.text, etag: object.etag } : null;
+			const read = object ? { text: object.text, etag: object.etag } : null;
+			const hook = state.afterRead;
+			state.afterRead = null;
+			await hook?.(key);
+			return read;
 		},
 		create: async ({ key, body }) => {
 			guard();

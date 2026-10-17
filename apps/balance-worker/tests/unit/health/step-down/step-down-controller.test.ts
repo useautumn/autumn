@@ -50,19 +50,34 @@ function heartbeatOf({
 	};
 }
 
+const DEGRADED: OwnNetworkVerdict = {
+	state: "degraded",
+	at: 10_000,
+	windowStartedAt: 7_000,
+	segments: 300,
+	retransmitRatio: 0.3,
+	busyPartitions: 8,
+	stalledPartitions: 6,
+};
+
 function harness({
 	peersAt,
 	permit = { ok: true, permit: { slot: 0, key: "slot-0" } },
 	owns = true,
+	currentVerdict = () => DEGRADED,
+	readPeersGate,
 }: {
 	peersAt: (wall: number) => SlotHeartbeat[];
 	permit?: StepDownPermitResult;
 	owns?: boolean;
+	currentVerdict?: () => OwnNetworkVerdict;
+	readPeersGate?: Promise<void>;
 }) {
 	const time = { now: 10_000, wall: WALL_START };
 	const calls: string[] = [];
 	const logs: { level: string; message: string }[] = [];
 	const listeners = new Set<(verdict: OwnNetworkVerdict) => void>();
+	const renewals: (() => void)[] = [];
 	const state = { steppedDown: false };
 	function log(level: string) {
 		return (...args: unknown[]) => {
@@ -76,15 +91,21 @@ function harness({
 					listeners.add(listener);
 					return () => listeners.delete(listener);
 				},
+				verdict: currentVerdict,
 			},
 			readPeers: async () => {
 				calls.push("read-peers");
-				return peersAt(time.wall);
+				await readPeersGate;
+				return { heartbeats: peersAt(time.wall), unreadable: 0 };
 			},
 			permits: {
 				acquire: async () => {
 					calls.push("acquire");
 					return permit;
+				},
+				renew: async () => {
+					calls.push("renew");
+					return true;
 				},
 				release: async () => {
 					calls.push("release");
@@ -105,30 +126,27 @@ function harness({
 				time.now += ms;
 				time.wall += ms;
 			},
+			schedule: ({ run }) => {
+				renewals.push(run);
+				return () => undefined;
+			},
 		},
 		config: {
 			selfEndpoint: "http://self",
 			peerWaitMs: 6_000,
 			peerPollMs: 1_000,
-			peerLiveMs: 60_000,
+			membershipMs: 300_000,
+			skewMs: 1_000,
 			minPeers: 2,
+			permitRenewMs: 600_000,
 		},
 	});
-	const verdict: OwnNetworkVerdict = {
-		state: "degraded",
-		at: 10_000,
-		windowStartedAt: 7_000,
-		segments: 300,
-		retransmitRatio: 0.3,
-		busyPartitions: 8,
-		stalledPartitions: 6,
-	};
 	async function fire(): Promise<void> {
-		for (const listener of [...listeners]) listener(verdict);
+		for (const listener of [...listeners]) listener(DEGRADED);
 		await Bun.sleep(0);
 		await Bun.sleep(0);
 	}
-	return { controller, calls, logs, fire, time };
+	return { controller, calls, logs, fire, time, renewals };
 }
 
 const faultAt = WALL_START - 3_000;
@@ -214,6 +232,20 @@ describe("step-down controller", () => {
 		});
 	});
 
+	test("a network that recovered before the permit landed keeps the worker in and gives the permit back", async () => {
+		const { controller, calls, logs, fire } = harness({
+			peersAt: healthyPeersAt,
+			currentVerdict: () => ({ ...DEGRADED, state: "healthy" }),
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual(["read-peers", "acquire", "release"]);
+		expect(logs).toContainEqual({
+			level: "warn",
+			message: "Own network recovered before the step-down: staying",
+		});
+	});
+
 	test("a worker that owns nothing never checks", async () => {
 		const { controller, calls, fire } = harness({
 			peersAt: healthyPeersAt,
@@ -222,6 +254,32 @@ describe("step-down controller", () => {
 		controller.start();
 		await fire();
 		expect(calls).toEqual([]);
+	});
+
+	test("a stepped-down worker keeps renewing its permit", async () => {
+		const { controller, calls, fire, renewals } = harness({
+			peersAt: healthyPeersAt,
+		});
+		controller.start();
+		await fire();
+		expect(renewals).toHaveLength(1);
+		renewals[0]?.();
+		await Bun.sleep(0);
+		expect(calls.at(-1)).toBe("renew");
+	});
+
+	test("stop waits for a check in flight, which then takes no permit and steps nothing down", async () => {
+		const gate = Promise.withResolvers<void>();
+		const { controller, calls, fire } = harness({
+			peersAt: healthyPeersAt,
+			readPeersGate: gate.promise,
+		});
+		controller.start();
+		await fire();
+		const stopping = controller.stop();
+		gate.resolve();
+		await stopping;
+		expect(calls).toEqual(["read-peers"]);
 	});
 
 	test("stop lets go of the verdicts and releases a permit it holds", async () => {

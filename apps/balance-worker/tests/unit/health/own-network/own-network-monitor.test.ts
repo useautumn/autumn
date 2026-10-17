@@ -32,9 +32,11 @@ function countersOf({
 function harness({
 	lossy,
 	stuck,
+	serving = () => true,
 }: {
 	lossy: () => boolean;
 	stuck: () => boolean;
+	serving?: (partition: number) => boolean;
 }) {
 	const time = { now: 0 };
 	const totals = { outSegs: 0, retransSegs: 0 };
@@ -54,6 +56,7 @@ function harness({
 	const monitor = createOwnNetworkMonitor({
 		ctx: {
 			sends: { take },
+			isServing: ({ partition }) => serving(partition),
 			readTcp,
 			now: () => time.now,
 			schedule: (task) => {
@@ -114,6 +117,21 @@ describe("own network monitor", () => {
 		for (let index = 0; index < 4; index++) tick();
 		expect(monitor.verdict().state).toBe("degraded");
 		expect(heard).toHaveLength(0);
+	});
+
+	test("sends on partitions the worker no longer serves do not count", () => {
+		const { monitor, tick } = harness({
+			lossy: () => true,
+			stuck: () => true,
+			serving: (partition) => partition === 82,
+		});
+		monitor.start();
+		for (let index = 0; index < 4; index++) tick();
+		expect(monitor.verdict()).toMatchObject({
+			state: "healthy",
+			busyPartitions: 1,
+			stalledPartitions: 1,
+		});
 	});
 
 	test("stop cancels the schedule", () => {
