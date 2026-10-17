@@ -581,6 +581,7 @@ describe("Kafka owned partition group", () => {
 				return {
 					start: async () => {
 						started.push(partition);
+						if (sequence === 1) await stopGate.promise;
 					},
 					stop: async () => {
 						if (sequence === 1) await stopGate.promise;
