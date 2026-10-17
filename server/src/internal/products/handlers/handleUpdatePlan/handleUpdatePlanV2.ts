@@ -41,20 +41,22 @@ export const handleUpdatePlanV2 = createRoute({
 		} = body;
 		const ctx = c.get("ctx");
 
-		await checkCatalogApprovals({
-			ctx,
-			checks: planUpdateToEditedPlanIds({ params: body }).map((planId) => ({
-				action: "plans.update" as const,
-				planId,
-			})),
-		});
-
 		const initialFullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: plan_id,
 			orgId: ctx.org.id,
 			env: ctx.env,
 			version,
+		});
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: planUpdateToEditedPlanIds({
+				params: { ...body, plan_id: initialFullProduct.id },
+			}).map((planId) => ({
+				action: "plans.update" as const,
+				planId,
+			})),
 		});
 
 		const updateProductV2Params = apiPlan.map.paramsV1ToProductV2({
