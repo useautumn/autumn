@@ -5,6 +5,7 @@ import type { PartitionProcessor } from "../../processor/types/partitionProcesso
 export interface PartitionRuntimePort {
 	/** Read-only: rebuilds the dedup window from the log, writes nothing durable. */
 	prepare(): Promise<void>;
+	connect?(): Promise<void>;
 	/** Fences and catches up from the bookmark; only after the predecessor has drained. */
 	activate(): Promise<void>;
 	/** After a claim won outright: writes the fence marker under the new epoch and reads up to it. */

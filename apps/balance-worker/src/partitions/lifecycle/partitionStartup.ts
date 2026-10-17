@@ -159,21 +159,10 @@ export async function startPartition({
 		// Listening from here on: a successor from another fleet may announce before this worker has even admitted.
 		watchForSuccessor({ ctx, state, entry });
 
-		const activation = entry.runtime.activate();
-		try {
-			// Named owner already: requests routed here wait at the gate while the runtime fences.
-			if (handedOff) claims.admit({ routeEpoch: handedOff });
-			await activation;
-		} catch (cause) {
-			state.directory.withdraw({ partition });
-			throw cause;
-		}
-		if (!isStillStarting()) return;
-		const health = entry.runtime.getHealth();
-		if (health.status !== "ready" || health.failureReason !== null) return;
-
-		if (!handedOff) {
-			let routeEpoch: string;
+		let routeEpoch = handedOff;
+		if (routeEpoch === null) {
+			await entry.runtime.connect?.();
+			if (!isStillStarting()) return;
 			try {
 				entry.claimAttempted = true;
 				({ routeEpoch } = await entry.publication.claim());
@@ -183,11 +172,21 @@ export async function startPartition({
 				throw cause;
 			}
 			if (!isStillStarting()) return;
-			// The claim names this worker; the marker written under its epoch is what fences the last one.
-			await entry.runtime.fence?.();
-			if (!isStillStarting()) return;
-			claims.admit({ routeEpoch });
 		}
+
+		const activation = entry.runtime.activate();
+		try {
+			// Named owner already: requests routed here wait at the gate while the runtime fences.
+			claims.admit({ routeEpoch });
+			await activation;
+		} catch (cause) {
+			state.directory.withdraw({ partition });
+			await activation;
+			throw cause;
+		}
+		if (!isStillStarting()) return;
+		const health = entry.runtime.getHealth();
+		if (health.status !== "ready" || health.failureReason !== null) return;
 		await resumeCommands({ ctx, partition });
 	} finally {
 		entry.startupSettled = true;
