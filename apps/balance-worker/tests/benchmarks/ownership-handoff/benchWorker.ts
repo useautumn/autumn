@@ -55,6 +55,7 @@ import type { StateBackend } from "../../../src/state/stateBackend.js";
 import { createDirectoryAdminBucketObjects } from "./directoryAdminBucketObjects.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
 import { installPgLatency } from "./pgLatency.js";
+import { createStartupTrace } from "./startupTrace.js";
 
 const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
 	| (BalanceWorkerEnv & {
@@ -166,6 +167,17 @@ const partitionProducers = createKafka(
 		limits: WORKER_KAFKA_PRODUCER_LIMITS,
 	}),
 );
+const trace = createStartupTrace({
+	emit,
+	describe,
+	topic: env.BALANCE_WORKER_METERING_TOPIC,
+	admin: resources.admin,
+});
+function tracedPartitionProducer(
+	producerConfig: Parameters<typeof partitionProducers.producer>[0],
+) {
+	return trace.traceProducer(partitionProducers.producer(producerConfig));
+}
 function readHolding({ partition }: { partition: number }): number | undefined {
 	return partitions.holdingOf({ partition });
 }
@@ -175,7 +187,7 @@ const sendWatches = createPartitionSendWatches({
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
 		logger,
-		kafka: { producer: partitionProducers.producer },
+		kafka: { producer: tracedPartitionProducer },
 		ownershipOffsets: resources.admin,
 		ownershipHandoff,
 		stateStore: resources.stateStore,
@@ -194,6 +206,7 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 	const { partition } = params;
 	const built = runtimeFactory(params);
 	const runtime = resources.registerRuntime(built.runtime);
+	trace.attach({ partition, runtime, follower: params.follower });
 	function watchStatus(): () => void {
 		let last = runtime.getHealth().status;
 		const poll = setInterval(() => {
@@ -210,58 +223,83 @@ function createRuntime(params: PartitionRuntimeFactoryInput) {
 		};
 	}
 	async function prepare(): Promise<void> {
-		emit("runtime.prepare", { partition });
+		trace.step("runtime.prepare", partition);
 		const stop = watchStatus();
 		try {
 			await runtime.prepare();
 		} finally {
 			stop();
-			emit("runtime.prepared", { partition });
+			trace.step("runtime.prepared", partition);
 		}
 	}
 	async function activate(): Promise<void> {
-		emit("runtime.start", { partition });
+		trace.step("runtime.start", partition);
 		const stop = watchStatus();
 		try {
 			await runtime.activate();
 		} finally {
 			stop();
-			emit("runtime.started", {
-				partition,
-				status: runtime.getHealth().status,
+			const health = runtime.getHealth();
+			trace.step("runtime.started", partition, {
+				status: health.status,
+				failureReason: describe(health.failureReason ?? null),
 			});
 		}
 	}
 	async function drain(): Promise<void> {
 		// detachPartitions withdraws the route and calls drain() in the same tick: this is the withdraw moment.
-		emit("withdraw", { partition });
+		trace.step("withdraw", partition);
 		await runtime.drain();
-		emit("drained", { partition });
+		trace.step("drained", partition);
+		trace.detach({ partition });
 	}
 	async function claim(params?: {
 		endpoint: string;
 	}): Promise<{ routeEpoch: string }> {
-		emit("claim.start", { partition, endpoint: params?.endpoint });
-		const result = await built.publication.claim(params);
-		emit("claim.done", {
-			partition,
-			routeEpoch: result.routeEpoch,
-			endpoint: params?.endpoint,
-		});
-		return result;
+		trace.step("claim.start", partition, { endpoint: params?.endpoint });
+		try {
+			const result = await built.publication.claim(params);
+			if (!params?.endpoint)
+				trace.noteClaim({ partition, routeEpoch: result.routeEpoch });
+			trace.step("claim.done", partition, {
+				routeEpoch: result.routeEpoch,
+				endpoint: params?.endpoint,
+			});
+			return result;
+		} catch (cause) {
+			trace.step("claim.failed", partition, { error: describe(cause) });
+			throw cause;
+		}
 	}
 	async function release(): Promise<void> {
-		emit("release.start", { partition });
+		trace.step("release.start", partition);
 		await built.publication.release();
-		emit("release.done", { partition });
+		trace.step("release.done", partition);
 	}
 	async function announceReady(params?: { readyAt: number }): Promise<void> {
 		await built.publication.announceReady(params);
-		emit("ready.announced", { partition });
+		trace.step("ready.announced", partition, {
+			readyAt: params?.readyAt ?? null,
+		});
 	}
 	return {
-		runtime: { ...runtime, prepare, activate, drain },
-		publication: { ...built.publication, claim, release, announceReady },
+		runtime: {
+			...runtime,
+			prepare,
+			activate,
+			drain,
+			fence: trace.traceFence({ partition, runtime }),
+		},
+		publication: {
+			...built.publication,
+			...trace.tracePublication({
+				partition,
+				publication: built.publication,
+			}),
+			claim,
+			release,
+			announceReady,
+		},
 	};
 }
 
@@ -281,10 +319,16 @@ async function leaveTimed(): Promise<void> {
 		throw cause;
 	}
 }
-const consumer = { ...groupConsumer, leave: leaveTimed };
-consumer.on(consumer.events.REBALANCING, () => emit("consumer.rebalancing"));
+const consumer = {
+	...groupConsumer,
+	...trace.traceConsumer(groupConsumer),
+	leave: leaveTimed,
+};
+consumer.on(consumer.events.REBALANCING, () =>
+	trace.noteAllocation("consumer.rebalancing"),
+);
 consumer.on(consumer.events.GROUP_JOIN, (event) =>
-	emit("consumer.group_join", {
+	trace.noteAllocation("consumer.group_join", {
 		partitions:
 			event.payload.memberAssignment[env.BALANCE_WORKER_METERING_TOPIC] ?? [],
 		assignment: event.payload.memberAssignment,
@@ -343,6 +387,7 @@ const partitions = createWorkerPartitions({
 		healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 	},
 });
+trace.bindOwnership(partitions);
 const mirror: { samples: OwnNetworkSample[] } = { samples: [] };
 const lastTcp = { counters: readTcpCounters() };
 const keepSamplesMs = DEFAULT_OWN_NETWORK_THRESHOLDS.windowMs + 2_000;
@@ -474,7 +519,7 @@ const stepDown = createWorkerStepDown({
 });
 const app = createBalanceWorkerApp({
 	ctx: {
-		ownership: partitions,
+		ownership: trace.traceOwnership(partitions),
 		partitionResolver: resources.partitionResolver,
 		logger,
 	},
@@ -535,6 +580,7 @@ const listener = Bun.serve({
 	idleTimeout: 0,
 });
 emit("consumer.start");
+trace.start();
 await partitions.start();
 void slotHeartbeat?.start();
 stepDown.start();
