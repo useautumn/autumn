@@ -552,7 +552,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: null,
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			const second = f.publication.awaitDraining({ signal: controller.signal });
 			f.deliver({
@@ -581,7 +581,7 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 				activeDrain: { endpoint: "http://third.test", successor: "http://x" },
 				activePreparation: null,
 				release: null,
-				readyEndpoints: [],
+				readies: [],
 			});
 			expect(f.publication.readActiveDrain()).toEqual({
 				endpoint: "http://third.test",
@@ -605,133 +605,149 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			controller.abort();
 			expect(f.listenerCount()).toBe(0);
 		});
-		test("a release frees the partition only from this worker's own ready on", async () => {
-			const f = fixture({ withHandoff: true });
+		const releaseView = ({
+			owner = null,
+			release,
+			readies = [],
+		}: {
+			owner?: string | null;
+			release: string | null;
+			readies?: { endpoint: string; readyAt: number }[];
+		}): OwnershipTailView => ({
+			owner,
+			activeDrain: null,
+			activePreparation: null,
+			release: release === null ? null : { endpoint: release },
+			readies,
+		});
+		const releasedBy = (endpoint: string): OwnershipRecord => ({
+			schemaVersion: 1,
+			type: "released",
+			partition: 2,
+			endpoint,
+			releasedAt: 1,
+		});
+		const ownReady: OwnershipRecord = {
+			schemaVersion: 1,
+			type: "ready",
+			partition: 2,
+			endpoint: "http://worker.test",
+			readyAt: 7,
+		};
+		function watchRelease(f: ReturnType<typeof fixture>) {
 			const controller = new AbortController();
-			const viewOf = ({
-				owner,
-				release,
-			}: {
-				owner: string | null;
-				release: string | null;
-			}): OwnershipTailView => ({
-				owner,
-				activeDrain: null,
-				activePreparation: null,
-				release: release === null ? null : { endpoint: release },
-				readyEndpoints: [],
-			});
-			const releasedBy = (endpoint: string): OwnershipRecord => ({
-				schemaVersion: 1,
-				type: "released",
-				partition: 2,
-				endpoint,
-				releasedAt: 1,
-			});
-			let freed: { endpoint: string } | null = null;
+			const state: { freed: { endpoint: string } | null } = { freed: null };
 			const released = f.publication.awaitRelease({
 				signal: controller.signal,
 				afterReadyAt: 7,
 			});
-			void released.then((result) => {
-				freed = result;
-			});
+			void released.then(
+				(result) => {
+					state.freed = result;
+				},
+				() => undefined,
+			);
+			return { controller, state, released };
+		}
 
-			f.views.set(2, viewOf({ owner: null, release: "http://other.test" }));
+		test("a release frees the partition only once this attempt's own ready is in the tail's view", async () => {
+			const f = fixture({ withHandoff: true });
+			const { state, released } = watchRelease(f);
+
+			f.views.set(2, releaseView({ release: "http://other.test" }));
 			f.deliver({
 				partition: 2,
 				offset: 1n,
 				record: releasedBy("http://other.test"),
 			});
 			await Promise.resolve();
-			expect(freed).toBeNull();
+			expect(state.freed).toBeNull();
+			expect(f.publication.readRelease({ readyAt: 7 })).toBeNull();
 
-			f.views.set(2, viewOf({ owner: "http://current.test", release: null }));
-			f.deliver({
-				partition: 2,
-				offset: 2n,
-				record: {
-					schemaVersion: 1,
-					type: "ready",
-					partition: 2,
-					endpoint: "http://worker.test",
-					readyAt: 7,
-				},
-			});
+			f.views.set(
+				2,
+				releaseView({
+					owner: "http://current.test",
+					release: null,
+					readies: [{ endpoint: "http://worker.test", readyAt: 7 }],
+				}),
+			);
+			f.deliver({ partition: 2, offset: 2n, record: ownReady });
 			await Promise.resolve();
-			expect(freed).toBeNull();
+			expect(state.freed).toBeNull();
 
-			f.views.set(2, viewOf({ owner: null, release: "http://current.test" }));
+			f.views.set(
+				2,
+				releaseView({
+					release: "http://current.test",
+					readies: [{ endpoint: "http://worker.test", readyAt: 7 }],
+				}),
+			);
 			f.deliver({
 				partition: 2,
 				offset: 3n,
 				record: releasedBy("http://current.test"),
 			});
 			expect(await released).toEqual({ endpoint: "http://current.test" });
+			expect(f.publication.readRelease({ readyAt: 7 })).toEqual({
+				endpoint: "http://current.test",
+			});
 			expect(f.listenerCount()).toBe(0);
 		});
-		test("a release the tail had read by this worker's own ready frees the partition at the ready", async () => {
+
+		test("a release the tail had read when this attempt's ready lands frees the partition at the ready", async () => {
 			const f = fixture({ withHandoff: true });
-			const controller = new AbortController();
-			const released = f.publication.awaitRelease({
-				signal: controller.signal,
-				afterReadyAt: 7,
-			});
-			f.views.set(2, {
-				owner: null,
-				activeDrain: null,
-				activePreparation: null,
-				release: { endpoint: "http://other.test" },
-				readyEndpoints: [],
-			});
-			f.deliver({
-				partition: 2,
-				offset: 4n,
-				record: {
-					schemaVersion: 1,
-					type: "ready",
-					partition: 2,
-					endpoint: "http://worker.test",
-					readyAt: 7,
-				},
-			});
+			const { released } = watchRelease(f);
+			f.views.set(
+				2,
+				releaseView({
+					release: "http://other.test",
+					readies: [{ endpoint: "http://worker.test", readyAt: 7 }],
+				}),
+			);
+			f.deliver({ partition: 2, offset: 4n, record: ownReady });
 			expect(await released).toEqual({ endpoint: "http://other.test" });
 		});
 
 		test("a release does not free the partition while another worker has announced ready since the last claim", async () => {
 			const f = fixture({ withHandoff: true });
-			const controller = new AbortController();
-			let freed: { endpoint: string } | null = null;
-			void f.publication
-				.awaitRelease({ signal: controller.signal, afterReadyAt: 7 })
-				.then(
-					(result) => {
-						freed = result;
-					},
-					() => undefined,
-				);
-			f.views.set(2, {
-				owner: null,
-				activeDrain: null,
-				activePreparation: null,
-				release: { endpoint: "http://other.test" },
-				readyEndpoints: ["http://rival.test", "http://worker.test"],
-			});
-			f.deliver({
-				partition: 2,
-				offset: 4n,
-				record: {
-					schemaVersion: 1,
-					type: "ready",
-					partition: 2,
-					endpoint: "http://worker.test",
-					readyAt: 7,
-				},
-			});
+			const { controller, state } = watchRelease(f);
+			f.views.set(
+				2,
+				releaseView({
+					release: "http://other.test",
+					readies: [
+						{ endpoint: "http://rival.test", readyAt: 3 },
+						{ endpoint: "http://worker.test", readyAt: 7 },
+					],
+				}),
+			);
+			f.deliver({ partition: 2, offset: 4n, record: ownReady });
 			await Promise.resolve();
-			expect(freed).toBeNull();
+			expect(state.freed).toBeNull();
 			controller.abort();
 		});
+
+		test("a release does not free the partition for an attempt whose ready is not in the current claim's interval", async () => {
+			const f = fixture({ withHandoff: true });
+			const { controller, state } = watchRelease(f);
+			for (const readies of [
+				[],
+				[{ endpoint: "http://worker.test", readyAt: 5 }],
+			]) {
+				f.views.set(2, releaseView({ release: "http://other.test", readies }));
+				f.deliver({
+					partition: 2,
+					offset: BigInt(5 + readies.length),
+					record: releasedBy("http://other.test"),
+				});
+				await Promise.resolve();
+				expect(state.freed).toBeNull();
+				expect(f.publication.readRelease({ readyAt: 7 })).toBeNull();
+			}
+			controller.abort();
+		});
+
 		test("awaitReady resolves on another worker's ready, ignoring its own and other record types", async () => {
 			const f = fixture({ withHandoff: true });
 			const controller = new AbortController();

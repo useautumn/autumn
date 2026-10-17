@@ -540,6 +540,50 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("one release frees the partition for one successor: a ready from before the last claim cannot take it", async () => {
+		const log = createOwnershipLog();
+		const C = createWorker({
+			name: "C",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			await C.ownership.start();
+			await B.ownership.start();
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			await settle();
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			log.publish({ type: "unowned", partition: 2, endpoint: "http://A" });
+			await settle();
+			expect(C.has("activate:2")).toBe(false);
+
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(B.has("claim:B:2")).toBe(true);
+			expect(C.has("activate:2")).toBe(false);
+		} finally {
+			await C.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
 	test("a ready that fails to send keeps the bounded claim wait instead of claiming at once", async () => {
 		const log = createOwnershipLog();
 		const B = createWorker({
