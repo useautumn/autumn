@@ -69,6 +69,37 @@ describe("stepping down", () => {
 		await waitFor(() => B.has("claim:b:0"));
 	});
 
+	test("a request waiting on a handoff is let go the moment the worker steps down", async () => {
+		const log = createOwnershipLog();
+		const drainGate = deferred();
+		const A = createWorker({
+			name: "a",
+			log,
+			drainGate: drainGate.promise,
+			config: { handoffReadyTimeoutMs: 60_000 },
+		});
+		const B = createWorker({
+			name: "b",
+			log,
+			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 20 },
+		});
+		await ownAlone(A, [0]);
+		await B.ownership.start();
+		A.revoke();
+		B.assign([0]);
+		await waitFor(() => A.has("withdraw:0"));
+		const released = { value: false };
+		void A.ownership.awaitHandoff({ partition: 0 }).then(() => {
+			released.value = true;
+		});
+		await Bun.sleep(20);
+		expect(released.value).toBe(false);
+		const steppingDown = A.ownership.stepDown();
+		await waitFor(() => released.value);
+		drainGate.resolve();
+		await steppingDown;
+	});
+
 	test("a step-down while the service is already stopping still keeps the process up", async () => {
 		const log = createOwnershipLog();
 		const A = createWorker({ name: "a", log });
