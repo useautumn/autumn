@@ -90,47 +90,17 @@ export const insertPartitionProgress = async ({
 	`);
 };
 
-const CLAIM_EPOCH_DIGITS = 20;
-
-export const epochClaimToken = ({
-	ownerEpoch,
-	id,
-}: {
-	ownerEpoch: bigint;
-	id: string;
-}): string =>
-	`${ownerEpoch.toString().padStart(CLAIM_EPOCH_DIGITS, "0")}:${id}`;
-
 export const claimPartitionProgress = async ({
 	ctx,
 	topic,
 	partition,
 	claimToken,
-	ownerEpoch,
 }: {
 	ctx: ProgressContext;
 	claimToken: string;
-	ownerEpoch: bigint;
-} & PartitionPosition): Promise<boolean> => {
-	const { rows } = await ctx.db.execute(sql`
-		WITH existing AS (
-			SELECT 1 FROM partition_progress
-			WHERE topic = ${topic} AND partition_id = ${partition}
-		), updated AS (
-			UPDATE partition_progress SET claim_token = ${claimToken}
-			WHERE topic = ${topic} AND partition_id = ${partition}
-				AND (
-					claim_token IS NULL
-					OR CASE
-						WHEN claim_token ~ '^[0-9]{20}:'
-						THEN substr(claim_token, 1, 20)::numeric <= ${ownerEpoch}::numeric
-						ELSE true
-					END
-				)
-				AND (owner_epoch IS NULL OR owner_epoch <= ${ownerEpoch}::bigint)
-			RETURNING 1
-		)
-		SELECT (NOT EXISTS (SELECT 1 FROM existing) OR EXISTS (SELECT 1 FROM updated)) AS claimed
+} & PartitionPosition): Promise<void> => {
+	await ctx.db.execute(sql`
+		UPDATE partition_progress SET claim_token = ${claimToken}
+		WHERE topic = ${topic} AND partition_id = ${partition}
 	`);
-	return rows[0]?.claimed === true;
 };

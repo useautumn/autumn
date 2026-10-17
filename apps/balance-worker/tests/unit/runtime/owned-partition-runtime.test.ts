@@ -52,7 +52,6 @@ import type {
 	PartitionRuntimeDependencies,
 } from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
-import { PartitionClaimRefusedError } from "../../../src/state/stateStoreErrors.js";
 import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
@@ -332,9 +331,7 @@ const createRuntime = ({
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 	storeApplyGate,
-	ownerEpoch,
 }: {
-	ownerEpoch?: () => string | undefined;
 	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
@@ -378,7 +375,6 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore,
-			ownerEpoch,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
@@ -400,12 +396,8 @@ const createRuntime = ({
 describe("owned partition runtime", () => {
 	function createBareFencedRuntime({
 		fenceOwnership,
-		ownerEpoch,
-		claimPartition,
 	}: {
 		fenceOwnership: () => Promise<{ offset: bigint } | null>;
-		ownerEpoch?: () => string | undefined;
-		claimPartition?: SqliteStateStore["claimPartition"];
 	}) {
 		const fixture = createStoreFixture();
 		const events: string[] = [];
@@ -418,10 +410,7 @@ describe("owned partition runtime", () => {
 		};
 		const runtime = createPartitionRuntime({
 			ctx: {
-				stateStore: claimPartition
-					? { ...fixture.store, claimPartition }
-					: fixture.store,
-				ownerEpoch,
+				stateStore: fixture.store,
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				producer: {
@@ -494,55 +483,6 @@ describe("owned partition runtime", () => {
 		}
 	});
 
-	test("a self-claimed runtime claims nothing at activation and claims under the named epoch at its fence", async () => {
-		const claims: unknown[] = [];
-		const epoch: { value: string | undefined } = { value: undefined };
-		const f = createBareFencedRuntime({
-			fenceOwnership: async () => ({ offset: 41n }),
-			ownerEpoch: () => epoch.value,
-			claimPartition: async (params) => {
-				claims.push(params);
-			},
-		});
-		try {
-			await f.runtime.start();
-			expect(claims).toEqual([]);
-			epoch.value = "9";
-			await f.runtime.fence();
-			expect(claims).toEqual([{ topic, partition, ownerEpoch: "9" }]);
-			expect(f.runtime.getStatus()).toBe("ready");
-		} finally {
-			await f.runtime.stop().catch(() => undefined);
-			closeStoreFixture(f.fixture);
-		}
-	});
-
-	test("a claim refused at the fence fences the runtime instead of serving", async () => {
-		const epoch: { value: string | undefined } = { value: undefined };
-		const f = createBareFencedRuntime({
-			fenceOwnership: async () => ({ offset: 41n }),
-			ownerEpoch: () => epoch.value,
-			claimPartition: async () => {
-				throw new PartitionClaimRefusedError({
-					topic,
-					partition,
-					ownerEpoch: "9",
-				});
-			},
-		});
-		try {
-			await f.runtime.start();
-			epoch.value = "9";
-			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
-				OwnedPartitionProducerFencedError,
-			);
-			expect(f.runtime.getStatus()).toBe("recovery_required");
-		} finally {
-			await f.runtime.stop().catch(() => undefined);
-			closeStoreFixture(f.fixture);
-		}
-	});
-
 	test("a marker that cannot be written sends the runtime into recovery instead of serving unfenced", async () => {
 		const f = createBareFencedRuntime({
 			fenceOwnership: async () => {
@@ -580,7 +520,6 @@ describe("owned partition runtime", () => {
 			},
 			producer: fakeProducer.producer,
 			follower: fakeFollower.follower,
-			ownerEpoch: () => "7",
 			bootstrap: async ({ logRange }) => {
 				startup.push("bootstrap");
 				expect(runtime.getStatus()).toBe("bootstrapping");
@@ -639,68 +578,6 @@ describe("owned partition runtime", () => {
 				result: { allowed: true },
 				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
 			});
-		} finally {
-			await runtime.stop();
-			closeStoreFixture(fixture);
-		}
-	});
-
-	test("claims the partition under the owner epoch the runtime holds, or none before a claim names one", async () => {
-		for (const held of ["512", undefined]) {
-			const fixture = createStoreFixture();
-			const claims: unknown[] = [];
-			const runtime = createRuntime({
-				store: {
-					...fixture.store,
-					claimPartition: async (params) => {
-						claims.push(params);
-					},
-				},
-				producer: createFakeProducer().producer,
-				follower: createFollower().follower,
-				ownerEpoch: () => held,
-			});
-			try {
-				await runtime.start();
-				expect(claims).toEqual(
-					held === undefined ? [] : [{ topic, partition, ownerEpoch: held }],
-				);
-			} finally {
-				await runtime.stop();
-				closeStoreFixture(fixture);
-			}
-		}
-	});
-
-	test("a refused claim sends startup into the fenced recovery path and never reaches the follower", async () => {
-		const fixture = createStoreFixture();
-		const startup: string[] = [];
-		const fakeFollower = createFollower({ lifecycle: startup });
-		const runtime = createRuntime({
-			store: {
-				...fixture.store,
-				claimPartition: async () => {
-					throw new PartitionClaimRefusedError({
-						topic,
-						partition,
-						ownerEpoch: "100",
-					});
-				},
-			},
-			producer: createFakeProducer({ lifecycle: startup }).producer,
-			follower: fakeFollower.follower,
-			ownerEpoch: () => "100",
-		});
-		try {
-			await expect(runtime.start()).rejects.toBeInstanceOf(
-				OwnedPartitionProducerFencedError,
-			);
-			expect(runtime.getStatus()).toBe("recovery_required");
-			expect(runtime.getHealth().failureReason).toContain(
-				"PartitionClaimRefusedError",
-			);
-			expect(startup).not.toContain("follower:range");
-			expect(startup).not.toContain("follower:start");
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);

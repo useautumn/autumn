@@ -234,7 +234,7 @@ const createWriterOverStore = () => {
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
-		claimPartitionProgress: async () => true,
+		claimPartitionProgress: async () => {},
 		flush: async (request) => {
 			flushes += 1;
 			if ((request.snapshots?.deletes.length ?? 0) > 0)

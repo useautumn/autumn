@@ -45,7 +45,7 @@ const createRecordingDb = ({
 	const db: CommitterDb = {
 		readPartitionProgress: async () => null,
 		insertPartitionProgress: async () => {},
-		claimPartitionProgress: async () => true,
+		claimPartitionProgress: async () => {},
 		flush: async (request) => {
 			requests.push(request);
 			const failure = failWhen?.(request);
