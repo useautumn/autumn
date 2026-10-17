@@ -129,6 +129,11 @@ const productCommit =
 		"apps/balance-worker/src",
 		"packages/*/src",
 	]);
+const TAKEOVER_BRANCH = "origin/og/bw-takeover";
+const takeoverBase = gitOutput(["merge-base", TAKEOVER_BRANCH, PRODUCT_BRANCH]);
+const takeoverMerged = gitOutput(["merge-base", "HEAD", TAKEOVER_BRANCH]);
+const takeoverCommit =
+	takeoverMerged && takeoverMerged !== takeoverBase ? takeoverMerged : null;
 const deployment = `bench-${crypto.randomUUID().slice(0, 8)}`;
 const runDir = join(outDir, `${SCENARIO}-${deployment}`);
 mkdirSync(runDir, { recursive: true });
@@ -1377,6 +1382,7 @@ const summary = {
 	scenario: SCENARIO,
 	commit,
 	productCommit,
+	takeoverCommit,
 	deployment,
 	fleetId,
 	config: {
