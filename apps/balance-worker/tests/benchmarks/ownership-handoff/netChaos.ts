@@ -25,6 +25,7 @@ import {
 } from "@autumn/kafka";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { BALANCE_WORKER_ACTIVE_SLOT_KEY } from "../../../src/edgeConfig/activeSlotEdgeConfig.js";
+import { stepDownPermitScopeOf } from "../../../src/init/construction/createWorkerStepDown.js";
 import { createTestKafka } from "../../fixtures/testKafka.js";
 import {
 	openFixturePostgres,
@@ -129,10 +130,14 @@ const deployment = `bench-${crypto.randomUUID().slice(0, 8)}`;
 const runDir = join(outDir, `${SCENARIO}-${deployment}`);
 mkdirSync(runDir, { recursive: true });
 const edgeDir = join(runDir, "admin-bucket");
-const permitDir = join(edgeDir, "admin/balance-worker-step-down", deployment);
-mkdirSync(permitDir, { recursive: true });
 const serviceArn = `arn:aws:ecs:local:0:service/${deployment}/balance-workers-blue`;
 const fleetId = fleetIdOf({ serviceArn });
+const permitDir = join(
+	edgeDir,
+	"admin/balance-worker-step-down",
+	stepDownPermitScopeOf({ deployment, fleetId, imageSha: null }),
+);
+mkdirSync(permitDir, { recursive: true });
 const subjectSnapshotsPath = join(
 	edgeDir,
 	BALANCE_WORKER_SUBJECT_SNAPSHOTS_KEY,
@@ -716,7 +721,7 @@ const phase = (t: number) =>
 
 type Tick = WorkerEvent & {
 	work: {
-		lastSendAckAt: number | null;
+		lastSendAckAgeMs: number | null;
 		ownNetwork: string;
 		steppedDown: boolean;
 	};
