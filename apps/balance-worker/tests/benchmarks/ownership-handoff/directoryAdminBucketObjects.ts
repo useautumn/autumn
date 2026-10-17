@@ -1,22 +1,19 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
 	closeSync,
-	type Dirent,
 	linkSync,
 	mkdirSync,
 	openSync,
-	readdirSync,
 	readFileSync,
 	renameSync,
 	statSync,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
 import type {
 	AdminBucketObjects,
 	AdminObject,
-	AdminObjectListing,
 } from "../../../src/external/s3/types/adminBucketObjects.js";
 
 const LOCK_STALE_MS = 5_000;
@@ -66,23 +63,6 @@ export function createDirectoryAdminBucketObjects({
 		return temporary;
 	}
 
-	function filesUnder(root: string): string[] {
-		let entries: Dirent[];
-		try {
-			entries = readdirSync(root, { withFileTypes: true });
-		} catch (cause) {
-			if (isMissing(cause)) return [];
-			throw cause;
-		}
-		const files: string[] = [];
-		for (const entry of entries) {
-			const path = join(root, entry.name);
-			if (entry.isDirectory()) files.push(...filesUnder(path));
-			else if (!entry.name.endsWith(LOCK_SUFFIX)) files.push(path);
-		}
-		return files;
-	}
-
 	async function withLock<Value>({
 		path,
 		run,
@@ -121,22 +101,6 @@ export function createDirectoryAdminBucketObjects({
 			if (isMissing(cause)) return true;
 			throw cause;
 		}
-	}
-
-	async function list({
-		prefix,
-	}: {
-		prefix: string;
-	}): Promise<AdminObjectListing[]> {
-		const root = pathOf(prefix.slice(0, prefix.lastIndexOf("/") + 1));
-		const listed: AdminObjectListing[] = [];
-		for (const path of filesUnder(root)) {
-			const key = relative(directory, path);
-			if (!key.startsWith(prefix)) continue;
-			const text = readText(path);
-			if (text !== null) listed.push({ key, etag: etagOf(text) });
-		}
-		return listed;
 	}
 
 	async function read({ key }: { key: string }): Promise<AdminObject | null> {
@@ -186,19 +150,5 @@ export function createDirectoryAdminBucketObjects({
 		});
 	}
 
-	async function remove({ key }: { key: string }): Promise<void> {
-		const path = pathOf(key);
-		await withLock({
-			path,
-			run: () => {
-				try {
-					unlinkSync(path);
-				} catch (cause) {
-					if (!isMissing(cause)) throw cause;
-				}
-			},
-		});
-	}
-
-	return { list, read, create, replace, remove };
+	return { read, create, replace };
 }
