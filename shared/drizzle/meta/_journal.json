@@ -750,6 +750,13 @@
       "when": 1792080873519,
       "tag": "0106_customers_atom_seqs",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1792155500293,
+      "tag": "0107_approval_rules",
+      "breakpoints": true
     }
   ]
 }
