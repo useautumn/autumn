@@ -60,7 +60,11 @@ function harness({
 	holdingOf = (partition) => (partition <= 3 ? 1 : undefined),
 	held = [0, 1, 2, 3],
 	trigger = DEGRADED,
+	progressAt = (call: number) => fleetAt({ call, keepsUp }),
+	readDelayMs = () => 0,
 }: {
+	progressAt?: (call: number) => FleetProgress;
+	readDelayMs?: (call: number) => number;
 	held?: number[];
 	trigger?: OwnNetworkVerdict;
 	holdingOf?: (partition: number) => number | undefined;
@@ -94,10 +98,12 @@ function harness({
 			readFleetProgress: async () => {
 				calls.push("read-progress");
 				const call = state.reads++;
+				const readStartedAt = time.now;
 				await readGate;
+				time.now += readDelayMs(call);
 				if (call === 0 && baselineFails)
 					throw new Error("Postgres did not answer");
-				return fleetAt({ call, keepsUp });
+				return { ...progressAt(call), readStartedAt };
 			},
 			ownPartitions: () => new Set(held),
 			permits: {
@@ -133,6 +139,7 @@ function harness({
 			peerPollMs: 1_000,
 			minKeptUp: 2,
 			maxOwnerLagMs: 2_000,
+			maxObservationMs: 3_000,
 			recheckAttempts: 3,
 			recheckIntervalMs: 1_000,
 			minStalledPartitions: 2,
@@ -202,6 +209,40 @@ describe("step-down controller", () => {
 		await fire();
 		expect(readsOf(calls)).toBe(14);
 		expect(calls).not.toContain("step-down");
+	});
+
+	test("a slow baseline read counts in the arrival interval, so owners stalled for over two seconds of arrivals do not vouch", async () => {
+		function stalledFleetAt(call: number): FleetProgress {
+			const highWatermarks = new Map<number, bigint>();
+			const nextOffsets = new Map<number, bigint>();
+			for (let partition = 0; partition < 16; partition++) {
+				highWatermarks.set(partition, call === 0 ? 100n : 450n);
+				nextOffsets.set(partition, call === 0 ? 100n : 101n);
+			}
+			return { highWatermarks, nextOffsets };
+		}
+		const { controller, calls, fire } = harness({
+			progressAt: stalledFleetAt,
+			readDelayMs: (call) => (call === 0 ? 2_500 : 0),
+		});
+		controller.start();
+		await fire();
+		expect(calls).not.toContain("acquire");
+	});
+
+	test("an observation older than its read bound is set aside and the check goes on", async () => {
+		const { controller, calls, fire } = harness({
+			readDelayMs: (call) => (call === 1 ? 3_500 : 0),
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"step-down",
+		]);
 	});
 
 	test("stays when only the worker's own partitions and too few others keep up", async () => {

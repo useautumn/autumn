@@ -8,6 +8,21 @@ const EMPTY: FleetProgress = {
 };
 
 describe("bounded fleet progress reads", () => {
+	test("a joined read reports when the read it joined began, not when it was joined", async () => {
+		const time = { now: 0 };
+		const slow = Promise.withResolvers<FleetProgress>();
+		const read = readFleetProgressWithin({
+			read: () => slow.promise,
+			timeoutMs: 20,
+			now: () => time.now,
+		});
+		await expect(read()).rejects.toThrow("took longer than 20 ms");
+		time.now = 50;
+		const joined = read();
+		slow.resolve(EMPTY);
+		expect((await joined).readStartedAt).toBe(0);
+	});
+
 	test("a read that outlasts its bound fails that poll, and the next poll joins it instead of starting another", async () => {
 		const slow = Promise.withResolvers<FleetProgress>();
 		const started = { reads: 0 };
@@ -22,7 +37,7 @@ describe("bounded fleet progress reads", () => {
 		const second = read();
 		expect(started.reads).toBe(1);
 		slow.resolve(EMPTY);
-		expect(await second).toBe(EMPTY);
+		expect(await second).toMatchObject(EMPTY);
 		await read();
 		expect(started.reads).toBe(2);
 	});
