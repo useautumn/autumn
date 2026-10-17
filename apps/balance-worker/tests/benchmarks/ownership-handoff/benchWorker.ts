@@ -49,6 +49,8 @@ const env = JSON.parse(process.env.BENCH_WORKER_ENV ?? "null") as
 			BENCH_BACKEND: StateBackend;
 			BENCH_SERVICE_ARN?: string;
 			BENCH_EDGE_CONFIG_DIR?: string;
+			BENCH_ADVERTISE_IP?: string;
+			BENCH_HEARTBEAT_MS?: number;
 	  })
 	| null;
 if (!env) throw new Error("BENCH_WORKER_ENV is required");
@@ -102,7 +104,12 @@ if (process.env.BENCH_DB_REPORT === "1")
 	);
 
 const checkpointConfig = createWorkerCheckpointConfig({ env });
-const address = await resolveWorkerAddress({ env });
+const address = env.BENCH_ADVERTISE_IP
+	? {
+			hostname: "0.0.0.0",
+			endpoint: `http://${env.BENCH_ADVERTISE_IP}:${env.BALANCE_WORKER_PORT}`,
+		}
+	: await resolveWorkerAddress({ env });
 /** The fleet's identity handed in instead of read from ECS; the group derives from it exactly as in createBalanceWorker. */
 const fleetId = env.BENCH_SERVICE_ARN
 	? fleetIdOf({ serviceArn: env.BENCH_SERVICE_ARN })
@@ -364,7 +371,7 @@ const app = createBalanceWorkerApp({
 	},
 });
 
-/** The production heartbeat every 2s instead of 20s, so the orchestrator can assert on it between steps. */
+const heartbeatMs = env.BENCH_HEARTBEAT_MS ?? 2_000;
 const slotHeartbeat =
 	slotGate && resources.edgeConfigs && env.BENCH_SERVICE_ARN && fleetId
 		? createSlotHeartbeat({
@@ -391,7 +398,7 @@ const slotHeartbeat =
 					},
 					logger,
 					schedule: ({ run }) => {
-						const timer = setInterval(run, 2_000);
+						const timer = setInterval(run, heartbeatMs);
 						return () => clearInterval(timer);
 					},
 				},
