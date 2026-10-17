@@ -29,7 +29,12 @@ describe("read fleet heartbeats", () => {
 	test("a baseline lists the fleet without reading any heartbeat", async () => {
 		const memory = createMemoryAdminObjects();
 		write({ memory, instanceId: "1-a", endpoint: "http://a" });
-		write({ memory, instanceId: "2-c", endpoint: "http://c", fleetId: "other" });
+		write({
+			memory,
+			instanceId: "2-c",
+			endpoint: "http://c",
+			fleetId: "other",
+		});
 		const baseline = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",
@@ -52,7 +57,12 @@ describe("read fleet heartbeats", () => {
 		write({ memory, instanceId: "1-a", endpoint: "http://a" });
 		write({ memory, instanceId: "3-d", endpoint: "http://d" });
 		memory.put({ key: keyOf("4-broken"), body: "{not json" });
-		write({ memory, instanceId: "5-e", endpoint: "http://e", fleetId: "other" });
+		write({
+			memory,
+			instanceId: "5-e",
+			endpoint: "http://e",
+			fleetId: "other",
+		});
 		const later = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",

@@ -4,10 +4,7 @@ import { createPartitionSendWatches } from "../../../../src/health/ownNetwork/cr
 describe("partition send watches", () => {
 	test("each partition reports its own longest send, and idle ones report nothing", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({
-			now: () => time.now,
-			wallNow: () => 1_000_000 + time.now,
-		});
+		const watches = createPartitionSendWatches({ now: () => time.now });
 		const stuck = Promise.withResolvers<void>();
 		void watches.watchFor({ partition: 80 }).track(() => stuck.promise);
 		await watches.watchFor({ partition: 81 }).track(async () => undefined);

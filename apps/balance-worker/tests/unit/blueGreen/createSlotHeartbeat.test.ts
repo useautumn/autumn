@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { EdgeConfigS3Client } from "@autumn/edge-config";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import type { SlotGateDescription } from "../../../src/blueGreen/isActiveSlot.js";
-import type { SlotWorkReading } from "../../../src/blueGreen/types/slotHeartbeat.js";
+import type { SlotWork } from "../../../src/blueGreen/types/slotHeartbeat.js";
 import {
 	SlotHeartbeatSchema,
 	slotHeartbeatKeyOf,
@@ -45,7 +45,7 @@ const createHarness = ({
 	storeHealthy?: boolean;
 	admitted?: Set<number>;
 	assignmentSettled?: boolean;
-	work?: SlotWorkReading;
+	work?: SlotWork;
 }) => {
 	const written: { key: string; body: unknown }[] = [];
 	const s3Client: EdgeConfigS3Client = {
