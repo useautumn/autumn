@@ -18,6 +18,7 @@ export const checkBillingApproval = async (
 		enforced: ctx.org.config.approvals_enforced,
 	};
 	const facts = lazyBillingApprovalFacts({ ...params, action });
+	if (ctx.skipApproval) return outcome;
 
 	if (preview) await attachTestFacts({ params, outcome, facts });
 	return outcome;

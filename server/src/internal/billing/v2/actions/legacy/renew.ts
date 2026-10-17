@@ -9,6 +9,7 @@ import {
 	InternalError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { attachParamsToStripeBillingContext } from "@/internal/billing/v2/actions/legacy/utils/attachParamsToStripeBillingContext";
 import { setupLegacyTransitionContext } from "@/internal/billing/v2/actions/legacy/utils/setupLegacyFeatureQuantitiesContext";
@@ -80,9 +81,13 @@ export const renew = async ({
 		redirect_mode: "if_required",
 	};
 
-	return await billingActions.updateSubscription({
+	return await withApprovalSkipped({
 		ctx,
-		params,
-		contextOverride: billingContextOverride,
+		run: () =>
+			billingActions.updateSubscription({
+				ctx,
+				params,
+				contextOverride: billingContextOverride,
+			}),
 	});
 };

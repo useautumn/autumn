@@ -14,6 +14,7 @@ import {
 import type { TransitionRules } from "@shared/api/billing/common/transitionRules";
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { withApprovalSkipped } from "@/internal/approvals/check/withApprovalSkipped";
 import { billingActions } from "@/internal/billing/v2/actions";
 
 export interface AttachResult {
@@ -80,20 +81,24 @@ export async function migrate({
 	ctx.logger.info(
 		`----- RUNNING MIGRATION FOR CUSTOMER ${fullCustomer.id}, ENTITY ${entity?.id} -----`,
 	);
-	await billingActions.updateSubscription({
+	await withApprovalSkipped({
 		ctx,
-		params: updateSubscriptionParams,
-		contextOverride: {
-			productContext: {
-				customerProduct: currentCustomerProduct,
-				fullProduct: newProduct,
+		run: () =>
+			billingActions.updateSubscription({
+				ctx,
+				params: updateSubscriptionParams,
+				contextOverride: {
+					productContext: {
+						customerProduct: currentCustomerProduct,
+						fullProduct: newProduct,
 
-				customPrices: [],
-				customEnts: [],
-			},
+						customPrices: [],
+						customEnts: [],
+					},
 
-			billingVersion: currentCustomerProduct.billing_version,
-		},
+					billingVersion: currentCustomerProduct.billing_version,
+				},
+			}),
 	});
 
 	ctx.logger.info(
