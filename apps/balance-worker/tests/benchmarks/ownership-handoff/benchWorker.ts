@@ -380,7 +380,9 @@ function takeAndMirror({ now }: { now: number }) {
 		...mirror.samples.filter((kept) => kept.at > now - keepSamplesMs),
 		{ at: now, tcp, sends: heldSends },
 	];
-	const verdict = judgeOwnNetwork({ samples: heldSamples(), now });
+	const samples = heldSamples();
+	const verdict = judgeOwnNetwork({ samples, now });
+	const window = windowOf({ samples, now });
 	queueMicrotask(() =>
 		emit("own_network.tick", {
 			work: stepDown.readWork(),
@@ -388,9 +390,33 @@ function takeAndMirror({ now }: { now: number }) {
 			tcp,
 			sends,
 			heldPartitions: heldSends.map(({ partition }) => partition),
+			...window,
 		}),
 	);
 	return sends;
+}
+function windowOf({
+	samples,
+	now,
+}: {
+	samples: OwnNetworkSample[];
+	now: number;
+}): {
+	windowLongestMs: Record<number, number>;
+	windowRetransmitted: number;
+} {
+	const windowStart = now - DEFAULT_OWN_NETWORK_THRESHOLDS.windowMs;
+	const windowLongestMs: Record<number, number> = {};
+	let windowRetransmitted = 0;
+	for (const sample of samples) {
+		if (sample.at <= windowStart) continue;
+		windowRetransmitted += sample.tcp?.retransSegs ?? 0;
+		for (const { partition, longestInFlightMs } of sample.sends)
+			windowLongestMs[partition] = Math.round(
+				Math.max(windowLongestMs[partition] ?? 0, longestInFlightMs),
+			);
+	}
+	return { windowLongestMs, windowRetransmitted };
 }
 const watchedSends: PartitionSendWatches = {
 	watchFor: sendWatches.watchFor,
