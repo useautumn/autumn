@@ -114,10 +114,14 @@ export function createOwnershipTail({
 			if (view.activePreparation?.endpoint === record.endpoint)
 				view.activePreparation = null;
 			const { endpoint, readyAt } = record;
-			const known = view.readies.some(
-				(ready) => ready.endpoint === endpoint && ready.readyAt === readyAt,
-			);
-			if (!known) view.readies = [...view.readies, { endpoint, readyAt }];
+			function isThisReady(ready: {
+				endpoint: string;
+				readyAt: number;
+			}): boolean {
+				return ready.endpoint === endpoint && ready.readyAt === readyAt;
+			}
+			if (!view.readies.some(isThisReady))
+				view.readies = [...view.readies, { endpoint, readyAt }];
 		}
 	}
 
