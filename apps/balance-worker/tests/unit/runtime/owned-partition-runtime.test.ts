@@ -1615,9 +1615,9 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				events.push(`${name}:range:${end}`);
 				return { logStartOffset: 0n, logEndOffset: end };
 			},
-			startAndCatchUp: async ({ targetNextOffset, fromBookmark }) => {
+			startAndCatchUp: async ({ targetNextOffset, preparedNextOffset }) => {
 				events.push(
-					`${name}:replay:${targetNextOffset}${fromBookmark ? ":from-bookmark" : ""}`,
+					`${name}:replay:${targetNextOffset}${preparedNextOffset === undefined ? "" : `:from:${preparedNextOffset}`}`,
 				);
 				if (failPrepare && name === "prepare") throw new Error("replay failed");
 			},
@@ -1816,7 +1816,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					"fence",
 					"active:range:9",
 					"bootstrap",
-					"active:replay:9:from-bookmark",
+					"active:replay:9:from:5",
 				]);
 				expect(f.runtime.getStatus()).toBe("ready");
 			} finally {

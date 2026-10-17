@@ -63,7 +63,7 @@ export async function completeRuntimeStartup({
 			partition,
 			targetNextOffset: logRange.logEndOffset,
 			onUnavailable,
-			fromBookmark: prepared,
+			preparedNextOffset: state.preparedNextOffset ?? undefined,
 		});
 		assertStartupContinues({ state });
 		state.status = "ready";
@@ -125,6 +125,7 @@ export async function completeRuntimePreparation({
 		});
 		signal.throwIfAborted();
 		const replayedUntil = performance.now();
+		state.preparedNextOffset = logRange.logEndOffset;
 		await stopRuntimePreparation({ state });
 		signal.throwIfAborted();
 		state.status = "prepared";

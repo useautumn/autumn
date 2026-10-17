@@ -29,6 +29,7 @@ export type PartitionRuntimeScope = {
 export type PartitionRuntimeState = {
 	preparationFollower: PartitionOutcomeFollowerPort | null;
 	preparationStopPromise: Promise<void> | null;
+	preparedNextOffset: bigint | null;
 	drainPromise: Promise<void> | null;
 	status: PartitionRuntimeStatus;
 	terminalError: OwnedPartitionRecoveryRequiredError | null;

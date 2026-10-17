@@ -12,7 +12,7 @@ import type {
 	PartitionReplayContext,
 	PartitionReplayState,
 } from "../types/partitionReplay.js";
-import { readReplayFloor } from "./readReplayFloor.js";
+import { holdReplayFloor, readReplayFloor } from "./readReplayFloor.js";
 
 export async function readReplayLogRange({
 	ctx,
@@ -51,7 +51,7 @@ export async function startReplay({
 	partition,
 	targetNextOffset,
 	onUnavailable,
-	fromBookmark = false,
+	preparedNextOffset,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
@@ -59,7 +59,7 @@ export async function startReplay({
 	partition: number;
 	targetNextOffset: bigint;
 	onUnavailable: RuntimeUnavailableListener;
-	fromBookmark?: boolean;
+	preparedNextOffset?: bigint;
 }): Promise<void> {
 	if (state.status !== "created")
 		throw new Error(
@@ -84,7 +84,7 @@ export async function startReplay({
 		ctx,
 		state,
 		targetNextOffset,
-		fromBookmark,
+		preparedNextOffset,
 		signal: state.abortController.signal,
 	});
 	return state.startPromise;
@@ -94,13 +94,13 @@ async function catchUpPartition({
 	ctx,
 	state,
 	targetNextOffset,
-	fromBookmark,
+	preparedNextOffset,
 	signal,
 }: {
 	ctx: PartitionReplayContext;
 	state: PartitionReplayState;
 	targetNextOffset: bigint;
-	fromBookmark: boolean;
+	preparedNextOffset: bigint | undefined;
 	signal: AbortSignal;
 }): Promise<void> {
 	const { topic, partition } = state.position;
@@ -117,9 +117,14 @@ async function catchUpPartition({
 					signal,
 				})
 			: targetNextOffset;
-	const floor = fromBookmark
-		? storedNextOffset
-		: await readReplayFloor({ ctx, state, bookmark: storedNextOffset });
+	const floor =
+		preparedNextOffset === undefined
+			? await readReplayFloor({ ctx, state, bookmark: storedNextOffset })
+			: holdReplayFloor({
+					state,
+					offset: preparedNextOffset,
+					bookmark: storedNextOffset,
+				});
 	if (signal.aborted) throw signal.reason;
 	// A new replay must rebuild recent commands even if an earlier runtime reached the target.
 	ctx.positionTracker.reset({ topic, partition, nextOffset: floor });

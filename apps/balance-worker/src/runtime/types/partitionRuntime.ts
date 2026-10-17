@@ -47,8 +47,7 @@ export type PartitionOutcomeFollowerPort = {
 		partition: number;
 		targetNextOffset: bigint;
 		onUnavailable: RuntimeUnavailableListener;
-		/** Skip the dedup window below the bookmark; a preparation follower already rebuilt it. */
-		fromBookmark?: boolean;
+		preparedNextOffset?: bigint;
 	}): Promise<void>;
 	readProgress(params: {
 		topic: string;
