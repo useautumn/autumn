@@ -57,7 +57,12 @@ export const handlePostCustomer = createRoute({
 		const start = Date.now();
 
 		const customerData = CustomerDataSchema.parse(createCusParams);
-		await checkCustomerCreateApproval({ ctx, customerId: createCusParams.id });
+		await checkCustomerCreateApproval({
+			ctx,
+			customerId: createCusParams.id,
+			customerData,
+			billingDetails: createCusParams.billing_details,
+		});
 
 		const apiCustomer = await getOrCreateApiCustomerByRollout({
 			ctx,

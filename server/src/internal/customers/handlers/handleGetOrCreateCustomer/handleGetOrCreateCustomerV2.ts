@@ -20,7 +20,12 @@ export const getOrCreateCustomerV2 = async ({
 }) => {
 	const start = Date.now();
 	const customerData = CustomerDataSchema.parse(params);
-	await checkCustomerCreateApproval({ ctx, customerId: params.customer_id });
+	await checkCustomerCreateApproval({
+		ctx,
+		customerId: params.customer_id,
+		customerData,
+		billingDetails: params.billing_details,
+	});
 
 	const apiCustomer = await getOrCreateApiCustomerByRollout({
 		ctx,
