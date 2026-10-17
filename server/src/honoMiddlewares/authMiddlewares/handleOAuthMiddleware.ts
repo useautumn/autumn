@@ -11,6 +11,7 @@ import {
 	ErrCode,
 	type Feature,
 	features,
+	member,
 	type Organization,
 	OrgConfigSchema,
 	oauthAccessToken,
@@ -115,6 +116,7 @@ const getOAuthRequestContext = async ({
 			masterOrg,
 			feature: features,
 			productAlias: productAliases,
+			memberRole: member.role,
 		})
 		.from(oauthAccessToken)
 		.innerJoin(
@@ -126,6 +128,14 @@ const getOAuthRequestContext = async ({
 			eq(oauthAccessToken.referenceId, organizations.id),
 		)
 		.leftJoin(masterOrg, eq(organizations.created_by, masterOrg.id))
+		// One membership per (org, user), so this join adds no rows.
+		.leftJoin(
+			member,
+			and(
+				eq(member.organizationId, organizations.id),
+				eq(member.userId, oauthAccessToken.userId),
+			),
+		)
 		.leftJoin(
 			features,
 			and(
@@ -207,6 +217,7 @@ const getOAuthRequestContext = async ({
 		org,
 		scopes: first.tokenScopes,
 		userId: first.tokenUserId,
+		role: first.memberRole ?? undefined,
 	};
 };
 
@@ -226,6 +237,8 @@ export const handleOAuthMiddleware = async ({
 	ctx.features = sortFeatures({ features: data.features }) ?? [];
 	ctx.env = data.env;
 	ctx.userId = data.userId;
+	// The token acts for this member, so approval rules see their role.
+	ctx.role = data.role;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = data.scopes;
 

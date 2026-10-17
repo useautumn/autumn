@@ -20,6 +20,8 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	/** The acting member's org role. Set only when a member acts (dashboard or OAuth token), never for API keys. */
+	role?: string;
 	apiKeyId?: string;
 	impersonatedBy?: string;
 	customerId?: string;

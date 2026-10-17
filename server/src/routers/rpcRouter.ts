@@ -20,6 +20,7 @@ import { migrationRpcRouter } from "@/internal/migrations/v2/migrationRouter";
 import { organizationRpcRouter } from "@/internal/orgs/organizationRpcRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
+import { handleListRoles } from "@/internal/roles/handlers/handleListRoles";
 import { sandboxesRpcRouter } from "@/internal/sandboxes/sandboxesRouter";
 import { stripeReadRpcRouter } from "@/internal/stripeRead/stripeReadRouter";
 import { webhooksRpcRouter } from "@/internal/webhooks/webhooksRouter";
@@ -36,6 +37,8 @@ rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", catalogRpcRouter);
 rpcRouter.route("", catalogV2RpcRouter);
 rpcRouter.route("", billingRpcRouter);
+// Agents need role ids for rule subjects; managing roles stays in the dashboard.
+rpcRouter.post("/roles.list", ...handleListRoles);
 rpcRouter.route("", dfuRpcRouter);
 rpcRouter.route("", balancesRpcRouter);
 rpcRouter.route("", eventsRpcRouter);
