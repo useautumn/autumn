@@ -27,10 +27,12 @@ export const DEFAULT_OWN_NETWORK_THRESHOLDS: OwnNetworkThresholds = {
 export function judgeOwnNetwork({
 	samples,
 	now,
+	heldPartitions,
 	thresholds = DEFAULT_OWN_NETWORK_THRESHOLDS,
 }: {
 	samples: readonly OwnNetworkSample[];
 	now: number;
+	heldPartitions: number;
 	thresholds?: OwnNetworkThresholds;
 }): OwnNetworkVerdict {
 	const windowStart = now - thresholds.windowMs;
@@ -41,10 +43,14 @@ export function judgeOwnNetwork({
 		segments += tcp?.outSegs ?? 0;
 		retransmitted += tcp?.retransSegs ?? 0;
 	}
-	const longestByPartition = longestSendByPartition({ window });
-	const stalledPartitions = [...longestByPartition.values()].filter(
-		(longestMs) => longestMs >= thresholds.stallMs,
-	).length;
+	const longest = longestSendByHolding({ window });
+	const stalledHoldings: { partition: number; holding: number }[] = [];
+	for (const { partition, holding, longestMs } of longest.values())
+		if (longestMs >= thresholds.stallMs)
+			stalledHoldings.push({ partition, holding });
+	const busyPartitions = new Set(
+		[...longest.values()].map(({ partition }) => partition),
+	).size;
 	const retransmitRatio = segments > 0 ? retransmitted / segments : null;
 	const losesPackets =
 		retransmitted >= thresholds.minRetransmits &&
@@ -54,8 +60,10 @@ export function judgeOwnNetwork({
 		windowStartedAt: window[0]?.at ?? null,
 		segments,
 		retransmitRatio,
-		busyPartitions: longestByPartition.size,
-		stalledPartitions,
+		busyPartitions,
+		stalledPartitions: stalledHoldings.length,
+		heldPartitions,
+		stalledHoldings,
 		losesPackets,
 	};
 	const coversWindow =
@@ -63,40 +71,47 @@ export function judgeOwnNetwork({
 	const countersComplete = window.every((sample) => sample.tcp !== null);
 	if (!coversWindow || !countersComplete || segments === 0)
 		return { ...verdict, state: "insufficient_data" };
-	const stuck = sendsStuckOnMostPartitions({
-		busyPartitions: longestByPartition.size,
-		stalledPartitions,
+	const stuck = sendsStuckOnMostHeldPartitions({
+		heldPartitions: Math.max(heldPartitions, busyPartitions),
+		stalledPartitions: stalledHoldings.length,
 		thresholds,
 	});
 	return { ...verdict, state: losesPackets && stuck ? "degraded" : "healthy" };
 }
 
-function longestSendByPartition({
+function longestSendByHolding({
 	window,
 }: {
 	window: readonly OwnNetworkSample[];
-}): Map<number, number> {
-	const longestByPartition = new Map<number, number>();
+}): Map<string, { partition: number; holding: number; longestMs: number }> {
+	const longest = new Map<
+		string,
+		{ partition: number; holding: number; longestMs: number }
+	>();
 	for (const { sends } of window)
-		for (const { partition, longestInFlightMs } of sends)
-			longestByPartition.set(
+		for (const { partition, holding, longestInFlightMs } of sends) {
+			const key = `${partition}:${holding}`;
+			const known = longest.get(key);
+			longest.set(key, {
 				partition,
-				Math.max(longestByPartition.get(partition) ?? 0, longestInFlightMs),
-			);
-	return longestByPartition;
+				holding,
+				longestMs: Math.max(known?.longestMs ?? 0, longestInFlightMs),
+			});
+		}
+	return longest;
 }
 
-function sendsStuckOnMostPartitions({
-	busyPartitions,
+function sendsStuckOnMostHeldPartitions({
+	heldPartitions,
 	stalledPartitions,
 	thresholds,
 }: {
-	busyPartitions: number;
+	heldPartitions: number;
 	stalledPartitions: number;
 	thresholds: OwnNetworkThresholds;
 }): boolean {
 	return (
 		stalledPartitions >= thresholds.minStalledPartitions &&
-		stalledPartitions * 2 > busyPartitions
+		stalledPartitions * 2 > heldPartitions
 	);
 }

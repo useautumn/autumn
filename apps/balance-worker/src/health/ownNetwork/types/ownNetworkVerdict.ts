@@ -8,5 +8,7 @@ export type OwnNetworkVerdict = {
 	retransmitRatio: number | null;
 	busyPartitions: number;
 	stalledPartitions: number;
+	heldPartitions: number;
+	stalledHoldings: { partition: number; holding: number }[];
 	losesPackets: boolean;
 };

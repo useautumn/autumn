@@ -202,7 +202,16 @@ export async function createBalanceWorker({
 		const commitPositions = createCommitPositions({
 			config: { partitionCount: env.BALANCE_WORKER_PARTITION_COUNT },
 		});
-		const sendWatches = createPartitionSendWatches();
+		function readHolding({
+			partition,
+		}: {
+			partition: number;
+		}): number | undefined {
+			return partitions.holdingOf({ partition });
+		}
+		const sendWatches = createPartitionSendWatches({
+			ctx: { holdingOf: readHolding },
+		});
 		const runtimeFactory = createPartitionRuntimeFactory({
 			ctx: {
 				partitionLoad,

@@ -1,5 +1,6 @@
 export type PartitionSendSample = {
 	partition: number;
+	holding: number;
 	longestInFlightMs: number;
 };
 

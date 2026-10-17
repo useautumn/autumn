@@ -10,6 +10,7 @@ import {
 	beginPartitionHandoffs,
 	cancelPartitionHandoff,
 } from "./lifecycle/handOffPartition.js";
+import { refreshHoldings } from "./lifecycle/refreshHoldings.js";
 import { clearConsumerRejoin } from "./lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
@@ -119,6 +120,7 @@ export function stopPartitionService({
 		...(state.steppedDown ? [] : beginPartitionHandoffs({ ctx, state })),
 	];
 	const entriesToStop = [...handingOff, ...detachPartitions({ state })];
+	refreshHoldings({ state });
 	const previousLifecycle = state.lifecycle;
 	const healthRefresh = state.healthRefreshPromise;
 	state.stopPromise = finishPartitionServiceStop({
