@@ -725,6 +725,8 @@ type Tick = WorkerEvent & {
 		ownNetwork: string;
 		steppedDown: boolean;
 	};
+	windowLongestMs?: Record<string, number>;
+	windowRetransmitted?: number;
 	verdict: {
 		state: string;
 		segments: number;
@@ -903,6 +905,8 @@ const perSecond = Object.fromEntries(
 						: Number(tick.verdict.retransmitRatio.toFixed(4)),
 				busy: tick.verdict.busyPartitions,
 				stalled: tick.verdict.stalledPartitions,
+				retrans3s: tick.windowRetransmitted ?? null,
+				longestMs: tick.windowLongestMs ?? null,
 				mirror: tick.verdict.state,
 				product: tick.work.ownNetwork,
 				steppedDown: tick.work.steppedDown,
@@ -956,6 +960,75 @@ const calibration = Object.fromEntries(
 			},
 		];
 	}),
+);
+function percentile(values: number[], q: number): number | null {
+	if (values.length === 0) return null;
+	const sorted = [...values].sort((x, y) => x - y);
+	return (
+		sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? null
+	);
+}
+function distributionOf(values: number[]) {
+	return {
+		n: values.length,
+		p50: percentile(values, 0.5),
+		p90: percentile(values, 0.9),
+		p99: percentile(values, 0.99),
+		max: values.length ? Math.max(...values) : null,
+	};
+}
+function perWindow(
+	mine: Tick[],
+	pick: (longest: number[]) => number | null,
+): number[] {
+	return mine
+		.map((tick) => pick(Object.values(tick.windowLongestMs ?? {})))
+		.filter((value): value is number => value !== null);
+}
+const windowStats = Object.fromEntries(
+	workers.map((worker) => [
+		worker.name,
+		Object.fromEntries(
+			["baseline", "fault", "recovery"].map((name) => {
+				const mine = ticks.filter(
+					(tick) =>
+						tick.worker === worker.name &&
+						tick.t >= readyAt &&
+						phase(tick.t) === name,
+				);
+				return [
+					name,
+					{
+						windows: mine.length,
+						longestSendPerPartitionMs: distributionOf(
+							mine.flatMap((tick) => Object.values(tick.windowLongestMs ?? {})),
+						),
+						windowP50Ms: distributionOf(
+							perWindow(mine, (longest) => percentile(longest, 0.5)),
+						),
+						windowP99Ms: distributionOf(
+							perWindow(mine, (longest) => percentile(longest, 0.99)),
+						),
+						windowMaxMs: distributionOf(
+							perWindow(mine, (longest) =>
+								longest.length ? Math.max(...longest) : null,
+							),
+						),
+						busyPartitions: distributionOf(
+							mine.map((tick) => tick.verdict.busyPartitions),
+						),
+						retransmittedPer3s: distributionOf(
+							mine.map((tick) => tick.windowRetransmitted ?? 0),
+						),
+						segmentsPer3s: distributionOf(
+							mine.map((tick) => tick.verdict.segments),
+						),
+						states: countBy(mine, (tick) => tick.work.ownNetwork),
+					},
+				];
+			}),
+		),
+	]),
 );
 const steppingDownAnswers = countBy(
 	taps.filter(
@@ -1307,6 +1380,7 @@ const summary = {
 		(l) => `${phase(l.t)}:${l.level}:${String(l.message).slice(0, 100)}`,
 	),
 	calibration,
+	windowStats,
 	perSecond,
 	reconciliation,
 	perPartitionReconciliation: perPartition,
