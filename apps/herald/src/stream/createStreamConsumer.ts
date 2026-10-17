@@ -86,6 +86,7 @@ export function createStreamConsumer({
 		// An idle job hears its fetches answered from statistics; without them it would read as stalled.
 		statisticsIntervalMs: FETCH_LIVENESS_INTERVAL_MS,
 		maxRecordsPerPoll: readSize.recordsPerPoll,
+		batchByPartition: true,
 	});
 	const stopping = new AbortController();
 	const job = streamConsumer.name;

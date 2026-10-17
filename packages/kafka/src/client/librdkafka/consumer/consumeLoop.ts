@@ -415,6 +415,7 @@ async function deliverPartition({
 	const { topic, partition } = fetched;
 	const key = partitionKeyOf({ topic, partition });
 	let pending: NativeMessage[] = [];
+	let endOffset: number | undefined;
 	async function flush(endOffset?: number): Promise<void> {
 		const messages = pending;
 		pending = [];
@@ -438,6 +439,10 @@ async function deliverPartition({
 			continue;
 		}
 		if (pending.length > 0) {
+			if (scope.config.batchByPartition) {
+				endOffset = item.offset;
+				continue;
+			}
 			await flush(item.offset);
 			continue;
 		}
@@ -466,7 +471,7 @@ async function deliverPartition({
 			},
 		});
 	}
-	await flush();
+	await flush(endOffset);
 }
 
 async function deliverConcurrently({

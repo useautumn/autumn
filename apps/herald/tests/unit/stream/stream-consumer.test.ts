@@ -629,6 +629,7 @@ test("usage-events asks each poll for 5,000 records and lands them 2,000 a slice
 	});
 	await deliver({ records: trackMessages({ count: 4_001 }) });
 	expect(consumerConfigs[0]?.maxRecordsPerPoll).toBe(5_000);
+	expect(consumerConfigs[0]?.batchByPartition).toBe(true);
 	expect(sliceSizes).toEqual([2_000, 2_000, 1]);
 });
 
@@ -644,6 +645,7 @@ test("a job without a read size of its own polls and slices 500 records, as hera
 	});
 	await deliver({ records: trackMessages({ count: 501 }) });
 	expect(consumerConfigs[0]?.maxRecordsPerPoll).toBe(500);
+	expect(consumerConfigs[0]?.batchByPartition).toBe(true);
 	expect(sliceSizes).toEqual([500, 1]);
 });
 
