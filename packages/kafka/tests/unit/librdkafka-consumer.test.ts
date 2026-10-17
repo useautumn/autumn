@@ -1069,6 +1069,39 @@ describe("librdkafka consumer runner", () => {
 	});
 });
 
+describe("leaving the group", () => {
+	test("leave unsubscribes at once and serves the revocation while the loop is stuck", async () => {
+		const { fake, consumer, events } = createRunner();
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => events.includes("join:0,1"));
+		const stuck = Promise.withResolvers<void>();
+		fake.gate.held = stuck.promise;
+		await until(() => fake.gate.held === undefined);
+		const startedAt = performance.now();
+		await consumer.leave();
+		expect(performance.now() - startedAt).toBeLessThan(1_000);
+		expect(fake.calls).toContain("unsubscribe");
+		expect(fake.calls).toContain("incrementalUnassign:0,1");
+		stuck.resolve();
+		await consumer.leave();
+		await consumer.disconnect();
+		expect(fake.calls.filter((call) => call === "unsubscribe")).toHaveLength(1);
+		expect(fake.calls.at(-1)).toBe("disconnect");
+	});
+
+	test("leave before the consumer has a client does nothing", async () => {
+		const { fake, consumer } = createRunner();
+		await consumer.connect();
+		await consumer.leave();
+		expect(fake.calls).not.toContain("unsubscribe");
+	});
+});
+
 describe("group protocol", () => {
 	async function nativeGroupConfigOf({
 		groupProtocol,

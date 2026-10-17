@@ -75,6 +75,9 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		events.push("disconnect");
 		if (options.disconnectFailure) throw options.disconnectFailure;
 	}
+	async function leave(): Promise<void> {
+		events.push("leave");
+	}
 	async function commitOffsets(
 		offsets: Array<{ topic: string; partition: number; offset: string }>,
 	): Promise<void> {
@@ -120,6 +123,7 @@ function createConsumerFixture(options: ConsumerFixtureOptions = {}) {
 		subscribe,
 		run,
 		stop,
+		leave,
 		disconnect,
 		commitOffsets,
 		seek,
@@ -306,6 +310,26 @@ function readResumeOffset(): null {
 
 function applyRecord(): undefined {
 	return undefined;
+}
+
+async function leavesTheGroupOnlyWhileStarted(): Promise<void> {
+	const fixture = createConsumerFixture();
+	const consumer = createTopicConsumer({
+		ctx: {
+			consumer: fixture.consumer,
+			handler: { readResumeOffset, applyRecord },
+			progress: createProgressTracker(),
+		},
+		config: { topic },
+	});
+	await consumer.leave();
+	expect(fixture.events).not.toContain("leave");
+	await consumer.start();
+	await consumer.leave();
+	expect(fixture.events.filter((event) => event === "leave")).toHaveLength(1);
+	await consumer.stop();
+	await consumer.leave();
+	expect(fixture.events.filter((event) => event === "leave")).toHaveLength(1);
 }
 
 async function commitsOnlyAfterApplyingWholeBatch(): Promise<void> {
@@ -869,6 +893,10 @@ function topicConsumerTests(): void {
 	])(
 		"replayed records advance through fetched offset $lastOffset when already committed",
 		advancesAlreadyCommittedReplay,
+	);
+	test(
+		"leave asks the client to leave the group only between start and stop",
+		leavesTheGroupOnlyWhileStarted,
 	);
 	test(
 		"failed commits do not publish catch-up progress and can be retried",
