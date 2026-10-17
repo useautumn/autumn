@@ -34,7 +34,8 @@ export function judgeFleetProgress({
 			continue;
 		const arrived = highWatermark - baselineHigh;
 		const lag = highWatermark - owner.next;
-		if (lag * BigInt(elapsedMs) <= arrived * BigInt(maxLagMs)) keptUp += 1;
+		if (lag * BigInt(Math.ceil(elapsedMs)) <= arrived * BigInt(maxLagMs))
+			keptUp += 1;
 	}
 	return { ok: keptUp >= minKeptUp && keptUp * 2 >= active, active, keptUp };
 }

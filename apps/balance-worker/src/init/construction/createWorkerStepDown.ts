@@ -15,7 +15,10 @@ import { createOwnNetworkMonitor } from "../../health/ownNetwork/createOwnNetwor
 import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
 import { createStepDownController } from "../../health/stepDown/createStepDownController.js";
 import { createStepDownPermits } from "../../health/stepDown/createStepDownPermits.js";
-import type { FleetProgress } from "../../health/stepDown/types/fleetProgress.js";
+import type {
+	FleetProgress,
+	TimedFleetProgress,
+} from "../../health/stepDown/types/fleetProgress.js";
 import type { StepDownController } from "../../health/stepDown/types/stepDownController.js";
 import type { Partitions } from "../../partitions/types/partitions.js";
 
@@ -87,26 +90,35 @@ export function createWorkerStepDown({
 	return { start, stop };
 }
 
+function readMonotonicClock(): number {
+	return performance.now();
+}
+
 export function readFleetProgressWithin({
 	read,
 	timeoutMs,
+	now = readMonotonicClock,
 }: {
 	read: () => Promise<FleetProgress>;
 	timeoutMs: number;
-}): () => Promise<FleetProgress> {
-	const state: { inFlight: Promise<FleetProgress> | null } = { inFlight: null };
-	async function readThenSettle(): Promise<FleetProgress> {
+	now?: () => number;
+}): () => Promise<TimedFleetProgress> {
+	const state: { inFlight: Promise<TimedFleetProgress> | null } = {
+		inFlight: null,
+	};
+	async function readThenSettle(): Promise<TimedFleetProgress> {
+		const readStartedAt = now();
 		try {
-			return await read();
+			return { ...(await read()), readStartedAt };
 		} finally {
 			state.inFlight = null;
 		}
 	}
-	function startOrJoin(): Promise<FleetProgress> {
+	function startOrJoin(): Promise<TimedFleetProgress> {
 		state.inFlight ??= readThenSettle();
 		return state.inFlight;
 	}
-	async function readWithin(): Promise<FleetProgress> {
+	async function readWithin(): Promise<TimedFleetProgress> {
 		const late = Promise.withResolvers<never>();
 		function expire(): void {
 			late.reject(new Error(`Fleet progress took longer than ${timeoutMs} ms`));
@@ -167,6 +179,7 @@ function createController({
 				config.partitionCount * BALANCE_WORKER_STEP_DOWN_MIN_KEPT_UP_SHARE,
 			),
 			maxOwnerLagMs: BALANCE_WORKER_STEP_DOWN_MAX_OWNER_LAG_MS,
+			maxObservationMs: BALANCE_WORKER_STEP_DOWN_PROGRESS_TIMEOUT_MS,
 			recheckAttempts: BALANCE_WORKER_STEP_DOWN_RECHECK_ATTEMPTS,
 			recheckIntervalMs: BALANCE_WORKER_OWN_NETWORK_SAMPLE_MS,
 			minStalledPartitions: BALANCE_WORKER_OWN_NETWORK_MIN_STALLED_PARTITIONS,

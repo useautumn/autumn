@@ -12,12 +12,17 @@ export async function readFleetProgress({
 	};
 	topic: string;
 }): Promise<FleetProgress> {
-	const [highWatermarks, nextOffsets] = await Promise.all([
+	const [highWatermarks, nextOffsets] = await Promise.allSettled([
 		readTopicHighWatermarks({
 			ctx: { partitionOffsets: ctx.partitionOffsets },
 			topic,
 		}),
 		readTopicNextOffsets({ ctx: { db: ctx.db }, topic }),
 	]);
-	return { highWatermarks, nextOffsets };
+	if (highWatermarks.status === "rejected") throw highWatermarks.reason;
+	if (nextOffsets.status === "rejected") throw nextOffsets.reason;
+	return {
+		highWatermarks: highWatermarks.value,
+		nextOffsets: nextOffsets.value,
+	};
 }

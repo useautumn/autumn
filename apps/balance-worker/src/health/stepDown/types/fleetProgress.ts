@@ -3,6 +3,8 @@ export type FleetProgress = {
 	nextOffsets: ReadonlyMap<number, bigint>;
 };
 
+export type TimedFleetProgress = FleetProgress & { readStartedAt: number };
+
 export type FleetProgressVerdict = {
 	ok: boolean;
 	active: number;

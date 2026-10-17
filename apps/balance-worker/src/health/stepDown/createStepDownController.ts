@@ -4,8 +4,8 @@ import type { OwnNetworkMonitor } from "../ownNetwork/types/ownNetworkMonitor.js
 import type { OwnNetworkVerdict } from "../ownNetwork/types/ownNetworkVerdict.js";
 import { judgeFleetProgress } from "./judgeFleetProgress.js";
 import type {
-	FleetProgress,
 	FleetProgressVerdict,
+	TimedFleetProgress,
 } from "./types/fleetProgress.js";
 import type { StepDownController } from "./types/stepDownController.js";
 import type {
@@ -15,7 +15,7 @@ import type {
 
 type StepDownControllerContext = {
 	monitor: Pick<OwnNetworkMonitor, "onDegraded" | "verdict">;
-	readFleetProgress(): Promise<FleetProgress>;
+	readFleetProgress(): Promise<TimedFleetProgress>;
 	ownPartitions(): ReadonlySet<number>;
 	permits: StepDownPermits;
 	partitions: Pick<
@@ -36,6 +36,7 @@ type StepDownControllerConfig = {
 	peerPollMs: number;
 	minKeptUp: number;
 	maxOwnerLagMs: number;
+	maxObservationMs: number;
 	recheckAttempts: number;
 	recheckIntervalMs: number;
 	minStalledPartitions: number;
@@ -162,20 +163,19 @@ export function createStepDownController({
 
 	async function awaitFleetKeepingUp(): Promise<FleetProgressVerdict> {
 		const baseline = await readProgressOrNone();
-		const baselineAt = now();
 		let verdict: FleetProgressVerdict = { ok: false, active: 0, keptUp: 0 };
 		if (!baseline) return verdict;
-		const deadline = baselineAt + config.peerWaitMs;
+		const deadline = baseline.completedAt + config.peerWaitMs;
 		while (!state.stopped && now() + config.peerPollMs <= deadline) {
 			await sleep(config.peerPollMs);
 			const current = await readProgressOrNone();
-			if (!current || now() > deadline) continue;
+			if (!current || current.completedAt > deadline) continue;
 			verdict = judgeFleetProgress({
-				before: baseline,
-				after: current,
+				before: baseline.progress,
+				after: current.progress,
 				ownPartitions: ctx.ownPartitions(),
 				minKeptUp: config.minKeptUp,
-				elapsedMs: now() - baselineAt,
+				elapsedMs: current.completedAt - baseline.progress.readStartedAt,
 				maxLagMs: config.maxOwnerLagMs,
 			});
 			if (verdict.ok) return verdict;
@@ -183,9 +183,19 @@ export function createStepDownController({
 		return verdict;
 	}
 
-	async function readProgressOrNone(): Promise<FleetProgress | null> {
+	async function readProgressOrNone(): Promise<{
+		progress: TimedFleetProgress;
+		completedAt: number;
+	} | null> {
 		try {
-			return await ctx.readFleetProgress();
+			const progress = await ctx.readFleetProgress();
+			const completedAt = now();
+			if (completedAt - progress.readStartedAt <= config.maxObservationMs)
+				return { progress, completedAt };
+			ctx.logger.warn("Fleet progress was read too slowly to judge", {
+				readMs: completedAt - progress.readStartedAt,
+			});
+			return null;
 		} catch (cause) {
 			ctx.logger.warn("Fleet progress could not be read", { error: cause });
 			return null;
