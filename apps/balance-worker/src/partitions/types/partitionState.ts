@@ -40,6 +40,7 @@ export type PartitionsState = {
 		timer: ReturnType<typeof setTimeout> | null;
 	};
 	status: "created" | "running" | "stopping" | "stopped";
+	steppedDown: boolean;
 	retirementFailed: boolean;
 	generation: number;
 	lifecycle: Promise<void>;

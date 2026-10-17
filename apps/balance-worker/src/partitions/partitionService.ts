@@ -6,7 +6,10 @@ import {
 	startHealthRefresh,
 	stopHealthRefresh,
 } from "./health/partitionHealth.js";
-import { beginPartitionHandoffs } from "./lifecycle/handOffPartition.js";
+import {
+	beginPartitionHandoffs,
+	cancelPartitionHandoff,
+} from "./lifecycle/handOffPartition.js";
 import { clearConsumerRejoin } from "./lifecycle/rejoinConsumer.js";
 import { clearPartitionRetries } from "./lifecycle/retryPartition.js";
 import {
@@ -52,6 +55,28 @@ export async function startPartitionService({
 	}
 }
 
+export function stepDownPartitionService({
+	ctx,
+	state,
+}: PartitionsScope): Promise<void> {
+	if (state.status !== "running") return stopPartitionService({ ctx, state });
+	state.steppedDown = true;
+	for (const entry of [...state.handingOff.values()])
+		cancelPartitionHandoff({ state, entry });
+	void leaveGroupNow({ ctx });
+	return stopPartitionService({ ctx, state });
+}
+
+async function leaveGroupNow({
+	ctx,
+}: Pick<PartitionsScope, "ctx">): Promise<void> {
+	try {
+		await ctx.consumer.leave();
+	} catch (cause) {
+		reportPartitionError({ ctx, cause });
+	}
+}
+
 export function stopPartitionService({
 	ctx,
 	state,
@@ -73,7 +98,7 @@ export function stopPartitionService({
 	// Serving partitions keep serving until a successor is ready; the rest stop as before.
 	const handingOff = [
 		...state.handingOff.values(),
-		...beginPartitionHandoffs({ ctx, state }),
+		...(state.steppedDown ? [] : beginPartitionHandoffs({ ctx, state })),
 	];
 	const entriesToStop = [...handingOff, ...detachPartitions({ state })];
 	const previousLifecycle = state.lifecycle;
@@ -134,6 +159,7 @@ export async function stopServiceThenNotify({
 	reason,
 }: PartitionsScope & { reason: PartitionServiceStopReason }): Promise<void> {
 	await stopPartitionServiceSafely({ ctx, state });
+	if (state.steppedDown) return;
 	try {
 		ctx.onServiceStopped?.(reason);
 	} catch (cause) {

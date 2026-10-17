@@ -11,6 +11,7 @@ import { listPartitionHealth } from "./health/partitionHealth.js";
 import { consumerStatusOf } from "./lifecycle/rejoinConsumer.js";
 import {
 	startPartitionService,
+	stepDownPartitionService,
 	stopPartitionService,
 } from "./partitionService.js";
 import type { PartitionsState } from "./types/partitionState.js";
@@ -43,6 +44,14 @@ export function createPartitions({
 		return stopPartitionService({ ctx, state });
 	}
 
+	function stepDown(): Promise<void> {
+		return stepDownPartitionService({ ctx, state });
+	}
+
+	function isSteppedDown(): boolean {
+		return state.steppedDown;
+	}
+
 	function partitions(): OwnedPartitionHealth[] {
 		return listPartitionHealth({ state });
 	}
@@ -73,6 +82,8 @@ export function createPartitions({
 	return {
 		start,
 		stop,
+		stepDown,
+		isSteppedDown,
 		partitions,
 		hasAssignment,
 		isAdmitted,
@@ -130,6 +141,7 @@ function createPartitionState(): PartitionsState {
 		terminalHealthByPartition: new Map(),
 		partitionRetryTimers: new Map(),
 		status: "created",
+		steppedDown: false,
 		retirementFailed: false,
 		generation: 0,
 		lifecycle: Promise.resolve(),

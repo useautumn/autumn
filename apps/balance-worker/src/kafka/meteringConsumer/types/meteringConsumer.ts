@@ -14,6 +14,7 @@ import type { ReplayWindow } from "./replayWindow.js";
 export type MeteringConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	leave(): Promise<void>;
 	/** Joins the group again after the consumer gave it up. */
 	restart(): Promise<void>;
 	/** The replay remembers every record it sees land into the partition's `recentCommands`.

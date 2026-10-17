@@ -103,6 +103,7 @@ export type SubscribePartitionChanges = (
 export type PartitionConsumer = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	leave(): Promise<void>;
 	/** Joins the group again after the consumer gave it up; absent, such a crash stops the service. */
 	restart?(): Promise<void>;
 	pause(position: { topic: string; partitions: number[] }): void;
@@ -218,6 +219,8 @@ export interface ResolvedPartitionsConfig extends PartitionsConfig {
 export type Partitions = {
 	start(): Promise<void>;
 	stop(): Promise<void>;
+	stepDown(): Promise<void>;
+	isSteppedDown(): boolean;
 	partitions(): OwnedPartitionHealth[];
 	/** Running and dealt at least one assignment by the group; false while booting. */
 	hasAssignment(): boolean;

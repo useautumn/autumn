@@ -218,6 +218,9 @@ const createFakeGroupConsumer = (): FakeGroupConsumer => {
 		stop: async () => {
 			lifecycle.push("consumer-stop");
 		},
+		leave: async () => {
+			lifecycle.push("consumer-leave");
+		},
 		disconnect: async () => {
 			lifecycle.push("consumer-disconnect");
 		},
