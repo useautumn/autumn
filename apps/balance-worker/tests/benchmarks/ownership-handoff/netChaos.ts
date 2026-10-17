@@ -108,8 +108,11 @@ const taps: HttpTap[] = [];
 const routingLogs: { t: number; level: string; message?: string }[] = [];
 const marks: Mark[] = [];
 
+const repoRoot = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"])
+	.stdout.toString()
+	.trim();
 function gitOutput(args: string[]): string {
-	return Bun.spawnSync(["git", ...args])
+	return Bun.spawnSync(["git", "-C", repoRoot, ...args])
 		.stdout.toString()
 		.trim();
 }
