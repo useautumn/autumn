@@ -24,13 +24,13 @@ export function createStepDownPermits({
 	config,
 }: {
 	ctx: { objects: AdminBucketObjects; now?: () => number };
-	config: { deployment: string; holder: string; slots: number };
+	config: { scope: string; holder: string; slots: number };
 }): StepDownPermits {
 	const now = ctx.now ?? Date.now;
 	const { objects } = ctx;
 
 	function keyOf(slot: number): string {
-		return `${STEP_DOWN_PERMIT_PREFIX}/${config.deployment}/slot-${slot}.json`;
+		return `${STEP_DOWN_PERMIT_PREFIX}/${config.scope}/slot-${slot}.json`;
 	}
 
 	function heldRecord(): PermitRecord {

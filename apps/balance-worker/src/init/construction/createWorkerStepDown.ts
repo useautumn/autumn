@@ -32,7 +32,20 @@ type WorkerStepDownConfig = {
 	deployment: string;
 	endpoint: string;
 	fleetId: string | null;
+	imageSha: string | null;
 };
+
+export function stepDownPermitScopeOf({
+	deployment,
+	fleetId,
+	imageSha,
+}: {
+	deployment: string;
+	fleetId: string;
+	imageSha: string | null;
+}): string {
+	return `${deployment}/${fleetId}/${imageSha ?? "unversioned"}`;
+}
 
 export function createWorkerStepDown({
 	ctx,
@@ -99,7 +112,11 @@ function createController({
 	const permits = createStepDownPermits({
 		ctx: { objects },
 		config: {
-			deployment: config.deployment,
+			scope: stepDownPermitScopeOf({
+				deployment: config.deployment,
+				fleetId,
+				imageSha: config.imageSha,
+			}),
 			holder: `${config.endpoint}#${process.pid}`,
 			slots: BALANCE_WORKER_STEP_DOWN_PERMITS,
 		},
