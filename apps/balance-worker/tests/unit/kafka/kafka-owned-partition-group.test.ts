@@ -319,7 +319,7 @@ const createRuntimeFactory =
 		};
 		return {
 			start: async () => {
-				status = "fencing";
+				status = "activating";
 				started.push(partition);
 				const logRange = await follower.readLogRange({
 					topic: runtimeTopic,

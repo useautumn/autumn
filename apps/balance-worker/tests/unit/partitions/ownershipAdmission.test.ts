@@ -61,6 +61,7 @@ const fixture = ({
 	const createRuntime: PartitionRuntimeFactory = ({ partition }) => {
 		let status:
 			| "created"
+			| "activating"
 			| "ready"
 			| "draining"
 			| "recovery_required"
@@ -82,9 +83,11 @@ const fixture = ({
 			prepare: async () => undefined,
 			activate: async () => {
 				events.push(`start:${partition}`);
-				await startGate;
 				if (status !== "created") throw new Error("startup cancelled");
-				if (!unready) status = "ready";
+				status = "activating";
+				await startGate;
+				if (status !== "activating") throw new Error("startup cancelled");
+				status = unready ? "created" : "ready";
 				events.push(`ready:${partition}`);
 			},
 			fence: async () => {
