@@ -405,13 +405,7 @@ describe("owned partition runtime", () => {
 	}) {
 		const fixture = createStoreFixture();
 		const events: string[] = [];
-		const fakeFollower = createFollower({ lifecycle: events });
-		const follower: PartitionOutcomeFollowerPort = {
-			...fakeFollower.follower,
-			awaitNextOffset: async ({ nextOffset }) => {
-				events.push(`follower:await:${nextOffset}`);
-			},
-		};
+		const { follower } = createFollower({ lifecycle: events });
 		const runtime = createPartitionRuntime({
 			ctx: {
 				stateStore: fixture.store,
@@ -453,39 +447,6 @@ describe("owned partition runtime", () => {
 		});
 		return { runtime, events, fixture };
 	}
-
-	test("fence after the claim writes the marker and reads up to it before anything is admitted", async () => {
-		const f = createBareFencedRuntime({
-			fenceOwnership: async () => ({ offset: 41n }),
-		});
-		try {
-			await f.runtime.start();
-			expect(f.runtime.getStatus()).toBe("ready");
-			f.events.length = 0;
-			await f.runtime.fence();
-			expect(f.events).toEqual(["producer:fence-marker", "follower:await:42"]);
-			expect(f.runtime.getStatus()).toBe("ready");
-		} finally {
-			await f.runtime.stop().catch(() => undefined);
-			closeStoreFixture(f.fixture);
-		}
-	});
-
-	test("a producer with no marker to write makes the fence a no-op, and it is refused before the runtime is ready", async () => {
-		const f = createBareFencedRuntime({ fenceOwnership: async () => null });
-		try {
-			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
-				OwnedPartitionNotReadyError,
-			);
-			await f.runtime.start();
-			f.events.length = 0;
-			await f.runtime.fence();
-			expect(f.events).toEqual(["producer:fence-marker"]);
-		} finally {
-			await f.runtime.stop().catch(() => undefined);
-			closeStoreFixture(f.fixture);
-		}
-	});
 
 	test("a marker that cannot be written at activation sends the runtime into recovery instead of serving unfenced", async () => {
 		const f = createBareFencedRuntime({

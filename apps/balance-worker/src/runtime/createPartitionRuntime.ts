@@ -3,7 +3,6 @@ import { createPartitionProcessor } from "../processor/createPartitionProcessor.
 import type { PartitionProcessor } from "../processor/types/partitionProcessor.js";
 import { getRuntimeHealth } from "./getRuntimeHealth.js";
 import { enterRuntimeRecovery } from "./lifecycle/enterRuntimeRecovery.js";
-import { fenceRuntime } from "./lifecycle/fenceRuntime.js";
 import {
 	activateRuntime,
 	connectRuntime,
@@ -93,9 +92,6 @@ export function createPartitionRuntime({
 	function activate(): Promise<void> {
 		return activateRuntime({ ctx, state });
 	}
-	function fence(): Promise<void> {
-		return fenceRuntime({ ctx, state });
-	}
 
 	function drain(): Promise<void> {
 		return drainRuntime({ ctx, state });
@@ -145,7 +141,6 @@ export function createPartitionRuntime({
 		prepare,
 		connect,
 		activate,
-		fence,
 		drain,
 		stop,
 		waitForQuiescence,

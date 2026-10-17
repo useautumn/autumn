@@ -120,8 +120,6 @@ export type PartitionRuntime = {
 	prepare(): Promise<void>;
 	connect(): Promise<void>;
 	activate(): Promise<void>;
-	/** After the claim: writes the owner's fence marker and reads up to it, so nothing a stale owner appends can slip in. */
-	fence(): Promise<void>;
 	drain(): Promise<void>;
 	waitForQuiescence(): Promise<void>;
 	start(): Promise<void>;

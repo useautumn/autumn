@@ -96,9 +96,6 @@ const fixture = ({
 				status = unready ? "created" : "ready";
 				events.push(`ready:${partition}`);
 			},
-			fence: async () => {
-				events.push(`fence:${partition}`);
-			},
 			drain: async () => {
 				events.push(`gate-closed:${partition}`);
 				if (status === "recovery_required")

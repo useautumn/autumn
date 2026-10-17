@@ -161,8 +161,6 @@ export type WorkerOptions = {
 	prepareGate?: Promise<void>;
 	prepareFailures?: Map<number, unknown>;
 	activateGate?: Promise<void>;
-	/** Holds the fence a worker writes after claiming for itself. */
-	fenceGate?: Promise<void>;
 	awaitReadyAnnouncement?: PartitionsDependencies["awaitReadyAnnouncement"];
 	acquirePreparation?: PartitionsDependencies["acquirePreparation"];
 	/** Never hears a successor's `ready`: stands in for an owner that is dead or wedged. */
@@ -182,7 +180,6 @@ export const createWorker = ({
 	prepareGate,
 	prepareFailures,
 	activateGate,
-	fenceGate,
 	awaitReadyAnnouncement,
 	acquirePreparation,
 	deaf = false,
@@ -254,10 +251,6 @@ export const createWorker = ({
 				status = "activating";
 				await activateGate;
 				status = "ready";
-			},
-			fence: async () => {
-				record("fence");
-				await fenceGate;
 			},
 			drain: async () => {
 				record("withdraw");
