@@ -392,6 +392,67 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("a predecessor that already released lets the successor claim at once instead of waiting out the claim timeout", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 60_000 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			A.fail(2);
+			await waitFor(() => A.has("release:2"));
+
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			expect(B.index("announce:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
+	test("a predecessor that releases while the successor waits lets it claim at once", async () => {
+		const log = createOwnershipLog();
+		const A = createWorker({
+			name: "A",
+			log,
+			deaf: true,
+			config: { handoffReadyTimeoutMs: 60_000 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			await ownAlone(A, [2]);
+			A.revoke();
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			await settle();
+			expect(B.has("activate:2")).toBe(false);
+
+			A.fail(2);
+			await waitFor(() => B.status(2) === "ready");
+			expect(A.index("release:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.errors).toEqual([]);
+		} finally {
+			await A.ownership.stop();
+			await B.ownership.stop();
+		}
+	});
+
 	test("a slow predecessor that announced draining is not fenced by the claim timeout", async () => {
 		const log = createOwnershipLog();
 		const drain = deferred();
