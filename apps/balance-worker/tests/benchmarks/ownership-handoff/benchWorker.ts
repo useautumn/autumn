@@ -22,11 +22,13 @@ import {
 	DEFAULT_OWN_NETWORK_THRESHOLDS,
 	judgeOwnNetwork,
 } from "../../../src/health/ownNetwork/judgeOwnNetwork.js";
+import type { OwnNetworkSample } from "../../../src/health/ownNetwork/types/ownNetworkSample.js";
 import type {
-	OwnNetworkSample,
-	PartitionSendSample,
-} from "../../../src/health/ownNetwork/types/ownNetworkSample.js";
-import type { PartitionSendWatches } from "../../../src/health/ownNetwork/types/partitionSendWatches.js";
+	PartitionHolding,
+	PartitionSendWatches,
+} from "../../../src/health/ownNetwork/types/partitionSendWatches.js";
+import { readFleetProgress } from "../../../src/health/stepDown/readFleetProgress.js";
+import type { FleetProgress } from "../../../src/health/stepDown/types/fleetProgress.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
@@ -164,7 +166,12 @@ const partitionProducers = createKafka(
 		limits: WORKER_KAFKA_PRODUCER_LIMITS,
 	}),
 );
-const sendWatches = createPartitionSendWatches();
+function readHolding({ partition }: { partition: number }): number | undefined {
+	return partitions.holdingOf({ partition });
+}
+const sendWatches = createPartitionSendWatches({
+	ctx: { holdingOf: readHolding },
+});
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
 		logger,
@@ -336,60 +343,49 @@ const partitions = createWorkerPartitions({
 		healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 	},
 });
-type HeldSendSample = PartitionSendSample & { holding: number };
-const mirror: {
-	samples: (Omit<OwnNetworkSample, "sends"> & { sends: HeldSendSample[] })[];
-	holdings: Map<number, number>;
-	nextHolding: number;
-} = { samples: [], holdings: new Map(), nextHolding: 0 };
+const mirror: { samples: OwnNetworkSample[] } = { samples: [] };
 const lastTcp = { counters: readTcpCounters() };
 const keepSamplesMs = DEFAULT_OWN_NETWORK_THRESHOLDS.windowMs + 2_000;
-function forgetReleasedHoldings(): void {
-	for (const partition of [...mirror.holdings.keys()])
-		if (!partitions.isHeld({ partition })) mirror.holdings.delete(partition);
-}
-function holdingOf(partition: number): number {
-	const known = mirror.holdings.get(partition);
-	if (known !== undefined) return known;
-	const holding = mirror.nextHolding++;
-	mirror.holdings.set(partition, holding);
-	return holding;
-}
-function heldSamples(): OwnNetworkSample[] {
-	return mirror.samples.map((kept) => ({
-		...kept,
-		sends: kept.sends.filter(
-			({ partition, holding }) => mirror.holdings.get(partition) === holding,
-		),
-	}));
-}
-function takeAndMirror({ now }: { now: number }) {
-	const sends = sendWatches.take({ now });
+function takeAndMirror({
+	now,
+	isCurrent,
+}: {
+	now: number;
+	isCurrent(holding: PartitionHolding): boolean;
+}) {
+	const sends = sendWatches.take({ now, isCurrent });
 	const counters = readTcpCounters();
 	const tcp =
 		counters && lastTcp.counters
 			? tcpWindowOf({ previous: lastTcp.counters, current: counters })
 			: null;
 	lastTcp.counters = counters;
-	forgetReleasedHoldings();
-	const heldSends: HeldSendSample[] = [];
-	for (const send of sends)
-		if (partitions.isHeld({ partition: send.partition }))
-			heldSends.push({ ...send, holding: holdingOf(send.partition) });
 	mirror.samples = [
 		...mirror.samples.filter((kept) => kept.at > now - keepSamplesMs),
-		{ at: now, tcp, sends: heldSends },
+		{ at: now, tcp, sends },
 	];
-	const samples = heldSamples();
-	const verdict = judgeOwnNetwork({ samples, now });
+	const samples = mirror.samples.map((kept) => ({
+		...kept,
+		sends: kept.sends.filter(isCurrent),
+	}));
+	const held = partitions.heldPartitions();
+	const verdict = judgeOwnNetwork({
+		samples,
+		now,
+		heldPartitions: held.length,
+	});
 	const window = windowOf({ samples, now });
+	const holdings = Object.fromEntries(
+		held.map((partition) => [partition, partitions.holdingOf({ partition })]),
+	);
+	const steppedDown = partitions.isSteppedDown();
 	queueMicrotask(() =>
 		emit("own_network.tick", {
-			work: stepDown.readWork(),
 			verdict,
 			tcp,
 			sends,
-			heldPartitions: heldSends.map(({ partition }) => partition),
+			holdings,
+			steppedDown,
 			...window,
 		}),
 	);
@@ -420,14 +416,47 @@ function windowOf({
 }
 const watchedSends: PartitionSendWatches = {
 	watchFor: sendWatches.watchFor,
-	readLastAckAgeMs: sendWatches.readLastAckAgeMs,
 	take: takeAndMirror,
 };
+function offsetsOf(
+	offsets: ReadonlyMap<number, bigint>,
+): Record<number, string> {
+	return Object.fromEntries(
+		[...offsets].map(([partition, offset]) => [partition, offset.toString()]),
+	);
+}
+const fleetDb = resources.postgres.db;
+const meteringTopic = env.BALANCE_WORKER_METERING_TOPIC;
+async function readBenchFleetProgress(): Promise<FleetProgress> {
+	if (!fleetDb) throw new Error("No Postgres client to read fleet progress");
+	const startedAt = Date.now();
+	try {
+		const progress = await readFleetProgress({
+			ctx: { partitionOffsets: resources.admin, db: fleetDb },
+			topic: meteringTopic,
+		});
+		emit("fleet_progress.read", {
+			startedAt,
+			ms: Date.now() - startedAt,
+			highWatermarks: offsetsOf(progress.highWatermarks),
+			nextOffsets: offsetsOf(progress.nextOffsets),
+		});
+		return progress;
+	} catch (cause) {
+		emit("fleet_progress.read", {
+			startedAt,
+			ms: Date.now() - startedAt,
+			error: describe(cause),
+		});
+		throw cause;
+	}
+}
 const stepDown = createWorkerStepDown({
 	ctx: {
 		sendWatches: watchedSends,
 		partitions,
 		logger,
+		readFleetProgress: fleetDb ? readBenchFleetProgress : undefined,
 		objects:
 			slotGate && env.BENCH_EDGE_CONFIG_DIR
 				? createDirectoryAdminBucketObjects({
