@@ -603,6 +603,48 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			controller.abort();
 			expect(f.listenerCount()).toBe(0);
 		});
+		test("a release counts once the tail took it as the owner's own, read at once or heard as it lands", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			const releasedBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "released",
+				partition: 2,
+				endpoint,
+				releasedAt: 1,
+			});
+			expect(f.publication.readRelease()).toBeNull();
+			const released = f.publication.awaitRelease({
+				signal: controller.signal,
+			});
+			f.views.set(2, {
+				owner: "http://other.test",
+				activeDrain: null,
+				activePreparation: null,
+				release: null,
+			});
+			f.deliver({
+				partition: 2,
+				offset: 1n,
+				record: releasedBy("http://stranger.test"),
+			});
+			f.views.set(2, {
+				owner: null,
+				activeDrain: null,
+				activePreparation: null,
+				release: { endpoint: "http://other.test" },
+			});
+			f.deliver({
+				partition: 2,
+				offset: 2n,
+				record: releasedBy("http://other.test"),
+			});
+			expect(await released).toEqual({ endpoint: "http://other.test" });
+			expect(f.publication.readRelease()).toEqual({
+				endpoint: "http://other.test",
+			});
+			expect(f.listenerCount()).toBe(0);
+		});
 		test("awaitReady resolves on another worker's ready, ignoring its own and other record types", async () => {
 			const f = fixture({ withHandoff: true });
 			const controller = new AbortController();

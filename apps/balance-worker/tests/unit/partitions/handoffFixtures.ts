@@ -92,6 +92,21 @@ export const createOwnershipLog = () => {
 		}
 		return null;
 	};
+	const release = ({ partition }: { partition: number }) => {
+		let holder: string | null = null;
+		let freedBy: string | null = null;
+		for (const event of records) {
+			if (event.partition !== partition) continue;
+			if (event.type === "claimed") {
+				holder = event.endpoint;
+				freedBy = null;
+			} else if (event.type === "unowned" && event.endpoint === holder) {
+				holder = null;
+				freedBy = event.endpoint;
+			}
+		}
+		return freedBy === null ? null : { endpoint: freedBy };
+	};
 	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
 		for (let i = records.length - 1; i >= 0; i--) {
@@ -114,6 +129,7 @@ export const createOwnershipLog = () => {
 		owner,
 		activeDrain,
 		activePreparation,
+		release,
 	};
 };
 
@@ -163,6 +179,7 @@ export const createWorker = ({
 		"subscribeUnavailable",
 		"readActivePreparation",
 		"readActiveDrain",
+		"readRelease",
 	]);
 	function untilKilled<Port extends object>(port: Port): Port {
 		return new Proxy(port, {
@@ -321,6 +338,15 @@ export const createWorker = ({
 						event.partition === partition &&
 						event.endpoint !== endpoint
 							? { endpoint: event.endpoint }
+							: undefined,
+				}),
+			readRelease: () => log.release({ partition }),
+			awaitRelease: ({ signal }) =>
+				log.await({
+					signal,
+					match: (event) =>
+						event.type === "unowned" && event.partition === partition
+							? (log.release({ partition }) ?? undefined)
 							: undefined,
 				}),
 			awaitReady: ({ signal }) =>

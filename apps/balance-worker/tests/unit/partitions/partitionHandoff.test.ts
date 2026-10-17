@@ -453,6 +453,38 @@ describe("partition handoff", () => {
 		}
 	});
 
+	test("a release from a worker that no longer owns the partition does not cut the successor's wait", async () => {
+		const log = createOwnershipLog();
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		try {
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://A",
+				routeEpoch: log.nextEpoch(),
+			});
+			log.publish({
+				type: "claimed",
+				partition: 2,
+				endpoint: "http://C",
+				routeEpoch: log.nextEpoch(),
+			});
+			await B.ownership.start();
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			log.publish({ type: "unowned", partition: 2, endpoint: "http://A" });
+			await Bun.sleep(50);
+			expect(B.has("activate:2")).toBe(false);
+			expect(B.status(2)).toBe("prepared");
+		} finally {
+			await B.ownership.stop();
+		}
+	});
+
 	test("a slow predecessor that announced draining is not fenced by the claim timeout", async () => {
 		const log = createOwnershipLog();
 		const drain = deferred();

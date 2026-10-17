@@ -301,7 +301,8 @@ async function awaitHandoffClaim({
 	const claim = entry.publication.awaitClaim({ signal, afterReadyAt: readyAt });
 	const draining = entry.publication.awaitDraining({ signal });
 	const foreignClaim = entry.publication.awaitForeignClaim({ signal });
-	void Promise.allSettled([claim, draining, foreignClaim]);
+	const release = entry.publication.awaitRelease({ signal });
+	void Promise.allSettled([claim, draining, foreignClaim, release]);
 	let timer = setTimeout(expire, ctx.config.handoffClaimTimeoutMs);
 	function rearm({ afterMs }: { afterMs: number }): void {
 		if (timeout.signal.aborted) return;
@@ -318,9 +319,14 @@ async function awaitHandoffClaim({
 	function restartSilence(): void {
 		rearm({ afterMs: ctx.config.handoffClaimTimeoutMs });
 	}
+	function claimFreedPartition(): void {
+		timeout.abort(new Error("Handoff predecessor released the partition"));
+	}
 	if (entry.publication.readActiveDrain()) holdForDrain();
+	if (entry.publication.readRelease()) claimFreedPartition();
 	void draining.then(holdForDrain, noop);
 	void foreignClaim.then(restartSilence, noop);
+	void release.then(claimFreedPartition, noop);
 	try {
 		await entry.publication.announceReady({ readyAt });
 		const { routeEpoch } = await claim;
