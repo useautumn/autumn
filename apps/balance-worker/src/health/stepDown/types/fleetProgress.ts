@@ -10,3 +10,7 @@ export type FleetProgressVerdict = {
 	active: number;
 	keptUp: number;
 };
+
+export type FleetCheck =
+	| { judged: false }
+	| { judged: true; verdict: FleetProgressVerdict };
