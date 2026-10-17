@@ -97,18 +97,15 @@ describe("worker producer ownership fence", () => {
 		expect(transactional.calls).toEqual(["fence"]);
 	});
 
-	test("activation's fence writes the marker too when the epoch arrived through a handoff", async () => {
+	test("fencing the session writes no marker, even with the epoch known: the runtime writes it once it activates", async () => {
 		const fake = createFakeSession({ mode: "idempotent" });
 		const producer = createWorkerProducer({
 			ctx: { session: fake.session, ownerEpoch: () => "77" },
 			config: { topic, partition },
 		});
 		await producer.fence();
-		expect(fake.calls).toEqual(["fence", "send"]);
-		expect(fake.records[0]?.messages[0]?.headers).toEqual({
-			ownerEpoch: "77",
-			ownerFence: "1",
-		});
+		expect(fake.calls).toEqual(["fence"]);
+		expect(fake.records).toEqual([]);
 	});
 
 	test("a marker that may not have landed is reported as an unknown commit, not swallowed", async () => {

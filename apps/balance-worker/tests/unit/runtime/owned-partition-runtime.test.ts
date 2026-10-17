@@ -487,15 +487,14 @@ describe("owned partition runtime", () => {
 		}
 	});
 
-	test("a marker that cannot be written sends the runtime into recovery instead of serving unfenced", async () => {
+	test("a marker that cannot be written at activation sends the runtime into recovery instead of serving unfenced", async () => {
 		const f = createBareFencedRuntime({
 			fenceOwnership: async () => {
 				throw new Error("broker unreachable");
 			},
 		});
 		try {
-			await f.runtime.start();
-			await expect(f.runtime.fence()).rejects.toBeInstanceOf(
+			await expect(f.runtime.start()).rejects.toBeInstanceOf(
 				OwnedPartitionRecoveryRequiredError,
 			);
 			expect(f.runtime.getStatus()).toBe("recovery_required");
@@ -1662,6 +1661,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		bootstrap = async () => undefined,
 		activationWaitMs,
 		info,
+		ownerEpoch,
 	}: {
 		preparation?: (
 			follower: PartitionOutcomeFollowerPort,
@@ -1671,6 +1671,7 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		bootstrap?: () => Promise<void>;
 		activationWaitMs?: number;
 		info?: (...args: unknown[]) => void;
+		ownerEpoch?: () => string | undefined;
 	} = {}) => {
 		const storage = createStoreFixture();
 		const events: string[] = [];
@@ -1699,7 +1700,15 @@ describe("partitionPreparation", function partitionPreparationTests() {
 		);
 		const runtime = createPartitionRuntime({
 			ctx: {
-				stateStore: storage.store,
+				stateStore: ownerEpoch
+					? {
+							...storage.store,
+							claimPartition: async (params) => {
+								events.push(`token:${params.ownerEpoch}`);
+							},
+						}
+					: storage.store,
+				ownerEpoch,
 				db: createSyntheticWorkerDb(),
 				catalogCache: createTestCatalogCache(),
 				producer: {
@@ -1709,6 +1718,12 @@ describe("partitionPreparation", function partitionPreparationTests() {
 					fence: async () => {
 						events.push("fence");
 						await fence();
+					},
+					fenceOwnership: async () => {
+						const epoch = ownerEpoch?.();
+						if (epoch === undefined) return null;
+						events.push(`marker:${epoch}`);
+						return { offset: end };
 					},
 					disconnect: async () => {
 						events.push("disconnect");
@@ -1881,6 +1896,48 @@ describe("partitionPreparation", function partitionPreparationTests() {
 				expect(f.events.slice(4)).toEqual([
 					"connect",
 					"fence",
+					"active:range:9",
+					"bootstrap",
+					"active:replay:9:from:5",
+				]);
+				expect(f.runtime.getStatus()).toBe("ready");
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("activation writes the fence marker and claims the token under the owner epoch once the producer is up, before it reads the log", async () => {
+			const f = createFixture({ ownerEpoch: () => "9" });
+			try {
+				await f.runtime.prepare();
+				f.setEnd(9n);
+				await f.runtime.activate();
+				expect(f.events.slice(4)).toEqual([
+					"connect",
+					"fence",
+					"marker:9",
+					"token:9",
+					"active:range:9",
+					"bootstrap",
+					"active:replay:9:from:5",
+				]);
+			} finally {
+				await f.cleanup();
+			}
+		});
+		test("connecting before a self-claim brings the producer up with no marker or token, and activation then fences and claims under the epoch the claim named", async () => {
+			const epoch: { value: string | undefined } = { value: undefined };
+			const f = createFixture({ ownerEpoch: () => epoch.value });
+			try {
+				await f.runtime.prepare();
+				await f.runtime.connect();
+				expect(f.events.slice(4)).toEqual(["connect", "fence"]);
+				expect(f.runtime.getStatus()).toBe("prepared");
+				epoch.value = "9";
+				f.setEnd(9n);
+				await f.runtime.activate();
+				expect(f.events.slice(6)).toEqual([
+					"marker:9",
+					"token:9",
 					"active:range:9",
 					"bootstrap",
 					"active:replay:9:from:5",
