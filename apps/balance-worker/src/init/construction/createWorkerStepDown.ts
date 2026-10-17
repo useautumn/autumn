@@ -1,4 +1,3 @@
-import type { EdgeConfigLocation } from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STEP_DOWN_MIN_PEERS,
 	BALANCE_WORKER_STEP_DOWN_PEER_LIVE_MS,
@@ -6,15 +5,12 @@ import {
 	BALANCE_WORKER_STEP_DOWN_PEER_WAIT_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMIT_TTL_MS,
 	BALANCE_WORKER_STEP_DOWN_PERMITS,
-	BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS,
 } from "@autumn/env/balanceWorkerConstants";
 import type { AutumnLogger } from "@autumn/logging";
-import { S3Client } from "@aws-sdk/client-s3";
 import type {
 	SlotHeartbeat,
 	SlotWorkReading,
 } from "../../blueGreen/types/slotHeartbeat.js";
-import { createAdminBucketObjects } from "../../external/s3/createAdminBucketObjects.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
 import { createOwnNetworkMonitor } from "../../health/ownNetwork/createOwnNetworkMonitor.js";
 import type { PartitionSendWatches } from "../../health/ownNetwork/types/partitionSendWatches.js";
@@ -28,7 +24,7 @@ type WorkerStepDownContext = {
 	sendWatches: PartitionSendWatches;
 	partitions: Pick<Partitions, "stepDown" | "isSteppedDown" | "hasAssignment">;
 	logger: Pick<AutumnLogger, "info" | "warn" | "error">;
-	adminBucket?: EdgeConfigLocation;
+	objects?: AdminBucketObjects;
 };
 
 type WorkerStepDownConfig = {
@@ -96,18 +92,9 @@ function createController({
 	config: WorkerStepDownConfig;
 	ownNetwork: ReturnType<typeof createOwnNetworkMonitor>;
 }): StepDownController | undefined {
-	const { adminBucket } = ctx;
+	const { objects } = ctx;
 	const { fleetId } = config;
-	if (!adminBucket || !fleetId) return undefined;
-	const objects = createAdminBucketObjects({
-		ctx: {
-			client: new S3Client({ region: adminBucket.region, maxAttempts: 1 }),
-		},
-		config: {
-			bucket: adminBucket.bucket,
-			timeoutMs: BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS,
-		},
-	});
+	if (!objects || !fleetId) return undefined;
 	const permits = createStepDownPermits({
 		ctx: { objects },
 		config: {
@@ -117,11 +104,10 @@ function createController({
 			ttlMs: BALANCE_WORKER_STEP_DOWN_PERMIT_TTL_MS,
 		},
 	});
-	const readPeers = readPeersOf({ objects, fleetId });
 	return createStepDownController({
 		ctx: {
 			monitor: ownNetwork,
-			readPeers,
+			readPeers: readPeersOf({ objects, fleetId }),
 			permits,
 			partitions: ctx.partitions,
 			logger: ctx.logger,

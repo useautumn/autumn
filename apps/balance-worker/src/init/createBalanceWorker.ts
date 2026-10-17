@@ -1,8 +1,12 @@
 import { cpus } from "node:os";
 import { logUnknownInput } from "@autumn/balance-engine";
-import { defaultBalanceWorkerThreadsEdgeConfig } from "@autumn/edge-config";
+import {
+	defaultBalanceWorkerThreadsEdgeConfig,
+	type EdgeConfigLocation,
+} from "@autumn/edge-config";
 import {
 	BALANCE_WORKER_STANDBY_PREPARATION_CONCURRENCY,
+	BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS,
 	BALANCE_WORKER_SUBJECT_LOAD_CONCURRENCY,
 } from "@autumn/env/balanceWorkerConstants";
 import type {
@@ -10,6 +14,7 @@ import type {
 	KafkaProducerClient,
 	ProducerConfig,
 } from "@autumn/kafka";
+import { S3Client } from "@aws-sdk/client-s3";
 import { createSlotGate } from "../blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../blueGreen/createSlotHeartbeat.js";
 import { createStandbyPreparations } from "../blueGreen/createStandbyPreparations.js";
@@ -18,6 +23,8 @@ import { resolveTaskIdentity } from "../blueGreen/resolveTaskIdentity.js";
 import { createCjsChildrenDedupe } from "../bunWorkarounds/cjsChildren/createCjsChildrenDedupe.js";
 import { createColdStart } from "../coldStart/createColdStart.js";
 import { subjectLoadGate } from "../external/postgres/subjectLoadGate.js";
+import { createAdminBucketObjects } from "../external/s3/createAdminBucketObjects.js";
+import type { AdminBucketObjects } from "../external/s3/types/adminBucketObjects.js";
 import { createPartitionSendWatches } from "../health/ownNetwork/createPartitionSendWatches.js";
 import { createBalanceWorkerApp } from "../http/createBalanceWorkerApp.js";
 import {
@@ -80,6 +87,19 @@ import {
 
 /** Acks are small; the ring only needs room for a burst of them while the decide thread is busy. */
 const PRODUCER_ACK_RING_BYTES = 1 << 20;
+
+function adminBucketObjectsOf({
+	edgeConfigs,
+}: {
+	edgeConfigs: { adminBucket: { location: EdgeConfigLocation } } | undefined;
+}): AdminBucketObjects | undefined {
+	if (!edgeConfigs) return undefined;
+	const { bucket, region } = edgeConfigs.adminBucket.location;
+	return createAdminBucketObjects({
+		ctx: { client: new S3Client({ region, maxAttempts: 1 }) },
+		config: { bucket, timeoutMs: BALANCE_WORKER_STEP_DOWN_S3_TIMEOUT_MS },
+	});
+}
 
 export async function createBalanceWorker({
 	ctx: dependencies,
@@ -256,8 +276,8 @@ export async function createBalanceWorker({
 				sendWatches,
 				partitions,
 				logger: dependencies.logger,
-				adminBucket: slotGate
-					? resources.edgeConfigs?.adminBucket.location
+				objects: slotGate
+					? adminBucketObjectsOf({ edgeConfigs: resources.edgeConfigs })
 					: undefined,
 			},
 			config: {
