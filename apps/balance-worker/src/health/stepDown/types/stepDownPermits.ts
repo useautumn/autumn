@@ -6,5 +6,6 @@ export type StepDownPermitResult =
 
 export type StepDownPermits = {
 	acquire(): Promise<StepDownPermitResult>;
+	renew(params: { permit: StepDownPermit }): Promise<boolean>;
 	release(params: { permit: StepDownPermit }): Promise<void>;
 };
