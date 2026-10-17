@@ -322,15 +322,25 @@ async function awaitHandoffClaim({
 	function restartSilence(): void {
 		rearm({ afterMs: ctx.config.handoffClaimTimeoutMs });
 	}
-	function claimFreedPartition(): void {
+	let readySettled = false;
+	let releaseHeard = false;
+	function claimIfStillFreed(): void {
+		if (!readySettled || !releaseHeard) return;
+		if (!entry.publication.readRelease()) return;
 		timeout.abort(new Error("Handoff predecessor released the partition"));
+	}
+	function onReleaseHeard(): void {
+		releaseHeard = true;
+		claimIfStillFreed();
 	}
 	if (entry.publication.readActiveDrain()) holdForDrain();
 	void draining.then(holdForDrain, noop);
 	void foreignClaim.then(restartSilence, noop);
-	void release.then(claimFreedPartition, noop);
+	void release.then(onReleaseHeard, noop);
 	try {
 		await entry.publication.announceReady({ readyAt });
+		readySettled = true;
+		claimIfStillFreed();
 		const { routeEpoch } = await claim;
 		entry.claimAttempted = true;
 		entry.claimed = true;

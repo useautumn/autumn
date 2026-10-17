@@ -196,6 +196,7 @@ export const createWorker = ({
 		"subscribeUnavailable",
 		"readActivePreparation",
 		"readActiveDrain",
+		"readRelease",
 	]);
 	function untilKilled<Port extends object>(port: Port): Port {
 		return new Proxy(port, {
@@ -358,6 +359,7 @@ export const createWorker = ({
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
+			readRelease: () => log.release({ partition, from: tailFrom, endpoint }),
 			awaitRelease: ({ signal, afterReadyAt }) => {
 				let answersReady = false;
 				return log.await({

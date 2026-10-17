@@ -58,6 +58,7 @@ export type PartitionOwnershipPublication = {
 	awaitForeignClaim(params: {
 		signal: AbortSignal;
 	}): Promise<{ endpoint: string }>;
+	readRelease(): { endpoint: string } | null;
 	awaitRelease(params: {
 		signal: AbortSignal;
 		afterReadyAt: number;

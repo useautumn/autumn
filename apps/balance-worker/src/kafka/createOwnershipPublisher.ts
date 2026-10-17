@@ -215,7 +215,11 @@ export function createOwnershipPublisher({
 
 	function readRelease(): { endpoint: string } | null {
 		const view = ctx.handoff?.tail.readView({ partition: config.partition });
-		return view?.release ?? null;
+		if (!view?.release) return null;
+		const rivalReady = view.readyEndpoints.some(
+			(endpoint) => endpoint !== config.endpoint,
+		);
+		return rivalReady ? null : view.release;
 	}
 
 	function awaitRelease({
@@ -276,6 +280,7 @@ export function createOwnershipPublisher({
 		awaitPreparing,
 		awaitDraining,
 		awaitForeignClaim,
+		readRelease,
 		awaitRelease,
 		awaitClaim,
 		awaitRouteClaim: ({ signal }) => awaitClaim({ signal }),

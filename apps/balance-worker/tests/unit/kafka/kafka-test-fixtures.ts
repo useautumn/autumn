@@ -223,6 +223,7 @@ export const noHandoffPublication: Pick<
 	| "awaitPreparing"
 	| "awaitDraining"
 	| "awaitForeignClaim"
+	| "readRelease"
 	| "awaitRelease"
 	| "awaitClaim"
 	| "awaitRouteClaim"
@@ -236,6 +237,7 @@ export const noHandoffPublication: Pick<
 	awaitPreparing: awaitSignal,
 	awaitDraining: awaitSignal,
 	awaitForeignClaim: awaitSignal,
+	readRelease: () => null,
 	awaitRelease: awaitSignal,
 	awaitClaim: awaitSignal,
 	awaitRouteClaim: awaitSignal,
