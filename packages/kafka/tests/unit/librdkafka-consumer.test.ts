@@ -1256,9 +1256,9 @@ describe("leaving the group", () => {
 			);
 			expect(tookMs).toBeGreaterThanOrEqual(STOP_LOOP_TIMEOUT_MS - 50);
 			expect(tookMs).toBeLessThan(STOP_LOOP_TIMEOUT_MS + 10_000);
-			expect(
-				logs.some((line) => line.includes("did not finish leaving")),
-			).toBe(true);
+			expect(logs.some((line) => line.includes("did not finish leaving"))).toBe(
+				true,
+			);
 			await consumer.disconnect();
 			expect(fake.calls.at(-1)).toBe("disconnect");
 			loopPoll.resolve();
