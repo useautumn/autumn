@@ -11,6 +11,7 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCustomerCreateApproval } from "@/internal/approvals/routeChecks/checkCustomerCreateApproval.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 
@@ -56,6 +57,12 @@ export const handlePostCustomer = createRoute({
 		const start = Date.now();
 
 		const customerData = CustomerDataSchema.parse(createCusParams);
+		await checkCustomerCreateApproval({
+			ctx,
+			customerId: createCusParams.id,
+			customerData,
+			billingDetails: createCusParams.billing_details,
+		});
 
 		const apiCustomer = await getOrCreateApiCustomerByRollout({
 			ctx,

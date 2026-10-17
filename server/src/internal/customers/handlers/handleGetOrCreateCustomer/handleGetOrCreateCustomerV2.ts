@@ -7,6 +7,7 @@ import {
 import type { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { checkCustomerCreateApproval } from "@/internal/approvals/routeChecks/checkCustomerCreateApproval.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 
@@ -19,6 +20,12 @@ export const getOrCreateCustomerV2 = async ({
 }) => {
 	const start = Date.now();
 	const customerData = CustomerDataSchema.parse(params);
+	await checkCustomerCreateApproval({
+		ctx,
+		customerId: params.customer_id,
+		customerData,
+		billingDetails: params.billing_details,
+	});
 
 	const apiCustomer = await getOrCreateApiCustomerByRollout({
 		ctx,
@@ -34,9 +41,7 @@ export const getOrCreateCustomerV2 = async ({
 	});
 
 	const duration = Date.now() - start;
-	ctx.logger.debug(
-		`[post-customer] duration: ${duration}ms`,
-	);
+	ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
 
 	return apiCustomer;
 };

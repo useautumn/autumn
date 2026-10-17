@@ -20,6 +20,8 @@ import {
 	STRIPE_MAX_KEY_LENGTH,
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
+import { buildCustomerChangeFacts } from "@/internal/approvals/facts/customers/buildCustomerChangeFacts";
 import { notifyAllocationsAdjusted } from "@/internal/balances/allocate/actions/notifyAllocationsAdjusted.js";
 import { patchCachedAllocations } from "@/internal/balances/allocate/actions/patchCachedAllocations.js";
 import {
@@ -98,6 +100,12 @@ export const updateCustomer = async ({
 			});
 		}
 	}
+
+	await checkRouteApproval({
+		ctx,
+		action: "customers.update",
+		buildFacts: () => buildCustomerChangeFacts({ ctx, customerId }),
+	});
 
 	const configUsageLimits = getUsageLimitConfigUpdate({
 		usageLimits: billing_controls?.usage_limits,

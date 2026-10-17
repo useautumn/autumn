@@ -11,6 +11,9 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveCoupon } from "@/external/stripe/coupons";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval.js";
+import { buildApprovalCustomerFacts } from "@/internal/approvals/facts/customer/buildApprovalCustomerFacts.js";
+import { rewardRedeemToFacts } from "@/internal/approvals/facts/rewards/rewardRedeemToFacts.js";
 import { rewardActions } from "@/internal/rewards/actions/index.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { CusService } from "../CusService.js";
@@ -70,6 +73,22 @@ export const handleAddCouponToCusV2 = createRoute({
 		const { source } = await resolveCoupon({
 			stripeCli: createStripeCli({ org, env }),
 			couponId: coupon?.id ?? coupon_id,
+		});
+
+		await checkRouteApproval({
+			ctx,
+			action: "rewards.redeem",
+			buildFacts: async () =>
+				rewardRedeemToFacts({
+					customer: await buildApprovalCustomerFacts({
+						ctx,
+						fullCustomer: await CusService.getFull({
+							ctx,
+							idOrInternalId: customer.id ?? customer_id,
+						}),
+					}),
+					reward: coupon ?? source.coupon,
+				}),
 		});
 
 		const legacyStripeCli = createStripeCli({
