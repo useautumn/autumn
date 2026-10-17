@@ -329,7 +329,7 @@ async function awaitHandoffClaim({
 	let releaseHeard = false;
 	function claimIfStillFreed(): void {
 		if (!readySettled || !releaseHeard) return;
-		if (!entry.publication.readRelease()) return;
+		if (!entry.publication.readRelease({ readyAt })) return;
 		timeout.abort(new Error("Handoff predecessor released the partition"));
 	}
 	function onReleaseHeard(): void {

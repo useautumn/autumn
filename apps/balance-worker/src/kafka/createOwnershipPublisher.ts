@@ -213,13 +213,21 @@ export function createOwnershipPublisher({
 		return awaitRecord({ signal, match: matchForeignClaim });
 	}
 
-	function readRelease(): { endpoint: string } | null {
+	function readRelease({
+		readyAt,
+	}: {
+		readyAt: number;
+	}): { endpoint: string } | null {
 		const view = ctx.handoff?.tail.readView({ partition: config.partition });
 		if (!view?.release) return null;
-		const rivalReady = view.readyEndpoints.some(
-			(endpoint) => endpoint !== config.endpoint,
+		const ownReady = view.readies.some(
+			(ready) =>
+				ready.endpoint === config.endpoint && ready.readyAt === readyAt,
 		);
-		return rivalReady ? null : view.release;
+		const rivalReady = view.readies.some(
+			(ready) => ready.endpoint !== config.endpoint,
+		);
+		return ownReady && !rivalReady ? view.release : null;
 	}
 
 	function awaitRelease({
@@ -229,17 +237,10 @@ export function createOwnershipPublisher({
 		signal: AbortSignal;
 		afterReadyAt: number;
 	}): Promise<{ endpoint: string }> {
-		let answersReady = false;
 		function matchRelease({ record }: OwnershipTailRecord) {
-			if (
-				record.type === "ready" &&
-				record.endpoint === config.endpoint &&
-				record.readyAt === afterReadyAt
-			)
-				answersReady = true;
-			else if (record.type !== "released") return undefined;
-			if (!answersReady) return undefined;
-			return readRelease() ?? undefined;
+			if (record.type !== "ready" && record.type !== "released")
+				return undefined;
+			return readRelease({ readyAt: afterReadyAt }) ?? undefined;
 		}
 		return awaitRecord({ signal, match: matchRelease });
 	}

@@ -96,14 +96,16 @@ export const createOwnershipLog = () => {
 		partition,
 		from,
 		endpoint,
+		readyAt,
 	}: {
 		partition: number;
 		from: number;
 		endpoint: string;
+		readyAt: number;
 	}) => {
 		let holder: string | null = null;
 		let freedBy: string | null = null;
-		let readies: string[] = [];
+		let readies: { endpoint: string; readyAt?: number }[] = [];
 		for (const event of records.slice(from)) {
 			if (event.partition !== partition) continue;
 			if (event.type === "claimed") {
@@ -113,11 +115,15 @@ export const createOwnershipLog = () => {
 			} else if (event.type === "unowned" && event.endpoint === holder) {
 				holder = null;
 				freedBy = event.endpoint;
-			} else if (event.type === "ready") readies.push(event.endpoint);
+			} else if (event.type === "ready")
+				readies.push({ endpoint: event.endpoint, readyAt: event.readyAt });
 		}
 		if (freedBy === null) return null;
-		if (readies.some((ready) => ready !== endpoint)) return null;
-		return { endpoint: freedBy };
+		const ownReady = readies.some(
+			(ready) => ready.endpoint === endpoint && ready.readyAt === readyAt,
+		);
+		const rivalReady = readies.some((ready) => ready.endpoint !== endpoint);
+		return ownReady && !rivalReady ? { endpoint: freedBy } : null;
 	};
 	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
@@ -359,27 +365,25 @@ export const createWorker = ({
 							? { endpoint: event.endpoint }
 							: undefined,
 				}),
-			readRelease: () => log.release({ partition, from: tailFrom, endpoint }),
-			awaitRelease: ({ signal, afterReadyAt }) => {
-				let answersReady = false;
-				return log.await({
+			readRelease: ({ readyAt }) =>
+				log.release({ partition, from: tailFrom, endpoint, readyAt }),
+			awaitRelease: ({ signal, afterReadyAt }) =>
+				log.await({
 					signal,
 					match: (event) => {
 						if (event.partition !== partition) return undefined;
-						if (
-							event.type === "ready" &&
-							event.endpoint === endpoint &&
-							event.readyAt === afterReadyAt
-						)
-							answersReady = true;
-						else if (event.type !== "unowned") return undefined;
-						if (!answersReady) return undefined;
+						if (event.type !== "ready" && event.type !== "unowned")
+							return undefined;
 						return (
-							log.release({ partition, from: tailFrom, endpoint }) ?? undefined
+							log.release({
+								partition,
+								from: tailFrom,
+								endpoint,
+								readyAt: afterReadyAt,
+							}) ?? undefined
 						);
 					},
-				});
-			},
+				}),
 			awaitReady: ({ signal }) =>
 				log.await({
 					signal,
