@@ -37,6 +37,9 @@ const PARTITION_COUNT = Number(process.env.CHURN_PARTITIONS ?? 16);
 const WORKERS = Number(process.env.CHURN_WORKERS ?? 4);
 const BASELINE_MS = Number(process.env.CHAOS_BASELINE_MS ?? 15_000);
 const AFTER_CLEAR_MS = Number(process.env.CHAOS_AFTER_CLEAR_MS ?? 60_000);
+const SERVE_DEADLINE_MS = Number(
+	process.env.CHAOS_SERVE_DEADLINE_MS ?? 240_000,
+);
 const HEARTBEAT_MS = Number(process.env.CHAOS_HEARTBEAT_MS ?? 20_000);
 const SCENARIO = process.env.CHAOS_NAME ?? "unnamed";
 const VICTIMS = (process.env.CHAOS_VICTIMS ?? "").split(",").filter(Boolean);
@@ -628,7 +631,7 @@ function countBy<T>(
 
 const spawnedAt = Date.now();
 for (let i = 0; i < WORKERS; i++) spawnWorker(String.fromCharCode(65 + i));
-const claimDeadline = Date.now() + 240_000;
+const claimDeadline = Date.now() + SERVE_DEADLINE_MS;
 while (
 	new Set(
 		ownershipEvents
