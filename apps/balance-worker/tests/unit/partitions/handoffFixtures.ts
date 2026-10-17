@@ -435,6 +435,7 @@ export const createWorker = ({
 		assign: (partitions: number[]) =>
 			listeners.onAssigned({ partitions, causeForPartition }),
 		revoke: () => listeners.onRevoked({ causeForPartition }),
+		crash: (cause: unknown) => listeners.onCrashed({ cause, restart: false }),
 		has: (event: string) => events.includes(`${name}:${event}`),
 		index: (event: string) => events.indexOf(`${name}:${event}`),
 		fail: (partition: number, cause?: unknown) =>
