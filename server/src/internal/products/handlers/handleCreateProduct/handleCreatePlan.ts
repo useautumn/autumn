@@ -17,6 +17,7 @@ import {
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { throwIfPlanIdReservedAsAlias } from "@/internal/catalogV2/productAliases/throwIfPlanIdReservedAsAlias.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -55,6 +56,10 @@ export const handleCreatePlan = createRoute({
 		const { logger, org, features, env, db } = ctx;
 
 		await throwIfPlanIdReservedAsAlias({ ctx, planId: v1_2Body.id });
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "plans.create", planId: v1_2Body.id }],
+		});
 
 		const existing = await ProductService.get({
 			db,

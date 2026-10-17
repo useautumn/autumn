@@ -14,6 +14,7 @@ import {
 	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
@@ -53,6 +54,13 @@ export const handleUpdatePlanV1 = createRoute({
 					params: body,
 				}) as UpdateProductV2Params)
 			: (body as UpdateProductV2Params);
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [productId, v1_2Body.id].flatMap((planId) =>
+				planId ? [{ action: "plans.update" as const, planId }] : [],
+			),
+		});
 
 		await updateProduct({
 			ctx,

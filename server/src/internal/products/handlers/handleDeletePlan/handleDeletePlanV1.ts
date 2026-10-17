@@ -1,6 +1,7 @@
 import { AffectedResource, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { deleteProduct } from "../../../product/actions/deleteProduct.js";
 
 const DeletePlanParamsSchema = z.object({
@@ -19,8 +20,13 @@ export const handleDeletePlanV1 = createRoute({
 	handler: async (c) => {
 		const { product_id } = c.req.param();
 		const { all_versions } = c.req.valid("query");
+		const ctx = c.get("ctx");
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "plans.delete", planId: product_id }],
+		});
 		const { success } = await deleteProduct({
-			ctx: c.get("ctx"),
+			ctx,
 			productId: product_id,
 			allVersions: all_versions,
 		});

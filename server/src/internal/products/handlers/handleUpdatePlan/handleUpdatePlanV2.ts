@@ -6,6 +6,8 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { planUpdateToEditedPlanIds } from "@/internal/approvals/facts/catalog/planUpdateToEditedPlanIds.js";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals.js";
 import { buildLicenseParentTargetCustomize } from "@/internal/licenses/actions/propagation/buildLicenseParentCustomize.js";
 import { prepareLicenseParentPropagation } from "@/internal/licenses/actions/propagation/prepareLicenseParentPropagation.js";
 import {
@@ -45,6 +47,16 @@ export const handleUpdatePlanV2 = createRoute({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			version,
+		});
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: planUpdateToEditedPlanIds({
+				params: { ...body, plan_id: initialFullProduct.id },
+			}).map((planId) => ({
+				action: "plans.update" as const,
+				planId,
+			})),
 		});
 
 		const updateProductV2Params = apiPlan.map.paramsV1ToProductV2({

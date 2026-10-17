@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { CreateFeatureV1ParamsSchema } from "@autumn/shared/api/features/crud/createFeatureParams";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { checkCatalogApprovals } from "@/internal/approvals/routeChecks/checkCatalogApprovals";
 import { createFeature } from "../../featureActions/createFeature";
 
 export const handleCreateFeatureV1 = createRoute({
@@ -26,6 +27,11 @@ export const handleCreateFeatureV1 = createRoute({
 		const feature = featureV1ToDbFeature({
 			apiFeature: body,
 			originalFeature: undefined,
+		});
+
+		await checkCatalogApprovals({
+			ctx,
+			checks: [{ action: "features.create", featureId: body.id }],
 		});
 
 		// Body is now always in the latest V1 format, regardless of API version
