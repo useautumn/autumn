@@ -8,14 +8,16 @@ function permitsFor({
 	memory,
 	holder,
 	now = Date.now,
+	scope = "prod/fleet-a/sha-1",
 }: {
 	memory: ReturnType<typeof createMemoryAdminObjects>;
 	holder: string;
 	now?: () => number;
+	scope?: string;
 }) {
 	return createStepDownPermits({
 		ctx: { objects: memory.objects, now },
-		config: { deployment: "prod", holder, slots: 2 },
+		config: { scope, holder, slots: 2 },
 	});
 }
 
@@ -65,6 +67,23 @@ describe("step-down permits", () => {
 		});
 	});
 
+	test("slots held under an earlier deployment's scope never count against a new one", async () => {
+		const memory = createMemoryAdminObjects();
+		const earlier = "prod/fleet-a/sha-1";
+		await permitsFor({ memory, holder: "a", scope: earlier }).acquire();
+		await permitsFor({ memory, holder: "b", scope: earlier }).acquire();
+		expect(
+			await permitsFor({ memory, holder: "c", scope: earlier }).acquire(),
+		).toEqual({ ok: false, reason: "all_taken" });
+		expect(
+			await permitsFor({
+				memory,
+				holder: "c",
+				scope: "prod/fleet-a/sha-2",
+			}).acquire(),
+		).toMatchObject({ ok: true, permit: { slot: 0 } });
+	});
+
 	test("a store that does not answer grants nothing", async () => {
 		const memory = createMemoryAdminObjects();
 		memory.state.unavailable = true;
@@ -107,7 +126,7 @@ describe("step-down permits", () => {
 	test("a permit record that does not parse is never taken over", async () => {
 		const memory = createMemoryAdminObjects();
 		memory.put({
-			key: "admin/balance-worker-step-down/prod/slot-0.json",
+			key: "admin/balance-worker-step-down/prod/fleet-a/sha-1/slot-0.json",
 			body: "{not json",
 		});
 		const taken = await permitsFor({ memory, holder: "a" }).acquire();
