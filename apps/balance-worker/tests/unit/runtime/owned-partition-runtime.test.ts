@@ -52,6 +52,7 @@ import type {
 	PartitionRuntimeDependencies,
 } from "../../../src/runtime/types/partitionRuntime.js";
 import { openStateStore } from "../../../src/state/openStateStore.js";
+import { PartitionClaimRefusedError } from "../../../src/state/stateStoreErrors.js";
 import type { SqliteStateStore } from "../../../src/state/types/stateStore.js";
 import {
 	createSyntheticWorkerDb,
@@ -331,7 +332,9 @@ const createRuntime = ({
 	partitionForIdentity = () => partition,
 	recoveryDrainTimeoutMs = 1_000,
 	storeApplyGate,
+	ownerEpoch,
 }: {
+	ownerEpoch?: () => string | undefined;
 	store: SqliteStateStore;
 	producer: OwnedPartitionProducerPort;
 	follower: PartitionOutcomeFollowerPort;
@@ -375,6 +378,7 @@ const createRuntime = ({
 		config: { topic, partition, writerLimits, recoveryDrainTimeoutMs },
 		ctx: {
 			stateStore,
+			ownerEpoch,
 			db: createSyntheticWorkerDb(),
 			catalogCache: createTestCatalogCache(),
 			bootstrapper: { bootstrap },
@@ -578,6 +582,66 @@ describe("owned partition runtime", () => {
 				result: { allowed: true },
 				state: { revision: 0, customerEntitlements: [{ balance: 10 }] },
 			});
+		} finally {
+			await runtime.stop();
+			closeStoreFixture(fixture);
+		}
+	});
+
+	test("claims the partition under the owner epoch the runtime holds, or none before a claim names one", async () => {
+		for (const held of ["512", undefined]) {
+			const fixture = createStoreFixture();
+			const claims: unknown[] = [];
+			const runtime = createRuntime({
+				store: {
+					...fixture.store,
+					claimPartition: async (params) => {
+						claims.push(params);
+					},
+				},
+				producer: createFakeProducer().producer,
+				follower: createFollower().follower,
+				ownerEpoch: () => held,
+			});
+			try {
+				await runtime.start();
+				expect(claims).toEqual([{ topic, partition, ownerEpoch: held }]);
+			} finally {
+				await runtime.stop();
+				closeStoreFixture(fixture);
+			}
+		}
+	});
+
+	test("a refused claim sends startup into the fenced recovery path and never reaches the follower", async () => {
+		const fixture = createStoreFixture();
+		const startup: string[] = [];
+		const fakeFollower = createFollower({ lifecycle: startup });
+		const runtime = createRuntime({
+			store: {
+				...fixture.store,
+				claimPartition: async () => {
+					throw new PartitionClaimRefusedError({
+						topic,
+						partition,
+						ownerEpoch: "100",
+					});
+				},
+			},
+			producer: createFakeProducer({ lifecycle: startup }).producer,
+			follower: fakeFollower.follower,
+			ownerEpoch: () => "100",
+		});
+		try {
+			await expect(runtime.start()).rejects.toBeInstanceOf(
+				OwnedPartitionProducerFencedError,
+			);
+			expect(runtime.getStatus()).toBe("recovery_required");
+			expect(runtime.getHealth().failureReason).toContain(
+				"PartitionClaimRefusedError",
+			);
+			expect(startup).not.toContain("follower:range");
+			expect(startup).not.toContain("follower:start");
 		} finally {
 			await runtime.stop();
 			closeStoreFixture(fixture);
