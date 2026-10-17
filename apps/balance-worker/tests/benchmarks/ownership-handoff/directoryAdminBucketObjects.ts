@@ -133,11 +133,8 @@ export function createDirectoryAdminBucketObjects({
 		for (const path of filesUnder(root)) {
 			const key = relative(directory, path);
 			if (!key.startsWith(prefix)) continue;
-			try {
-				listed.push({ key, lastModifiedAt: statSync(path).mtimeMs });
-			} catch (cause) {
-				if (!isMissing(cause)) throw cause;
-			}
+			const text = readText(path);
+			if (text !== null) listed.push({ key, etag: etagOf(text) });
 		}
 		return listed;
 	}
