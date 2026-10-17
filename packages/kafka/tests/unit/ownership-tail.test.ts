@@ -546,6 +546,62 @@ describe("ownershipTail", function ownershipTailTests() {
 		}
 	});
 
+	test("a record at or below the last offset read for its partition changes nothing and reaches no listener", async () => {
+		const fixture = createFakeTailKafka();
+		const { tail, errors } = await startTail(fixture);
+		const controller = new AbortController();
+		try {
+			const heard: bigint[] = [];
+			tail.tailPartition({
+				partition: 3,
+				signal: controller.signal,
+				onRecord: ({ offset }) => {
+					heard.push(offset);
+				},
+			});
+			const claimedBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "claimed",
+				partition: 3,
+				endpoint,
+				claimedAt: 2,
+			});
+			const releasedBy = (endpoint: string): OwnershipRecord => ({
+				schemaVersion: 1,
+				type: "released",
+				partition: 3,
+				endpoint,
+				releasedAt: 3,
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimedBy("http://former:8080"), offset: 11n }),
+					serialized({ record: releasedBy("http://former:8080"), offset: 12n }),
+					serialized({ record: claimedBy("http://current:8080"), offset: 13n }),
+				],
+			});
+			await fixture.deliver({
+				partition: 3,
+				messages: [
+					serialized({ record: claimedBy("http://former:8080"), offset: 11n }),
+					serialized({ record: releasedBy("http://former:8080"), offset: 12n }),
+				],
+			});
+			expect(tail.readView({ partition: 3 })).toEqual({
+				owner: "http://current:8080",
+				activeDrain: null,
+				activePreparation: null,
+				release: null,
+			});
+			expect(heard).toEqual([11n, 12n, 13n]);
+			expect(errors).toEqual([]);
+		} finally {
+			controller.abort();
+			await tail.stop();
+		}
+	});
+
 	test("delivers a partition's records in order to its listeners only", async () => {
 		const fixture = createFakeTailKafka();
 		const { tail, errors } = await startTail(fixture);
