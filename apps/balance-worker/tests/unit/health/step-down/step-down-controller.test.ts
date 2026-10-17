@@ -397,6 +397,38 @@ describe("step-down controller", () => {
 		]);
 	});
 
+	test("a trip whose busy partitions grew with healthy sends before the permit landed keeps the worker in", async () => {
+		const starved: OwnNetworkVerdict = {
+			...DEGRADED,
+			heldPartitions: 8,
+			busyPartitions: 2,
+			stalledPartitions: 2,
+			stalledHoldings: [
+				{ partition: 0, holding: 1 },
+				{ partition: 1, holding: 1 },
+			],
+		};
+		const recovered: OwnNetworkVerdict = {
+			...starved,
+			state: "healthy",
+			busyPartitions: 8,
+		};
+		const { controller, calls, fire } = harness({
+			held: [0, 1, 2, 3, 4, 5, 6, 7],
+			holdingOf: () => 1,
+			trigger: starved,
+			currentVerdict: () => recovered,
+		});
+		controller.start();
+		await fire();
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
+	});
+
 	test("loss that pauses for a sample after the permit lands still steps down within the re-check", async () => {
 		const verdicts = [RECOVERED, DEGRADED];
 		const { controller, calls, fire } = harness({
