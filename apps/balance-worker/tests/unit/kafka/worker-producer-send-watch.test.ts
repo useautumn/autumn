@@ -40,10 +40,7 @@ function landedAt(baseOffset: string): RecordMetadata[] {
 describe("worker producer send watch", () => {
 	test("the fence marker and every later send are timed on the partition's watch", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({
-			now: () => time.now,
-			wallNow: () => 5_000 + time.now,
-		});
+		const watches = createPartitionSendWatches({ now: () => time.now });
 		const { session, held } = createHeldSession();
 		const producer = createWorkerProducer({
 			ctx: {
@@ -73,7 +70,8 @@ describe("worker producer send watch", () => {
 		expect(watches.take({ now: 2_000 })).toEqual([
 			{ partition, longestInFlightMs: 200 },
 		]);
-		expect(watches.readLastAckAt()).toBe(6_500);
+		time.now = 2_000;
+		expect(watches.readLastAckAgeMs()).toBe(500);
 	});
 
 	test("a send that fails still counts its time and still fails", async () => {
@@ -94,6 +92,6 @@ describe("worker producer send watch", () => {
 		expect(watches.take({ now: 2_500 })).toEqual([
 			{ partition, longestInFlightMs: 2_400 },
 		]);
-		expect(watches.readLastAckAt()).toBeNull();
+		expect(watches.readLastAckAgeMs()).toBeNull();
 	});
 });

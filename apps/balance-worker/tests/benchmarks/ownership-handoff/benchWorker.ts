@@ -300,7 +300,7 @@ const slotHeartbeat =
 					readStoreHealthy: () =>
 						resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false,
 					readWork: () => ({
-						lastSendAckAt: null,
+						lastSendAckAgeMs: null,
 						ownNetwork: "healthy",
 						steppedDown: partitions.isSteppedDown(),
 					}),
