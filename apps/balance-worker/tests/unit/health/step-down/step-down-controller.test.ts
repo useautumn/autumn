@@ -12,6 +12,11 @@ const DEGRADED: OwnNetworkVerdict = {
 	retransmitRatio: 0.3,
 	busyPartitions: 8,
 	stalledPartitions: 6,
+	heldPartitions: 4,
+	stalledHoldings: [
+		{ partition: 0, holding: 1 },
+		{ partition: 1, holding: 1 },
+	],
 	losesPackets: true,
 };
 

@@ -218,10 +218,13 @@ describe("judge own network", () => {
 			...kafkaStall[3],
 			tcp: { outSegs: 83, retransSegs: 10 },
 		};
-		expect(judgeOwnNetwork({
-			heldPartitions: 4, samples: kafkaStall, now: 10_000 })).toMatchObject(
-			{ state: "healthy", losesPackets: false },
-		);
+		expect(
+			judgeOwnNetwork({
+				heldPartitions: 4,
+				samples: kafkaStall,
+				now: 10_000,
+			}),
+		).toMatchObject({ state: "healthy", losesPackets: false });
 	});
 
 	test("a window the samples do not yet cover, or missing counters, is not enough data", () => {

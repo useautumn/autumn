@@ -56,7 +56,11 @@ function harness({
 		isCurrent(holding: { partition: number; holding: number }): boolean;
 	}) {
 		if (!stuck()) return [];
-		const sends: { partition: number; holding: number; longestInFlightMs: number }[] = [];
+		const sends: {
+			partition: number;
+			holding: number;
+			longestInFlightMs: number;
+		}[] = [];
 		for (const partition of [80, 81, 82]) {
 			const holding = sendHolding(partition);
 			if (holding === undefined || !isCurrent({ partition, holding })) continue;

@@ -48,7 +48,10 @@ describe("held partitions", () => {
 		await waitFor(() => A.has("withdraw:0"));
 		expect(A.ownership.holdingOf({ partition: 0 })).toBeDefined();
 		drainGate.resolve();
-		await waitFor(() => A.ownership.holdingOf({ partition: 0 }) === undefined, 2_000);
+		await waitFor(
+			() => A.ownership.holdingOf({ partition: 0 }) === undefined,
+			2_000,
+		);
 		await waitFor(() => B.ownership.holdingOf({ partition: 0 }) !== undefined);
 	});
 
