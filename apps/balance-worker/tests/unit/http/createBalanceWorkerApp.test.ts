@@ -11,6 +11,7 @@ import {
 import {
 	PARTITION_RECOVERY_REASON,
 	type PartitionRoute,
+	STEPPING_DOWN_REASON,
 } from "@autumn/balance-worker-client/protocol";
 import { Hono } from "hono";
 import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.js";
@@ -101,6 +102,7 @@ const fixture = ({
 	causeFor,
 	awaitHandoff,
 	findSuccessor,
+	isSteppedDown,
 }: {
 	cause?: Error;
 	owned?: boolean;
@@ -109,6 +111,7 @@ const fixture = ({
 	causeFor?: Record<string, Error>;
 	awaitHandoff?: BalanceWorkerHttpContext["ownership"]["awaitHandoff"];
 	findSuccessor?: BalanceWorkerHttpContext["ownership"]["findSuccessor"];
+	isSteppedDown?: BalanceWorkerHttpContext["ownership"]["isSteppedDown"];
 } = {}) => {
 	const logs: unknown[][] = [];
 	function recordLog(...args: unknown[]): void {
@@ -208,7 +211,7 @@ const fixture = ({
 			: undefined;
 	};
 	const ctx: BalanceWorkerHttpContext = {
-		ownership: { findRuntime, awaitHandoff, findSuccessor },
+		ownership: { findRuntime, awaitHandoff, findSuccessor, isSteppedDown },
 		partitionResolver: { partitionForIdentity: () => actualPartition },
 		logger: {
 			debug: recordLog,
@@ -656,6 +659,23 @@ describe("Balance worker HTTP", () => {
 		});
 		expect(batch.status).toBe(409);
 		expect((await batch.json()).error.successor).toEqual(successor);
+		expect(submitted).toEqual([]);
+	});
+	test("a worker that stepped down says so in its NOT_OWNER answer, on a single request and on a batch", async () => {
+		const { post, postBatch, submitted } = fixture({
+			owned: false,
+			isSteppedDown: () => true,
+		});
+		const single = await post();
+		expect(single.status).toBe(409);
+		expect((await single.json()).error).toEqual({
+			code: "NOT_OWNER",
+			message: "Route is not admitted by this worker",
+			reason: STEPPING_DOWN_REASON,
+		});
+		const batch = await postBatch({ route, commands: [command] });
+		expect(batch.status).toBe(409);
+		expect((await batch.json()).error.reason).toBe(STEPPING_DOWN_REASON);
 		expect(submitted).toEqual([]);
 	});
 	test("the caller's budget header reaches every command the request runs", async () => {
