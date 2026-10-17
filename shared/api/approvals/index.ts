@@ -1,5 +1,7 @@
 export * from "../common/filters/durationMatcher";
 export * from "./actions/approvalActions";
+export * from "./can/approvalsCanParams";
+export * from "./can/approvalsCanResponse";
 export * from "./schemas/approvalRule";
 export * from "./schemas/filters/approvalFilterFieldLabels";
 export * from "./schemas/filters/approvalFilterShapes";
