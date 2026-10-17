@@ -8,6 +8,7 @@ on:
       - "packages/balance-worker-client/**"
       - "packages/env/**"
       - "packages/kafka/**"
+      - "scripts/devServices/**"
       - "package.json"
       - "bun.lock"
       - ".github/workflows/balance-unit-tests.yml"
@@ -19,6 +20,7 @@ on:
       - "packages/balance-worker-client/**"
       - "packages/env/**"
       - "packages/kafka/**"
+      - "scripts/devServices/**"
       - "package.json"
       - "bun.lock"
       - ".github/workflows/balance-unit-tests.yml"
@@ -75,3 +77,39 @@ jobs:
         run: |
           bun -F @autumn/balance-worker-client ts
           bun -F @autumn/env ts
+
+  kafka-integration-tests:
+    name: Kafka Integration Tests
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    env:
+      KAFKA_TEST_COMPOSE_FILE: apps/balance-worker/tests/integration/kafka/compose.yml
+      # The single-broker compose stack advertises its HOST listener here; the
+      # test runner refuses to start services itself, so CI provides the address.
+      KAFKA_BROKERS: 127.0.0.1:19092
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Start Kafka and S3 test services
+        run: docker compose -f "$KAFKA_TEST_COMPOSE_FILE" up -d --wait --wait-timeout 120
+
+      - name: Run balance worker Kafka integration tests
+        run: bun -F @autumn/balance-worker test:kafka
+
+      - name: Show test service logs
+        if: failure()
+        run: docker compose -f "$KAFKA_TEST_COMPOSE_FILE" logs --tail 200
+
+      - name: Stop test services
+        if: always()
+        run: docker compose -f "$KAFKA_TEST_COMPOSE_FILE" down -v --remove-orphans
