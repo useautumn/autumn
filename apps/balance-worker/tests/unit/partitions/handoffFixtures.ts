@@ -95,23 +95,29 @@ export const createOwnershipLog = () => {
 	const release = ({
 		partition,
 		from,
+		endpoint,
 	}: {
 		partition: number;
 		from: number;
+		endpoint: string;
 	}) => {
 		let holder: string | null = null;
 		let freedBy: string | null = null;
+		let readies: string[] = [];
 		for (const event of records.slice(from)) {
 			if (event.partition !== partition) continue;
 			if (event.type === "claimed") {
 				holder = event.endpoint;
 				freedBy = null;
+				readies = [];
 			} else if (event.type === "unowned" && event.endpoint === holder) {
 				holder = null;
 				freedBy = event.endpoint;
-			}
+			} else if (event.type === "ready") readies.push(event.endpoint);
 		}
-		return freedBy === null ? null : { endpoint: freedBy };
+		if (freedBy === null) return null;
+		if (readies.some((ready) => ready !== endpoint)) return null;
+		return { endpoint: freedBy };
 	};
 	/** A drain by the current owner not yet concluded by a claim. */
 	const activeDrain = ({ partition }: { partition: number }) => {
@@ -157,6 +163,8 @@ export type WorkerOptions = {
 	deaf?: boolean;
 	/** Says nothing before preparing: stands in for a successor on a build without the announcement. */
 	silentPreparation?: boolean;
+	readyGate?: Promise<void>;
+	failReady?: boolean;
 };
 
 export const createWorker = ({
@@ -173,6 +181,8 @@ export const createWorker = ({
 	acquirePreparation,
 	deaf = false,
 	silentPreparation = false,
+	readyGate,
+	failReady = false,
 }: WorkerOptions) => {
 	const { events } = log;
 	const tailFrom = log.records.length;
@@ -283,12 +293,14 @@ export const createWorker = ({
 			},
 			announceReady: async (params) => {
 				record("announce");
+				if (failReady) throw new Error("Ready send failed");
 				log.publish({
 					type: "ready",
 					partition,
 					endpoint,
 					readyAt: params?.readyAt,
 				});
+				await readyGate;
 			},
 			announcePreparing: async () => {
 				if (silentPreparation) return;
@@ -360,7 +372,9 @@ export const createWorker = ({
 							answersReady = true;
 						else if (event.type !== "unowned") return undefined;
 						if (!answersReady) return undefined;
-						return log.release({ partition, from: tailFrom }) ?? undefined;
+						return (
+							log.release({ partition, from: tailFrom, endpoint }) ?? undefined
+						);
 					},
 				});
 			},

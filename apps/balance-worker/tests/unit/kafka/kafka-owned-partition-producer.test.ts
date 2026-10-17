@@ -698,6 +698,40 @@ describe("ownershipPublication", function ownershipPublicationTests() {
 			expect(await released).toEqual({ endpoint: "http://other.test" });
 		});
 
+		test("a release does not free the partition while another worker has announced ready since the last claim", async () => {
+			const f = fixture({ withHandoff: true });
+			const controller = new AbortController();
+			let freed: { endpoint: string } | null = null;
+			void f.publication
+				.awaitRelease({ signal: controller.signal, afterReadyAt: 7 })
+				.then(
+					(result) => {
+						freed = result;
+					},
+					() => undefined,
+				);
+			f.views.set(2, {
+				owner: null,
+				activeDrain: null,
+				activePreparation: null,
+				release: { endpoint: "http://other.test" },
+				readyEndpoints: ["http://rival.test", "http://worker.test"],
+			});
+			f.deliver({
+				partition: 2,
+				offset: 4n,
+				record: {
+					schemaVersion: 1,
+					type: "ready",
+					partition: 2,
+					endpoint: "http://worker.test",
+					readyAt: 7,
+				},
+			});
+			await Promise.resolve();
+			expect(freed).toBeNull();
+			controller.abort();
+		});
 		test("awaitReady resolves on another worker's ready, ignoring its own and other record types", async () => {
 			const f = fixture({ withHandoff: true });
 			const controller = new AbortController();
