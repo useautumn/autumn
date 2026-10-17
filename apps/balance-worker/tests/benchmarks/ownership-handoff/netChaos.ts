@@ -766,12 +766,13 @@ const timelines = Object.fromEntries(
 					...logsOf({
 						worker: worker.name,
 						event: "log.warn",
-						match: /do not vouch|could not be read/,
+						match:
+							/do not vouch|could not be read|recovered before the step-down|not renewed|not released/,
 					}),
 					...logsOf({
 						worker: worker.name,
 						event: "log.error",
-						match: /no step-down permit|check failed/,
+						match: /no step-down permit|check failed|no longer ours/,
 					}),
 				].map((e) => ({
 					relMs: rel(e.t),
