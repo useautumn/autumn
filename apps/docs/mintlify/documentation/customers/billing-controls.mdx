@@ -481,6 +481,77 @@ This limits the customer to 5 auto top-ups per month. Supported intervals: `hour
 
 For setup instructions and how it works end-to-end, see [Auto Top-Ups](/documentation/modelling-pricing/auto-top-ups).
 
+## Balance Allocations
+
+Balance allocations reserve a customer's shared credits for specific [entities](/documentation/customers/feature-entities). Set them with `billing_controls.balance_allocations` when [updating a customer](/api-reference/customers/updateCustomer). They can't be set when creating a customer or updating an entity.
+
+Each update replaces the full allocation configuration. Include every feature and entity you want to keep, omit the field to leave allocations unchanged, or send `[]` to release all allocations.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "customer_123",
+  billingControls: {
+    balanceAllocations: [{
+      featureId: "credits",
+      interval: "month",
+      allocations: [
+        { entityId: "workspace_a", amount: 300 },
+        { entityId: "workspace_b", amount: 200 },
+      ],
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="customer_123",
+    billing_controls={
+        "balance_allocations": [{
+            "feature_id": "credits",
+            "interval": "month",
+            "allocations": [
+                {"entity_id": "workspace_a", "amount": 300},
+                {"entity_id": "workspace_b", "amount": 200},
+            ],
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "customer_123",
+    "billing_controls": {
+      "balance_allocations": [{
+        "feature_id": "credits",
+        "interval": "month",
+        "allocations": [
+          {"entity_id": "workspace_a", "amount": 300},
+          {"entity_id": "workspace_b", "amount": 200}
+        ]
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature whose shared customer credits are allocated |
+| `interval` | string | The reset interval of the shared credits being allocated |
+| `allocations` | object[] | Complete list of entity allocations for this feature. Omitted entities release their shares. |
+| `allocations[].entity_id` | string | The entity ID |
+| `allocations[].amount` | number | Requested credits per cycle, before proportional scaling. `0` releases the allocation. |
+
+The response returns requested amounts under `billing_controls.balance_allocations`. Read `balances` for effective amounts after proportional scaling.
+
 ## Customer vs Entity Controls
 
 Billing controls can be set at two levels:
@@ -492,6 +563,7 @@ Billing controls can be set at two levels:
 | **Usage limits** | Yes | Yes |
 | **Usage alerts** | Yes | Yes |
 | **Auto top-ups** | Yes | No |
+| **Balance allocations** | Yes | No |
 
 **Entity-level** controls are configured by updating the entity instead of the customer. Entity-level controls override customer-level controls for that entity — for example, an entity overage override takes precedence over the customer-level setting, and entity spend limits override the customer-level limit.
 
