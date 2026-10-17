@@ -4,6 +4,8 @@ import type { KafkaProducerClient, ProducerConfig } from "@autumn/kafka";
 import { createPartitionRuntimeFactory } from "../../../../src/init/construction/createPartitionRuntimeFactory.js";
 import type { PartitionRuntimeFactoryConfig } from "../../../../src/init/types/partitionRuntimeFactory.js";
 import { commitSummaries } from "../../../../src/logging/commitSummaries.js";
+import { createPartitions } from "../../../../src/partitions/createPartitions.js";
+import type { PartitionChangeListeners } from "../../../../src/partitions/types/partitions.js";
 import { createRecentCommands } from "../../../../src/processor/writer/recentCommands/createRecentCommands.js";
 import { createPartitionBootstrapper } from "../../../../src/runtime/bootstrap/createPartitionBootstrapper.js";
 import type {
@@ -189,6 +191,156 @@ describe("Kafka owned partition runtime factory", () => {
 			}
 		},
 	);
+
+	test("a partition that claims for itself publishes the claim before its fence marker and its token, and both carry the claim's epoch", async () => {
+		const fixture = createStoreFixture();
+		const steps: string[] = [];
+		const errors: unknown[] = [];
+		let nextOffset = 40;
+		let listeners: PartitionChangeListeners | undefined;
+		const producer: KafkaProducerClient = {
+			connect: async () => {
+				steps.push("connect");
+			},
+			disconnect: async () => {},
+			transaction: async () => {
+				throw new Error("Idempotent commits open no transaction");
+			},
+			send: async (record) => {
+				const baseOffset = String(nextOffset++);
+				steps.push(
+					record.topic === config.ownership.topic
+						? `claim@${baseOffset}`
+						: `marker:${record.messages[0]?.headers?.ownerEpoch}`,
+				);
+				return [
+					{ topicName: record.topic, partition: 0, errorCode: 0, baseOffset },
+				];
+			},
+		};
+		const createFollower = (): PartitionOutcomeFollowerPort => ({
+			readLogRange: async () => ({ logStartOffset: 0n, logEndOffset: 0n }),
+			startAndCatchUp: async () => {},
+			readProgress: () => ({ consumedNextOffset: 0n, highWatermark: 0n }),
+			stop: async () => {},
+		});
+		try {
+			restoreSubjectStates({
+				store: fixture.store,
+				topic,
+				partition: 0,
+				states: [createState()],
+			});
+			const factory = createPartitionRuntimeFactory({
+				ctx: {
+					kafka: { producer: () => producer },
+					stateStore: {
+						...fixture.store,
+						claimPartition: async ({ ownerEpoch }) => {
+							steps.push(`token:${ownerEpoch}`);
+						},
+					},
+					db: createSyntheticWorkerDb(),
+					catalogCache: createTestCatalogCache(),
+					ownershipOffsets: {
+						fetchTopicOffsets: async () => [
+							{ partition: 0, offset: "0", high: "0", low: "0" },
+						],
+					},
+					bootstrapper: createPartitionBootstrapper({
+						stateStore: fixture.store,
+						checkpointSource: { latest: async () => null },
+						partitionResolver: { partitionForIdentity: () => 0 },
+						restoreLimits: config.checkpointRestoreLimits,
+						retryPolicy: config.checkpointRetryPolicy,
+					}),
+					partitionResolver: { partitionForIdentity: () => 0 },
+				},
+				config: { ...config, commit: { mode: "idempotent" } },
+			});
+			const partitions = createPartitions({
+				ctx: {
+					createRuntime: ({ topic: runtimeTopic, partition }) => ({
+						...factory({
+							topic: runtimeTopic,
+							partition,
+							follower: createFollower(),
+							preparation: createFollower(),
+							recentCommands: createRecentCommands({
+								windowMs: 600_000,
+								now: () => 0,
+							}),
+						}),
+						markUnavailable: () => undefined,
+					}),
+					consumer: {
+						start: async () => undefined,
+						stop: async () => undefined,
+						pause: () => undefined,
+						resume: () => undefined,
+					},
+					partitionOffsets: {
+						connect: async () => undefined,
+						disconnect: async () => undefined,
+						fetchHighWatermarks: async () => ({ readHighWatermark: () => 0n }),
+					},
+					progress: {
+						readProgress: () => ({
+							localNextOffset: 0n,
+							consumedNextOffset: 0n,
+							highWatermark: 0n,
+						}),
+						observeHighWatermark: () => undefined,
+					},
+					subscribePartitionChanges: (subscribers) => {
+						listeners = subscribers;
+						return () => undefined;
+					},
+					onError: ({ cause }) => {
+						errors.push(cause);
+					},
+					onUnhealthyPartition: () => undefined,
+				},
+				config: {
+					topic,
+					healthRefreshIntervalMs: 60_000,
+					handoffReadyTimeoutMs: 1,
+					handoffClaimTimeoutMs: 1,
+				},
+			});
+			await partitions.start();
+			try {
+				listeners?.onAssigned({
+					partitions: [0],
+					causeForPartition: () => new Error("revoked"),
+				});
+				for (let attempt = 0; attempt < 500; attempt++) {
+					const ready = partitions
+						.partitions()
+						.some((health) => health.status === "ready");
+					if (ready && steps.length >= 4) break;
+					await Bun.sleep(1);
+				}
+				const epoch = steps
+					.find((step) => step.startsWith("claim@"))
+					?.slice("claim@".length);
+				expect(steps).toEqual([
+					"connect",
+					`claim@${epoch}`,
+					`marker:${epoch}`,
+					`token:${epoch}`,
+				]);
+				expect(
+					partitions.findRuntime({ partition: 0, routeEpoch: epoch ?? "" }),
+				).toBeDefined();
+				expect(errors).toEqual([]);
+			} finally {
+				await partitions.stop();
+			}
+		} finally {
+			closeStoreFixture(fixture);
+		}
+	});
 
 	test("rejects invalid receipt retention before accepting assignments", () => {
 		const fixture = createStoreFixture();
