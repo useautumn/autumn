@@ -12,9 +12,11 @@ import { createSlotGate } from "../../../src/blueGreen/createSlotGate.js";
 import { createSlotHeartbeat } from "../../../src/blueGreen/createSlotHeartbeat.js";
 import { fleetIdOf } from "../../../src/blueGreen/fleetIdOf.js";
 import { subjectLoadGate } from "../../../src/external/postgres/subjectLoadGate.js";
+import { createPartitionSendWatches } from "../../../src/health/ownNetwork/createPartitionSendWatches.js";
 import { createBalanceWorkerApp } from "../../../src/http/createBalanceWorkerApp.js";
 import { createPartitionRuntimeFactory } from "../../../src/init/construction/createPartitionRuntimeFactory.js";
 import { createWorkerPartitions } from "../../../src/init/construction/createWorkerPartitions.js";
+import { createWorkerStepDown } from "../../../src/init/construction/createWorkerStepDown.js";
 import { resolveWorkerAddress } from "../../../src/init/resolveWorkerAddress.js";
 import type { PartitionRuntimeFactoryInput } from "../../../src/init/types/partitionRuntimeFactory.js";
 import { createWorkerCheckpointConfig } from "../../../src/init/workerCheckpointConfig.js";
@@ -27,6 +29,7 @@ import { openWorkerResources } from "../../../src/init/workerResources.js";
 import { createOwnershipHandoffLink } from "../../../src/kafka/createOwnershipHandoffLink.js";
 import { databaseTimings } from "../../../src/logging/databaseTimings.js";
 import type { StateBackend } from "../../../src/state/stateBackend.js";
+import { createDirectoryAdminBucketObjects } from "./directoryAdminBucketObjects.js";
 import { createDirectoryEdgeConfigClient } from "./directoryEdgeConfigClient.js";
 import { installPgLatency } from "./pgLatency.js";
 
@@ -120,6 +123,7 @@ const ownershipHandoff = createOwnershipHandoffLink({
 		producerLimits: runtimeConfig.producerLimits,
 	},
 });
+const sendWatches = createPartitionSendWatches();
 const runtimeFactory = createPartitionRuntimeFactory({
 	ctx: {
 		logger,
@@ -132,6 +136,7 @@ const runtimeFactory = createPartitionRuntimeFactory({
 		partitionResolver: resources.partitionResolver,
 		bootstrapper: resources.bootstrapper,
 		checkpointMaintenance: resources.checkpoints?.maintenance,
+		sendWatches,
 	},
 	config: runtimeConfig,
 });
@@ -279,6 +284,24 @@ const partitions = createWorkerPartitions({
 		healthRefreshIntervalMs: runtimeConfig.timings.healthRefreshIntervalMs,
 	},
 });
+const stepDown = createWorkerStepDown({
+	ctx: {
+		sendWatches,
+		partitions,
+		logger,
+		objects:
+			slotGate && env.BENCH_EDGE_CONFIG_DIR
+				? createDirectoryAdminBucketObjects({
+						directory: env.BENCH_EDGE_CONFIG_DIR,
+					})
+				: undefined,
+	},
+	config: {
+		deployment: env.BALANCE_WORKER_DEPLOYMENT,
+		endpoint: address.endpoint,
+		fleetId,
+	},
+});
 const app = createBalanceWorkerApp({
 	ctx: {
 		ownership: partitions,
@@ -299,11 +322,7 @@ const slotHeartbeat =
 					readAssignmentSettled: partitions.hasAssignment,
 					readStoreHealthy: () =>
 						resources.edgeConfigs?.activeSlot.getStatus().healthy ?? false,
-					readWork: () => ({
-						lastSendAckAt: null,
-						ownNetwork: "healthy",
-						steppedDown: partitions.isSteppedDown(),
-					}),
+					readWork: stepDown.readWork,
 					probes: {
 						kafka: async () => {
 							await resources.admin.fetchTopicOffsets(
@@ -344,12 +363,14 @@ const listener = Bun.serve({
 emit("consumer.start");
 await partitions.start();
 void slotHeartbeat?.start();
+stepDown.start();
 emit("worker.started");
 
 let stopping: Promise<void> | undefined;
 function stop(): Promise<void> {
 	stopping ??= (async () => {
 		emit("stop.begin");
+		stepDown.stop();
 		slotHeartbeat?.stop();
 		await partitions.stop();
 		emit("stop.partitions_stopped");
