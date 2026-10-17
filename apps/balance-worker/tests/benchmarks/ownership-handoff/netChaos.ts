@@ -118,14 +118,17 @@ function gitOutput(args: string[]): string {
 		.trim();
 }
 const commit = gitOutput(["rev-parse", "HEAD"]);
-const productCommit = gitOutput([
-	"log",
-	"-1",
-	"--format=%H",
-	"--",
-	"apps/balance-worker/src",
-	"packages/*/src",
-]);
+const PRODUCT_BRANCH = "origin/og/bw-own-network-step-down";
+const productCommit =
+	gitOutput(["merge-base", "HEAD", PRODUCT_BRANCH]) ||
+	gitOutput([
+		"log",
+		"-1",
+		"--format=%H",
+		"--",
+		"apps/balance-worker/src",
+		"packages/*/src",
+	]);
 const deployment = `bench-${crypto.randomUUID().slice(0, 8)}`;
 const runDir = join(outDir, `${SCENARIO}-${deployment}`);
 mkdirSync(runDir, { recursive: true });
