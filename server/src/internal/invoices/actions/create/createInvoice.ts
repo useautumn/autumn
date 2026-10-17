@@ -3,12 +3,11 @@ import type {
 	CreateInvoicePreview,
 	Invoice,
 } from "@autumn/shared";
-import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeInvoiceLines } from "./compute/computeInvoiceLines";
-import { evaluateStripeInvoicePlan } from "./evaluate/evaluateStripeInvoicePlan";
+import { checkRouteApproval } from "@/internal/approvals/check/checkRouteApproval";
+import { buildCreateInvoiceFacts } from "@/internal/approvals/facts/invoices/buildCreateInvoiceFacts";
 import { executeStripeInvoicePlan } from "./execute/executeStripeInvoicePlan";
-import { setupCreateInvoiceContext } from "./setup/setupCreateInvoiceContext";
+import { planInvoice } from "./planInvoice";
 
 export type CreateInvoiceResult = {
 	invoice: Invoice | null;
@@ -29,27 +28,27 @@ export const createInvoice = async ({
 	const preview = params.preview === true;
 	const nowMs = Date.now();
 
-	// 1. Setup
-	const invoiceContext = await setupCreateInvoiceContext({
+	if (preview) {
+		const { stripePlan } = await planInvoice({ ctx, params, nowMs, preview });
+		return { invoice: null, preview: stripePlan.preview };
+	}
+
+	// 1. Approvals: judged on a write-free preview, since setup creates or updates the customer
+	await checkRouteApproval({
+		ctx,
+		action: "invoices.create",
+		buildFacts: () => buildCreateInvoiceFacts({ ctx, params, nowMs }),
+	});
+
+	// 2. Setup, compute and evaluate
+	const { invoiceContext, lines, stripePlan } = await planInvoice({
 		ctx,
 		params,
+		nowMs,
 		preview,
 	});
 
-	// 2. Compute Autumn lines
-	const lines = computeInvoiceLines({ ctx, invoiceContext, nowMs });
-
-	// 3. Evaluate the Stripe projection
-	const stripePlan = evaluateStripeInvoicePlan({
-		invoiceContext,
-		lines,
-		issueDateMs: params.issue_date ?? nowMs,
-		dueDateMs: params.due_date ?? nowMs + ms.days(invoiceContext.daysUntilDue),
-	});
-
-	if (preview) return { invoice: null, preview: stripePlan.preview };
-
-	// 4. Execute
+	// 3. Execute
 	const { invoice, issueDateMs, dueDateMs } = await executeStripeInvoicePlan({
 		ctx,
 		invoiceContext,
