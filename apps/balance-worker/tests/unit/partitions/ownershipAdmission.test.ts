@@ -35,6 +35,7 @@ const fixture = ({
 	quiescenceError,
 	drainError,
 	failAfterClaim = false,
+	connectGate,
 	startGate,
 	claimGate,
 	drainGate,
@@ -46,6 +47,7 @@ const fixture = ({
 	quiescenceError?: Error;
 	drainError?: Error;
 	failAfterClaim?: boolean;
+	connectGate?: Promise<void>;
 	startGate?: Promise<void>;
 	claimGate?: Promise<void>;
 	drainGate?: Promise<void>;
@@ -81,6 +83,10 @@ const fixture = ({
 			});
 		const runtime = {
 			prepare: async () => undefined,
+			connect: async () => {
+				events.push(`connect:${partition}`);
+				await connectGate;
+			},
 			activate: async () => {
 				events.push(`start:${partition}`);
 				if (status !== "created") throw new Error("startup cancelled");
@@ -246,14 +252,14 @@ test(
 );
 
 describe("Ownership publication and admission", () => {
-	test("ready then claim then admit exact epoch, independently for multiple partitions", async () => {
+	test("claim then activate then admit exact epoch, independently for multiple partitions", async () => {
 		const f = fixture();
 		await f.ownership.start();
 		expect(
 			f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 		).toBeUndefined();
 		f.assign([1, 2]);
-		await waitFor(() => f.events.includes("claimed:2"));
+		await waitFor(() => f.events.includes("ready:2"));
 		expect(f.ownership.findRuntime({ partition: 1, routeEpoch: "100" })).toBe(
 			f.runtimes.get(1)?.runtime,
 		);
@@ -266,35 +272,37 @@ describe("Ownership publication and admission", () => {
 		expect(
 			f.ownership.findRuntime({ partition: 3, routeEpoch: "101" }),
 		).toBeUndefined();
-		expect(f.events.indexOf("ready:2")).toBeLessThan(
-			f.events.indexOf("claim:2"),
-		);
-		// The marker under the new epoch goes in once the claim names it, before any request is admitted.
-		expect(f.events.indexOf("claimed:2")).toBeLessThan(
-			f.events.indexOf("fence:2"),
-		);
+		expect(
+			f.events.filter((event) => event.endsWith(":2")).slice(0, 4),
+		).toEqual(["connect:2", "claim:2", "claimed:2", "start:2"]);
 		await f.ownership.stop();
 	});
-	test("does not advertise unready runtimes", async () => {
+	test("claims before it activates, and an activation that ends unready is never served", async () => {
 		const f = fixture({ unready: true });
 		await f.ownership.start();
 		f.assign();
 		await waitFor(() => f.events.includes("ready:2"));
-		expect(f.events).not.toContain("claim:2");
+		expect(f.events).toEqual([
+			"connect:2",
+			"claim:2",
+			"claimed:2",
+			"start:2",
+			"ready:2",
+		]);
 		expect(
 			f.ownership.findRuntime({ partition: 2, routeEpoch: "100" }),
 		).toBeUndefined();
 		await f.ownership.stop();
 	});
 	test("revoke during startup prevents claim and old callbacks cannot admit a replacement", async () => {
-		const start = deferred();
-		const f = fixture({ startGate: start.promise });
+		const connect = deferred();
+		const f = fixture({ connectGate: connect.promise });
 		await f.ownership.start();
 		f.assign();
-		await waitFor(() => f.events.includes("start:2"));
+		await waitFor(() => f.events.includes("connect:2"));
 		f.revoke();
 		f.assign([1]);
-		start.resolve();
+		connect.resolve();
 		await waitFor(() => f.events.includes("claimed:1"));
 		expect(f.events).not.toContain("claim:2");
 		expect(
@@ -401,7 +409,8 @@ describe("Ownership publication and admission", () => {
 		await waitFor(() => f.events.includes("claim:2"));
 		f.revoke();
 		f.assign();
-		expect(f.events.filter((event) => event === "start:2")).toHaveLength(1);
+		expect(f.events.filter((event) => event === "claim:2")).toHaveLength(1);
+		expect(f.events).not.toContain("start:2");
 		claim.resolve();
 		await waitFor(
 			() => f.events.filter((event) => event === "claimed:2").length === 2,
@@ -433,14 +442,16 @@ describe("Ownership publication and admission", () => {
 		await f.ownership.stop();
 	});
 	test("unproven quiescence stops the worker and refuses every later assignment", async () => {
+		const connect = deferred();
 		const f = fixture({
 			quiescenceError: new Error("replay stop failed"),
-			unready: true,
+			connectGate: connect.promise,
 		});
 		await f.ownership.start();
 		f.assign();
-		await waitFor(() => f.events.includes("ready:2"));
+		await waitFor(() => f.events.includes("connect:2"));
 		f.revoke();
+		connect.resolve();
 		await waitFor(() => f.events.includes("consumer-stop"));
 		expect(f.events).toContain("service-stopped");
 		const startsBeforeStop = f.events.filter((e) => e === "start:1").length;

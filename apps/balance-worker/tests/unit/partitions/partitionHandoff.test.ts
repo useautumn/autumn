@@ -367,7 +367,7 @@ describe("partition handoff", () => {
 		}
 	});
 
-	test("no claim in time: the successor claims for itself after activating", async () => {
+	test("no claim in time: the successor claims for itself, then activates under that claim", async () => {
 		const log = createOwnershipLog();
 		const B = createWorker({
 			name: "B",
@@ -381,8 +381,8 @@ describe("partition handoff", () => {
 			await settle();
 			expect(B.has("activate:2")).toBe(false);
 			await waitFor(() => B.status(2) === "ready");
-			expect(B.index("announce:2")).toBeLessThan(B.index("activate:2"));
-			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.index("announce:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.index("claim:B:2")).toBeLessThan(B.index("activate:2"));
 			expect(
 				B.ownership.findRuntime({ partition: 2, routeEpoch: "101" }),
 			).toBeDefined();
@@ -601,6 +601,103 @@ describe("partition handoff", () => {
 			await waitFor(() => B.status(2) === "ready", 1_000);
 		} finally {
 			await B.ownership.stop();
+		}
+	});
+
+	test("a successor whose ready failed claims before it activates, so a later release cannot hand its partition to a quick claimant", async () => {
+		const log = createOwnershipLog();
+		const activation = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const C = createWorker({
+			name: "C",
+			log,
+			failReady: true,
+			activateGate: activation.promise,
+			config: { handoffClaimTimeoutMs: 20 },
+		});
+		try {
+			await B.ownership.start();
+			await C.ownership.start();
+			await ownAlone(A, [2]);
+			C.assign([2]);
+			await waitFor(() => C.has("activate:2"), 1_000);
+			expect(C.has("claim:C:2")).toBe(true);
+			expect(latestClaim({ log, partition: 2 })?.endpoint).toBe(C.endpoint);
+
+			A.revoke();
+			await A.ownership.stop();
+			expect(A.has("release:2")).toBe(true);
+			B.assign([2]);
+			await waitFor(() => B.has("announce:2"));
+			await Bun.sleep(50);
+			expect(B.has("claim:B:2")).toBe(false);
+			expect(B.has("activate:2")).toBe(false);
+			expect(B.status(2)).toBe("prepared");
+		} finally {
+			activation.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
+		}
+	});
+
+	test("a successor whose ready failed times out while a quick claimant serves: its newer claim is on the log before it touches the token or the fence", async () => {
+		const log = createOwnershipLog();
+		const activation = deferred();
+		const A = createWorker({
+			name: "A",
+			log,
+			config: { handoffReadyTimeoutMs: 20, handoffDrainCapMs: 40 },
+		});
+		const B = createWorker({
+			name: "B",
+			log,
+			config: { handoffClaimTimeoutMs: 60_000 },
+		});
+		const C = createWorker({
+			name: "C",
+			log,
+			failReady: true,
+			activateGate: activation.promise,
+			config: { handoffClaimTimeoutMs: 300 },
+		});
+		try {
+			await B.ownership.start();
+			await C.ownership.start();
+			await ownAlone(A, [2]);
+			C.assign([2]);
+			await waitFor(() => C.has("announce:2"));
+			A.revoke();
+			await A.ownership.stop();
+			B.assign([2]);
+			await waitFor(() => B.status(2) === "ready");
+			const quick = latestClaim({ log, partition: 2 });
+			expect(quick?.endpoint).toBe(B.endpoint);
+			expect(C.has("claim:C:2")).toBe(false);
+
+			await waitFor(() => C.has("activate:2"), 2_000);
+			expect(C.has("claim:C:2")).toBe(true);
+			expect(C.index("claim:C:2")).toBeLessThan(C.index("activate:2"));
+			const newer = latestClaim({ log, partition: 2 });
+			expect(newer?.endpoint).toBe(C.endpoint);
+			expect(BigInt(newer?.routeEpoch ?? "0")).toBeGreaterThan(
+				BigInt(quick?.routeEpoch ?? "0"),
+			);
+			expect(B.status(2)).toBe("ready");
+		} finally {
+			activation.resolve();
+			await A.ownership.stop();
+			await B.ownership.stop();
+			await C.ownership.stop();
 		}
 	});
 
@@ -859,7 +956,7 @@ describe("partition handoff", () => {
 			expect(B.status(2)).toBe("prepared");
 			// The predecessor never finishes: past the cap the successor claims for itself, as it would in silence.
 			await waitFor(() => B.status(2) === "ready", 1_000);
-			expect(B.index("activate:2")).toBeLessThan(B.index("claim:B:2"));
+			expect(B.index("claim:B:2")).toBeLessThan(B.index("activate:2"));
 			expect(A.has("claim:B:2")).toBe(false);
 			expect(B.errors).toEqual([]);
 		} finally {
@@ -959,28 +1056,29 @@ describe("partition handoff", () => {
 		}
 	});
 
-	test("a handoff claim landing while the successor fences its own claim is the route it serves", async () => {
+	test("a handoff claim landing while the successor activates under its own claim is the route it serves", async () => {
 		const log = createOwnershipLog();
 		const drain = deferred();
-		const fence = deferred();
+		const activation = deferred();
 		const A = createWorker({ name: "A", log, drainGate: drain.promise });
 		const B = createWorker({
 			name: "B",
 			log,
 			config: { handoffClaimTimeoutMs: 20, handoffDrainCapMs: 40 },
-			fenceGate: fence.promise,
+			activateGate: activation.promise,
 		});
 		try {
 			await ownAlone(A, [2]);
 			A.revoke();
 			await B.ownership.start();
 			B.assign([2]);
-			await waitFor(() => B.has("fence:2"), 1_000);
+			await waitFor(() => B.has("activate:2"), 1_000);
+			expect(B.has("claim:B:2")).toBe(true);
 
 			drain.resolve();
 			await waitFor(() => A.has("claim:B:2"));
-			fence.resolve();
-			await waitFor(() => B.ownership.isAdmitted({ partition: 2 }));
+			activation.resolve();
+			await waitFor(() => B.status(2) === "ready");
 
 			const route = latestClaim({ log, partition: 2 });
 			expect(route?.endpoint).toBe(B.endpoint);
@@ -992,7 +1090,7 @@ describe("partition handoff", () => {
 			).toBeDefined();
 		} finally {
 			drain.resolve();
-			fence.resolve();
+			activation.resolve();
 			await A.ownership.stop();
 			await B.ownership.stop();
 		}
