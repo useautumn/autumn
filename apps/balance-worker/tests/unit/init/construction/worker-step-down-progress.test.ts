@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { readFleetProgressWithin } from "../../../../src/init/construction/createWorkerStepDown.js";
 import type { FleetProgress } from "../../../../src/health/stepDown/types/fleetProgress.js";
+import { readFleetProgressWithin } from "../../../../src/init/construction/createWorkerStepDown.js";
 
-const EMPTY: FleetProgress = { highWatermarks: new Map(), nextOffsets: new Map() };
+const EMPTY: FleetProgress = {
+	highWatermarks: new Map(),
+	nextOffsets: new Map(),
+};
 
 describe("bounded fleet progress reads", () => {
 	test("a read that outlasts its bound fails that poll, and the next poll joins it instead of starting another", async () => {

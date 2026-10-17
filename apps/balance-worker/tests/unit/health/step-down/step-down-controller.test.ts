@@ -16,6 +16,7 @@ const DEGRADED: OwnNetworkVerdict = {
 	stalledHoldings: [
 		{ partition: 0, holding: 1 },
 		{ partition: 1, holding: 1 },
+		{ partition: 2, holding: 1 },
 	],
 	losesPackets: true,
 };
@@ -301,7 +302,12 @@ describe("step-down controller", () => {
 		});
 		controller.start();
 		await fire();
-		expect(calls).toEqual(["read-progress", "read-progress", "acquire", "release"]);
+		expect(calls).toEqual([
+			"read-progress",
+			"read-progress",
+			"acquire",
+			"release",
+		]);
 	});
 
 	test("loss that pauses for a sample after the permit lands still steps down within the re-check", async () => {
