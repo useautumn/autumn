@@ -1,1 +1,6 @@
-export type PeerVerdict = { ok: boolean; live: number; healthy: number };
+export type PeerVerdict = {
+	ok: boolean;
+	vouching: number;
+	partitions: number;
+	partitionCount: number;
+};

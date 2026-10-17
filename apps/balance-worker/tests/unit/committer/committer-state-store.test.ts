@@ -9,7 +9,6 @@ import { FlushRecordRefusedError } from "../../../src/committer/committerErrors.
 import { createCommitter } from "../../../src/committer/createCommitter.js";
 import { createCommitterStateStore } from "../../../src/committer/createCommitterStateStore.js";
 import { SubjectStaleError } from "../../../src/processor/subject/subjectErrors.js";
-import { PartitionClaimRefusedError } from "../../../src/state/stateStoreErrors.js";
 import type { CommitterDb } from "../../../src/types/committerDb.js";
 import {
 	createCustomerEntitlement,
@@ -39,8 +38,6 @@ function createFakeCommitterDb({
 	const commandProgress = new Map<string, bigint>();
 	const fences = new Map<string, { epoch: bigint; offset: bigint }>();
 	const claims = new Map<string, string>();
-	const claimEpochs = new Map<string, bigint>();
-	const claimCalls: { claimToken: string; ownerEpoch?: bigint }[] = [];
 	if (storedNextOffset !== null)
 		progress.set(`${topic}[${partition}]`, storedNextOffset);
 	const updates: SubjectRowChange[] = [];
@@ -67,21 +64,9 @@ function createFakeCommitterDb({
 			if (claimToken !== undefined)
 				claims.set(`${topic}[${partition}]`, claimToken);
 		},
-		claimPartitionProgress: async ({
-			topic,
-			partition,
-			claimToken,
-			ownerEpoch,
-		}) => {
+		claimPartitionProgress: async ({ topic, partition, claimToken }) => {
 			const key = `${topic}[${partition}]`;
-			claimCalls.push({ claimToken, ownerEpoch });
-			if (!progress.has(key)) return true;
-			const held = claimEpochs.get(key);
-			if (ownerEpoch !== undefined && held !== undefined && held > ownerEpoch)
-				return false;
-			claims.set(key, claimToken);
-			if (ownerEpoch !== undefined) claimEpochs.set(key, ownerEpoch);
-			return true;
+			if (progress.has(key)) claims.set(key, claimToken);
 		},
 		// Rolls back like Postgres would: nothing lands unless every bookmark moved.
 		flush: async (request) => {
@@ -133,7 +118,6 @@ function createFakeCommitterDb({
 		commandProgress,
 		fences,
 		claims,
-		claimCalls,
 		updates,
 		transactions,
 	};
@@ -465,10 +449,10 @@ describe("committer state store", () => {
 	test("once a new owner claims the partition, the old owner's late flush is refused and the new owner lands on the bookmark it read", async () => {
 		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
 		const oldOwner = createStore(fake);
-		await oldOwner.claimPartition({ topic, partition, ownerEpoch: "1" });
+		await oldOwner.claimPartition({ topic, partition });
 		await oldOwner.loadProgress({ topic, partition });
 		const newOwner = createStore(fake);
-		await newOwner.claimPartition({ topic, partition, ownerEpoch: "2" });
+		await newOwner.claimPartition({ topic, partition });
 		await newOwner.loadProgress({ topic, partition });
 
 		const state = createState({ balance: 100 });
@@ -485,28 +469,6 @@ describe("committer state store", () => {
 		expect(fake.updates).toHaveLength(1);
 	});
 
-	test("a claim made under an epoch stamps that epoch into the token it stores", async () => {
-		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
-		const store = createStore(fake);
-		await store.claimPartition({ topic, partition, ownerEpoch: "5" });
-		expect(fake.claims.get(`${topic}[${partition}]`)).toMatch(
-			/^00000000000000000005:[0-9a-f-]{36}$/,
-		);
-		expect(fake.claimCalls.map((call) => call.ownerEpoch)).toEqual([5n]);
-	});
-
-	test("an older owner's claim that lands after its successor's is refused and the successor keeps the partition", async () => {
-		const fake = createFakeCommitterDb({ storedNextOffset: 43n });
-		const successor = createStore(fake);
-		await successor.claimPartition({ topic, partition, ownerEpoch: "200" });
-		const held = fake.claims.get(`${topic}[${partition}]`);
-		const delayed = createStore(fake);
-		await expect(
-			delayed.claimPartition({ topic, partition, ownerEpoch: "100" }),
-		).rejects.toBeInstanceOf(PartitionClaimRefusedError);
-		expect(fake.claims.get(`${topic}[${partition}]`)).toBe(held);
-	});
-
 	test("work queued before a re-claim keeps the claim it was submitted under, so it cannot land after it", async () => {
 		const gate = Promise.withResolvers<void>();
 		const fake = createFakeCommitterDb({
@@ -514,7 +476,7 @@ describe("committer state store", () => {
 			flushGate: gate.promise,
 		});
 		const store = createStore(fake);
-		await store.claimPartition({ topic, partition, ownerEpoch: "5" });
+		await store.claimPartition({ topic, partition });
 		await store.loadProgress({ topic, partition });
 		const state = createState({ balance: 100 });
 		const mutation = createTrackMutation({ state, value: 5 });
@@ -529,7 +491,7 @@ describe("committer state store", () => {
 		const queued = store.applyDurableMutations({
 			records: [{ position: { topic, partition, offset: 43n }, mutation }],
 		});
-		await store.claimPartition({ topic, partition, ownerEpoch: "5" });
+		await store.claimPartition({ topic, partition });
 		gate.resolve();
 
 		expect(await ahead).toBeInstanceOf(FlushBookmarkConflictError);
@@ -540,7 +502,7 @@ describe("committer state store", () => {
 	test("a partition bookmarked for the first time carries its owner's claim", async () => {
 		const fake = createFakeCommitterDb();
 		const store = createStore(fake);
-		await store.claimPartition({ topic, partition, ownerEpoch: "1" });
+		await store.claimPartition({ topic, partition });
 		await store.initializePartition({ topic, partition, nextOffset: 0n });
 		const claim = fake.claims.get(`${topic}[${partition}]`);
 		expect(claim).toBeString();
@@ -548,7 +510,7 @@ describe("committer state store", () => {
 		await intruder.loadProgress({ topic, partition });
 		const state = createState({ balance: 100 });
 		const mutation = createTrackMutation({ state, value: 5 });
-		await intruder.claimPartition({ topic, partition, ownerEpoch: "2" });
+		await intruder.claimPartition({ topic, partition });
 		expect(fake.claims.get(`${topic}[${partition}]`)).not.toBe(claim);
 		const refused = await store.applyDurableMutations({
 			records: [{ position: { topic, partition, offset: 0n }, mutation }],

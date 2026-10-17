@@ -4,10 +4,7 @@ import { createPartitionSendWatches } from "../../../../src/health/ownNetwork/cr
 describe("partition send watches", () => {
 	test("each partition reports its own longest send, and idle ones report nothing", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({
-			now: () => time.now,
-			wallNow: () => 1_000_000 + time.now,
-		});
+		const watches = createPartitionSendWatches({ now: () => time.now });
 		const stuck = Promise.withResolvers<void>();
 		void watches.watchFor({ partition: 80 }).track(() => stuck.promise);
 		await watches.watchFor({ partition: 81 }).track(async () => undefined);
@@ -20,16 +17,13 @@ describe("partition send watches", () => {
 		stuck.resolve();
 	});
 
-	test("the same partition shares one watch, and the latest acknowledged send is kept", async () => {
+	test("the same partition shares one watch, and the age of the latest acknowledged send is kept on the monotonic clock", async () => {
 		const time = { now: 0 };
-		const watches = createPartitionSendWatches({
-			now: () => time.now,
-			wallNow: () => 1_000_000 + time.now,
-		});
+		const watches = createPartitionSendWatches({ now: () => time.now });
 		expect(watches.watchFor({ partition: 80 })).toBe(
 			watches.watchFor({ partition: 80 }),
 		);
-		expect(watches.readLastAckAt()).toBeNull();
+		expect(watches.readLastAckAgeMs()).toBeNull();
 		time.now = 400;
 		await watches.watchFor({ partition: 80 }).track(async () => undefined);
 		time.now = 900;
@@ -38,6 +32,7 @@ describe("partition send watches", () => {
 				throw new Error("refused");
 			}),
 		).rejects.toThrow("refused");
-		expect(watches.readLastAckAt()).toBe(1_000_400);
+		time.now = 1_000;
+		expect(watches.readLastAckAgeMs()).toBe(600);
 	});
 });

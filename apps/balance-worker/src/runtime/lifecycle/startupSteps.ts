@@ -11,7 +11,6 @@ import type {
 	PartitionRuntimeScope,
 	PartitionRuntimeState,
 } from "../types/partitionRuntimeState.js";
-import { claimOwnedPartition } from "./claimOwnedPartition.js";
 import {
 	stopPreparationInBackground,
 	stopRuntimePreparation,
@@ -42,7 +41,7 @@ export async function completeRuntimeStartup({
 		assertStartupContinues({ state });
 		await ctx.producer.fence();
 		assertStartupContinues({ state });
-		await claimOwnedPartition({ ctx });
+		await ctx.stateStore.claimPartition?.({ topic, partition });
 		assertStartupContinues({ state });
 
 		// Activation keeps one status: a command that meets it waits instead of reading each step.

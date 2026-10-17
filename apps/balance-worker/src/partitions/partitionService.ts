@@ -64,6 +64,7 @@ export function stepDownPartitionService({
 	if (state.status !== "running" && state.status !== "stopping")
 		return stopPartitionService({ ctx, state });
 	state.steppedDown = true;
+	state.steppedDownSignal.resolve();
 	for (const entry of [...state.handingOff.values()])
 		withdrawHandoffNow({ state, entry });
 	void leaveGroupNow({ ctx });
@@ -104,6 +105,7 @@ export function stopPartitionService({
 		return Promise.resolve();
 	}
 	state.status = "stopping";
+	state.assigned.clear();
 	stopHealthRefresh({ state });
 	clearPartitionRetries({ state });
 	clearConsumerRejoin({ state });

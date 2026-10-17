@@ -1,6 +1,5 @@
 import type { SlotHeartbeat } from "../../../blueGreen/types/slotHeartbeat.js";
 
-export type FleetHeartbeats = {
-	heartbeats: SlotHeartbeat[];
-	unreadable: number;
-};
+export type FleetListing = ReadonlyMap<string, string>;
+
+export type FleetRead = { listing: FleetListing; changed: SlotHeartbeat[] };

@@ -1153,6 +1153,120 @@ describe("leaving the group", () => {
 		expect(fake.calls.filter((call) => call === "unsubscribe")).toHaveLength(1);
 	});
 
+	test("leave then stop at once never polls beside a loop poll still in flight and fresh", async () => {
+		const { fake, consumer, events } = createRunner();
+		const consume = fake.native.consume.bind(fake.native);
+		const inFlight = { now: 0, most: 0 };
+		fake.native.consume = (count, done) => {
+			inFlight.now += 1;
+			inFlight.most = Math.max(inFlight.most, inFlight.now);
+			if (count === 1) fake.calls.push("leave-poll");
+			consume(count, (error, messages) => {
+				inFlight.now -= 1;
+				done(error, messages);
+			});
+		};
+		fake.chunks.push([
+			{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) },
+		]);
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({ eachBatch: async () => {} });
+		await until(() => events.includes("join:0,1"));
+		const held = Promise.withResolvers<void>();
+		fake.gate.held = held.promise;
+		await until(() => fake.gate.held === undefined);
+		const leaving = consumer.leave();
+		const stopping = consumer.stop();
+		await Bun.sleep(200);
+		expect(fake.calls).not.toContain("leave-poll");
+		held.resolve();
+		await stopping;
+		await leaving;
+		expect(fake.calls).toContain("incrementalUnassign:0,1");
+		expect(inFlight.most).toBe(1);
+		await consumer.disconnect();
+	});
+
+	test("once leaving, the loop hands no more records to the handler, even ones it already fetched", async () => {
+		const { fake, consumer } = createRunner();
+		fake.chunks.push(
+			[{ kind: "rebalance", code: ASSIGN, partitions: partitions(0, 1) }],
+			[
+				{ kind: "message", partition: 0, offset: 5 },
+				{ kind: "message", partition: 1, offset: 7 },
+			],
+		);
+		const handled: number[] = [];
+		const firstHandled = Promise.withResolvers<void>();
+		const releaseFirst = Promise.withResolvers<void>();
+		await consumer.connect();
+		await consumer.subscribe({ topics: [topic], fromBeginning: true });
+		await consumer.run({
+			eachBatch: async ({ batch }) => {
+				handled.push(batch.partition);
+				if (handled.length > 1) return;
+				firstHandled.resolve();
+				await releaseFirst.promise;
+			},
+		});
+		await firstHandled.promise;
+		const leaving = consumer.leave();
+		releaseFirst.resolve();
+		await leaving;
+		await consumer.disconnect();
+		expect(handled).toEqual([0]);
+	});
+
+	test(
+		"with the loop's poll and the leave's own poll both held, the leave polls only once the loop's poll is stale and the stop ends at its bound",
+		async () => {
+			const { fake, consumer, events, logs } = createRunner();
+			const consume = fake.native.consume.bind(fake.native);
+			const leavePoll = Promise.withResolvers<void>();
+			const at: { loopPoll?: number; leavePoll?: number } = {};
+			fake.native.consume = (count, done) => {
+				if (count !== 1) {
+					if (fake.gate.held) at.loopPoll = performance.now();
+					return consume(count, done);
+				}
+				at.leavePoll ??= performance.now();
+				fake.calls.push("leave-poll");
+				consume(count, (error, messages) => {
+					void leavePoll.promise.then(() => done(error, messages));
+				});
+			};
+			fake.chunks.push([
+				{ kind: "rebalance", code: ASSIGN, partitions: partitions(0) },
+			]);
+			await consumer.connect();
+			await consumer.subscribe({ topics: [topic], fromBeginning: true });
+			await consumer.run({ eachBatch: async () => {} });
+			await until(() => events.includes("join:0"));
+			const loopPoll = Promise.withResolvers<void>();
+			fake.gate.held = loopPoll.promise;
+			await until(() => fake.gate.held === undefined);
+			const startedAt = performance.now();
+			const leaving = consumer.leave();
+			await consumer.stop();
+			const tookMs = performance.now() - startedAt;
+			await leaving;
+			expect((at.leavePoll ?? 0) - (at.loopPoll ?? 0)).toBeGreaterThanOrEqual(
+				450,
+			);
+			expect(tookMs).toBeGreaterThanOrEqual(STOP_LOOP_TIMEOUT_MS - 50);
+			expect(tookMs).toBeLessThan(STOP_LOOP_TIMEOUT_MS + 10_000);
+			expect(logs.some((line) => line.includes("did not finish leaving"))).toBe(
+				true,
+			);
+			await consumer.disconnect();
+			expect(fake.calls.at(-1)).toBe("disconnect");
+			loopPoll.resolve();
+			leavePoll.resolve();
+		},
+		{ timeout: STOP_LOOP_TIMEOUT_MS + 15_000 },
+	);
+
 	test("leave before the consumer has a client does nothing", async () => {
 		const { fake, consumer } = createRunner();
 		await consumer.connect();

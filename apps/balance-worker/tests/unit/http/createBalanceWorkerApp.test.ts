@@ -678,6 +678,26 @@ describe("Balance worker HTTP", () => {
 		expect((await batch.json()).error.reason).toBe(STEPPING_DOWN_REASON);
 		expect(submitted).toEqual([]);
 	});
+	test("a request already waiting on a handoff when the worker steps down is answered as stepping down", async () => {
+		const handoff = Promise.withResolvers<void>();
+		const steppedDown = { value: false };
+		const { post, postBatch } = fixture({
+			owned: false,
+			isSteppedDown: () => steppedDown.value,
+			awaitHandoff: () => handoff.promise,
+		});
+		const single = Promise.resolve(post());
+		const batch = Promise.resolve(postBatch({ route, commands: [command] }));
+		await Bun.sleep(20);
+		steppedDown.value = true;
+		handoff.resolve();
+		expect((await (await single).json()).error.reason).toBe(
+			STEPPING_DOWN_REASON,
+		);
+		expect((await (await batch).json()).error.reason).toBe(
+			STEPPING_DOWN_REASON,
+		);
+	});
 	test("a stepped-down worker answers at once instead of waiting for a handoff to settle", async () => {
 		const { post } = fixture({
 			owned: false,

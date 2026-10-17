@@ -65,8 +65,8 @@ test.concurrent(
 				},
 				config,
 			});
-			await stateStore.claimPartition?.({ topic, partition, ownerEpoch: "4" });
-			expect(claimed).toEqual([{ topic, partition, ownerEpoch: "4" }]);
+			await stateStore.claimPartition?.({ topic, partition });
+			expect(claimed).toEqual([{ topic, partition }]);
 		} finally {
 			closeStoreFixture(fixture);
 		}

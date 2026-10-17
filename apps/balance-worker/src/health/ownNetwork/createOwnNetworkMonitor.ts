@@ -10,13 +10,22 @@ import {
 	type OwnNetworkThresholds,
 } from "./judgeOwnNetwork.js";
 import type { OwnNetworkMonitor } from "./types/ownNetworkMonitor.js";
-import type { OwnNetworkSample } from "./types/ownNetworkSample.js";
+import type {
+	OwnNetworkSample,
+	PartitionSendSample,
+} from "./types/ownNetworkSample.js";
 import type { OwnNetworkVerdict } from "./types/ownNetworkVerdict.js";
 import type { PartitionSendWatches } from "./types/partitionSendWatches.js";
 
+type HeldSendSample = PartitionSendSample & { holding: number };
+
+type HeldNetworkSample = Omit<OwnNetworkSample, "sends"> & {
+	sends: HeldSendSample[];
+};
+
 type OwnNetworkMonitorContext = {
 	sends: Pick<PartitionSendWatches, "take">;
-	isServing?(params: { partition: number }): boolean;
+	isHeld?(params: { partition: number }): boolean;
 	readTcp?: () => TcpCounters | null;
 	now?: () => number;
 	schedule?: (params: { intervalMs: number; run(): void }) => () => void;
@@ -37,37 +46,66 @@ export function createOwnNetworkMonitor({
 	const keepMs = thresholds.windowMs + sampleMs * 2;
 	const listeners = new Set<(verdict: OwnNetworkVerdict) => void>();
 	const state: {
-		samples: OwnNetworkSample[];
+		samples: HeldNetworkSample[];
 		lastTcp: TcpCounters | null;
-		latest: OwnNetworkVerdict;
+		holdings: Map<number, number>;
+		nextHolding: number;
 		cancel: (() => void) | null;
 	} = {
 		samples: [],
 		lastTcp: null,
-		latest: judgeOwnNetwork({ samples: [], now: now(), thresholds }),
+		holdings: new Map(),
+		nextHolding: 0,
 		cancel: null,
 	};
+
+	function isHeld(partition: number): boolean {
+		return ctx.isHeld?.({ partition }) ?? true;
+	}
+
+	function forgetReleasedHoldings(): void {
+		for (const partition of [...state.holdings.keys()])
+			if (!isHeld(partition)) state.holdings.delete(partition);
+	}
+
+	function holdingOf(partition: number): number {
+		const known = state.holdings.get(partition);
+		if (known !== undefined) return known;
+		const holding = state.nextHolding++;
+		state.holdings.set(partition, holding);
+		return holding;
+	}
+
+	function judge(at: number): OwnNetworkVerdict {
+		forgetReleasedHoldings();
+		const samples = state.samples.map((kept) => ({
+			...kept,
+			sends: kept.sends.filter(
+				({ partition, holding }) => state.holdings.get(partition) === holding,
+			),
+		}));
+		return judgeOwnNetwork({ samples, now: at, thresholds });
+	}
 
 	function sample(): void {
 		const at = now();
 		const tcp = readTcp();
 		const previous = state.lastTcp;
 		state.lastTcp = tcp;
+		forgetReleasedHoldings();
+		const sends: HeldSendSample[] = [];
+		for (const send of ctx.sends.take({ now: at }))
+			if (isHeld(send.partition))
+				sends.push({ ...send, holding: holdingOf(send.partition) });
 		state.samples.push({
 			at,
 			tcp: tcp && previous ? tcpWindowOf({ previous, current: tcp }) : null,
-			sends: ctx.sends
-				.take({ now: at })
-				.filter(({ partition }) => ctx.isServing?.({ partition }) ?? true),
+			sends,
 		});
 		state.samples = state.samples.filter((kept) => kept.at > at - keepMs);
-		state.latest = judgeOwnNetwork({
-			samples: state.samples,
-			now: at,
-			thresholds,
-		});
-		if (state.latest.state !== "degraded") return;
-		for (const listener of [...listeners]) listener(state.latest);
+		const latest = judge(at);
+		if (latest.state !== "degraded") return;
+		for (const listener of [...listeners]) listener(latest);
 	}
 
 	function start(): void {
@@ -82,7 +120,7 @@ export function createOwnNetworkMonitor({
 	}
 
 	function verdict(): OwnNetworkVerdict {
-		return state.latest;
+		return judge(now());
 	}
 
 	function onDegraded(

@@ -148,7 +148,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 		const db: CommitterDb = {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: async () => {},
-			claimPartitionProgress: async () => true,
+			claimPartitionProgress: async () => {},
 			flush: async (request) => {
 				inFlight += 1;
 				maxInFlight = Math.max(maxInFlight, inFlight);
@@ -530,7 +530,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				topic,
 				partition: 5,
 				claimToken: "owner_b",
-				ownerEpoch: 2n,
 			});
 
 			const lateEvict = await commitFlush({
@@ -596,7 +595,6 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 				topic,
 				partition: 5,
 				claimToken: "owner_b",
-				ownerEpoch: 2n,
 			});
 
 			// What the lane sends for a refresh: no records, the bookmark it last saw, its own claim.
@@ -635,7 +633,7 @@ describe.skipIf(!databaseUrl)("subject snapshot flush", () => {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: (params) =>
 				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			claimPartitionProgress: async () => true,
+			claimPartitionProgress: async () => {},
 			flush: (request) =>
 				commitFlush({
 					ctx: { db: postgres.db },

@@ -35,6 +35,7 @@ export type ConsumerRunnerState = {
 	inflightSeeks: Set<Promise<void>>;
 	/** When the runner last polled; librdkafka leaves the group once max.poll.interval.ms passes without one. */
 	lastPollAt: number;
+	loopPollInFlight: boolean;
 	paused: Set<string>;
 	/** One past the last record handed to the handler since the partition's last seek or assignment. */
 	deliveredNext: Map<string, number>;

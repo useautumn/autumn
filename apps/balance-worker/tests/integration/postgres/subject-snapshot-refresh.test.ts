@@ -98,7 +98,7 @@ describe.skipIf(!databaseUrl)("subject snapshot refresh", () => {
 			readPartitionProgress: async () => null,
 			insertPartitionProgress: (params) =>
 				insertPartitionProgress({ ctx: { db: postgres.db }, ...params }),
-			claimPartitionProgress: async () => true,
+			claimPartitionProgress: async () => {},
 			flush: (request) =>
 				commitFlush({
 					ctx: { db: postgres.db },

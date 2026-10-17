@@ -4,28 +4,32 @@ import {
 	SlotHeartbeatSchema,
 } from "../../blueGreen/types/slotHeartbeat.js";
 import type { AdminBucketObjects } from "../../external/s3/types/adminBucketObjects.js";
-import type { FleetHeartbeats } from "./types/fleetHeartbeats.js";
+import type { FleetListing, FleetRead } from "./types/fleetHeartbeats.js";
 
 export async function readFleetHeartbeats({
 	ctx,
 	fleetId,
-	modifiedAfter,
+	since,
 }: {
 	ctx: { objects: AdminBucketObjects };
 	fleetId: string;
-	modifiedAfter: number;
-}): Promise<FleetHeartbeats> {
+	since: FleetListing | null;
+}): Promise<FleetRead> {
 	const listed = await ctx.objects.list({
 		prefix: `${SLOT_HEARTBEAT_KEY_PREFIX}/${fleetId}/`,
 	});
-	const recent = listed.filter(
-		({ lastModifiedAt }) => lastModifiedAt > modifiedAfter,
+	const listing: FleetListing = new Map(
+		listed.map(({ key, etag }) => [key, etag]),
 	);
+	if (since === null) return { listing, changed: [] };
+	const written = listed.filter(({ key, etag }) => since.get(key) !== etag);
 	const read = await Promise.all(
-		recent.map(({ key }) => readHeartbeat({ ctx, key })),
+		written.map(({ key }) => readHeartbeat({ ctx, key })),
 	);
-	const heartbeats = read.filter((heartbeat) => heartbeat !== null);
-	return { heartbeats, unreadable: read.length - heartbeats.length };
+	return {
+		listing,
+		changed: read.filter((heartbeat) => heartbeat !== null),
+	};
 }
 
 async function readHeartbeat({

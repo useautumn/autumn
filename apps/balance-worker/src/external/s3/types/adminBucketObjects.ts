@@ -1,4 +1,4 @@
-export type AdminObjectListing = { key: string; lastModifiedAt: number };
+export type AdminObjectListing = { key: string; etag: string };
 
 export type AdminObject = { text: string; etag: string };
 

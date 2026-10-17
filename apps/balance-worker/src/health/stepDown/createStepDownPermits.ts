@@ -15,7 +15,6 @@ const PermitRecordSchema = z.object({
 	holder: z.string(),
 	acquisitionId: z.string(),
 	acquiredAt: z.string(),
-	expiresAt: z.string(),
 	releasedAt: z.string().nullable(),
 });
 type PermitRecord = z.infer<typeof PermitRecordSchema>;
@@ -25,24 +24,22 @@ export function createStepDownPermits({
 	config,
 }: {
 	ctx: { objects: AdminBucketObjects; now?: () => number };
-	config: { deployment: string; holder: string; slots: number; ttlMs: number };
+	config: { scope: string; holder: string; slots: number };
 }): StepDownPermits {
 	const now = ctx.now ?? Date.now;
 	const { objects } = ctx;
 
 	function keyOf(slot: number): string {
-		return `${STEP_DOWN_PERMIT_PREFIX}/${config.deployment}/slot-${slot}.json`;
+		return `${STEP_DOWN_PERMIT_PREFIX}/${config.scope}/slot-${slot}.json`;
 	}
 
-	function heldRecord(): string {
-		const at = now();
-		return JSON.stringify({
+	function heldRecord(): PermitRecord {
+		return {
 			holder: config.holder,
 			acquisitionId: crypto.randomUUID(),
-			acquiredAt: new Date(at).toISOString(),
-			expiresAt: new Date(at + config.ttlMs).toISOString(),
+			acquiredAt: new Date(now()).toISOString(),
 			releasedAt: null,
-		} satisfies PermitRecord);
+		};
 	}
 
 	function recordOf(object: AdminObject): PermitRecord | null {
@@ -53,59 +50,46 @@ export function createStepDownPermits({
 		}
 	}
 
-	function isFree(record: PermitRecord): boolean {
-		return record.releasedAt !== null || Date.parse(record.expiresAt) <= now();
-	}
-
-	function isOurs(record: PermitRecord | null): record is PermitRecord {
-		return (
-			record !== null &&
-			record.holder === config.holder &&
-			record.releasedAt === null
-		);
-	}
-
-	async function takeSlot({ key }: { key: string }): Promise<boolean> {
-		if (await objects.create({ key, body: heldRecord() })) return true;
+	async function takeSlot({
+		key,
+	}: {
+		key: string;
+	}): Promise<PermitRecord | null> {
+		const fresh = heldRecord();
+		if (await objects.create({ key, body: JSON.stringify(fresh) }))
+			return fresh;
 		const existing = await objects.read({ key });
-		if (existing === null) return objects.create({ key, body: heldRecord() });
+		if (existing === null)
+			return (await objects.create({ key, body: JSON.stringify(fresh) }))
+				? fresh
+				: null;
 		const record = recordOf(existing);
-		if (record === null) return false;
-		if (isOurs(record) && !isFree(record)) return true;
-		if (!isFree(record)) return false;
-		return objects.replace({ key, body: heldRecord(), etag: existing.etag });
+		if (record === null) return null;
+		if (record.releasedAt === null)
+			return record.holder === config.holder ? record : null;
+		const taken = await objects.replace({
+			key,
+			body: JSON.stringify(fresh),
+			etag: existing.etag,
+		});
+		return taken ? fresh : null;
 	}
 
 	async function acquire(): Promise<StepDownPermitResult> {
 		for (let slot = 0; slot < config.slots; slot++) {
 			const key = keyOf(slot);
 			try {
-				if (await takeSlot({ key })) return { ok: true, permit: { slot, key } };
+				const held = await takeSlot({ key });
+				if (held)
+					return {
+						ok: true,
+						permit: { slot, key, acquisitionId: held.acquisitionId },
+					};
 			} catch (cause) {
 				return { ok: false, reason: "unavailable", cause };
 			}
 		}
 		return { ok: false, reason: "all_taken" };
-	}
-
-	async function renew({
-		permit,
-	}: {
-		permit: StepDownPermit;
-	}): Promise<boolean> {
-		const existing = await objects.read({ key: permit.key });
-		if (existing === null) return false;
-		const record = recordOf(existing);
-		if (!isOurs(record)) return false;
-		const renewed: PermitRecord = {
-			...record,
-			expiresAt: new Date(now() + config.ttlMs).toISOString(),
-		};
-		return objects.replace({
-			key: permit.key,
-			body: JSON.stringify(renewed),
-			etag: existing.etag,
-		});
 	}
 
 	async function release({
@@ -116,17 +100,18 @@ export function createStepDownPermits({
 		const existing = await objects.read({ key: permit.key });
 		if (existing === null) return;
 		const record = recordOf(existing);
-		if (!isOurs(record)) return;
-		const released: PermitRecord = {
-			...record,
-			releasedAt: new Date(now()).toISOString(),
-		};
+		if (record?.holder !== config.holder) return;
+		if (record.acquisitionId !== permit.acquisitionId) return;
+		if (record.releasedAt !== null) return;
 		await objects.replace({
 			key: permit.key,
-			body: JSON.stringify(released),
+			body: JSON.stringify({
+				...record,
+				releasedAt: new Date(now()).toISOString(),
+			} satisfies PermitRecord),
 			etag: existing.etag,
 		});
 	}
 
-	return { acquire, renew, release };
+	return { acquire, release };
 }

@@ -284,6 +284,8 @@ export async function createBalanceWorker({
 				deployment: env.BALANCE_WORKER_DEPLOYMENT,
 				endpoint: address.endpoint,
 				fleetId,
+				imageSha: identity.imageSha,
+				partitionCount: env.BALANCE_WORKER_PARTITION_COUNT,
 			},
 		});
 		const app = createBalanceWorkerApp({
@@ -505,7 +507,6 @@ export async function createBalanceWorker({
 			cjsChildren.start();
 			healthReporter.start();
 			void slotHeartbeat?.start();
-			stepDown.start();
 			if (!reportsHealth) return;
 			stallMonitor.start();
 			kafkaRequestReporter.start();
@@ -515,7 +516,6 @@ export async function createBalanceWorker({
 			databaseReporter.stop();
 			kafkaRequestReporter.stop();
 			stallMonitor.stop();
-			stepDown.stop();
 			slotHeartbeat?.stop();
 			healthReporter.stop();
 			cjsChildren.stop();
@@ -525,6 +525,7 @@ export async function createBalanceWorker({
 			edgeConfigs: resources.edgeConfigs,
 			// The stall monitor rides the health reporter's lifecycle: both are telemetry the worker never waits on.
 			healthReporter: { start: startTelemetry, stop: stopTelemetry },
+			stepDown,
 			catalogInvalidations: resources.catalogInvalidations,
 			coldStart,
 			listen,

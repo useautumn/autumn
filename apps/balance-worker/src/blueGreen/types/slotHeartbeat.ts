@@ -16,15 +16,11 @@ export function slotHeartbeatKeyOf({
 }
 
 export const SlotWorkSchema = z.object({
-	lastSendAckAt: z.string().nullable(),
+	lastSendAckAgeMs: z.number().nullable(),
 	ownNetwork: z.enum(["healthy", "degraded", "insufficient_data"]),
 	steppedDown: z.boolean(),
 });
 export type SlotWork = z.infer<typeof SlotWorkSchema>;
-
-export type SlotWorkReading = Omit<SlotWork, "lastSendAckAt"> & {
-	lastSendAckAt: number | null;
-};
 
 export const SlotProbeResultSchema = z.object({
 	ok: z.boolean(),

@@ -24,11 +24,11 @@ export async function resolveRequestRuntime({
 	if (partition !== route.partition) throw new PartitionRouteMismatchError();
 	const runtime = ctx.ownership.findRuntime(route);
 	if (runtime) return runtime;
-	const steppingDown = ctx.ownership.isSteppedDown?.() ?? false;
 	// Mid-handoff the successor is not named yet: answering now would send the caller back here.
-	if (!steppingDown) await ctx.ownership.awaitHandoff?.({ partition });
+	if (!ctx.ownership.isSteppedDown?.())
+		await ctx.ownership.awaitHandoff?.({ partition });
 	throw new PartitionRouteNotOwnedError({
 		successor: ctx.ownership.findSuccessor?.({ partition }),
-		steppingDown,
+		steppingDown: ctx.ownership.isSteppedDown?.() ?? false,
 	});
 }

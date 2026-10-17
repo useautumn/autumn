@@ -79,7 +79,6 @@ export type PartitionRuntimeDependencies = {
 			| "claimPartition"
 		>;
 	producer: OwnedPartitionProducer;
-	ownerEpoch?: () => string | undefined;
 	appender: CommittedOutcomeAppender;
 	follower: PartitionOutcomeFollowerPort;
 	/** Read-only: feeds the dedup window before this worker owns the partition. Without one the runtime cannot prepare. */

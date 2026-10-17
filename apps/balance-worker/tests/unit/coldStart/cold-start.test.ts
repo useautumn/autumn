@@ -378,7 +378,7 @@ describe("heartbeat", () => {
 				readAssignmentSettled: () => true,
 				readStoreHealthy: () => true,
 				readWork: () => ({
-					lastSendAckAt: null,
+					lastSendAckAgeMs: null,
 					ownNetwork: "healthy",
 					steppedDown: false,
 				}),

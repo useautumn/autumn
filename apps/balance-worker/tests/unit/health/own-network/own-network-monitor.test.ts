@@ -32,11 +32,11 @@ function countersOf({
 function harness({
 	lossy,
 	stuck,
-	serving = () => true,
+	held = () => true,
 }: {
 	lossy: () => boolean;
 	stuck: () => boolean;
-	serving?: (partition: number) => boolean;
+	held?: (partition: number) => boolean;
 }) {
 	const time = { now: 0 };
 	const totals = { outSegs: 0, retransSegs: 0 };
@@ -56,7 +56,7 @@ function harness({
 	const monitor = createOwnNetworkMonitor({
 		ctx: {
 			sends: { take },
-			isServing: ({ partition }) => serving(partition),
+			isHeld: ({ partition }) => held(partition),
 			readTcp,
 			now: () => time.now,
 			schedule: (task) => {
@@ -123,7 +123,7 @@ describe("own network monitor", () => {
 		const { monitor, tick } = harness({
 			lossy: () => true,
 			stuck: () => true,
-			serving: (partition) => partition === 82,
+			held: (partition) => partition === 82,
 		});
 		monitor.start();
 		for (let index = 0; index < 4; index++) tick();
@@ -131,6 +131,45 @@ describe("own network monitor", () => {
 			state: "healthy",
 			busyPartitions: 1,
 			stalledPartitions: 1,
+		});
+	});
+
+	test("stalls stop counting the moment their partition is no longer held, even inside the window", () => {
+		const held = new Set([80, 81, 82]);
+		const { monitor, tick } = harness({
+			lossy: () => true,
+			stuck: () => true,
+			held: (partition) => held.has(partition),
+		});
+		monitor.start();
+		for (let index = 0; index < 4; index++) tick();
+		expect(monitor.verdict().state).toBe("degraded");
+		held.clear();
+		expect(monitor.verdict()).toMatchObject({
+			state: "healthy",
+			busyPartitions: 0,
+			stalledPartitions: 0,
+		});
+	});
+
+	test("a partition held again starts without the stalls of its earlier holding", () => {
+		const held = new Set([80, 81, 82]);
+		const stuck = { on: true };
+		const { monitor, tick } = harness({
+			lossy: () => true,
+			stuck: () => stuck.on,
+			held: (partition) => held.has(partition),
+		});
+		monitor.start();
+		for (let index = 0; index < 4; index++) tick();
+		expect(monitor.verdict().state).toBe("degraded");
+		held.clear();
+		stuck.on = false;
+		tick();
+		for (const partition of [80, 81, 82]) held.add(partition);
+		expect(monitor.verdict()).toMatchObject({
+			state: "healthy",
+			stalledPartitions: 0,
 		});
 	});
 

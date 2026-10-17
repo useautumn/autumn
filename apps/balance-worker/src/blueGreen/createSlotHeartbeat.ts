@@ -10,7 +10,7 @@ import type { SlotGate } from "./createSlotGate.js";
 import {
 	type SlotHeartbeat,
 	type SlotProbeResult,
-	type SlotWorkReading,
+	type SlotWork,
 	slotHeartbeatKeyOf,
 } from "./types/slotHeartbeat.js";
 import type { TaskIdentity } from "./types/taskIdentity.js";
@@ -27,7 +27,7 @@ type SlotHeartbeatContext = {
 	/** False until the partition service is running and has been dealt its assignment. */
 	readAssignmentSettled(): boolean;
 	readStoreHealthy(): boolean;
-	readWork(): SlotWorkReading;
+	readWork(): SlotWork;
 	probes: { kafka(): Promise<void>; postgres(): Promise<void> };
 	/** Present only where cold starts are honoured (staging); the heartbeat then always carries the latest ack. */
 	readColdStart?(): ColdStartAck | null;
@@ -109,13 +109,7 @@ export function createSlotHeartbeat({
 				})),
 			},
 			...(ctx.readColdStart ? { coldStart: ctx.readColdStart() } : {}),
-			work: {
-				...work,
-				lastSendAckAt:
-					work.lastSendAckAt === null
-						? null
-						: new Date(work.lastSendAckAt).toISOString(),
-			},
+			work,
 			startedAt,
 			writtenAt: new Date().toISOString(),
 		};

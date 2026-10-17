@@ -64,8 +64,14 @@ export function createPartitions({
 		return state.directory.findOwnedRuntime(target) !== undefined;
 	}
 
+	function isHeld({ partition }: PartitionTarget): boolean {
+		return state.assigned.has(partition) || state.handingOff.has(partition);
+	}
+
 	function awaitHandoff({ partition }: PartitionTarget): Promise<void> {
-		return state.handoffSettlements.get(partition) ?? Promise.resolve();
+		const settlement = state.handoffSettlements.get(partition);
+		if (!settlement) return Promise.resolve();
+		return Promise.race([settlement, state.steppedDownSignal.promise]);
 	}
 
 	function findSuccessor({
@@ -87,6 +93,7 @@ export function createPartitions({
 		partitions,
 		hasAssignment,
 		isAdmitted,
+		isHeld,
 		findRuntime,
 		findOwnedRuntime,
 		awaitHandoff,
@@ -132,6 +139,7 @@ function resolvePartitionConfig(
 function createPartitionState(): PartitionsState {
 	return {
 		directory: createRuntimeDirectory(),
+		assigned: new Set(),
 		entries: new Map(),
 		handingOff: new Map(),
 		retiringEntries: new Map(),
@@ -142,6 +150,7 @@ function createPartitionState(): PartitionsState {
 		partitionRetryTimers: new Map(),
 		status: "created",
 		steppedDown: false,
+		steppedDownSignal: Promise.withResolvers<void>(),
 		retirementFailed: false,
 		generation: 0,
 		lifecycle: Promise.resolve(),

@@ -69,6 +69,7 @@ function applyPartitionAllocation({
 	change,
 }: PartitionsScope & { change: PartitionAssignment }): void {
 	if (state.status !== "running") return;
+	state.assigned = new Set(change.partitions);
 	ctx.served?.assign({ partitions: change.partitions });
 	noteConsumerJoined({ ctx, state });
 	discardUnallocatedHealth({ state, partitions: change.partitions });
@@ -125,6 +126,7 @@ function revokePartitionAllocation({
 	revocation,
 }: PartitionsScope & { revocation: PartitionRevocation }): void {
 	if (state.status !== "running") return;
+	state.assigned.clear();
 	clearPartitionRetries({ state });
 	state.generation += 1;
 	beginPartitionHandoffs({ ctx, state });
@@ -140,6 +142,7 @@ function crashPartitionAllocation({
 	crash,
 }: PartitionsScope & { crash: PartitionConsumerCrash }): void {
 	if (state.status !== "running") return;
+	state.assigned.clear();
 	clearPartitionRetries({ state });
 	const allocationGeneration = ++state.generation;
 	const entriesToStop = detachPartitions({ state, failure: crash });

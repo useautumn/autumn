@@ -2,67 +2,76 @@ import { describe, expect, test } from "bun:test";
 import { slotHeartbeatKeyOf } from "../../../../src/blueGreen/types/slotHeartbeat.js";
 import { readFleetHeartbeats } from "../../../../src/health/stepDown/readFleetHeartbeats.js";
 import { createMemoryAdminObjects } from "./memoryAdminObjects.js";
+import { peerHeartbeat } from "./peerHeartbeats.js";
 
-const heartbeat = {
-	serviceName: "balance-workers",
-	fleetId: "fleet",
-	deployment: "prod",
-	endpoint: "http://a",
-	instanceId: "1-a",
-	pid: 1,
-	identity: { serviceArn: null, imageSha: null },
-	declaredActive: true,
-	gate: "active",
-	storeHealthy: true,
-	ok: true,
-	checks: {
-		kafka: { ok: true, latencyMs: 1 },
-		postgres: { ok: true, latencyMs: 1 },
-	},
-	partitions: { prepared: 0, ready: 8, admitted: 8, total: 8, byPartition: [] },
-	startedAt: "2026-10-16T18:00:00.000Z",
-	writtenAt: "2026-10-16T19:39:03.000Z",
-};
+function keyOf(instanceId: string, fleetId = "fleet"): string {
+	return slotHeartbeatKeyOf({ fleetId, instanceId });
+}
+
+function write({
+	memory,
+	instanceId,
+	endpoint,
+	fleetId = "fleet",
+}: {
+	memory: ReturnType<typeof createMemoryAdminObjects>;
+	instanceId: string;
+	endpoint: string;
+	fleetId?: string;
+}): void {
+	memory.put({
+		key: keyOf(instanceId, fleetId),
+		body: JSON.stringify(peerHeartbeat({ endpoint })),
+	});
+}
 
 describe("read fleet heartbeats", () => {
-	test("reads the fleet's recent heartbeats, skipping stale objects, other fleets and unreadable ones", async () => {
-		const time = { now: 10_000 };
-		const memory = createMemoryAdminObjects({ now: () => time.now });
-		memory.put({
-			key: slotHeartbeatKeyOf({ fleetId: "fleet", instanceId: "1-a" }),
-			body: JSON.stringify(heartbeat),
+	test("a baseline lists the fleet without reading any heartbeat", async () => {
+		const memory = createMemoryAdminObjects();
+		write({ memory, instanceId: "1-a", endpoint: "http://a" });
+		write({
+			memory,
+			instanceId: "2-c",
+			endpoint: "http://c",
+			fleetId: "other",
 		});
-		memory.put({
-			key: slotHeartbeatKeyOf({ fleetId: "fleet", instanceId: "2-broken" }),
-			body: "{not json",
-		});
-		memory.put({
-			key: slotHeartbeatKeyOf({ fleetId: "other", instanceId: "3-c" }),
-			body: JSON.stringify({ ...heartbeat, fleetId: "other" }),
-		});
-		time.now = 100_000;
-		memory.put({
-			key: slotHeartbeatKeyOf({ fleetId: "fleet", instanceId: "4-d" }),
-			body: JSON.stringify({ ...heartbeat, endpoint: "http://d" }),
-		});
-		const recent = await readFleetHeartbeats({
+		const baseline = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",
-			modifiedAfter: 50_000,
+			since: null,
 		});
-		expect(recent.heartbeats.map(({ endpoint }) => endpoint)).toEqual([
-			"http://d",
-		]);
-		expect(recent.unreadable).toBe(0);
-		const all = await readFleetHeartbeats({
+		expect([...baseline.listing.keys()]).toEqual([keyOf("1-a")]);
+		expect(baseline.changed).toEqual([]);
+		expect(memory.reads.count).toBe(0);
+	});
+
+	test("only heartbeats written since the baseline are read, new ones included and unreadable ones skipped", async () => {
+		const memory = createMemoryAdminObjects();
+		write({ memory, instanceId: "1-a", endpoint: "http://a" });
+		write({ memory, instanceId: "2-b", endpoint: "http://b" });
+		const baseline = await readFleetHeartbeats({
 			ctx: { objects: memory.objects },
 			fleetId: "fleet",
-			modifiedAfter: 0,
+			since: null,
 		});
-		expect(all.heartbeats.map(({ endpoint }) => endpoint).sort()).toEqual([
+		write({ memory, instanceId: "1-a", endpoint: "http://a" });
+		write({ memory, instanceId: "3-d", endpoint: "http://d" });
+		memory.put({ key: keyOf("4-broken"), body: "{not json" });
+		write({
+			memory,
+			instanceId: "5-e",
+			endpoint: "http://e",
+			fleetId: "other",
+		});
+		const later = await readFleetHeartbeats({
+			ctx: { objects: memory.objects },
+			fleetId: "fleet",
+			since: baseline.listing,
+		});
+		expect(later.changed.map(({ endpoint }) => endpoint).sort()).toEqual([
 			"http://a",
 			"http://d",
 		]);
-		expect(all.unreadable).toBe(1);
+		expect(memory.reads.count).toBe(3);
 	});
 });
